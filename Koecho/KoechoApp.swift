@@ -5,6 +5,7 @@ import os
 @main
 struct KoechoApp: App {
     private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "App")
+    @State private var appState = AppState()
 
     init() {
         logger.info("Koecho launched")
@@ -18,5 +19,6 @@ struct KoechoApp: App {
             .keyboardShortcut("q")
         }
         .menuBarExtraStyle(.menu)
+        .environment(appState)
     }
 }
