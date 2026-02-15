@@ -18,3 +18,9 @@
 - 対策: `PATH` と `HOME` のみ渡す + `currentDirectoryURL` を `FileManager.default.temporaryDirectory` に設定
 - Process を使う箇所すべてに適用すること（ScriptRunner 等）
 - 子プロセスのアクセスは親プロセス（Koecho）の権限として扱われる
+
+## macOS / MenuBarExtra
+
+- `LSUIElement = YES` と `setActivationPolicy(.accessory)` を両方指定すると MenuBarExtra のアイコンが表示されないことがある
+- `LSUIElement = YES`（Info.plist）だけで Dock 非表示になるので、`setActivationPolicy(.accessory)` は不要
+- `App.init()` 内での `NSApplication.shared` アクセスは SwiftUI のライフサイクル初期化と競合するリスクがある

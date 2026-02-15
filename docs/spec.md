@@ -99,8 +99,7 @@
 
 ## メニューバー
 
-- NSApplication.setActivationPolicy(.accessory) で Dock 非表示
-- Info.plist: LSUIElement = true
+- Info.plist: LSUIElement = true で Dock 非表示
 - MenuBarExtra (.menu スタイル) で常駐
 
 ### メニュー項目
