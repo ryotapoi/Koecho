@@ -8,21 +8,51 @@ final class InputPanelController {
     private let appState: AppState
     private let selectedTextReader: SelectedTextReader
     private let paster: any Pasting
+    private let makeScriptRunner: () -> ScriptRunner
     private var isConfirming = false
     private(set) var panel: InputPanel
 
-    init(appState: AppState, selectedTextReader: SelectedTextReader, paster: any Pasting) {
+    init(
+        appState: AppState,
+        selectedTextReader: SelectedTextReader,
+        paster: any Pasting,
+        makeScriptRunner: @escaping () -> ScriptRunner
+    ) {
         self.appState = appState
         self.selectedTextReader = selectedTextReader
         self.paster = paster
+        self.makeScriptRunner = makeScriptRunner
 
-        let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200))
-        let hostingView = NSHostingView(rootView: InputPanelContent(appState: appState))
+        self.panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200))
+
+        let hostingView = NSHostingView(rootView: InputPanelContent(
+            appState: appState,
+            onExecuteScript: { [weak self] script in
+                await self?.executeScript(script)
+            },
+            onCancelPrompt: { [weak self] in
+                self?.cancelPrompt()
+            }
+        ))
         panel.contentView = hostingView
-        self.panel = panel
 
         panel.onEscape = { [weak self] in
-            self?.cancel()
+            guard let self else { return }
+            if self.appState.promptScript != nil && !self.appState.isRunningScript {
+                self.cancelPrompt()
+            } else {
+                self.cancel()
+            }
+        }
+
+        panel.onShortcutKey = { [weak self] key in
+            guard let self,
+                  let script = self.appState.settings.scripts.first(where: { $0.shortcutKey == key })
+            else { return false }
+            Task { @MainActor in
+                await self.executeScript(script)
+            }
+            return true
         }
 
         panel.center()
@@ -33,7 +63,8 @@ final class InputPanelController {
         self.init(
             appState: appState,
             selectedTextReader: SelectedTextReader(),
-            paster: ClipboardPaster(pasteDelay: appState.settings.pasteDelay)
+            paster: ClipboardPaster(pasteDelay: appState.settings.pasteDelay),
+            makeScriptRunner: { ScriptRunner(timeout: appState.settings.scriptTimeout) }
         )
     }
 
@@ -96,8 +127,59 @@ final class InputPanelController {
         return nil
     }
 
+    func executeScript(_ script: Script) async {
+        guard appState.isInputPanelVisible,
+              !isConfirming,
+              !appState.isRunningScript,
+              appState.promptScript == nil || appState.promptScript == script
+        else { return }
+
+        if script.requiresPrompt && appState.promptScript == nil {
+            appState.errorMessage = nil
+            appState.promptScript = script
+            return
+        }
+
+        let originalText = appState.inputText
+        appState.isRunningScript = true
+        defer {
+            appState.isRunningScript = false
+            appState.promptScript = nil
+            appState.promptText = ""
+        }
+
+        appState.errorMessage = nil
+
+        let context = ScriptRunnerContext(
+            selection: appState.selectedText,
+            selectionStart: appState.selectionStart,
+            selectionEnd: appState.selectionEnd,
+            prompt: appState.promptText
+        )
+
+        let runner = makeScriptRunner()
+        do {
+            let result = try await runner.run(
+                scriptPath: script.scriptPath,
+                input: appState.inputText,
+                context: context
+            )
+            guard appState.isInputPanelVisible else { return }
+            appState.inputText = result.output
+        } catch {
+            guard appState.isInputPanelVisible else { return }
+            appState.inputText = originalText
+            appState.errorMessage = scriptErrorMessage(for: error, script: script)
+        }
+    }
+
+    func cancelPrompt() {
+        appState.promptScript = nil
+        appState.promptText = ""
+    }
+
     func confirm() async {
-        guard appState.isInputPanelVisible, !isConfirming else { return }
+        guard appState.isInputPanelVisible, !isConfirming, !appState.isRunningScript else { return }
 
         let text = appState.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
@@ -141,6 +223,9 @@ final class InputPanelController {
         appState.selectionStart = ""
         appState.selectionEnd = ""
         appState.errorMessage = nil
+        appState.isRunningScript = false
+        appState.promptScript = nil
+        appState.promptText = ""
     }
 
     func cancel() {
@@ -164,6 +249,21 @@ final class InputPanelController {
             "Target application has been terminated."
         case ClipboardPasterError.failedToCreateCGEvent:
             "Failed to simulate paste keystroke."
+        default:
+            String(describing: error)
+        }
+    }
+
+    private func scriptErrorMessage(for error: any Error, script: Script) -> String {
+        switch error {
+        case ScriptRunnerError.scriptNotFound(let path):
+            "Script not found: \(path)"
+        case ScriptRunnerError.timeout:
+            "Script '\(script.name)' timed out."
+        case ScriptRunnerError.nonZeroExit(let code, let stderr):
+            "Script '\(script.name)' failed (exit \(code))\(stderr.isEmpty ? "" : ": \(stderr)")"
+        case ScriptRunnerError.emptyOutput:
+            "Script '\(script.name)' produced empty output."
         default:
             String(describing: error)
         }

@@ -1,4 +1,5 @@
 import AppKit
+import Foundation
 import Testing
 @testable import Koecho
 
@@ -25,12 +26,32 @@ private final class MockPaster: Pasting {
 }
 
 @MainActor
-private func makeController(paster: MockPaster? = nil) -> (InputPanelController, AppState, MockPaster) {
+private func makeController(
+    paster: MockPaster? = nil,
+    makeScriptRunner: (() -> ScriptRunner)? = nil
+) -> (InputPanelController, AppState, MockPaster) {
     let p = paster ?? MockPaster()
     let appState = AppState()
     let reader = SelectedTextReader()
-    let controller = InputPanelController(appState: appState, selectedTextReader: reader, paster: p)
+    let controller = InputPanelController(
+        appState: appState,
+        selectedTextReader: reader,
+        paster: p,
+        makeScriptRunner: makeScriptRunner ?? { ScriptRunner(timeout: appState.settings.scriptTimeout) }
+    )
     return (controller, appState, p)
+}
+
+@MainActor
+private func makeScript(_ content: String) throws -> String {
+    let dir = FileManager.default.temporaryDirectory
+    let path = dir.appendingPathComponent("koecho-test-\(UUID().uuidString).sh").path
+    try ("#!/bin/sh\n" + content).write(toFile: path, atomically: true, encoding: .utf8)
+    try FileManager.default.setAttributes(
+        [.posixPermissions: 0o755],
+        ofItemAtPath: path
+    )
+    return path
 }
 
 @MainActor
@@ -256,5 +277,284 @@ struct InputPanelControllerTests {
         controller.showPanel()
 
         #expect(appState.errorMessage == nil)
+    }
+
+    // MARK: - executeScript tests
+
+    @Test func executeScriptReplacesText() async throws {
+        let scriptPath = try makeScript("tr a-z A-Z")
+        let script = Script(name: "Upper", scriptPath: scriptPath)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "hello"
+
+        await controller.executeScript(script)
+
+        #expect(appState.inputText == "HELLO")
+        #expect(appState.errorMessage == nil)
+    }
+
+    @Test func executeScriptFallsBackOnError() async throws {
+        let scriptPath = try makeScript("exit 1")
+        let script = Script(name: "Fail", scriptPath: scriptPath)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "original"
+
+        await controller.executeScript(script)
+
+        #expect(appState.inputText == "original")
+        #expect(appState.errorMessage?.contains("Fail") == true)
+        #expect(appState.errorMessage?.contains("exit 1") == true)
+    }
+
+    @Test func executeScriptFallsBackOnEmptyOutput() async throws {
+        let scriptPath = try makeScript("printf ''")
+        let script = Script(name: "Empty", scriptPath: scriptPath)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "original"
+
+        await controller.executeScript(script)
+
+        #expect(appState.inputText == "original")
+        #expect(appState.errorMessage?.contains("Empty") == true)
+        #expect(appState.errorMessage?.contains("empty output") == true)
+    }
+
+    @Test func executeScriptPassesContext() async throws {
+        let scriptPath = try makeScript(
+            "echo \"sel=$KOECHO_SELECTION start=$KOECHO_SELECTION_START end=$KOECHO_SELECTION_END prompt=$KOECHO_PROMPT\""
+        )
+        let script = Script(name: "Context", scriptPath: scriptPath)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "input"
+        appState.selectedText = "selected"
+        appState.selectionStart = "10"
+        appState.selectionEnd = "18"
+        appState.promptText = "my prompt"
+
+        await controller.executeScript(script)
+
+        #expect(appState.inputText == "sel=selected start=10 end=18 prompt=my prompt")
+    }
+
+    @Test func executeScriptShowsPromptUI() async throws {
+        let scriptPath = try makeScript("cat")
+        let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "original"
+
+        await controller.executeScript(script)
+
+        // First call with requiresPrompt sets promptScript but doesn't run
+        #expect(appState.promptScript == script)
+        #expect(appState.inputText == "original")
+        #expect(appState.isRunningScript == false)
+    }
+
+    @Test func executeScriptWithPrompt() async throws {
+        let scriptPath = try makeScript("echo \"prompt=$KOECHO_PROMPT\"")
+        let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "input"
+
+        // First call: show prompt UI
+        await controller.executeScript(script)
+        #expect(appState.promptScript == script)
+
+        // Simulate user entering prompt text
+        appState.promptText = "user prompt"
+
+        // Second call: execute with prompt
+        await controller.executeScript(script)
+
+        #expect(appState.inputText == "prompt=user prompt")
+        #expect(appState.promptScript == nil)
+        #expect(appState.promptText == "")
+    }
+
+    @Test func cancelPromptClearsState() async throws {
+        let scriptPath = try makeScript("cat")
+        let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        await controller.executeScript(script)
+        appState.promptText = "some text"
+
+        #expect(appState.promptScript == script)
+
+        controller.cancelPrompt()
+
+        #expect(appState.promptScript == nil)
+        #expect(appState.promptText == "")
+    }
+
+    @Test func executeScriptWhileRunningIsNoop() async throws {
+        let scriptPath = try makeScript("cat")
+        let script = Script(name: "Test", scriptPath: scriptPath)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "original"
+        appState.isRunningScript = true
+
+        await controller.executeScript(script)
+
+        #expect(appState.inputText == "original")
+    }
+
+    @Test func executeScriptWhenNotVisibleIsNoop() async throws {
+        let scriptPath = try makeScript("echo 'replaced'")
+        let script = Script(name: "Test", scriptPath: scriptPath)
+        let (controller, appState, _) = makeController()
+
+        // Don't call showPanel — panel is not visible
+        appState.inputText = "original"
+
+        await controller.executeScript(script)
+
+        #expect(appState.inputText == "original")
+    }
+
+    @Test func clearStateClearsScriptState() {
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.isRunningScript = true
+        appState.promptScript = Script(name: "Test", scriptPath: "/tmp/test.sh")
+        appState.promptText = "prompt"
+
+        controller.cancel()
+
+        #expect(appState.isRunningScript == false)
+        #expect(appState.promptScript == nil)
+        #expect(appState.promptText == "")
+    }
+
+    @Test func confirmWhileRunningScriptIsNoop() async {
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "hello"
+        appState.frontmostApplication = NSRunningApplication.current
+        appState.isRunningScript = true
+
+        await controller.confirm()
+
+        // confirm should be no-op, state unchanged
+        #expect(appState.isInputPanelVisible == true)
+        #expect(appState.inputText == "hello")
+    }
+
+    @Test func escapeWhilePromptCancelsPromptOnly() async throws {
+        let scriptPath = try makeScript("cat")
+        let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        await controller.executeScript(script)
+        #expect(appState.promptScript == script)
+
+        // Simulate Escape via onEscape callback
+        controller.panel.onEscape?()
+
+        // Prompt should be cancelled but panel stays visible
+        #expect(appState.promptScript == nil)
+        #expect(appState.isInputPanelVisible == true)
+    }
+
+    @Test func executeScriptDuringPromptForDifferentScriptIsNoop() async throws {
+        let scriptPath1 = try makeScript("cat")
+        let scriptPath2 = try makeScript("echo 'other'")
+        let script1 = Script(name: "Script1", scriptPath: scriptPath1, requiresPrompt: true)
+        let script2 = Script(name: "Script2", scriptPath: scriptPath2)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "original"
+
+        // Show prompt for script1
+        await controller.executeScript(script1)
+        #expect(appState.promptScript == script1)
+
+        // Try to execute script2 while prompt is shown for script1
+        await controller.executeScript(script2)
+
+        // Should be no-op
+        #expect(appState.inputText == "original")
+        #expect(appState.promptScript == script1)
+    }
+
+    @Test func cancelDuringScriptDiscardsResult() async throws {
+        let scriptPath = try makeScript("sleep 0.5 && echo done")
+        let script = Script(name: "Slow", scriptPath: scriptPath)
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "original"
+
+        let executeTask = Task { @MainActor in
+            await controller.executeScript(script)
+        }
+        // Yield to let executeScript start
+        await Task.yield()
+
+        // Cancel while script is running
+        controller.cancel()
+
+        await executeTask.value
+
+        // Result should be discarded because panel was cancelled
+        #expect(appState.inputText == "")
+        #expect(appState.isInputPanelVisible == false)
+    }
+
+    @Test func scriptErrorMessages() async throws {
+        let (controller, appState, _) = makeController()
+        controller.showPanel()
+
+        // Test scriptNotFound
+        let notFoundScript = Script(name: "Missing", scriptPath: "/nonexistent/script.sh")
+        appState.inputText = "text"
+        await controller.executeScript(notFoundScript)
+        #expect(appState.errorMessage == "Script not found: /nonexistent/script.sh")
+
+        // Test nonZeroExit with stderr
+        let failPath = try makeScript("echo 'err msg' >&2; exit 2")
+        let failScript = Script(name: "Fail", scriptPath: failPath)
+        appState.errorMessage = nil
+        appState.inputText = "text"
+        await controller.executeScript(failScript)
+        #expect(appState.errorMessage == "Script 'Fail' failed (exit 2): err msg")
+
+        // Test emptyOutput
+        let emptyPath = try makeScript("printf ''")
+        let emptyScript = Script(name: "Empty", scriptPath: emptyPath)
+        appState.errorMessage = nil
+        appState.inputText = "text"
+        await controller.executeScript(emptyScript)
+        #expect(appState.errorMessage == "Script 'Empty' produced empty output.")
+
+        // Test timeout
+        let timeoutPath = try makeScript("sleep 10")
+        let timeoutScript = Script(name: "Timeout", scriptPath: timeoutPath)
+        let (controller2, appState2, _) = makeController(
+            makeScriptRunner: { ScriptRunner(timeout: 0.1) }
+        )
+        controller2.showPanel()
+        appState2.inputText = "text"
+        await controller2.executeScript(timeoutScript)
+        #expect(appState2.errorMessage == "Script 'Timeout' timed out.")
     }
 }

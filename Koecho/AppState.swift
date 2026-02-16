@@ -11,6 +11,9 @@ final class AppState {
     var isInputPanelVisible: Bool = false
     var frontmostApplication: NSRunningApplication?
     var errorMessage: String?
+    var isRunningScript: Bool = false
+    var promptText: String = ""
+    var promptScript: Script? = nil
     var selectedText: String = ""
     var selectionStart: String = ""
     var selectionEnd: String = ""
