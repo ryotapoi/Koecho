@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import os
 
 @MainActor @Observable
@@ -45,6 +46,23 @@ final class Settings {
         }
 
         save()
+    }
+
+    func addScript(_ script: Script) {
+        scripts.append(script)
+    }
+
+    func updateScript(_ script: Script) {
+        guard let index = scripts.firstIndex(where: { $0.id == script.id }) else { return }
+        scripts[index] = script
+    }
+
+    func deleteScript(id: UUID) {
+        scripts.removeAll { $0.id == id }
+    }
+
+    func moveScripts(from source: IndexSet, to destination: Int) {
+        scripts.move(fromOffsets: source, toOffset: destination)
     }
 
     private func save() {

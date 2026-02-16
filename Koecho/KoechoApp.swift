@@ -22,22 +22,18 @@ struct KoechoApp: App {
 
     var body: some Scene {
         MenuBarExtra("Koecho", systemImage: "mic.fill") {
-            Button(appState.isInputPanelVisible ? "Close Input Panel" : "Open Input Panel") {
-                togglePanel()
-            }
-
-            Divider()
-
-            Button("Quit Koecho") {
-                NSApplication.shared.terminate(nil)
-            }
-            .keyboardShortcut("q")
+            MenuBarContent(appState: appState, onTogglePanel: { togglePanel() })
         }
         .menuBarExtraStyle(.menu)
         .environment(appState)
         .onChange(of: appState.isInputPanelVisible, initial: true) {
             startHotkeyService()
         }
+
+        Window("Manage Scripts", id: "script-management") {
+            ScriptManagementView(settings: appState.settings)
+        }
+        .defaultSize(width: 500, height: 400)
     }
 
     private func startHotkeyService() {
@@ -63,5 +59,33 @@ struct KoechoApp: App {
         } else {
             controller.showPanel()
         }
+    }
+}
+
+private struct MenuBarContent: View {
+    let appState: AppState
+    let onTogglePanel: () -> Void
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button(appState.isInputPanelVisible ? "Close Input Panel" : "Open Input Panel") {
+            onTogglePanel()
+        }
+
+        Divider()
+
+        Button("Manage Scripts...") {
+            openWindow(id: "script-management")
+            DispatchQueue.main.async {
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            }
+        }
+
+        Divider()
+
+        Button("Quit Koecho") {
+            NSApplication.shared.terminate(nil)
+        }
+        .keyboardShortcut("q")
     }
 }

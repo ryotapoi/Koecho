@@ -78,4 +78,98 @@ struct SettingsTests {
         #expect(reloaded.scripts[1].name == "Second")
         #expect(reloaded.scripts[2].name == "Third")
     }
+
+    // MARK: - CRUD Methods
+
+    @Test func addScript() {
+        let settings = Settings(defaults: makeDefaults())
+        let script = Script(name: "New", scriptPath: "/bin/new")
+
+        settings.addScript(script)
+
+        #expect(settings.scripts.count == 1)
+        #expect(settings.scripts[0].id == script.id)
+    }
+
+    @Test func updateScript() {
+        let settings = Settings(defaults: makeDefaults())
+        var script = Script(name: "Original", scriptPath: "/bin/original")
+        settings.addScript(script)
+
+        script.name = "Updated"
+        script.scriptPath = "/bin/updated"
+        settings.updateScript(script)
+
+        #expect(settings.scripts.count == 1)
+        #expect(settings.scripts[0].name == "Updated")
+        #expect(settings.scripts[0].scriptPath == "/bin/updated")
+    }
+
+    @Test func updateNonexistentScript() {
+        let settings = Settings(defaults: makeDefaults())
+        settings.addScript(Script(name: "Existing", scriptPath: "/bin/existing"))
+
+        let nonexistent = Script(name: "Ghost", scriptPath: "/bin/ghost")
+        settings.updateScript(nonexistent)
+
+        #expect(settings.scripts.count == 1)
+        #expect(settings.scripts[0].name == "Existing")
+    }
+
+    @Test func deleteScript() {
+        let settings = Settings(defaults: makeDefaults())
+        let script = Script(name: "Doomed", scriptPath: "/bin/doomed")
+        settings.addScript(script)
+
+        settings.deleteScript(id: script.id)
+
+        #expect(settings.scripts.isEmpty)
+    }
+
+    @Test func deleteNonexistentScript() {
+        let settings = Settings(defaults: makeDefaults())
+        settings.addScript(Script(name: "Safe", scriptPath: "/bin/safe"))
+
+        settings.deleteScript(id: UUID())
+
+        #expect(settings.scripts.count == 1)
+        #expect(settings.scripts[0].name == "Safe")
+    }
+
+    @Test func moveScripts() {
+        let settings = Settings(defaults: makeDefaults())
+        let a = Script(name: "A", scriptPath: "/bin/a")
+        let b = Script(name: "B", scriptPath: "/bin/b")
+        let c = Script(name: "C", scriptPath: "/bin/c")
+        settings.scripts = [a, b, c]
+
+        settings.moveScripts(from: IndexSet(integer: 2), to: 0)
+
+        #expect(settings.scripts[0].name == "C")
+        #expect(settings.scripts[1].name == "A")
+        #expect(settings.scripts[2].name == "B")
+    }
+
+    @Test func addScriptPersists() {
+        let defaults = makeDefaults()
+        let settings = Settings(defaults: defaults)
+        let script = Script(name: "Persistent", scriptPath: "/bin/persist")
+
+        settings.addScript(script)
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.scripts.count == 1)
+        #expect(reloaded.scripts[0].name == "Persistent")
+    }
+
+    @Test func deleteScriptPersists() {
+        let defaults = makeDefaults()
+        let settings = Settings(defaults: defaults)
+        let script = Script(name: "Temporary", scriptPath: "/bin/temp")
+        settings.addScript(script)
+        settings.deleteScript(id: script.id)
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.scripts.isEmpty)
+    }
 }
