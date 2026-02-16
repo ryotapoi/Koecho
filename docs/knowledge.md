@@ -36,6 +36,12 @@
 - NSPanel 内に TextEditor（NSTextView）があると、Escape キーは NSTextView が消費するため `keyDown(with:)` がパネルまで届かない
 - 対策: `keyDown(with:)` ではなく `cancelOperation(_:)` を override する。NSTextView は Escape を受けると `cancelOperation(_:)` をレスポンダーチェーンに送る
 
+## SwiftUI / Scene + .onAppear
+
+- `.onAppear` は View モディファイアであり、Scene（`MenuBarExtra` 等）には使えない（コンパイルエラー: `has no member 'onAppear'`）
+- `.menu` スタイルの MenuBarExtra ではメニューを開くまで content の View が表示されないため、content 内ビューの `.onAppear` も初回起動時には発火しない
+- 対策: `.onChange(of:initial:true)` を Scene に付けて初回評価時にコードを実行する。`initial: true` により最初の body 評価で実行される
+
 ## Swift / @MainActor + デフォルト引数
 
 - `@MainActor` クラスの `init` にデフォルト引数で別の `@MainActor` 型のインスタンス生成を書くと、デフォルト引数式は caller の actor isolation を継承しないためコンパイルエラーになる
