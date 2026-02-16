@@ -42,6 +42,12 @@
 - `.menu` スタイルの MenuBarExtra ではメニューを開くまで content の View が表示されないため、content 内ビューの `.onAppear` も初回起動時には発火しない
 - 対策: `.onChange(of:initial:true)` を Scene に付けて初回評価時にコードを実行する。`initial: true` により最初の body 評価で実行される
 
+## Shell / echo -n
+
+- macOS の `/bin/sh`（BSD sh）では `echo -n ''` が `-n` をリテラル文字列として出力する。`-n` フラグは bash 拡張であり POSIX 非標準
+- 改行なし出力が必要な場合は `printf ''` を使う
+- テストで空出力を作りたい場合も `printf ''` が安全
+
 ## Swift / @MainActor + デフォルト引数
 
 - `@MainActor` クラスの `init` にデフォルト引数で別の `@MainActor` 型のインスタンス生成を書くと、デフォルト引数式は caller の actor isolation を継承しないためコンパイルエラーになる
