@@ -11,6 +11,21 @@ struct AppStateTests {
         #expect(appState.isInputPanelVisible == false)
         #expect(appState.frontmostApplication == nil)
         #expect(appState.errorMessage == nil)
+        #expect(appState.selectedText == "")
+        #expect(appState.selectionStart == "")
+        #expect(appState.selectionEnd == "")
+    }
+
+    @Test func selectedTextModification() {
+        let appState = AppState()
+
+        appState.selectedText = "selected"
+        appState.selectionStart = "10"
+        appState.selectionEnd = "18"
+
+        #expect(appState.selectedText == "selected")
+        #expect(appState.selectionStart == "10")
+        #expect(appState.selectionEnd == "18")
     }
 
     @Test func settingsAccessible() {

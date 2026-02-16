@@ -11,6 +11,13 @@ struct KoechoApp: App {
 
     init() {
         logger.info("Koecho launched")
+        requestAccessibilityIfNeeded()
+    }
+
+    private func requestAccessibilityIfNeeded() {
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+        let trusted = AXIsProcessTrustedWithOptions(options)
+        logger.info("Accessibility trusted: \(trusted)")
     }
 
     var body: some Scene {
@@ -50,7 +57,9 @@ struct KoechoApp: App {
         }()
 
         if appState.isInputPanelVisible {
-            controller.cancel()
+            Task { @MainActor in
+                await controller.confirm()
+            }
         } else {
             controller.showPanel()
         }

@@ -31,6 +31,13 @@
 - Settings.swift の `init` 内代入 + `didSet { save() }` パターンはこの挙動に依存している。`persistsChanges` テストで検証済み
 - Swift バージョンアップ時に `@Observable` マクロの挙動が変わると壊れうるので、テストが通ることを確認する
 
+## macOS / NSPanel + SwiftUI TextEditor
+
+- NSPanel を `orderOut` で非表示にした後、SwiftUI の `@Observable` バインディング経由で `inputText = ""` をセットしても、内部の NSTextView のテキストストレージに反映されないことがある。パネルが非表示の間、SwiftUI のビュー更新が遅延されるため
+- 対策: `showPanel()` 時に `findTextView(in:)` でビュー階層から NSTextView を直接見つけて `textView.string = ""` でクリアする
+- 初回表示では `makeKeyAndOrderFront` 直後に NSHostingView のレイアウトがまだ完了しておらず NSTextView が見つからない。`DispatchQueue.main.async` で次の RunLoop サイクルまで遅延させる必要がある
+- `@FocusState` の `onAppear` は NSPanel の show/hide サイクルで再発火しない。`onChange(of: isVisible)` を使うか、`panel.makeFirstResponder(textView)` で直接セットする
+
 ## macOS / NSPanel + Escape キー
 
 - NSPanel 内に TextEditor（NSTextView）があると、Escape キーは NSTextView が消費するため `keyDown(with:)` がパネルまで届かない

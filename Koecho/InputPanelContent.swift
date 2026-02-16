@@ -11,8 +11,10 @@ struct InputPanelContent: View {
             .scrollContentBackground(.hidden)
             .frame(minWidth: 300, maxWidth: 300, minHeight: 100, maxHeight: 400)
             .background(.ultraThinMaterial)
-            .onAppear {
-                isTextEditorFocused = true
+            .onChange(of: appState.isInputPanelVisible) {
+                if appState.isInputPanelVisible {
+                    isTextEditorFocused = true
+                }
             }
     }
 }
