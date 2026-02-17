@@ -55,6 +55,12 @@
 - 改行なし出力が必要な場合は `printf ''` を使う
 - テストで空出力を作りたい場合も `printf ''` が安全
 
+## macOS / Dictation (startDictation:)
+
+- `startDictation:` セレクタを `NSApp.sendAction` で送ると responder chain 的には成功する（`true` を返す）が、パネル表示直後だと Dictation が実際には開始されない
+- 原因: ウィンドウの表示・first responder 設定が完了した直後はまだ Dictation の受付準備ができていない模様
+- 対策: `DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` で遅延させてから送る。0.3秒で動作確認済み
+
 ## Swift / @MainActor + デフォルト引数
 
 - `@MainActor` クラスの `init` にデフォルト引数で別の `@MainActor` 型のインスタンス生成を書くと、デフォルト引数式は caller の actor isolation を継承しないためコンパイルエラーになる

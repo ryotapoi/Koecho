@@ -111,6 +111,14 @@ final class InputPanelController {
             guard let self, let textView = self.findTextView(in: self.panel.contentView) else { return }
             textView.string = ""
             self.panel.makeFirstResponder(textView)
+
+            let selector = Selector(("startDictation:"))
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                guard let self, self.appState.isInputPanelVisible else { return }
+                if !NSApp.sendAction(selector, to: nil, from: nil) {
+                    textView.perform(selector, with: nil)
+                }
+            }
         }
     }
 
