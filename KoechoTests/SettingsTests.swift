@@ -136,6 +136,46 @@ struct SettingsTests {
         #expect(settings.scripts[0].name == "Safe")
     }
 
+    // MARK: - Value Clamping
+
+    @Test func clampsPasteDelayToZero() {
+        let settings = Settings(defaults: makeDefaults())
+        settings.pasteDelay = -1.0
+        #expect(settings.pasteDelay == 0.0)
+    }
+
+    @Test func clampsScriptTimeoutToOne() {
+        let settings = Settings(defaults: makeDefaults())
+        settings.scriptTimeout = 0
+        #expect(settings.scriptTimeout == 1.0)
+
+        settings.scriptTimeout = -5.0
+        #expect(settings.scriptTimeout == 1.0)
+    }
+
+    @Test func clampsPersistedValues() {
+        let defaults = makeDefaults()
+        let settings = Settings(defaults: defaults)
+        settings.pasteDelay = -1.0
+        settings.scriptTimeout = 0
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.pasteDelay == 0.0)
+        #expect(reloaded.scriptTimeout == 1.0)
+    }
+
+    @Test func clampsNegativeValuesOnInit() {
+        let defaults = makeDefaults()
+        defaults.set(-3.0, forKey: "pasteDelay")
+        defaults.set(-5.0, forKey: "scriptTimeout")
+
+        let settings = Settings(defaults: defaults)
+        #expect(settings.pasteDelay == 0.0)
+        #expect(settings.scriptTimeout == 1.0)
+    }
+
+    // MARK: - Script Ordering
+
     @Test func moveScripts() {
         let settings = Settings(defaults: makeDefaults())
         let a = Script(name: "A", scriptPath: "/bin/a")

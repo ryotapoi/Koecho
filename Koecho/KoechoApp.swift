@@ -30,10 +30,10 @@ struct KoechoApp: App {
             startHotkeyService()
         }
 
-        Window("Manage Scripts", id: "script-management") {
-            ScriptManagementView(settings: appState.settings)
+        Window("Settings", id: "settings") {
+            SettingsView(settings: appState.settings)
         }
-        .defaultSize(width: 500, height: 400)
+        .defaultSize(width: 780, height: 460)
     }
 
     private func startHotkeyService() {
@@ -74,12 +74,13 @@ private struct MenuBarContent: View {
 
         Divider()
 
-        Button("Manage Scripts...") {
-            openWindow(id: "script-management")
+        Button("Settings...") {
+            openWindow(id: "settings")
             DispatchQueue.main.async {
                 NSApplication.shared.activate(ignoringOtherApps: true)
             }
         }
+        .keyboardShortcut(",")
 
         Divider()
 

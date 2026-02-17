@@ -7,12 +7,22 @@ final class Settings {
     private let defaults: UserDefaults
     private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "Settings")
 
+    private var _pasteDelay: TimeInterval
     var pasteDelay: TimeInterval {
-        didSet { save() }
+        get { _pasteDelay }
+        set {
+            _pasteDelay = max(0, newValue)
+            save()
+        }
     }
 
+    private var _scriptTimeout: TimeInterval
     var scriptTimeout: TimeInterval {
-        didSet { save() }
+        get { _scriptTimeout }
+        set {
+            _scriptTimeout = max(1, newValue)
+            save()
+        }
     }
 
     var scripts: [Script] {
@@ -22,17 +32,8 @@ final class Settings {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
-        if let value = defaults.object(forKey: "pasteDelay") as? TimeInterval {
-            pasteDelay = value
-        } else {
-            pasteDelay = 2.0
-        }
-
-        if let value = defaults.object(forKey: "scriptTimeout") as? TimeInterval {
-            scriptTimeout = value
-        } else {
-            scriptTimeout = 30.0
-        }
+        _pasteDelay = max(0, defaults.object(forKey: "pasteDelay") as? TimeInterval ?? 2.0)
+        _scriptTimeout = max(1, defaults.object(forKey: "scriptTimeout") as? TimeInterval ?? 30.0)
 
         if let data = defaults.data(forKey: "scripts") {
             do {
@@ -66,8 +67,8 @@ final class Settings {
     }
 
     private func save() {
-        defaults.set(pasteDelay, forKey: "pasteDelay")
-        defaults.set(scriptTimeout, forKey: "scriptTimeout")
+        defaults.set(_pasteDelay, forKey: "pasteDelay")
+        defaults.set(_scriptTimeout, forKey: "scriptTimeout")
         do {
             let data = try JSONEncoder().encode(scripts)
             defaults.set(data, forKey: "scripts")
