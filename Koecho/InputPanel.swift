@@ -7,7 +7,7 @@ final class InputPanel: NSPanel {
     init(contentRect: NSRect) {
         super.init(
             contentRect: contentRect,
-            styleMask: [.nonactivatingPanel, .titled, .resizable, .fullSizeContentView],
+            styleMask: [.nonactivatingPanel, .titled, .closable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -23,6 +23,10 @@ final class InputPanel: NSPanel {
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    override func close() {
+        onEscape?()
+    }
 
     override func cancelOperation(_ sender: Any?) {
         onEscape?()

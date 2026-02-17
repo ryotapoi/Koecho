@@ -79,6 +79,17 @@ struct InputPanelControllerTests {
         #expect(!controller.panel.isVisible)
     }
 
+    @Test func closeButtonCancelsPanel() {
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "some text"
+        controller.panel.close()
+
+        #expect(appState.isInputPanelVisible == false)
+        #expect(appState.inputText == "")
+    }
+
     @Test func cancelClearsSelectedText() {
         let (controller, appState, _) = makeController()
 
