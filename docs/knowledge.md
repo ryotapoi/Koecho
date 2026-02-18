@@ -62,6 +62,37 @@
 - 原因: ウィンドウの表示・first responder 設定が完了した直後はまだ Dictation の受付準備ができていない模様
 - 対策: `DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` で遅延させてから送る。0.3秒で動作確認済み
 
+## Foundation / NSRegularExpression テンプレート構文
+
+- `NSRegularExpression.stringByReplacingMatches(in:range:withTemplate:)` の `withTemplate` パラメータは `$0`, `$1` 等をキャプチャグループ参照として解釈する
+- 置換文字列にリテラルの `$` を含めたい場合は `NSRegularExpression.escapedTemplate(for:)` でエスケープが必要
+- `escapedPattern(for:)` は検索パターン用、`escapedTemplate(for:)` は置換テンプレート用。両方忘れずに使い分ける
+
+## テスト / UserDefaults 分離
+
+- `UserDefaults.standard` を使うテストは前回のテスト実行データが残留し、次回のテストに干渉する
+- 対策: テストでは `UserDefaults(suiteName: "test-\(UUID().uuidString)")!` で毎回新しいインスタンスを作る
+- `AppState()` のデフォルト init は `Settings(defaults: .standard)` を使うため、テストでは `AppState(settings: Settings(defaults: isolatedDefaults))` のように明示的に渡す
+
+## macOS / Dictation + SwiftUI TextEditor のテキスト変更検知
+
+- macOS Dictation は「marked text（未確定テキスト）」を NSTextInputClient の内部バッファに保持し、確定（unmark）するまで `NSTextView.string` や `textStorage` を更新しない
+- そのため Dictation 入力中は以下の方法では変更を検知できない:
+  - SwiftUI `.onChange(of: appState.inputText)` → バインディングが同期されない
+  - `NSText.didChangeNotification` → 発火しない
+  - `NSTextStorage.didProcessEditingNotification` → 発火しない
+  - ポーリングで `NSTextView.string` を読む → 未確定テキストが反映されていないので変化なし
+- 変更が検知される条件: フォーカスを外す、音声入力を停止する、キーボード入力する、カーソル移動する（いずれも marked text が確定されるタイミング）
+- 対策（将来）: NSTextView サブクラスを自作し `setMarkedText`/`insertText`/`unmarkText` を override してテキスト確定タイミングをフック。確定直後に置換ルールを適用する
+- 対策（現行）: リアルタイム自動置換は断念。confirm 時の自動適用 + Ctrl+R / Replace ボタンによる手動トリガーで対応
+
+## macOS / Dictation + フォーカス遷移
+
+- SwiftUI の `@FocusState` でフォーカスを TextEditor から TextField に移動すると、macOS が Dictation セッションを停止する
+- 例: Prompt ありスクリプト起動時に `focusedField = .prompt` をセットすると、TextEditor で実行中の Dictation が終了する
+- 対策: フォーカス遷移後に `startDictation:` を再送信する。`DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` で遅延が必要（「macOS / Dictation (startDictation:)」セクション参照）
+- `InputPanelContent.onPromptFocused` コールバックで `InputPanelController` に通知し、controller 側で Dictation を再起動する構成
+
 ## Swift / @MainActor + デフォルト引数
 
 - `@MainActor` クラスの `init` にデフォルト引数で別の `@MainActor` 型のインスタンス生成を書くと、デフォルト引数式は caller の actor isolation を継承しないためコンパイルエラーになる

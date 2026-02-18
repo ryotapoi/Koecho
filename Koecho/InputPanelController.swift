@@ -32,6 +32,17 @@ final class InputPanelController {
             },
             onCancelPrompt: { [weak self] in
                 self?.cancelPrompt()
+            },
+            onApplyReplacementRules: { [weak self] in
+                self?.applyReplacementRulesNow()
+            },
+            onPromptFocused: { [weak self] in
+                guard let self else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                    guard let self, self.appState.promptScript != nil else { return }
+                    let selector = Selector(("startDictation:"))
+                    NSApp.sendAction(selector, to: nil, from: nil)
+                }
             }
         ))
         panel.contentView = hostingView
@@ -46,8 +57,14 @@ final class InputPanelController {
         }
 
         panel.onShortcutKey = { [weak self] key in
-            guard let self,
-                  let script = self.appState.settings.scripts.first(where: { $0.shortcutKey == key })
+            guard let self else { return false }
+            if let rKey = self.appState.settings.replacementShortcutKey,
+               key == rKey,
+               !self.appState.settings.replacementRules.isEmpty {
+                self.applyReplacementRulesNow()
+                return true
+            }
+            guard let script = self.appState.settings.scripts.first(where: { $0.shortcutKey == key })
             else { return false }
             Task { @MainActor in
                 await self.executeScript(script)
@@ -122,6 +139,27 @@ final class InputPanelController {
         }
     }
 
+    /// Stop Dictation if active, and wait for the system to finish
+    /// committing any pending text to the text view. Without this delay,
+    /// macOS may forward the dictated text to the foreground app when the
+    /// panel loses focus.
+    private func stopDictation() async {
+        guard let textView = findTextView(in: panel.contentView) else { return }
+        textView.inputContext?.discardMarkedText()
+        panel.makeFirstResponder(nil)
+        // Give macOS time to finalize the Dictation session.
+        try? await Task.sleep(for: .milliseconds(100))
+        // Clear text view so no content leaks to the foreground app.
+        textView.string = ""
+    }
+
+    /// Read the current text directly from the NSTextView in the panel.
+    /// TextEditor's binding may lag behind the actual NSTextView content
+    /// while the text view has focus, so this ensures we get the real text.
+    private func readTextViewString() -> String? {
+        findTextView(in: panel.contentView)?.string
+    }
+
     private func findTextView(in view: NSView?) -> NSTextView? {
         guard let view else { return nil }
         if let textView = view as? NSTextView {
@@ -181,6 +219,28 @@ final class InputPanelController {
         }
     }
 
+    func applyReplacementRulesNow() {
+        guard appState.isInputPanelVisible,
+              !appState.isRunningScript else { return }
+        let rules = appState.settings.replacementRules
+        guard !rules.isEmpty else { return }
+        // Dictation の marked text 中に textView.string を書き換えると
+        // 未確定テキストが消失するため、marked text がある間はスキップ
+        if let textView = findTextView(in: panel.contentView),
+           textView.hasMarkedText() {
+            logger.debug("Skipping replacement rules: text view has marked text")
+            return
+        }
+        let currentText = readTextViewString() ?? appState.inputText
+        let result = applyReplacementRules(rules, to: currentText)
+        if result != currentText {
+            appState.inputText = result
+            if let textView = findTextView(in: panel.contentView) {
+                textView.string = result
+            }
+        }
+    }
+
     func cancelPrompt() {
         appState.promptScript = nil
         appState.promptText = ""
@@ -189,12 +249,35 @@ final class InputPanelController {
     func confirm() async {
         guard appState.isInputPanelVisible, !isConfirming, !appState.isRunningScript else { return }
 
-        let text = appState.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else {
+        // Read text BEFORE stopping Dictation, because stopDictation()
+        // clears the text view to prevent content leaking to foreground app.
+        let rawText = readTextViewString() ?? appState.inputText
+
+        // Stop Dictation before closing the panel. If Dictation is active
+        // when the panel closes (orderOut), macOS transfers the dictated
+        // text to the foreground app via NSInputAnalytics, causing
+        // duplicated text at the paste target.
+        await stopDictation()
+        let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
             paster.restoreClipboard()
             clearState()
             panel.orderOut(nil)
             logger.info("confirm() with empty text, treated as cancel")
+            return
+        }
+        let text: String
+        if appState.settings.appliesReplacementRulesOnConfirm {
+            text = applyReplacementRules(appState.settings.replacementRules, to: trimmed)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            text = trimmed
+        }
+        guard !text.isEmpty else {
+            paster.restoreClipboard()
+            clearState()
+            panel.orderOut(nil)
+            logger.info("confirm() replacement rules emptied text, treated as cancel")
             return
         }
 

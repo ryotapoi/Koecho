@@ -31,7 +31,9 @@ private func makeController(
     makeScriptRunner: (() -> ScriptRunner)? = nil
 ) -> (InputPanelController, AppState, MockPaster) {
     let p = paster ?? MockPaster()
-    let appState = AppState()
+    let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    let settings = Settings(defaults: defaults)
+    let appState = AppState(settings: settings)
     let reader = SelectedTextReader()
     let controller = InputPanelController(
         appState: appState,
@@ -55,6 +57,7 @@ private func makeScript(_ content: String) throws -> String {
 }
 
 @MainActor
+@Suite(.serialized)
 struct InputPanelControllerTests {
     @Test func showPanelSetsState() {
         let (controller, appState, _) = makeController()
@@ -531,6 +534,84 @@ struct InputPanelControllerTests {
         #expect(appState.isInputPanelVisible == false)
     }
 
+    // MARK: - Replacement Rules on Confirm
+
+    @Test func confirmAppliesReplacementRules() async {
+        let paster = MockPaster()
+        let (controller, appState, _) = makeController(paster: paster)
+
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        appState.inputText = "えーと今日はえーと天気がいいです"
+        appState.frontmostApplication = NSRunningApplication.current
+
+        await controller.confirm()
+
+        #expect(paster.pastedTexts == ["今日は天気がいいです"])
+    }
+
+    @Test func confirmSkipsInvalidRegex() async {
+        let paster = MockPaster()
+        let (controller, appState, _) = makeController(paster: paster)
+
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "[invalid", replacement: "x", usesRegularExpression: true)
+        )
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "a", replacement: "b")
+        )
+
+        controller.showPanel()
+        appState.inputText = "abc"
+        appState.frontmostApplication = NSRunningApplication.current
+
+        await controller.confirm()
+
+        #expect(paster.pastedTexts == ["bbc"])
+    }
+
+    @Test func confirmAppliesRulesInOrder() async {
+        let paster = MockPaster()
+        let (controller, appState, _) = makeController(paster: paster)
+
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "A", replacement: "B")
+        )
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "B", replacement: "C")
+        )
+
+        controller.showPanel()
+        appState.inputText = "A"
+        appState.frontmostApplication = NSRunningApplication.current
+
+        await controller.confirm()
+
+        #expect(paster.pastedTexts == ["C"])
+    }
+
+    @Test func confirmWithRulesEmptyingTextTreatsAsCancel() async {
+        let paster = MockPaster()
+        let (controller, appState, _) = makeController(paster: paster)
+
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: ".*", replacement: "", usesRegularExpression: true)
+        )
+
+        controller.showPanel()
+        appState.inputText = "hello"
+        appState.frontmostApplication = NSRunningApplication.current
+
+        await controller.confirm()
+
+        #expect(paster.pastedTexts.isEmpty)
+        #expect(paster.restoreClipboardCallCount == 1)
+        #expect(appState.isInputPanelVisible == false)
+    }
+
     @Test func scriptErrorMessages() async throws {
         let (controller, appState, _) = makeController()
         controller.showPanel()
@@ -567,5 +648,188 @@ struct InputPanelControllerTests {
         appState2.inputText = "text"
         await controller2.executeScript(timeoutScript)
         #expect(appState2.errorMessage == "Script 'Timeout' timed out.")
+    }
+
+    // MARK: - Manual Replacement Rules
+
+    @Test func applyReplacementRulesNowReplacesText() {
+        let (controller, appState, _) = makeController()
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        appState.inputText = "えーと天気"
+
+        controller.applyReplacementRulesNow()
+
+        #expect(appState.inputText == "天気")
+    }
+
+    @Test func applyReplacementRulesNowWhenNotVisibleIsNoop() {
+        let (controller, appState, _) = makeController()
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        // Don't call showPanel — panel is not visible
+        appState.inputText = "えーと天気"
+
+        controller.applyReplacementRulesNow()
+
+        #expect(appState.inputText == "えーと天気")
+    }
+
+    @Test func applyReplacementRulesNowDuringScriptIsNoop() {
+        let (controller, appState, _) = makeController()
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        appState.inputText = "えーと天気"
+        appState.isRunningScript = true
+
+        controller.applyReplacementRulesNow()
+
+        #expect(appState.inputText == "えーと天気")
+    }
+
+    @Test func applyReplacementRulesNowWithNoRulesIsNoop() {
+        let (controller, appState, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "hello"
+
+        controller.applyReplacementRulesNow()
+
+        #expect(appState.inputText == "hello")
+    }
+
+    @Test func applyReplacementRulesNowWithNoMatchIsNoop() {
+        let (controller, appState, _) = makeController()
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        appState.inputText = "hello"
+
+        controller.applyReplacementRulesNow()
+
+        #expect(appState.inputText == "hello")
+    }
+
+    @Test func shortcutRAppliesReplacementRules() {
+        let (controller, appState, _) = makeController()
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        appState.inputText = "えーと天気"
+
+        let handled = controller.panel.onShortcutKey?("r")
+
+        #expect(handled == true)
+        #expect(appState.inputText == "天気")
+    }
+
+    @Test func shortcutRFallsBackToScriptWhenNoRules() async throws {
+        let scriptPath = try makeScript("echo 'script output'")
+        let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: "r")
+        let (controller, appState, _) = makeController()
+        appState.settings.scripts = [script]
+        // No replacement rules — Ctrl+R should fall through to script
+
+        controller.showPanel()
+        appState.inputText = "original"
+
+        let handled = controller.panel.onShortcutKey?("r")
+
+        #expect(handled == true)
+        // Let the script Task execute
+        await Task.yield()
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(appState.inputText == "script output")
+    }
+
+    @Test func shortcutRTakesPriorityOverScript() async throws {
+        let scriptPath = try makeScript("echo 'script output'")
+        let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: "r")
+        let (controller, appState, _) = makeController()
+        appState.settings.scripts = [script]
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        appState.inputText = "えーと天気"
+
+        let handled = controller.panel.onShortcutKey?("r")
+
+        #expect(handled == true)
+        // Text should be replaced by replacement rules, not by script
+        #expect(appState.inputText == "天気")
+    }
+
+    @Test func customShortcutKeyAppliesReplacementRules() {
+        let (controller, appState, _) = makeController()
+        appState.settings.replacementShortcutKey = "x"
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        appState.inputText = "えーと天気"
+
+        // Ctrl+X should apply replacement rules
+        let handledX = controller.panel.onShortcutKey?("x")
+        #expect(handledX == true)
+        #expect(appState.inputText == "天気")
+
+        // Ctrl+R should NOT apply replacement rules (no longer the shortcut)
+        appState.inputText = "えーと天気"
+        let handledR = controller.panel.onShortcutKey?("r")
+        #expect(handledR == false)
+    }
+
+    @Test func nilShortcutKeyDisablesShortcut() async throws {
+        let scriptPath = try makeScript("echo 'script output'")
+        let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: "r")
+        let (controller, appState, _) = makeController()
+        appState.settings.scripts = [script]
+        appState.settings.replacementShortcutKey = nil
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        appState.inputText = "えーと天気"
+
+        // Ctrl+R should fall through to script (replacement shortcut is nil)
+        let handled = controller.panel.onShortcutKey?("r")
+        #expect(handled == true)
+        await Task.yield()
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(appState.inputText == "script output")
+    }
+
+    @Test func confirmWithAppliesReplacementRulesOffSkipsRules() async {
+        let paster = MockPaster()
+        let (controller, appState, _) = makeController(paster: paster)
+
+        appState.settings.appliesReplacementRulesOnConfirm = false
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "hello", replacement: "bye")
+        )
+
+        controller.showPanel()
+        appState.inputText = "hello world"
+        appState.frontmostApplication = NSRunningApplication.current
+
+        await controller.confirm()
+
+        #expect(paster.pastedTexts == ["hello world"])
     }
 }

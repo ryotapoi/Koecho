@@ -4,6 +4,8 @@ struct InputPanelContent: View {
     @Bindable var appState: AppState
     var onExecuteScript: (Script) async -> Void
     var onCancelPrompt: () -> Void
+    var onApplyReplacementRules: () -> Void = {}
+    var onPromptFocused: () -> Void = {}
 
     private enum FocusField {
         case textEditor
@@ -23,6 +25,21 @@ struct InputPanelContent: View {
                 .onChange(of: appState.inputText) {
                     appState.errorMessage = nil
                 }
+
+            if !appState.settings.replacementRules.isEmpty {
+                HStack {
+                    Button {
+                        onApplyReplacementRules()
+                    } label: {
+                        Label("Replace", systemImage: "arrow.2.squarepath")
+                            .font(.caption)
+                    }
+                    .help(replacementShortcutHelpText)
+                    .disabled(appState.isRunningScript)
+                    Spacer()
+                }
+                .padding(.horizontal, 8)
+            }
 
             if !appState.settings.scripts.isEmpty {
                 scriptButtonBar
@@ -50,6 +67,7 @@ struct InputPanelContent: View {
         .onChange(of: appState.promptScript) {
             if appState.promptScript != nil {
                 focusedField = .prompt
+                onPromptFocused()
             } else {
                 focusedField = .textEditor
             }
@@ -105,6 +123,14 @@ struct InputPanelContent: View {
             .disabled(appState.isRunningScript)
         }
         .padding(.horizontal, 8)
+    }
+
+    private var replacementShortcutHelpText: String {
+        if let key = appState.settings.replacementShortcutKey {
+            "Apply replacement rules (Ctrl+\(key.uppercased()))"
+        } else {
+            "Apply replacement rules"
+        }
     }
 
     private func shortcutHelpText(for script: Script) -> String {
