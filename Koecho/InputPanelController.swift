@@ -11,6 +11,8 @@ final class InputPanelController {
     private let makeScriptRunner: () -> ScriptRunner
     private let historyStore: HistoryStore
     private var isConfirming = false
+    private var shouldStartDictation = false
+    private var dictationRetryWorkItem: DispatchWorkItem?
     private(set) var panel: InputPanel
 
     init(
@@ -43,8 +45,7 @@ final class InputPanelController {
                 guard let self else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
                     guard let self, self.appState.promptScript != nil else { return }
-                    let selector = Selector(("startDictation:"))
-                    NSApp.sendAction(selector, to: nil, from: nil)
+                    self.startDictation()
                 }
             }
         ))
@@ -119,6 +120,7 @@ final class InputPanelController {
         appState.inputText = ""
         appState.errorMessage = nil
         appState.isInputPanelVisible = true
+        shouldStartDictation = true
         panel.makeKeyAndOrderFront(nil)
         clearTextView()
 
@@ -133,13 +135,13 @@ final class InputPanelController {
             textView.string = ""
             self.panel.makeFirstResponder(textView)
 
-            let selector = Selector(("startDictation:"))
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                guard let self, self.appState.isInputPanelVisible else { return }
-                if !NSApp.sendAction(selector, to: nil, from: nil) {
-                    textView.perform(selector, with: nil)
-                }
+            guard self.shouldStartDictation else { return }
+            self.shouldStartDictation = false
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.startDictation()
             }
+            self.dictationRetryWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
         }
     }
 
@@ -162,6 +164,23 @@ final class InputPanelController {
     /// while the text view has focus, so this ensures we get the real text.
     private func readTextViewString() -> String? {
         findTextView(in: panel.contentView)?.string
+    }
+
+    /// Send `startDictation:` once via the responder chain.
+    ///
+    /// Does NOT retry — `startDictation:` acts as a toggle, so re-sending
+    /// while Dictation is active would stop it.
+    private func startDictation() {
+        guard appState.isInputPanelVisible else { return }
+
+        let selector = Selector(("startDictation:"))
+        if !NSApp.sendAction(selector, to: nil, from: nil) {
+            // Fallback: send directly to text view for .nonactivatingPanel
+            if let textView = findTextView(in: panel.contentView) {
+                textView.perform(selector, with: nil)
+            }
+        }
+        logger.debug("startDictation sent")
     }
 
     private func findTextView(in view: NSView?) -> NSTextView? {
@@ -252,6 +271,8 @@ final class InputPanelController {
 
     func confirm() async {
         guard appState.isInputPanelVisible, !isConfirming, !appState.isRunningScript else { return }
+        dictationRetryWorkItem?.cancel()
+        dictationRetryWorkItem = nil
 
         // Read text BEFORE stopping Dictation, because stopDictation()
         // clears the text view to prevent content leaking to foreground app.
@@ -312,6 +333,9 @@ final class InputPanelController {
     }
 
     private func clearState() {
+        shouldStartDictation = false
+        dictationRetryWorkItem?.cancel()
+        dictationRetryWorkItem = nil
         appState.inputText = ""
         appState.isInputPanelVisible = false
         appState.frontmostApplication = nil

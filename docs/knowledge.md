@@ -58,9 +58,11 @@
 
 ## macOS / Dictation (startDictation:)
 
-- `startDictation:` セレクタを `NSApp.sendAction` で送ると responder chain 的には成功する（`true` を返す）が、パネル表示直後だと Dictation が実際には開始されない
+- `startDictation:` セレクタを `NSApp.sendAction` で送ると responder chain 的には成功する（`true` を返す）が、パネル表示直後だと Dictation が実際には開始されない（サイレント失敗）
 - 原因: ウィンドウの表示・first responder 設定が完了した直後はまだ Dictation の受付準備ができていない模様
-- 対策: `DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` で遅延させてから送る。0.3秒で動作確認済み
+- 対策: `makeFirstResponder` 完了後に `DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` で遅延させてから送る。`makeFirstResponder` → 0.3秒 → `startDictation:` の順序が重要。`becomeKey()` トリガーなど `makeFirstResponder` と独立したタイミングで送ると失敗率が上がる
+- `startDictation:` はトグル動作。Dictation がアクティブ中に再送信すると停止してしまうため、リトライは行わない
+- `NSApp.sendAction` が失敗した場合は `textView.perform(startDictation:)` にフォールバック（`.nonactivatingPanel` で responder chain が届かないケース対策）
 
 ## Foundation / NSRegularExpression テンプレート構文
 
@@ -90,7 +92,7 @@
 
 - SwiftUI の `@FocusState` でフォーカスを TextEditor から TextField に移動すると、macOS が Dictation セッションを停止する
 - 例: Prompt ありスクリプト起動時に `focusedField = .prompt` をセットすると、TextEditor で実行中の Dictation が終了する
-- 対策: フォーカス遷移後に `startDictation:` を再送信する。`DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` で遅延が必要（「macOS / Dictation (startDictation:)」セクション参照）
+- 対策: フォーカス遷移後に `startDictation()` を再送信する。`DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` で遅延が必要（「macOS / Dictation (startDictation:)」セクション参照）
 - `InputPanelContent.onPromptFocused` コールバックで `InputPanelController` に通知し、controller 側で Dictation を再起動する構成
 
 ## SwiftUI / contextMenu preview on macOS
