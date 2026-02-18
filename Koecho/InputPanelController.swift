@@ -376,8 +376,8 @@ final class InputPanelController {
 
     private func scriptErrorMessage(for error: any Error, script: Script) -> String {
         switch error {
-        case ScriptRunnerError.scriptNotFound(let path):
-            "Script not found: \(path)"
+        case ScriptRunnerError.emptyScript:
+            "Script command is empty."
         case ScriptRunnerError.timeout:
             "Script '\(script.name)' timed out."
         case ScriptRunnerError.nonZeroExit(let code, let stderr):

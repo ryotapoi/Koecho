@@ -2,7 +2,7 @@ import Foundation
 import os
 
 nonisolated enum ScriptRunnerError: Error, Equatable {
-    case scriptNotFound(path: String)
+    case emptyScript
     case timeout
     case nonZeroExit(code: Int32, stderr: String)
     case emptyOutput
@@ -31,14 +31,18 @@ nonisolated final class ScriptRunner: Sendable {
         self.killDelay = killDelay
     }
 
+    /// Run a shell command, passing `input` via stdin and returning stdout.
+    ///
+    /// `scriptPath` is passed directly to `/bin/sh -c` as a shell command string.
+    /// Do not pass untrusted input as `scriptPath`.
     func run(
         scriptPath: String,
         input: String,
         context: ScriptRunnerContext = ScriptRunnerContext()
     ) async throws -> ScriptRunnerResult {
-        guard FileManager.default.fileExists(atPath: scriptPath) else {
-            logger.error("Script not found: \(scriptPath)")
-            throw ScriptRunnerError.scriptNotFound(path: scriptPath)
+        guard !scriptPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            logger.error("Script command is empty")
+            throw ScriptRunnerError.emptyScript
         }
 
         logger.info("Running script: \(scriptPath)")
@@ -157,7 +161,7 @@ nonisolated final class ScriptRunner: Sendable {
     ) -> Process {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = ["-c", "exec \"$0\"", scriptPath]
+        process.arguments = ["-c", scriptPath]
         process.currentDirectoryURL = FileManager.default.temporaryDirectory
 
         let parentEnv = ProcessInfo.processInfo.environment

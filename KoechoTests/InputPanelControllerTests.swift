@@ -620,11 +620,11 @@ struct InputPanelControllerTests {
         let (controller, appState, _, _) = makeController()
         controller.showPanel()
 
-        // Test scriptNotFound
-        let notFoundScript = Script(name: "Missing", scriptPath: "/nonexistent/script.sh")
+        // Test emptyScript
+        let emptyScriptEntry = Script(name: "Empty", scriptPath: "")
         appState.inputText = "text"
-        await controller.executeScript(notFoundScript)
-        #expect(appState.errorMessage == "Script not found: /nonexistent/script.sh")
+        await controller.executeScript(emptyScriptEntry)
+        #expect(appState.errorMessage == "Script command is empty.")
 
         // Test nonZeroExit with stderr
         let failPath = try makeScript("echo 'err msg' >&2; exit 2")

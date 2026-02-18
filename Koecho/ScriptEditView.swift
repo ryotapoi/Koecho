@@ -8,7 +8,8 @@ struct ScriptEditView: View {
             TextField("Name", text: $script.name)
 
             HStack {
-                TextField("Script Path", text: $script.scriptPath)
+                TextField("Script Command", text: $script.scriptPath)
+                    .help("Shell command to run. You can use arguments, pipes, and redirects. Quote paths with spaces: '/path/to/my script.sh' arg1")
                 Button("Choose...") {
                     chooseFile()
                 }
@@ -45,7 +46,7 @@ struct ScriptEditView: View {
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         if panel.runModal() == .OK, let url = panel.url {
-            script.scriptPath = url.path
+            script.scriptPath = "'\(url.path.replacingOccurrences(of: "'", with: "'\\''"))'"
         }
     }
 }

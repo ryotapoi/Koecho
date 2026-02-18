@@ -105,9 +105,34 @@ nonisolated struct ScriptRunnerTests {
     @Test func scriptNotFound() async throws {
         let runner = ScriptRunner()
 
-        await #expect(throws: ScriptRunnerError.scriptNotFound(path: "/nonexistent/script.sh")) {
+        await #expect {
             try await runner.run(scriptPath: "/nonexistent/script.sh", input: "")
+        } throws: { error in
+            guard let scriptError = error as? ScriptRunnerError,
+                  case .nonZeroExit(let code, let stderr) = scriptError else { return false }
+            return code == 127 && !stderr.isEmpty
         }
+    }
+
+    @Test func emptyScript() async throws {
+        let runner = ScriptRunner()
+
+        await #expect(throws: ScriptRunnerError.emptyScript) {
+            try await runner.run(scriptPath: "", input: "")
+        }
+        await #expect(throws: ScriptRunnerError.emptyScript) {
+            try await runner.run(scriptPath: "   ", input: "")
+        }
+    }
+
+    @Test func scriptWithArguments() async throws {
+        let path = try makeScript("echo \"args: $@\"")
+        defer { try? FileManager.default.removeItem(atPath: path) }
+
+        let runner = ScriptRunner()
+        let result = try await runner.run(scriptPath: "'\(path)' arg1 arg2", input: "")
+
+        #expect(result.output == "args: arg1 arg2")
     }
 
     @Test func nonZeroExitNoStderr() async throws {
@@ -227,8 +252,26 @@ nonisolated struct ScriptRunnerTests {
         defer { try? FileManager.default.removeItem(atPath: path) }
 
         let runner = ScriptRunner()
-        let result = try await runner.run(scriptPath: path, input: "")
+        let result = try await runner.run(scriptPath: "'\(path)'", input: "")
 
         #expect(result.output == "spaces ok")
+    }
+
+    @Test func scriptPathWithSpacesAndArguments() async throws {
+        let dir = FileManager.default.temporaryDirectory
+        let path = dir.appendingPathComponent("koecho test script \(UUID().uuidString).sh").path
+        try ("#!/bin/sh\necho \"args: $@\"").write(
+            toFile: path, atomically: true, encoding: .utf8
+        )
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755],
+            ofItemAtPath: path
+        )
+        defer { try? FileManager.default.removeItem(atPath: path) }
+
+        let runner = ScriptRunner()
+        let result = try await runner.run(scriptPath: "'\(path)' arg1 arg2", input: "")
+
+        #expect(result.output == "args: arg1 arg2")
     }
 }
