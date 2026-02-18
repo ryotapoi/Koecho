@@ -357,4 +357,46 @@ struct SettingsTests {
         #expect(reloaded.appliesReplacementRulesOnConfirm == false)
     }
 
+    // MARK: - History Settings
+
+    @Test func defaultHistorySettings() {
+        let settings = Settings(defaults: makeDefaults())
+
+        #expect(settings.isHistoryEnabled == true)
+        #expect(settings.historyMaxCount == 500)
+        #expect(settings.historyRetentionDays == 30)
+    }
+
+    @Test func persistsHistorySettings() {
+        let defaults = makeDefaults()
+
+        let settings = Settings(defaults: defaults)
+        settings.isHistoryEnabled = false
+        settings.historyMaxCount = 100
+        settings.historyRetentionDays = 7
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.isHistoryEnabled == false)
+        #expect(reloaded.historyMaxCount == 100)
+        #expect(reloaded.historyRetentionDays == 7)
+    }
+
+    @Test func clampsHistoryMaxCount() {
+        let settings = Settings(defaults: makeDefaults())
+        settings.historyMaxCount = 0
+        #expect(settings.historyMaxCount == 1)
+
+        settings.historyMaxCount = -5
+        #expect(settings.historyMaxCount == 1)
+    }
+
+    @Test func clampsHistoryRetentionDays() {
+        let settings = Settings(defaults: makeDefaults())
+        settings.historyRetentionDays = 0
+        #expect(settings.historyRetentionDays == 1)
+
+        settings.historyRetentionDays = -5
+        #expect(settings.historyRetentionDays == 1)
+    }
+
 }

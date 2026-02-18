@@ -93,6 +93,17 @@
 - 対策: フォーカス遷移後に `startDictation:` を再送信する。`DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` で遅延が必要（「macOS / Dictation (startDictation:)」セクション参照）
 - `InputPanelContent.onPromptFocused` コールバックで `InputPanelController` に通知し、controller 側で Dictation を再起動する構成
 
+## SwiftUI / contextMenu preview on macOS
+
+- `contextMenu { } preview: { }` API は macOS ではプレビューを表示しない（iOS のみ）。右クリックすると通常のコンテキストメニューが表示されるだけで、preview クロージャは無視される
+- 対策: 全文表示などのプレビューが必要な場合は、contextMenu のボタンで `@State` を更新し `.popover(isPresented:)` で表示する
+
+## SwiftUI / TextField onChange + 即時パージの罠
+
+- TextField（`.number` フォーマット）の `onChange` で即座にデータ削除（purge 等）を実行すると、入力途中の中間値で発火して意図しない削除が起きる
+- 例: maxCount が 500 のとき、ユーザーが "2" に書き換えようとすると中間値 "5002" や空文字で onChange が発火し、purge が不正な値で実行される
+- 対策: onChange でのリアルタイム purge を避け、データ追加時（add）や起動時に purge を実行する
+
 ## Swift / @MainActor + デフォルト引数
 
 - `@MainActor` クラスの `init` にデフォルト引数で別の `@MainActor` 型のインスタンス生成を書くと、デフォルト引数式は caller の actor isolation を継承しないためコンパイルエラーになる

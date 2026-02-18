@@ -43,6 +43,33 @@ final class Settings {
         }
     }
 
+    private var _isHistoryEnabled: Bool
+    var isHistoryEnabled: Bool {
+        get { _isHistoryEnabled }
+        set {
+            _isHistoryEnabled = newValue
+            save()
+        }
+    }
+
+    private var _historyMaxCount: Int
+    var historyMaxCount: Int {
+        get { _historyMaxCount }
+        set {
+            _historyMaxCount = max(1, newValue)
+            save()
+        }
+    }
+
+    private var _historyRetentionDays: Int
+    var historyRetentionDays: Int {
+        get { _historyRetentionDays }
+        set {
+            _historyRetentionDays = max(1, newValue)
+            save()
+        }
+    }
+
     var scripts: [Script] {
         didSet { save() }
     }
@@ -61,6 +88,10 @@ final class Settings {
         _replacementShortcutKey = savedKey == nil ? "r" : (savedKey!.isEmpty ? nil : savedKey)
 
         _appliesReplacementRulesOnConfirm = defaults.object(forKey: "appliesReplacementRulesOnConfirm") as? Bool ?? true
+
+        _isHistoryEnabled = defaults.object(forKey: "isHistoryEnabled") as? Bool ?? true
+        _historyMaxCount = max(1, defaults.object(forKey: "historyMaxCount") as? Int ?? 500)
+        _historyRetentionDays = max(1, defaults.object(forKey: "historyRetentionDays") as? Int ?? 30)
 
         if let data = defaults.data(forKey: "scripts") {
             do {
@@ -126,6 +157,9 @@ final class Settings {
         defaults.set(_scriptTimeout, forKey: "scriptTimeout")
         defaults.set(replacementShortcutKey ?? "", forKey: "replacementShortcutKey")
         defaults.set(appliesReplacementRulesOnConfirm, forKey: "appliesReplacementRulesOnConfirm")
+        defaults.set(_isHistoryEnabled, forKey: "isHistoryEnabled")
+        defaults.set(_historyMaxCount, forKey: "historyMaxCount")
+        defaults.set(_historyRetentionDays, forKey: "historyRetentionDays")
         do {
             let data = try JSONEncoder().encode(scripts)
             defaults.set(data, forKey: "scripts")

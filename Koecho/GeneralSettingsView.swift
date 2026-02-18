@@ -31,6 +31,11 @@ struct GeneralSettingsView: View {
                         .multilineTextAlignment(.center)
                 }
             }
+            Section("History") {
+                Toggle("Enable History", isOn: $settings.isHistoryEnabled)
+                TextField("Max entries", value: $settings.historyMaxCount, format: .number)
+                TextField("Retention days", value: $settings.historyRetentionDays, format: .number)
+            }
         }
         .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

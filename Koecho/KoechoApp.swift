@@ -6,8 +6,10 @@ import os
 struct KoechoApp: App {
     private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "App")
     @State private var appState = AppState()
+    @State private var historyStore = HistoryStore()
     @State private var panelController: InputPanelController?
     @State private var hotkeyService: HotkeyService?
+    @State private var didPurge = false
 
     init() {
         logger.info("Koecho launched")
@@ -28,10 +30,17 @@ struct KoechoApp: App {
         .environment(appState)
         .onChange(of: appState.isInputPanelVisible, initial: true) {
             startHotkeyService()
+            if !didPurge {
+                didPurge = true
+                historyStore.purge(
+                    maxCount: appState.settings.historyMaxCount,
+                    retentionDays: appState.settings.historyRetentionDays
+                )
+            }
         }
 
         Window("Settings", id: "settings") {
-            SettingsView(settings: appState.settings)
+            SettingsView(settings: appState.settings, historyStore: historyStore)
         }
         .defaultSize(width: 780, height: 460)
     }
@@ -47,7 +56,7 @@ struct KoechoApp: App {
 
     private func togglePanel() {
         let controller = panelController ?? {
-            let c = InputPanelController(appState: appState)
+            let c = InputPanelController(appState: appState, historyStore: historyStore)
             panelController = c
             return c
         }()

@@ -9,6 +9,7 @@ final class InputPanelController {
     private let selectedTextReader: SelectedTextReader
     private let paster: any Pasting
     private let makeScriptRunner: () -> ScriptRunner
+    private let historyStore: HistoryStore
     private var isConfirming = false
     private(set) var panel: InputPanel
 
@@ -16,12 +17,14 @@ final class InputPanelController {
         appState: AppState,
         selectedTextReader: SelectedTextReader,
         paster: any Pasting,
-        makeScriptRunner: @escaping () -> ScriptRunner
+        makeScriptRunner: @escaping () -> ScriptRunner,
+        historyStore: HistoryStore
     ) {
         self.appState = appState
         self.selectedTextReader = selectedTextReader
         self.paster = paster
         self.makeScriptRunner = makeScriptRunner
+        self.historyStore = historyStore
 
         self.panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200))
 
@@ -76,12 +79,13 @@ final class InputPanelController {
         logger.info("InputPanelController initialized")
     }
 
-    convenience init(appState: AppState) {
+    convenience init(appState: AppState, historyStore: HistoryStore) {
         self.init(
             appState: appState,
             selectedTextReader: SelectedTextReader(),
             paster: ClipboardPaster(pasteDelay: appState.settings.pasteDelay),
-            makeScriptRunner: { ScriptRunner(timeout: appState.settings.scriptTimeout) }
+            makeScriptRunner: { ScriptRunner(timeout: appState.settings.scriptTimeout) },
+            historyStore: historyStore
         )
     }
 
@@ -295,6 +299,7 @@ final class InputPanelController {
 
         do {
             try await paster.paste(text: text, to: targetApp, using: .general)
+            historyStore.add(text: text, settings: appState.settings)
             logger.info("Paste completed successfully")
         } catch {
             paster.restoreClipboard()

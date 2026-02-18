@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var settings: Settings
+    let historyStore: HistoryStore
     @State private var selection: SettingsPage = .general
 
     var body: some View {
@@ -20,6 +21,8 @@ struct SettingsView: View {
                 ReplacementRuleManagementView(settings: settings)
             case .scripts:
                 ScriptManagementView(settings: settings)
+            case .history:
+                HistoryView(historyStore: historyStore)
             }
         }
     }
@@ -29,6 +32,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     case general
     case replacementRules
     case scripts
+    case history
 
     var id: String { rawValue }
 
@@ -37,6 +41,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .general: "General"
         case .replacementRules: "Replacement Rules"
         case .scripts: "Scripts"
+        case .history: "History"
         }
     }
 
@@ -45,6 +50,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .general: "gear"
         case .replacementRules: "arrow.2.squarepath"
         case .scripts: "applescript"
+        case .history: "clock.arrow.circlepath"
         }
     }
 }
