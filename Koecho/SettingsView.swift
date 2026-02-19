@@ -17,6 +17,8 @@ struct SettingsView: View {
             switch selection {
             case .general:
                 GeneralSettingsView(settings: settings)
+            case .hotkey:
+                HotkeySettingsView(settings: settings)
             case .replacementRules:
                 ReplacementRuleManagementView(settings: settings)
             case .scripts:
@@ -30,6 +32,7 @@ struct SettingsView: View {
 
 enum SettingsPage: String, CaseIterable, Identifiable {
     case general
+    case hotkey
     case replacementRules
     case scripts
     case history
@@ -39,6 +42,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .general: "General"
+        case .hotkey: "Hotkey"
         case .replacementRules: "Replacement Rules"
         case .scripts: "Scripts"
         case .history: "History"
@@ -48,6 +52,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .general: "gear"
+        case .hotkey: "keyboard"
         case .replacementRules: "arrow.2.squarepath"
         case .scripts: "applescript"
         case .history: "clock.arrow.circlepath"

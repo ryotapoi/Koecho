@@ -4,13 +4,28 @@ import os
 @MainActor
 final class HotkeyService {
     private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "HotkeyService")
-    private var detector = ModifierTapDetector()
+    private(set) var detector: ModifierTapDetector
     private var globalMonitor: Any?
     private var localMonitor: Any?
-    private let onHotkeyActivated: @MainActor () -> Void
+    private var doubleTapTimer: DispatchSourceTimer?
 
-    init(onHotkeyActivated: @escaping @MainActor () -> Void) {
-        self.onHotkeyActivated = onHotkeyActivated
+    private var config: HotkeyConfig
+    private let isPanelVisible: @MainActor () -> Bool
+    private let onSingleTap: @MainActor () -> Void
+    private let onDoubleTap: @MainActor () -> Void
+
+    init(
+        hotkeyConfig: HotkeyConfig,
+        isPanelVisible: @escaping @MainActor () -> Bool,
+        onSingleTap: @escaping @MainActor () -> Void,
+        onDoubleTap: @escaping @MainActor () -> Void
+    ) {
+        self.config = hotkeyConfig
+        self.isPanelVisible = isPanelVisible
+        self.onSingleTap = onSingleTap
+        self.onDoubleTap = onDoubleTap
+        self.detector = ModifierTapDetector()
+        self.detector.targetKeyCode = hotkeyConfig.keyCode
     }
 
     func start() {
@@ -28,7 +43,7 @@ final class HotkeyService {
 
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: eventMask) { [weak self] event in
             self?.handleEvent(event)
-            return event  // Do not consume the event
+            return event
         }
 
         logger.info("Hotkey monitoring started")
@@ -43,7 +58,16 @@ final class HotkeyService {
             NSEvent.removeMonitor(localMonitor)
             self.localMonitor = nil
         }
+        cancelDoubleTapTimer()
         logger.info("Hotkey monitoring stopped")
+    }
+
+    func updateConfig(_ newConfig: HotkeyConfig) {
+        config = newConfig
+        detector.targetKeyCode = newConfig.keyCode
+        detector.state = .idle
+        cancelDoubleTapTimer()
+        logger.info("Hotkey config updated: \(newConfig.modifierKey.rawValue) \(newConfig.side.rawValue) \(newConfig.tapMode.rawValue)")
     }
 
     private nonisolated func handleEvent(_ event: NSEvent) {
@@ -57,26 +81,74 @@ final class HotkeyService {
         }
     }
 
-    private func processEvent(
+    func processEvent(
         type: NSEvent.EventType, keyCode: UInt16,
         flags: NSEvent.ModifierFlags, timestamp: TimeInterval
     ) {
         switch type {
         case .flagsChanged:
-            let targetFlagIsSet = flags.contains(.function)
-            let fired = detector.handleFlagsChanged(
+            let targetFlagIsSet = flags.contains(config.modifierFlag)
+            let tapResult = detector.handleFlagsChanged(
                 keyCode: keyCode, targetFlagIsSet: targetFlagIsSet, now: timestamp
             )
-            if fired {
-                logger.debug("Hotkey tap detected")
-                onHotkeyActivated()
+
+            switch tapResult {
+            case .singleTap:
+                logger.debug("Single tap detected")
+                onSingleTap()
+            case .doubleTap:
+                cancelDoubleTapTimer()
+                logger.debug("Double tap detected")
+                onDoubleTap()
+            case .none:
+                break
+            }
+
+            // If detector entered waitingForSecondTap, decide whether to start timer or expire immediately
+            if tapResult == .none, case .waitingForSecondTap = detector.state, doubleTapTimer == nil {
+                if config.tapMode == .singleToggle || isPanelVisible() {
+                    // No need to wait for double tap — expire immediately
+                    let expireResult = detector.expireDoubleTapWindow()
+                    if expireResult == .singleTap {
+                        logger.debug("Single tap detected (immediate expire)")
+                        onSingleTap()
+                    }
+                } else {
+                    startDoubleTapTimer()
+                }
             }
 
         case .keyDown:
             detector.handleKeyDown()
+            cancelDoubleTapTimer()
 
         default:
             break
         }
+    }
+
+    private func startDoubleTapTimer() {
+        cancelDoubleTapTimer()
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + detector.doubleTapInterval)
+        timer.setEventHandler { [weak self] in
+            self?.handleDoubleTapTimerFired()
+        }
+        doubleTapTimer = timer
+        timer.resume()
+    }
+
+    private func handleDoubleTapTimerFired() {
+        doubleTapTimer = nil
+        let result = detector.expireDoubleTapWindow()
+        if result == .singleTap {
+            logger.debug("Single tap detected (timer expired)")
+            onSingleTap()
+        }
+    }
+
+    private func cancelDoubleTapTimer() {
+        doubleTapTimer?.cancel()
+        doubleTapTimer = nil
     }
 }

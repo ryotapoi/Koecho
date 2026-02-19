@@ -1,34 +1,41 @@
 import Carbon.HIToolbox
 
-/// Detects a single modifier key "tap" (press and quick release).
+enum TapResult: Equatable {
+    case none, singleTap, doubleTap
+}
+
+/// Detects modifier key tap patterns (single tap and double tap).
 ///
-/// Pure state machine — no NSEvent dependency, fully testable.
-/// Feed `flagsChanged` and `keyDown` events; returns `true` when a tap is detected.
+/// Pure state machine — no NSEvent dependency, no timers, fully testable.
+/// Feed `flagsChanged` and `keyDown` events; returns a `TapResult`.
+/// The caller (HotkeyService) manages the double-tap timeout timer
+/// and calls `expireDoubleTapWindow` when it fires.
 struct ModifierTapDetector {
     enum State: Equatable {
         case idle
         case waitingForRelease(pressTime: TimeInterval)
+        case waitingForSecondTap(firstTapTime: TimeInterval)
+        case waitingForSecondRelease(firstTapTime: TimeInterval, pressTime: TimeInterval)
     }
 
     var state: State = .idle
     var maxHoldDuration: TimeInterval = 0.4
+    var doubleTapInterval: TimeInterval = 0.3
 
-    // Target key configuration (changeable for future hotkey settings UI)
-    var targetKeyCode: UInt16 = UInt16(kVK_Function)  // 63
+    var targetKeyCode: UInt16 = UInt16(kVK_Function)
 
     /// Handle a flagsChanged event.
     /// - Parameters:
     ///   - keyCode: The keyCode from the event.
     ///   - targetFlagIsSet: Whether the target modifier flag is currently set.
     ///   - now: Event timestamp (system uptime).
-    /// - Returns: `true` if a tap was detected (fire).
+    /// - Returns: A `TapResult` indicating what was detected.
     mutating func handleFlagsChanged(
         keyCode: UInt16, targetFlagIsSet: Bool, now: TimeInterval
-    ) -> Bool {
+    ) -> TapResult {
         guard keyCode == targetKeyCode else {
-            // Other modifier key pressed — cancel any pending detection
             state = .idle
-            return false
+            return .none
         }
 
         switch state {
@@ -36,18 +43,63 @@ struct ModifierTapDetector {
             if targetFlagIsSet {
                 state = .waitingForRelease(pressTime: now)
             }
-            return false
+            return .none
 
         case .waitingForRelease(let pressTime):
             if targetFlagIsSet {
                 // Duplicate press (e.g. global + local monitor both fire) — ignore
-                return false
+                return .none
             }
             // Released
-            state = .idle
             let elapsed = now - pressTime
-            return elapsed < maxHoldDuration
+            if elapsed < maxHoldDuration {
+                state = .waitingForSecondTap(firstTapTime: now)
+                return .none
+            } else {
+                state = .idle
+                return .none
+            }
+
+        case .waitingForSecondTap(let firstTapTime):
+            if !targetFlagIsSet {
+                // Delayed release from global/local monitor overlap — ignore
+                return .none
+            }
+            // Second press
+            if now - firstTapTime <= doubleTapInterval {
+                state = .waitingForSecondRelease(firstTapTime: firstTapTime, pressTime: now)
+            } else {
+                // Too slow — start a new single tap attempt
+                state = .waitingForRelease(pressTime: now)
+            }
+            return .none
+
+        case .waitingForSecondRelease(_, let pressTime):
+            if targetFlagIsSet {
+                // Duplicate press (global + local) — ignore
+                return .none
+            }
+            // Released
+            let elapsed = now - pressTime
+            if elapsed < maxHoldDuration {
+                state = .idle
+                return .doubleTap
+            } else {
+                // Held too long — double tap failed
+                state = .idle
+                return .none
+            }
         }
+    }
+
+    /// Called by HotkeyService when the double-tap timer expires.
+    /// If still waiting for second tap, returns `.singleTap`.
+    mutating func expireDoubleTapWindow() -> TapResult {
+        if case .waitingForSecondTap = state {
+            state = .idle
+            return .singleTap
+        }
+        return .none
     }
 
     /// Handle a keyDown event. Any key press cancels pending tap detection.

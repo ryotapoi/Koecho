@@ -38,6 +38,9 @@ struct KoechoApp: App {
                 )
             }
         }
+        .onChange(of: appState.settings.hotkeyConfig) { _, newConfig in
+            hotkeyService?.updateConfig(newConfig)
+        }
 
         Window("Settings", id: "settings") {
             SettingsView(settings: appState.settings, historyStore: historyStore)
@@ -47,19 +50,45 @@ struct KoechoApp: App {
 
     private func startHotkeyService() {
         guard hotkeyService == nil else { return }
-        let service = HotkeyService {
-            togglePanel()
-        }
+        let service = HotkeyService(
+            hotkeyConfig: appState.settings.hotkeyConfig,
+            isPanelVisible: { [appState] in appState.isInputPanelVisible },
+            onSingleTap: { handleSingleTap() },
+            onDoubleTap: { handleDoubleTap() }
+        )
         service.start()
         hotkeyService = service
     }
 
+    private func ensurePanelController() -> InputPanelController {
+        if let existing = panelController { return existing }
+        let controller = InputPanelController(appState: appState, historyStore: historyStore)
+        panelController = controller
+        return controller
+    }
+
+    private func handleSingleTap() {
+        switch appState.settings.hotkeyConfig.tapMode {
+        case .singleToggle:
+            togglePanel()
+        case .doubleTapToShow:
+            guard appState.isInputPanelVisible else { return }
+            let controller = ensurePanelController()
+            Task { @MainActor in await controller.confirm() }
+        }
+    }
+
+    private func handleDoubleTap() {
+        let controller = ensurePanelController()
+        if !appState.isInputPanelVisible {
+            controller.showPanel()
+        } else {
+            Task { @MainActor in await controller.confirm() }
+        }
+    }
+
     private func togglePanel() {
-        let controller = panelController ?? {
-            let c = InputPanelController(appState: appState, historyStore: historyStore)
-            panelController = c
-            return c
-        }()
+        let controller = ensurePanelController()
 
         if appState.isInputPanelVisible {
             Task { @MainActor in

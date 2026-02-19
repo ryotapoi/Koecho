@@ -399,4 +399,40 @@ struct SettingsTests {
         #expect(settings.historyRetentionDays == 1)
     }
 
+    // MARK: - Hotkey Config
+
+    @Test func defaultHotkeyConfig() {
+        let settings = Settings(defaults: makeDefaults())
+        #expect(settings.hotkeyConfig == .default)
+        #expect(settings.hotkeyConfig.modifierKey == .fn)
+        #expect(settings.hotkeyConfig.side == .left)
+        #expect(settings.hotkeyConfig.tapMode == .singleToggle)
+    }
+
+    @Test func persistsHotkeyConfig() {
+        let defaults = makeDefaults()
+
+        let settings = Settings(defaults: defaults)
+        settings.hotkeyConfig = HotkeyConfig(modifierKey: .command, side: .right, tapMode: .doubleTapToShow)
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.hotkeyConfig.modifierKey == .command)
+        #expect(reloaded.hotkeyConfig.side == .right)
+        #expect(reloaded.hotkeyConfig.tapMode == .doubleTapToShow)
+    }
+
+    @Test func fnSideCorrectedToLeft() {
+        let settings = Settings(defaults: makeDefaults())
+        settings.hotkeyConfig = HotkeyConfig(modifierKey: .fn, side: .right, tapMode: .singleToggle)
+        #expect(settings.hotkeyConfig.side == .left)
+    }
+
+    @Test func corruptedHotkeyConfigFallsBack() {
+        let defaults = makeDefaults()
+        defaults.set(Data("invalid json".utf8), forKey: "hotkeyConfig")
+
+        let settings = Settings(defaults: defaults)
+        #expect(settings.hotkeyConfig == .default)
+    }
+
 }

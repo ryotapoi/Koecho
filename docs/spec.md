@@ -114,9 +114,35 @@
 ## グローバルホットキー
 
 - NSEvent.addGlobalMonitorForEvents + addLocalMonitorForEvents で modifier key 監視
-- デフォルト: Right Command
-- Task { @MainActor in } でメインスレッドに戻す
-- トグル動作: ウィンドウ表示 ↔ 確定して貼り付け
+- デフォルト: Fn (Globe) キー、シングルタップトグルモード
+- DispatchQueue.main.async でメインスレッドに戻す
+- Settings の Hotkey タブでカスタマイズ可能
+
+### ホットキー設定
+
+| 設定項目 | 選択肢 | デフォルト |
+|---------|--------|-----------|
+| Modifier Key | Command / Shift / Option / Control / Fn | Fn |
+| Side | Left / Right（Fn 選択時は非表示、常に Left） | Left |
+| Tap Mode | Single Toggle / Double Tap to Show | Single Toggle |
+
+### タップモード
+
+**Single Toggle（デフォルト）**
+- 1回目のタップ: パネル表示
+- 2回目のタップ: 確定して貼り付け
+- ダブルタップ判定の遅延なし（即座に反応）
+
+**Double Tap to Show**
+- ダブルタップ: パネル表示（パネル非表示時）/ 確定（パネル表示時）
+- シングルタップ + パネル表示中: 確定して貼り付け（遅延なし）
+- シングルタップ + パネル非表示時: 何もしない（300ms のダブルタップ判定待ち後に破棄）
+- ダブルタップ判定間隔: 300ms（固定）
+
+### 左右の区別
+- keyCode（Carbon kVK_* 定数）で左右を判別
+- NSEvent.ModifierFlags は左右共通のフラグとして使用
+- Fn / Globe キーは左右区別なし（同一 keyCode 63）
 
 ---
 
