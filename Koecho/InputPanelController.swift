@@ -60,15 +60,15 @@ final class InputPanelController {
             }
         }
 
-        panel.onShortcutKey = { [weak self] key in
+        panel.onShortcutKey = { [weak self] shortcut in
             guard let self else { return false }
-            if let rKey = self.appState.settings.replacementShortcutKey,
-               key == rKey,
+            if let rShortcut = self.appState.settings.replacementShortcutKey,
+               shortcut == rShortcut,
                !self.appState.settings.replacementRules.isEmpty {
                 self.applyReplacementRulesNow()
                 return true
             }
-            guard let script = self.appState.settings.scripts.first(where: { $0.shortcutKey == key })
+            guard let script = self.appState.settings.scripts.first(where: { $0.shortcutKey == shortcut })
             else { return false }
             Task { @MainActor in
                 await self.executeScript(script)

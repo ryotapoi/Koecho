@@ -733,7 +733,7 @@ struct InputPanelControllerTests {
         controller.showPanel()
         appState.inputText = "えーと天気"
 
-        let handled = controller.panel.onShortcutKey?("r")
+        let handled = controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "r"))
 
         #expect(handled == true)
         #expect(appState.inputText == "天気")
@@ -741,7 +741,8 @@ struct InputPanelControllerTests {
 
     @Test func shortcutRFallsBackToScriptWhenNoRules() async throws {
         let scriptPath = try makeScript("echo 'script output'")
-        let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: "r")
+        let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
+        let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
         let (controller, appState, _, _) = makeController()
         appState.settings.scripts = [script]
         // No replacement rules — Ctrl+R should fall through to script
@@ -749,7 +750,7 @@ struct InputPanelControllerTests {
         controller.showPanel()
         appState.inputText = "original"
 
-        let handled = controller.panel.onShortcutKey?("r")
+        let handled = controller.panel.onShortcutKey?(ctrlR)
 
         #expect(handled == true)
         // Let the script Task execute
@@ -760,7 +761,8 @@ struct InputPanelControllerTests {
 
     @Test func shortcutRTakesPriorityOverScript() async throws {
         let scriptPath = try makeScript("echo 'script output'")
-        let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: "r")
+        let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
+        let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
         let (controller, appState, _, _) = makeController()
         appState.settings.scripts = [script]
         appState.settings.addReplacementRule(
@@ -770,7 +772,7 @@ struct InputPanelControllerTests {
         controller.showPanel()
         appState.inputText = "えーと天気"
 
-        let handled = controller.panel.onShortcutKey?("r")
+        let handled = controller.panel.onShortcutKey?(ctrlR)
 
         #expect(handled == true)
         // Text should be replaced by replacement rules, not by script
@@ -779,7 +781,7 @@ struct InputPanelControllerTests {
 
     @Test func customShortcutKeyAppliesReplacementRules() {
         let (controller, appState, _, _) = makeController()
-        appState.settings.replacementShortcutKey = "x"
+        appState.settings.replacementShortcutKey = ShortcutKey(modifiers: [.control], character: "x")
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
@@ -788,19 +790,20 @@ struct InputPanelControllerTests {
         appState.inputText = "えーと天気"
 
         // Ctrl+X should apply replacement rules
-        let handledX = controller.panel.onShortcutKey?("x")
+        let handledX = controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "x"))
         #expect(handledX == true)
         #expect(appState.inputText == "天気")
 
         // Ctrl+R should NOT apply replacement rules (no longer the shortcut)
         appState.inputText = "えーと天気"
-        let handledR = controller.panel.onShortcutKey?("r")
+        let handledR = controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "r"))
         #expect(handledR == false)
     }
 
     @Test func nilShortcutKeyDisablesShortcut() async throws {
         let scriptPath = try makeScript("echo 'script output'")
-        let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: "r")
+        let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
+        let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
         let (controller, appState, _, _) = makeController()
         appState.settings.scripts = [script]
         appState.settings.replacementShortcutKey = nil
@@ -812,11 +815,45 @@ struct InputPanelControllerTests {
         appState.inputText = "えーと天気"
 
         // Ctrl+R should fall through to script (replacement shortcut is nil)
-        let handled = controller.panel.onShortcutKey?("r")
+        let handled = controller.panel.onShortcutKey?(ctrlR)
         #expect(handled == true)
         await Task.yield()
         try await Task.sleep(for: .milliseconds(500))
         #expect(appState.inputText == "script output")
+    }
+
+    @Test func cmdShiftShortcutExecutesScript() async throws {
+        let scriptPath = try makeScript("echo 'cmd-shift output'")
+        let cmdShiftC = ShortcutKey(modifiers: [.command, .shift], character: "c")
+        let script = Script(name: "CmdShift", scriptPath: scriptPath, shortcutKey: cmdShiftC)
+        let (controller, appState, _, _) = makeController()
+        appState.settings.scripts = [script]
+
+        controller.showPanel()
+        appState.inputText = "original"
+
+        let handled = controller.panel.onShortcutKey?(cmdShiftC)
+
+        #expect(handled == true)
+        await Task.yield()
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(appState.inputText == "cmd-shift output")
+    }
+
+    @Test func modifierMismatchDoesNotExecuteScript() {
+        let cmdC = ShortcutKey(modifiers: [.command], character: "c")
+        let cmdShiftC = ShortcutKey(modifiers: [.command, .shift], character: "c")
+        let script = Script(name: "CmdC", scriptPath: "/bin/echo", shortcutKey: cmdC)
+        let (controller, appState, _, _) = makeController()
+        appState.settings.scripts = [script]
+
+        controller.showPanel()
+        appState.inputText = "original"
+
+        // Cmd+Shift+C should NOT match Cmd+C
+        let handled = controller.panel.onShortcutKey?(cmdShiftC)
+        #expect(handled == false)
+        #expect(appState.inputText == "original")
     }
 
     @Test func confirmWithAppliesReplacementRulesOffSkipsRules() async {

@@ -34,7 +34,7 @@ struct SettingsTests {
         let script = Script(
             name: "Test Script",
             scriptPath: "/usr/local/bin/test.sh",
-            shortcutKey: "1",
+            shortcutKey: ShortcutKey(modifiers: [.control], character: "1"),
             requiresPrompt: true
         )
 
@@ -47,7 +47,7 @@ struct SettingsTests {
         #expect(loaded.id == script.id)
         #expect(loaded.name == "Test Script")
         #expect(loaded.scriptPath == "/usr/local/bin/test.sh")
-        #expect(loaded.shortcutKey == "1")
+        #expect(loaded.shortcutKey == ShortcutKey(modifiers: [.control], character: "1"))
         #expect(loaded.requiresPrompt == true)
     }
 
@@ -319,7 +319,7 @@ struct SettingsTests {
 
     @Test func defaultReplacementShortcutKey() {
         let settings = Settings(defaults: makeDefaults())
-        #expect(settings.replacementShortcutKey == "r")
+        #expect(settings.replacementShortcutKey == ShortcutKey(modifiers: [.control], character: "r"))
     }
 
     @Test func defaultAppliesReplacementRulesOnConfirm() {
@@ -331,10 +331,10 @@ struct SettingsTests {
         let defaults = makeDefaults()
 
         let settings = Settings(defaults: defaults)
-        settings.replacementShortcutKey = "x"
+        settings.replacementShortcutKey = ShortcutKey(modifiers: [.command], character: "x")
 
         let reloaded = Settings(defaults: defaults)
-        #expect(reloaded.replacementShortcutKey == "x")
+        #expect(reloaded.replacementShortcutKey == ShortcutKey(modifiers: [.command], character: "x"))
     }
 
     @Test func persistsNilReplacementShortcutKey() {

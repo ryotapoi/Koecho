@@ -2,7 +2,7 @@ import AppKit
 
 final class InputPanel: NSPanel {
     var onEscape: (() -> Void)?
-    var onShortcutKey: ((String) -> Bool)?
+    var onShortcutKey: ((ShortcutKey) -> Bool)?
 
     init(contentRect: NSRect) {
         super.init(
@@ -33,12 +33,19 @@ final class InputPanel: NSPanel {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if event.modifierFlags.contains(.control),
-           let characters = event.charactersIgnoringModifiers,
-           !characters.isEmpty,
-           onShortcutKey?(characters) == true {
-            return true
+        guard let characters = event.charactersIgnoringModifiers?.lowercased(),
+              !characters.isEmpty,
+              ShortcutKey.isPrintableASCII(characters) else {
+            return super.performKeyEquivalent(with: event)
         }
+
+        let mods = ShortcutKey.modifiers(from: event.modifierFlags)
+        guard ShortcutKey.hasRequiredModifier(mods) else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        let shortcut = ShortcutKey(modifiers: mods, character: characters)
+        if onShortcutKey?(shortcut) == true { return true }
         return super.performKeyEquivalent(with: event)
     }
 }

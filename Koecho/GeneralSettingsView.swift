@@ -3,16 +3,6 @@ import SwiftUI
 struct GeneralSettingsView: View {
     @Bindable var settings: Settings
 
-    private var replacementShortcutKeyBinding: Binding<String> {
-        Binding(
-            get: { settings.replacementShortcutKey ?? "" },
-            set: { newValue in
-                let trimmed = String(newValue.prefix(1)).lowercased()
-                settings.replacementShortcutKey = trimmed.isEmpty ? nil : trimmed
-            }
-        )
-    }
-
     var body: some View {
         Form {
             Section("Clipboard") {
@@ -23,12 +13,16 @@ struct GeneralSettingsView: View {
             }
             Section("Replacement Rules") {
                 Toggle("Apply on confirm", isOn: $settings.appliesReplacementRulesOnConfirm)
-                HStack {
-                    Text("Shortcut key")
-                    Spacer()
-                    TextField("Key", text: replacementShortcutKeyBinding)
-                        .frame(width: 40)
-                        .multilineTextAlignment(.center)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Shortcut key")
+                        Spacer()
+                        ShortcutKeyRecorder(shortcutKey: $settings.replacementShortcutKey)
+                            .frame(width: 120)
+                    }
+                    Text("Avoid shortcuts used by other apps or the system")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             Section("History") {

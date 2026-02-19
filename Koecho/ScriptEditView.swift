@@ -15,29 +15,22 @@ struct ScriptEditView: View {
                 }
             }
 
-            TextField(
-                "Shortcut Key (Ctrl+)",
-                text: shortcutKeyBinding
-            )
-            .help("Single character, used as Ctrl+<key>")
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Shortcut Key")
+                    Spacer()
+                    ShortcutKeyRecorder(shortcutKey: $script.shortcutKey)
+                        .frame(width: 120)
+                }
+                Text("Avoid shortcuts used by other apps or the system")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             Toggle("Requires Prompt", isOn: $script.requiresPrompt)
         }
         .formStyle(.grouped)
         .frame(maxHeight: .infinity, alignment: .top)
-    }
-
-    private var shortcutKeyBinding: Binding<String> {
-        Binding(
-            get: { script.shortcutKey ?? "" },
-            set: { newValue in
-                if newValue.isEmpty {
-                    script.shortcutKey = nil
-                } else {
-                    script.shortcutKey = String(newValue.suffix(1))
-                }
-            }
-        )
     }
 
     private func chooseFile() {

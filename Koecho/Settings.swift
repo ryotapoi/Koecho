@@ -25,8 +25,8 @@ final class Settings {
         }
     }
 
-    private var _replacementShortcutKey: String?
-    var replacementShortcutKey: String? {
+    private var _replacementShortcutKey: ShortcutKey?
+    var replacementShortcutKey: ShortcutKey? {
         get { _replacementShortcutKey }
         set {
             _replacementShortcutKey = newValue
@@ -97,8 +97,19 @@ final class Settings {
         _pasteDelay = max(0, defaults.object(forKey: "pasteDelay") as? TimeInterval ?? 2.0)
         _scriptTimeout = max(1, defaults.object(forKey: "scriptTimeout") as? TimeInterval ?? 30.0)
 
-        let savedKey = defaults.object(forKey: "replacementShortcutKey") as? String
-        _replacementShortcutKey = savedKey == nil ? "r" : (savedKey!.isEmpty ? nil : savedKey)
+        defaults.removeObject(forKey: "replacementShortcutKey")
+        if let data = defaults.data(forKey: "replacementShortcut") {
+            if data.isEmpty {
+                _replacementShortcutKey = nil
+            } else if let decoded = try? JSONDecoder().decode(ShortcutKey.self, from: data) {
+                _replacementShortcutKey = decoded
+            } else {
+                logger.warning("Failed to decode replacementShortcut, using default")
+                _replacementShortcutKey = ShortcutKey(modifiers: [.control], character: "r")
+            }
+        } else {
+            _replacementShortcutKey = ShortcutKey(modifiers: [.control], character: "r")
+        }
 
         _appliesReplacementRulesOnConfirm = defaults.object(forKey: "appliesReplacementRulesOnConfirm") as? Bool ?? true
 
@@ -179,7 +190,11 @@ final class Settings {
     private func save() {
         defaults.set(_pasteDelay, forKey: "pasteDelay")
         defaults.set(_scriptTimeout, forKey: "scriptTimeout")
-        defaults.set(replacementShortcutKey ?? "", forKey: "replacementShortcutKey")
+        if let shortcut = _replacementShortcutKey {
+            defaults.set(try? JSONEncoder().encode(shortcut), forKey: "replacementShortcut")
+        } else {
+            defaults.set(Data(), forKey: "replacementShortcut")
+        }
         defaults.set(appliesReplacementRulesOnConfirm, forKey: "appliesReplacementRulesOnConfirm")
         defaults.set(_isHistoryEnabled, forKey: "isHistoryEnabled")
         defaults.set(_historyMaxCount, forKey: "historyMaxCount")

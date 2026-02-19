@@ -126,16 +126,16 @@ struct InputPanelContent: View {
     }
 
     private var replacementShortcutHelpText: String {
-        if let key = appState.settings.replacementShortcutKey {
-            "Apply replacement rules (Ctrl+\(key.uppercased()))"
+        if let shortcut = appState.settings.replacementShortcutKey {
+            "Apply replacement rules (\(shortcut.displayName))"
         } else {
             "Apply replacement rules"
         }
     }
 
     private func shortcutHelpText(for script: Script) -> String {
-        if let key = script.shortcutKey {
-            "\(script.name) (Ctrl+\(key))"
+        if let shortcut = script.shortcutKey {
+            "\(script.name) (\(shortcut.displayName))"
         } else {
             script.name
         }
