@@ -7,43 +7,44 @@ struct InputPanelContent: View {
     var onApplyReplacementRules: () -> Void = {}
     var onPromptFocused: () -> Void = {}
     var onAddReplacementRule: (ReplacementRule) -> Void = { _ in }
+    var onTextChanged: (String) -> Void = { _ in }
+    var onTextCommitted: () -> Void = {}
+    var onTextViewCreated: (DictationTextView) -> Void = { _ in }
+    var onFocusTextEditor: () -> Void = {}
 
-    private enum FocusField {
-        case textEditor
-        case prompt
-    }
-
-    @FocusState private var focusedField: FocusField?
+    @FocusState private var isPromptFocused: Bool
 
     var body: some View {
         VStack(spacing: 4) {
-            TextEditor(text: $appState.inputText)
-                .focused($focusedField, equals: .textEditor)
-                .font(.body)
-                .scrollContentBackground(.hidden)
-                .frame(minHeight: 60, maxHeight: 300)
-                .disabled(appState.isRunningScript)
-                .onChange(of: appState.inputText) {
-                    appState.errorMessage = nil
-                }
-                .popover(
-                    isPresented: Binding(
-                        get: { appState.pendingReplacementPattern != nil },
-                        set: { if !$0 { appState.pendingReplacementPattern = nil } }
+            DictationTextEditor(
+                text: appState.inputText,
+                isDisabled: appState.isRunningScript,
+                onTextChanged: onTextChanged,
+                onTextCommitted: onTextCommitted,
+                onAddReplacementRule: { pattern in
+                    appState.pendingReplacementPattern = pattern
+                },
+                onViewCreated: onTextViewCreated
+            )
+            .frame(minHeight: 60, maxHeight: 300)
+            .popover(
+                isPresented: Binding(
+                    get: { appState.pendingReplacementPattern != nil },
+                    set: { if !$0 { appState.pendingReplacementPattern = nil } }
+                )
+            ) {
+                if let pattern = appState.pendingReplacementPattern {
+                    AddReplacementRuleView(
+                        pattern: pattern,
+                        onAdd: { rule in
+                            onAddReplacementRule(rule)
+                        },
+                        onCancel: {
+                            appState.pendingReplacementPattern = nil
+                        }
                     )
-                ) {
-                    if let pattern = appState.pendingReplacementPattern {
-                        AddReplacementRuleView(
-                            pattern: pattern,
-                            onAdd: { rule in
-                                onAddReplacementRule(rule)
-                            },
-                            onCancel: {
-                                appState.pendingReplacementPattern = nil
-                            }
-                        )
-                    }
                 }
+            }
 
             if !appState.settings.replacementRules.isEmpty {
                 HStack {
@@ -78,17 +79,13 @@ struct InputPanelContent: View {
         }
         .frame(minWidth: 300, maxWidth: 300)
         .background(.ultraThinMaterial)
-        .onChange(of: appState.isInputPanelVisible) {
-            if appState.isInputPanelVisible {
-                focusedField = .textEditor
-            }
-        }
         .onChange(of: appState.promptScript) {
             if appState.promptScript != nil {
-                focusedField = .prompt
+                isPromptFocused = true
                 onPromptFocused()
             } else {
-                focusedField = .textEditor
+                isPromptFocused = false
+                onFocusTextEditor()
             }
         }
     }
@@ -114,7 +111,7 @@ struct InputPanelContent: View {
     private var promptInputView: some View {
         HStack(spacing: 4) {
             TextField("Prompt", text: $appState.promptText)
-                .focused($focusedField, equals: .prompt)
+                .focused($isPromptFocused)
                 .textFieldStyle(.roundedBorder)
                 .font(.caption)
                 .onSubmit {

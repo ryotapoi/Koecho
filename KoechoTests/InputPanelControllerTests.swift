@@ -229,7 +229,7 @@ struct InputPanelControllerTests {
         #expect(appState.isInputPanelVisible == true)
     }
 
-    @Test func cancelDuringConfirmIsIgnored() async {
+    @Test func cancelDuringConfirmIsIgnored() async throws {
         let paster = MockPaster()
         let (controller, appState, _, _) = makeController(paster: paster)
 
@@ -247,8 +247,9 @@ struct InputPanelControllerTests {
         let confirmTask = Task { @MainActor in
             await controller.confirm()
         }
-        // Yield to let confirmTask start and reach the onPaste suspension
-        await Task.yield()
+        // Wait for confirmTask to progress past stopDictation() (100ms sleep)
+        // and reach the onPaste suspension point
+        try await Task.sleep(for: .milliseconds(200))
 
         // Panel should be hidden (confirm hides it before paste) but isConfirming is true
         // cancel() should be ignored because isConfirming is true

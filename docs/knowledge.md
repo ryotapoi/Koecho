@@ -32,12 +32,15 @@
 - `pasteDelay` / `scriptTimeout` は computed property + backing store パターンに移行済み（値クランプのため）。`init` では backing store に直接代入し `didSet` 問題を回避している
 - Swift バージョンアップ時に `@Observable` マクロの挙動が変わると壊れうるので、テストが通ることを確認する
 
-## macOS / NSPanel + SwiftUI TextEditor
+## macOS / DictationTextView + NSViewRepresentable
 
-- NSPanel を `orderOut` で非表示にした後、SwiftUI の `@Observable` バインディング経由で `inputText = ""` をセットしても、内部の NSTextView のテキストストレージに反映されないことがある。パネルが非表示の間、SwiftUI のビュー更新が遅延されるため
-- 対策: `showPanel()` 時に `findTextView(in:)` でビュー階層から NSTextView を直接見つけて `textView.string = ""` でクリアする
-- 初回表示では `makeKeyAndOrderFront` 直後に NSHostingView のレイアウトがまだ完了しておらず NSTextView が見つからない。`DispatchQueue.main.async` で次の RunLoop サイクルまで遅延させる必要がある
-- `@FocusState` の `onAppear` は NSPanel の show/hide サイクルで再発火しない。`onChange(of: isVisible)` を使うか、`panel.makeFirstResponder(textView)` で直接セットする
+- SwiftUI TextEditor の内部 NSTextView にアクセスする脆弱なハック（`findTextView(in:)`、isa-swizzling）を廃止し、DictationTextView（NSTextView サブクラス）+ DictationTextEditor（NSViewRepresentable）に置き換え済み（ADR 0010）
+- テキスト同期はコールバック方式。`didChangeText()` → `onTextChanged` で外向き同期、`updateNSView` で内向き同期。SwiftUI Binding は使わない
+- `didChangeText()` は `insertText` から内部的に呼ばれるので、`onTextChanged` は `didChangeText` のみで発火させる。`insertText` では `onTextCommitted`（Dictation 確定シグナル）のみ発火
+- フィードバックループ防止: `DictationTextView.isSuppressingCallbacks` フラグ。コントローラから `textView.string` を直接変更する箇所（clearTextView, stopDictation, applyReplacementRulesNow）すべてで true/false をセットする
+- `updateNSView` でも `isSuppressingCallbacks` をチェックし、`hasMarkedText()` ガードと合わせて Dictation 中の上書きを防止
+- 初回表示では `makeNSView` → `onViewCreated` で textView 参照を取得するが、`makeKeyAndOrderFront` 直後はまだ SwiftUI レイアウトが完了しておらず textView が nil の場合がある。nil なら `DispatchQueue.main.async` で 1 サイクル遅延
+- `@FocusState` は prompt TextField のみに使用。TextEditor 側のフォーカスは `panel.makeFirstResponder(textView)` で直接管理
 
 ## macOS / NSPanel + Escape キー
 
@@ -85,7 +88,7 @@
   - `NSTextStorage.didProcessEditingNotification` → 発火しない
   - ポーリングで `NSTextView.string` を読む → 未確定テキストが反映されていないので変化なし
 - 変更が検知される条件: フォーカスを外す、音声入力を停止する、キーボード入力する、カーソル移動する（いずれも marked text が確定されるタイミング）
-- 対策（将来）: NSTextView サブクラスを自作し `setMarkedText`/`insertText`/`unmarkText` を override してテキスト確定タイミングをフック。確定直後に置換ルールを適用する
+- 対策（将来）: DictationTextView サブクラスの `insertText` override で `onTextCommitted` を発火済み。`setMarkedText`/`unmarkText` の override を追加し、確定直後に置換ルールを自動適用する
 - 対策（現行）: リアルタイム自動置換は断念。confirm 時の自動適用 + Ctrl+R / Replace ボタンによる手動トリガーで対応
 
 ## macOS / Dictation + フォーカス遷移
@@ -106,14 +109,11 @@
 - 例: maxCount が 500 のとき、ユーザーが "2" に書き換えようとすると中間値 "5002" や空文字で onChange が発火し、purge が不正な値で実行される
 - 対策: onChange でのリアルタイム purge を避け、データ追加時（add）や起動時に purge を実行する
 
-## macOS / NSTextView context menu in SwiftUI TextEditor
+## macOS / NSTextView context menu
 
-- SwiftUI の `.contextMenu {}` は NSTextView の標準メニュー（Cut/Copy/Paste 等）をすべて置き換えてしまうため使えない
-- 対策: `object_setClass` で NSTextView の動的サブクラスを作成し、`menu(for:)` を override して標準メニューにカスタムアイテムを追加する（isa-swizzling パターン）
-- `objc_setAssociatedObject` で controller への参照を NSTextView に格納（`OBJC_ASSOCIATION_ASSIGN`）。controller は NSTextView より長生きする前提
-- 重複防止: `NSStringFromClass(type(of: textView)).hasPrefix("Koecho_")` で既にサブクラス化済みならスキップ
-- SwiftUI TextEditor 内部の NSTextView クラスは Apple のアップデートで変更される場合がある（`findTextView(in:)` と同じリスク）
-- T2（NSTextView サブクラス化）実装時にこの isa-swizzling は不要になる。T2 のリファクタ対象として記録
+- DictationTextView サブクラスで `menu(for:)` を override し、標準メニュー + カスタムアイテム（「Add Replacement Rule…」）を追加
+- 選択テキストがない場合はカスタムアイテムを追加しない（`selectedRange().length > 0` でガード）
+- テスト時に `super.menu(for:)` を呼ぶとプロセスクラッシュが発生する場合がある。メニューアクションのテストはセレクタの直接呼び出し（`perform(Selector(("addReplacementRuleFromMenu:")))`) で行う
 
 ## Swift / @MainActor + デフォルト引数
 
