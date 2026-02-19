@@ -66,6 +66,10 @@ final class InputPanelController {
             }
         ))
         panel.contentView = hostingView
+        // Force SwiftUI layout so makeNSView runs and textView is created
+        // before the first showPanel() call. This ensures textView is always
+        // in the window hierarchy when clearTextView() runs.
+        hostingView.layoutSubtreeIfNeeded()
 
         panel.onEscape = { [weak self] in
             guard let self else { return }
@@ -144,9 +148,9 @@ final class InputPanelController {
     }
 
     private func clearTextView() {
-        // onViewCreated is called in makeNSView, which may not have completed
-        // layout yet on first show. Dispatch to next RunLoop cycle.
-        if let textView {
+        // layoutSubtreeIfNeeded in init ensures textView is always available
+        // and in the window hierarchy. Fallback to async for safety.
+        if let textView, textView.window != nil {
             textView.isSuppressingCallbacks = true
             textView.string = ""
             textView.isSuppressingCallbacks = false
@@ -158,7 +162,9 @@ final class InputPanelController {
                 textView.isSuppressingCallbacks = true
                 textView.string = ""
                 textView.isSuppressingCallbacks = false
-                self.panel.makeFirstResponder(textView)
+                if textView.window != nil {
+                    self.panel.makeFirstResponder(textView)
+                }
                 self.scheduleDictation()
             }
         }
@@ -188,6 +194,13 @@ final class InputPanelController {
 
     private func startDictation() {
         guard appState.isInputPanelVisible else { return }
+
+        // Ensure textView is first responder before starting Dictation.
+        // On first show, clearTextView may have skipped makeFirstResponder
+        // because textView was not yet in the window hierarchy.
+        if let textView, panel.firstResponder !== textView {
+            panel.makeFirstResponder(textView)
+        }
 
         let selector = Selector(("startDictation:"))
         if !NSApp.sendAction(selector, to: nil, from: nil) {
