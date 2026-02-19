@@ -6,6 +6,7 @@ struct InputPanelContent: View {
     var onCancelPrompt: () -> Void
     var onApplyReplacementRules: () -> Void = {}
     var onPromptFocused: () -> Void = {}
+    var onAddReplacementRule: (ReplacementRule) -> Void = { _ in }
 
     private enum FocusField {
         case textEditor
@@ -24,6 +25,24 @@ struct InputPanelContent: View {
                 .disabled(appState.isRunningScript)
                 .onChange(of: appState.inputText) {
                     appState.errorMessage = nil
+                }
+                .popover(
+                    isPresented: Binding(
+                        get: { appState.pendingReplacementPattern != nil },
+                        set: { if !$0 { appState.pendingReplacementPattern = nil } }
+                    )
+                ) {
+                    if let pattern = appState.pendingReplacementPattern {
+                        AddReplacementRuleView(
+                            pattern: pattern,
+                            onAdd: { rule in
+                                onAddReplacementRule(rule)
+                            },
+                            onCancel: {
+                                appState.pendingReplacementPattern = nil
+                            }
+                        )
+                    }
                 }
 
             if !appState.settings.replacementRules.isEmpty {

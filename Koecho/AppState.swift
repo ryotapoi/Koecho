@@ -17,6 +17,7 @@ final class AppState {
     var selectedText: String = ""
     var selectionStart: String = ""
     var selectionEnd: String = ""
+    var pendingReplacementPattern: String?
 
     init(settings: Settings) {
         self.settings = settings

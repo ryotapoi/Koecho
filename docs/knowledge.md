@@ -106,6 +106,15 @@
 - 例: maxCount が 500 のとき、ユーザーが "2" に書き換えようとすると中間値 "5002" や空文字で onChange が発火し、purge が不正な値で実行される
 - 対策: onChange でのリアルタイム purge を避け、データ追加時（add）や起動時に purge を実行する
 
+## macOS / NSTextView context menu in SwiftUI TextEditor
+
+- SwiftUI の `.contextMenu {}` は NSTextView の標準メニュー（Cut/Copy/Paste 等）をすべて置き換えてしまうため使えない
+- 対策: `object_setClass` で NSTextView の動的サブクラスを作成し、`menu(for:)` を override して標準メニューにカスタムアイテムを追加する（isa-swizzling パターン）
+- `objc_setAssociatedObject` で controller への参照を NSTextView に格納（`OBJC_ASSOCIATION_ASSIGN`）。controller は NSTextView より長生きする前提
+- 重複防止: `NSStringFromClass(type(of: textView)).hasPrefix("Koecho_")` で既にサブクラス化済みならスキップ
+- SwiftUI TextEditor 内部の NSTextView クラスは Apple のアップデートで変更される場合がある（`findTextView(in:)` と同じリスク）
+- T2（NSTextView サブクラス化）実装時にこの isa-swizzling は不要になる。T2 のリファクタ対象として記録
+
 ## Swift / @MainActor + デフォルト引数
 
 - `@MainActor` クラスの `init` にデフォルト引数で別の `@MainActor` 型のインスタンス生成を書くと、デフォルト引数式は caller の actor isolation を継承しないためコンパイルエラーになる

@@ -949,4 +949,51 @@ struct InputPanelControllerTests {
 
         #expect(historyStore.entries.isEmpty)
     }
+
+    // MARK: - Add Replacement Rule from Context Menu
+
+    @Test func addReplacementRuleSavesAndApplies() {
+        let (controller, appState, _, _) = makeController()
+
+        controller.showPanel()
+        appState.inputText = "hello world hello"
+
+        let rule = ReplacementRule(pattern: "hello", replacement: "hi")
+        controller.addReplacementRule(rule)
+
+        #expect(appState.settings.replacementRules.count == 1)
+        #expect(appState.settings.replacementRules[0].pattern == "hello")
+        #expect(appState.settings.replacementRules[0].replacement == "hi")
+        #expect(appState.inputText == "hi world hi")
+        #expect(appState.pendingReplacementPattern == nil)
+    }
+
+    @Test func cancelClearsPendingReplacementPattern() {
+        let (controller, appState, _, _) = makeController()
+
+        controller.showPanel()
+        appState.pendingReplacementPattern = "test"
+
+        controller.cancel()
+
+        #expect(appState.pendingReplacementPattern == nil)
+    }
+
+    @Test func addReplacementRuleAppliesAllRules() {
+        let (controller, appState, _, _) = makeController()
+
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "world", replacement: "earth")
+        )
+
+        controller.showPanel()
+        appState.inputText = "hello world"
+
+        let newRule = ReplacementRule(pattern: "hello", replacement: "hi")
+        controller.addReplacementRule(newRule)
+
+        // Both existing and new rules should be applied
+        #expect(appState.settings.replacementRules.count == 2)
+        #expect(appState.inputText == "hi earth")
+    }
 }

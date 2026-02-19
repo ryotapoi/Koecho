@@ -1,4 +1,5 @@
 import AppKit
+import ObjectiveC
 import os
 import SwiftUI
 
@@ -47,6 +48,9 @@ final class InputPanelController {
                     guard let self, self.appState.promptScript != nil else { return }
                     self.startDictation()
                 }
+            },
+            onAddReplacementRule: { [weak self] rule in
+                self?.addReplacementRule(rule)
             }
         ))
         panel.contentView = hostingView
@@ -133,6 +137,7 @@ final class InputPanelController {
         DispatchQueue.main.async { [weak self] in
             guard let self, let textView = self.findTextView(in: self.panel.contentView) else { return }
             textView.string = ""
+            self.setupTextViewContextMenu(textView)
             self.panel.makeFirstResponder(textView)
 
             guard self.shouldStartDictation else { return }
@@ -346,6 +351,7 @@ final class InputPanelController {
         appState.isRunningScript = false
         appState.promptScript = nil
         appState.promptText = ""
+        appState.pendingReplacementPattern = nil
     }
 
     func cancel() {
@@ -387,5 +393,80 @@ final class InputPanelController {
         default:
             String(describing: error)
         }
+    }
+
+    // MARK: - Context Menu
+
+    private static var controllerKey: UInt8 = 0
+
+    private func setupTextViewContextMenu(_ textView: NSTextView) {
+        let className = NSStringFromClass(type(of: textView))
+        guard !className.hasPrefix("Koecho_") else { return }
+
+        objc_setAssociatedObject(
+            textView,
+            &Self.controllerKey,
+            self,
+            .OBJC_ASSOCIATION_ASSIGN
+        )
+
+        let originalClass: AnyClass = type(of: textView)
+        let subclassName = "Koecho_\(className)"
+
+        if let subclass = objc_allocateClassPair(originalClass, subclassName, 0) {
+            let menuSelector = #selector(NSView.menu(for:))
+            let menuMethod = class_getInstanceMethod(originalClass, menuSelector)!
+            let menuTypes = method_getTypeEncoding(menuMethod)
+
+            let block: @convention(block) (NSTextView, NSEvent) -> NSMenu? = { textView, event in
+                let original = unsafeBitCast(
+                    class_getMethodImplementation(originalClass, menuSelector),
+                    to: (@convention(c) (NSTextView, Selector, NSEvent) -> NSMenu?).self
+                )
+                let menu = original(textView, menuSelector, event)
+
+                guard textView.selectedRange().length > 0 else { return menu }
+
+                menu?.addItem(.separator())
+                let item = NSMenuItem(
+                    title: "Add Replacement Rule…",
+                    action: #selector(InputPanelController.addReplacementRuleFromMenu(_:)),
+                    keyEquivalent: ""
+                )
+                let controller = objc_getAssociatedObject(textView, &InputPanelController.controllerKey)
+                item.target = controller as AnyObject?
+                menu?.addItem(item)
+
+                return menu
+            }
+            let imp = imp_implementationWithBlock(block as Any)
+            class_addMethod(subclass, menuSelector, imp, menuTypes)
+            objc_registerClassPair(subclass)
+            object_setClass(textView, subclass)
+        } else if let existingSubclass = objc_lookUpClass(subclassName) {
+            object_setClass(textView, existingSubclass)
+        } else {
+            logger.warning("Failed to create dynamic subclass for NSTextView")
+            return
+        }
+
+        logger.debug("Set up context menu for NSTextView")
+    }
+
+    @objc func addReplacementRuleFromMenu(_ sender: Any?) {
+        guard let textView = findTextView(in: panel.contentView) else { return }
+        let range = textView.selectedRange()
+        guard range.length > 0,
+              let string = textView.string as NSString?,
+              range.location + range.length <= string.length
+        else { return }
+        let selectedText = string.substring(with: range)
+        appState.pendingReplacementPattern = selectedText
+    }
+
+    func addReplacementRule(_ rule: ReplacementRule) {
+        appState.settings.addReplacementRule(rule)
+        appState.pendingReplacementPattern = nil
+        applyReplacementRulesNow()
     }
 }
