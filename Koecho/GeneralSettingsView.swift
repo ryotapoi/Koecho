@@ -12,7 +12,7 @@ struct GeneralSettingsView: View {
                 TextField("Timeout (sec)", value: $settings.scriptTimeout, format: .number)
             }
             Section("Replacement Rules") {
-                Toggle("Apply on confirm", isOn: $settings.appliesReplacementRulesOnConfirm)
+                Toggle("Auto-replace", isOn: $settings.isAutoReplacementEnabled)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("Shortcut key")

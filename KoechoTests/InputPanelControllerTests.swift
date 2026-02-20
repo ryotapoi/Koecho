@@ -546,59 +546,19 @@ struct InputPanelControllerTests {
         let (controller, appState, _, _) = makeController(paster: paster)
 
         appState.settings.addReplacementRule(
-            ReplacementRule(pattern: "えーと", replacement: "")
+            ReplacementRule(pattern: "hello", replacement: "bye")
         )
 
         controller.showPanel()
-        appState.inputText = "えーと今日はえーと天気がいいです"
+        appState.inputText = "hello world"
         appState.frontmostApplication = NSRunningApplication.current
 
         await controller.confirm()
 
-        #expect(paster.pastedTexts == ["今日は天気がいいです"])
+        #expect(paster.pastedTexts == ["bye world"])
     }
 
-    @Test func confirmSkipsInvalidRegex() async {
-        let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster)
-
-        appState.settings.addReplacementRule(
-            ReplacementRule(pattern: "[invalid", replacement: "x", usesRegularExpression: true)
-        )
-        appState.settings.addReplacementRule(
-            ReplacementRule(pattern: "a", replacement: "b")
-        )
-
-        controller.showPanel()
-        appState.inputText = "abc"
-        appState.frontmostApplication = NSRunningApplication.current
-
-        await controller.confirm()
-
-        #expect(paster.pastedTexts == ["bbc"])
-    }
-
-    @Test func confirmAppliesRulesInOrder() async {
-        let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster)
-
-        appState.settings.addReplacementRule(
-            ReplacementRule(pattern: "A", replacement: "B")
-        )
-        appState.settings.addReplacementRule(
-            ReplacementRule(pattern: "B", replacement: "C")
-        )
-
-        controller.showPanel()
-        appState.inputText = "A"
-        appState.frontmostApplication = NSRunningApplication.current
-
-        await controller.confirm()
-
-        #expect(paster.pastedTexts == ["C"])
-    }
-
-    @Test func confirmWithRulesEmptyingTextTreatsAsCancel() async {
+    @Test func confirmWithReplacementRulesEmptyingText() async {
         let paster = MockPaster()
         let (controller, appState, _, _) = makeController(paster: paster)
 
@@ -612,9 +572,10 @@ struct InputPanelControllerTests {
 
         await controller.confirm()
 
+        // All text removed by replacement → treated as cancel
         #expect(paster.pastedTexts.isEmpty)
-        #expect(paster.restoreClipboardCallCount == 1)
         #expect(appState.isInputPanelVisible == false)
+        #expect(paster.restoreClipboardCallCount == 1)
     }
 
     @Test func scriptErrorMessages() async throws {
@@ -857,24 +818,6 @@ struct InputPanelControllerTests {
         #expect(appState.inputText == "original")
     }
 
-    @Test func confirmWithAppliesReplacementRulesOffSkipsRules() async {
-        let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster)
-
-        appState.settings.appliesReplacementRulesOnConfirm = false
-        appState.settings.addReplacementRule(
-            ReplacementRule(pattern: "hello", replacement: "bye")
-        )
-
-        controller.showPanel()
-        appState.inputText = "hello world"
-        appState.frontmostApplication = NSRunningApplication.current
-
-        await controller.confirm()
-
-        #expect(paster.pastedTexts == ["hello world"])
-    }
-
     // MARK: - History
 
     @Test func confirmRecordsHistory() async {
@@ -891,7 +834,7 @@ struct InputPanelControllerTests {
         #expect(historyStore.entries[0].text == "hello")
     }
 
-    @Test func confirmRecordsTextAfterReplacementRules() async {
+    @Test func confirmRecordsTextAfterReplacement() async {
         let paster = MockPaster()
         let (controller, appState, _, historyStore) = makeController(paster: paster)
 
@@ -996,5 +939,81 @@ struct InputPanelControllerTests {
         // Both existing and new rules should be applied
         #expect(appState.settings.replacementRules.count == 2)
         #expect(appState.inputText == "hi earth")
+    }
+
+    // MARK: - Auto Replacement
+
+    @Test func autoReplacementTriggersImmediately() {
+        let (controller, appState, _, _) = makeController()
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        controller.handleTextChanged("えーと天気")
+
+        // Replacement is applied immediately on text change
+        #expect(appState.inputText == "天気")
+    }
+
+    @Test func autoReplacementDisabledDoesNotTrigger() {
+        let (controller, appState, _, _) = makeController()
+        appState.settings.isAutoReplacementEnabled = false
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        controller.handleTextChanged("えーと天気")
+
+        #expect(appState.inputText == "えーと天気")
+    }
+
+    @Test func autoReplacementAppliesMultipleInputs() {
+        let (controller, appState, _, _) = makeController()
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "えーと", replacement: "")
+        )
+
+        controller.showPanel()
+        controller.handleTextChanged("えーと天気")
+        #expect(appState.inputText == "天気")
+
+        controller.handleTextChanged("えーとこんにちは")
+        #expect(appState.inputText == "こんにちは")
+    }
+
+    @Test func autoReplacementSkipsWhenNoRules() {
+        let (controller, appState, _, _) = makeController()
+
+        controller.showPanel()
+        controller.handleTextChanged("hello world")
+
+        #expect(appState.inputText == "hello world")
+    }
+
+    @Test func autoReplacementSkipsWhenNotVisible() {
+        let (controller, appState, _, _) = makeController()
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "hello", replacement: "bye")
+        )
+
+        // Don't call showPanel
+        controller.handleTextChanged("hello world")
+
+        #expect(appState.inputText == "hello world")
+    }
+
+    @Test func autoReplacementSkipsDuringScriptExecution() {
+        let (controller, appState, _, _) = makeController()
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "hello", replacement: "bye")
+        )
+
+        controller.showPanel()
+        appState.isRunningScript = true
+        controller.handleTextChanged("hello world")
+
+        #expect(appState.inputText == "hello world")
     }
 }

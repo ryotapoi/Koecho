@@ -141,6 +141,84 @@ struct ReplacementRuleTests {
         #expect(result == "X oXr X")
     }
 
+    // MARK: - findReplacementMatches
+
+    @Test func findMatchesSingleRuleSingleMatch() {
+        let rules = [ReplacementRule(pattern: "えーと", replacement: "")]
+        let matches = findReplacementMatches(rules, in: "えーと天気")
+        #expect(matches == [ReplacementMatch(range: NSRange(location: 0, length: 3), replacement: "")])
+    }
+
+    @Test func findMatchesSingleRuleMultipleMatches() {
+        let rules = [ReplacementRule(pattern: "えーと", replacement: "")]
+        let matches = findReplacementMatches(rules, in: "えーと天気えーと")
+        #expect(matches.count == 2)
+        #expect(matches[0] == ReplacementMatch(range: NSRange(location: 0, length: 3), replacement: ""))
+        #expect(matches[1] == ReplacementMatch(range: NSRange(location: 5, length: 3), replacement: ""))
+    }
+
+    @Test func findMatchesMultipleIndependentRules() {
+        // Two independent rules that don't overlap
+        let rules = [
+            ReplacementRule(pattern: "えーと", replacement: ""),
+            ReplacementRule(pattern: "あのー", replacement: ""),
+        ]
+        let matches = findReplacementMatches(rules, in: "えーとあのー天気")
+        #expect(matches.count == 2)
+        // Rule 1 matches "えーと" at (0,3) in original
+        #expect(matches[0] == ReplacementMatch(range: NSRange(location: 0, length: 3), replacement: ""))
+        // After rule 1, intermediate = "あのー天気", cumulativeOffset = -3
+        // Rule 2 matches "あのー" at (0,3) in intermediate, original = 0 - (-3) = 3
+        #expect(matches[1] == ReplacementMatch(range: NSRange(location: 3, length: 3), replacement: ""))
+    }
+
+    @Test func findMatchesRegexCaptureGroups() {
+        let rules = [
+            ReplacementRule(
+                pattern: "(\\w+) (\\w+)",
+                replacement: "$2 $1",
+                usesRegularExpression: true
+            ),
+        ]
+        let matches = findReplacementMatches(rules, in: "hello world")
+        #expect(matches.count == 1)
+        #expect(matches[0] == ReplacementMatch(range: NSRange(location: 0, length: 11), replacement: "world hello"))
+    }
+
+    @Test func findMatchesWholeWord() {
+        let rules = [
+            ReplacementRule(pattern: "the", replacement: "a", matchesWholeWord: true),
+        ]
+        let matches = findReplacementMatches(rules, in: "the other the")
+        #expect(matches.count == 2)
+        #expect(matches[0] == ReplacementMatch(range: NSRange(location: 0, length: 3), replacement: "a"))
+        #expect(matches[1] == ReplacementMatch(range: NSRange(location: 10, length: 3), replacement: "a"))
+    }
+
+    @Test func findMatchesDollarSignInReplacement() {
+        let rules = [ReplacementRule(pattern: "price", replacement: "$100")]
+        let matches = findReplacementMatches(rules, in: "The price is here")
+        #expect(matches.count == 1)
+        #expect(matches[0] == ReplacementMatch(range: NSRange(location: 4, length: 5), replacement: "$100"))
+    }
+
+    @Test func findMatchesNoMatch() {
+        let rules = [ReplacementRule(pattern: "xyz", replacement: "abc")]
+        let matches = findReplacementMatches(rules, in: "hello world")
+        #expect(matches.isEmpty)
+    }
+
+    @Test func findMatchesEmptyText() {
+        let rules = [ReplacementRule(pattern: "hello", replacement: "bye")]
+        let matches = findReplacementMatches(rules, in: "")
+        #expect(matches.isEmpty)
+    }
+
+    @Test func findMatchesEmptyRules() {
+        let matches = findReplacementMatches([], in: "hello world")
+        #expect(matches.isEmpty)
+    }
+
     // MARK: - displayName
 
     @Test func displayNameEmptyPattern() {

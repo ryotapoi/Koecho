@@ -88,8 +88,7 @@
   - `NSTextStorage.didProcessEditingNotification` → 発火しない
   - ポーリングで `NSTextView.string` を読む → 未確定テキストが反映されていないので変化なし
 - 変更が検知される条件: フォーカスを外す、音声入力を停止する、キーボード入力する、カーソル移動する（いずれも marked text が確定されるタイミング）
-- 対策（将来）: DictationTextView サブクラスの `insertText` override で `onTextCommitted` を発火済み。`setMarkedText`/`unmarkText` の override を追加し、確定直後に置換ルールを自動適用する
-- 対策（現行）: リアルタイム自動置換は断念。confirm 時の自動適用 + Ctrl+R / Replace ボタンによる手動トリガーで対応
+- 対策（現行）: DictationTextView の didChangeText() をトリガーに、`hasMarkedText()` が false のとき即座に置換ルールを適用。`hasMarkedText()` が true のときはアンダーラインプレビュー + ホバーツールチップを表示。Ctrl+R / Replace ボタンによる手動トリガーも併用可能（ADR 0011）
 
 ## macOS / Dictation + フォーカス遷移
 
@@ -114,6 +113,15 @@
 - DictationTextView サブクラスで `menu(for:)` を override し、標準メニュー + カスタムアイテム（「Add Replacement Rule…」）を追加
 - 選択テキストがない場合はカスタムアイテムを追加しない（`selectedRange().length > 0` でガード）
 - テスト時に `super.menu(for:)` を呼ぶとプロセスクラッシュが発生する場合がある。メニューアクションのテストはセレクタの直接呼び出し（`perform(Selector(("addReplacementRuleFromMenu:")))`) で行う
+
+## macOS / NSLayoutManager overlay positioning
+
+- `NSLayoutManager.boundingRect(forGlyphRange:in:)` returns the bounding rect for a glyph range in text container coordinates. Add `textContainerOrigin` to convert to NSTextView coordinates
+- `layoutManager.glyphRange(forCharacterRange:actualCharacterRange:)` converts character ranges (NSRange) to glyph ranges needed by `boundingRect`
+- DictationTextView uses TextKit 1 by default (NSTextView does not opt into TextKit 2 unless explicitly configured), so `layoutManager` is always non-nil
+- **Adding NSView subviews to NSTextView during Dictation corrupts the marked text state and causes duplicate text on the first Dictation phrase.** Use `draw(_:)` override for visual decorations (underlines) and a separate floating NSWindow for tooltips instead
+- For multi-line text, use `enumerateLineFragments(forGlyphRange:)` to draw per visual line. `boundingRect` alone returns a single rect spanning the full width across line breaks
+- Tooltip NSWindow should be positioned above the text to avoid overlapping the Dictation microphone icon that appears below the cursor
 
 ## Swift / @MainActor + デフォルト引数
 

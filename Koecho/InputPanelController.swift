@@ -40,7 +40,7 @@ final class InputPanelController {
                 self?.cancelPrompt()
             },
             onApplyReplacementRules: { [weak self] in
-                self?.applyReplacementRulesNow()
+                self?.applyOrPreviewReplacementRules()
             },
             onPromptFocused: { [weak self] in
                 guard let self else { return }
@@ -85,7 +85,7 @@ final class InputPanelController {
             if let rShortcut = self.appState.settings.replacementShortcutKey,
                shortcut == rShortcut,
                !self.appState.settings.replacementRules.isEmpty {
-                self.applyReplacementRulesNow()
+                self.applyOrPreviewReplacementRules()
                 return true
             }
             guard let script = self.appState.settings.scripts.first(where: { $0.shortcutKey == shortcut })
@@ -209,13 +209,29 @@ final class InputPanelController {
         logger.debug("startDictation sent")
     }
 
-    private func handleTextChanged(_ text: String) {
-        appState.inputText = text
+    func handleTextChanged(_ text: String) {
+        // During Dictation (hasMarkedText), textView.string may include
+        // hypothesis text that will be replaced on commit. Updating
+        // appState.inputText here would cause duplicate text when Dictation
+        // finalizes via insertText. Only update when no marked text.
+        if let textView, !textView.hasMarkedText() {
+            appState.inputText = text
+        }
         appState.errorMessage = nil
+        if appState.settings.isAutoReplacementEnabled {
+            applyOrPreviewReplacementRules()
+        }
     }
 
     private func handleTextCommitted() {
-        logger.debug("Dictation text committed")
+        // Dictation just committed marked text. Read the definitive string.
+        if let textView {
+            appState.inputText = textView.string
+        }
+        textView?.clearReplacementPreviews()
+        if appState.settings.isAutoReplacementEnabled {
+            applyOrPreviewReplacementRules()
+        }
     }
 
     private func focusTextView() {
@@ -269,15 +285,39 @@ final class InputPanelController {
         }
     }
 
+    private func applyOrPreviewReplacementRules() {
+        guard appState.isInputPanelVisible,
+              !appState.isRunningScript else { return }
+        let rules = appState.settings.replacementRules
+        guard !rules.isEmpty else { return }
+
+        if let textView, textView.hasMarkedText() {
+            showReplacementPreview(rules: rules)
+        } else {
+            applyReplacementRulesNow()
+        }
+    }
+
+    private func showReplacementPreview(rules: [ReplacementRule]) {
+        let currentText = textView?.string ?? ""
+        guard !currentText.isEmpty else {
+            textView?.clearReplacementPreviews()
+            return
+        }
+        let matches = findReplacementMatches(rules, in: currentText)
+        if matches.isEmpty {
+            textView?.clearReplacementPreviews()
+        } else {
+            textView?.showReplacementPreviews(matches)
+        }
+    }
+
     func applyReplacementRulesNow() {
         guard appState.isInputPanelVisible,
               !appState.isRunningScript else { return }
         let rules = appState.settings.replacementRules
         guard !rules.isEmpty else { return }
-        if let textView, textView.hasMarkedText() {
-            logger.debug("Skipping replacement rules: text view has marked text")
-            return
-        }
+        textView?.clearReplacementPreviews()
         let currentText = appState.inputText
         let result = applyReplacementRules(rules, to: currentText)
         if result != currentText {
@@ -301,29 +341,28 @@ final class InputPanelController {
         dictationRetryWorkItem?.cancel()
         dictationRetryWorkItem = nil
 
-        let rawText = appState.inputText
+        textView?.clearReplacementPreviews()
+
+        // Read text from textView directly — during Dictation,
+        // appState.inputText may not include marked text content.
+        // Fall back to appState.inputText when textView has no text
+        // (e.g., test environment where textView.string is not synced).
+        let textViewString = textView?.string ?? ""
+        var rawText = textViewString.isEmpty ? appState.inputText : textViewString
 
         await stopDictation()
-        let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            paster.restoreClipboard()
-            clearState()
-            panel.orderOut(nil)
-            logger.info("confirm() with empty text, treated as cancel")
-            return
+
+        // Apply replacement rules after Dictation is stopped
+        let rules = appState.settings.replacementRules
+        if !rules.isEmpty {
+            rawText = applyReplacementRules(rules, to: rawText)
         }
-        let text: String
-        if appState.settings.appliesReplacementRulesOnConfirm {
-            text = applyReplacementRules(appState.settings.replacementRules, to: trimmed)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        } else {
-            text = trimmed
-        }
+        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
             paster.restoreClipboard()
             clearState()
             panel.orderOut(nil)
-            logger.info("confirm() replacement rules emptied text, treated as cancel")
+            logger.info("confirm() with empty text, treated as cancel")
             return
         }
 
@@ -356,6 +395,7 @@ final class InputPanelController {
         shouldStartDictation = false
         dictationRetryWorkItem?.cancel()
         dictationRetryWorkItem = nil
+        textView?.clearReplacementPreviews()
         appState.inputText = ""
         appState.isInputPanelVisible = false
         appState.frontmostApplication = nil
@@ -413,6 +453,6 @@ final class InputPanelController {
     func addReplacementRule(_ rule: ReplacementRule) {
         appState.settings.addReplacementRule(rule)
         appState.pendingReplacementPattern = nil
-        applyReplacementRulesNow()
+        applyOrPreviewReplacementRules()
     }
 }

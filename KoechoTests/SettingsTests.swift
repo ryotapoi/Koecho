@@ -322,9 +322,9 @@ struct SettingsTests {
         #expect(settings.replacementShortcutKey == ShortcutKey(modifiers: [.control], character: "r"))
     }
 
-    @Test func defaultAppliesReplacementRulesOnConfirm() {
+    @Test func defaultAutoReplacementEnabled() {
         let settings = Settings(defaults: makeDefaults())
-        #expect(settings.appliesReplacementRulesOnConfirm == true)
+        #expect(settings.isAutoReplacementEnabled == true)
     }
 
     @Test func persistsReplacementShortcutKey() {
@@ -347,14 +347,14 @@ struct SettingsTests {
         #expect(reloaded.replacementShortcutKey == nil)
     }
 
-    @Test func persistsAppliesReplacementRulesOnConfirm() {
+    @Test func persistsAutoReplacementEnabled() {
         let defaults = makeDefaults()
 
         let settings = Settings(defaults: defaults)
-        settings.appliesReplacementRulesOnConfirm = false
+        settings.isAutoReplacementEnabled = false
 
         let reloaded = Settings(defaults: defaults)
-        #expect(reloaded.appliesReplacementRulesOnConfirm == false)
+        #expect(reloaded.isAutoReplacementEnabled == false)
     }
 
     // MARK: - History Settings

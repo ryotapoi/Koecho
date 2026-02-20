@@ -34,11 +34,11 @@ final class Settings {
         }
     }
 
-    private var _appliesReplacementRulesOnConfirm: Bool
-    var appliesReplacementRulesOnConfirm: Bool {
-        get { _appliesReplacementRulesOnConfirm }
+    private var _isAutoReplacementEnabled: Bool
+    var isAutoReplacementEnabled: Bool {
+        get { _isAutoReplacementEnabled }
         set {
-            _appliesReplacementRulesOnConfirm = newValue
+            _isAutoReplacementEnabled = newValue
             save()
         }
     }
@@ -97,7 +97,6 @@ final class Settings {
         _pasteDelay = max(0, defaults.object(forKey: "pasteDelay") as? TimeInterval ?? 2.0)
         _scriptTimeout = max(1, defaults.object(forKey: "scriptTimeout") as? TimeInterval ?? 30.0)
 
-        defaults.removeObject(forKey: "replacementShortcutKey")
         if let data = defaults.data(forKey: "replacementShortcut") {
             if data.isEmpty {
                 _replacementShortcutKey = nil
@@ -111,7 +110,7 @@ final class Settings {
             _replacementShortcutKey = ShortcutKey(modifiers: [.control], character: "r")
         }
 
-        _appliesReplacementRulesOnConfirm = defaults.object(forKey: "appliesReplacementRulesOnConfirm") as? Bool ?? true
+        _isAutoReplacementEnabled = defaults.object(forKey: "isAutoReplacementEnabled") as? Bool ?? true
 
         _isHistoryEnabled = defaults.object(forKey: "isHistoryEnabled") as? Bool ?? true
         _historyMaxCount = max(1, defaults.object(forKey: "historyMaxCount") as? Int ?? 500)
@@ -195,7 +194,7 @@ final class Settings {
         } else {
             defaults.set(Data(), forKey: "replacementShortcut")
         }
-        defaults.set(appliesReplacementRulesOnConfirm, forKey: "appliesReplacementRulesOnConfirm")
+        defaults.set(_isAutoReplacementEnabled, forKey: "isAutoReplacementEnabled")
         defaults.set(_isHistoryEnabled, forKey: "isHistoryEnabled")
         defaults.set(_historyMaxCount, forKey: "historyMaxCount")
         defaults.set(_historyRetentionDays, forKey: "historyRetentionDays")
