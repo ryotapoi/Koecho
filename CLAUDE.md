@@ -69,7 +69,7 @@ xcodebuild -project Koecho.xcodeproj -scheme Koecho -configuration Debug \
 1. `/self-plan-review` を実行する（5観点並列レビュー）
 2. **新規の** 🔴 MUST / 🟡 SHOULD の指摘をプランに反映する
 3. 新規指摘があった場合 → 手順1に戻る（新規 MUST/SHOULD がゼロになるまでループ）
-4. `/codex-plan-review` を実行する（Codex セカンドオピニオン）
+4. `/codex-plan-review` を実行する（Codex セカンドオピニオン。**2回目以降は `--resume` をつけて呼ぶ**）
 5. 指摘があれば反映し、手順1に戻る
 6. 指摘なし → ExitPlanMode する
 
@@ -86,7 +86,7 @@ xcodebuild -project Koecho.xcodeproj -scheme Koecho -configuration Debug \
 2. `/self-impl-review` を実行する（5観点並列レビュー）
 3. **新規の** 🔴 MUST / 🟡 SHOULD の指摘を実装に反映する
 4. 新規指摘があった場合 → 手順2に戻る（新規 MUST/SHOULD がゼロになるまでループ）
-5. `/codex-impl-review` を実行する（Codex セカンドオピニオン）
+5. `/codex-impl-review` を実行する（Codex セカンドオピニオン。**2回目以降は `--resume` をつけて呼ぶ**）
 6. 指摘があれば反映し、手順2に戻る
 7. 指摘なし → `/commit` する
 
