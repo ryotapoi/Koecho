@@ -941,6 +941,14 @@ struct InputPanelControllerTests {
         #expect(appState.inputText == "hi earth")
     }
 
+    // MARK: - Panel Configuration
+
+    @Test func panelHasResizeConstraints() {
+        let (controller, _, _, _) = makeController()
+        #expect(controller.panel.contentMinSize == NSSize(width: 200, height: 150))
+        #expect(controller.panel.frameAutosaveName == "InputPanel")
+    }
+
     // MARK: - Auto Replacement
 
     @Test func autoReplacementTriggersImmediately() {

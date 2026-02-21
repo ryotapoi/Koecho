@@ -96,7 +96,10 @@ final class InputPanelController {
             return true
         }
 
-        panel.center()
+        panel.setFrameAutosaveName("InputPanel")
+        if UserDefaults.standard.string(forKey: "NSWindow Frame InputPanel") == nil {
+            panel.center()
+        }
         logger.info("InputPanelController initialized")
     }
 

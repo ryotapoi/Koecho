@@ -26,7 +26,7 @@ struct InputPanelContent: View {
                 },
                 onViewCreated: onTextViewCreated
             )
-            .frame(minHeight: 60, maxHeight: 300)
+            .frame(minHeight: 60, maxHeight: CGFloat.infinity)
             .popover(
                 isPresented: Binding(
                     get: { appState.pendingReplacementPattern != nil },
@@ -77,7 +77,7 @@ struct InputPanelContent: View {
                     .padding(.horizontal, 8)
             }
         }
-        .frame(minWidth: 300, maxWidth: 300)
+        .frame(minWidth: 200, maxWidth: .infinity)
         .background(.ultraThinMaterial)
         .onChange(of: appState.promptScript) {
             if appState.promptScript != nil {

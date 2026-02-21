@@ -19,6 +19,7 @@ final class InputPanel: NSPanel {
         titleVisibility = .hidden
         isMovableByWindowBackground = true
         isReleasedWhenClosed = false
+        contentMinSize = NSSize(width: 200, height: 150)
     }
 
     override var canBecomeKey: Bool { true }

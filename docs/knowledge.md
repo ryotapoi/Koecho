@@ -42,6 +42,13 @@
 - 初回表示では `makeNSView` → `onViewCreated` で textView 参照を取得するが、`makeKeyAndOrderFront` 直後はまだ SwiftUI レイアウトが完了しておらず textView が nil の場合がある。nil なら `DispatchQueue.main.async` で 1 サイクル遅延
 - `@FocusState` は prompt TextField のみに使用。TextEditor 側のフォーカスは `panel.makeFirstResponder(textView)` で直接管理
 
+## SwiftUI / .frame の .infinity 型推論
+
+- `.frame(maxHeight: .infinity)` はコンパイルエラー「Cannot infer contextual base in reference to member 'infinity'」になる場合がある
+- `maxHeight` パラメータの型が `CGFloat` で、`.infinity` が `Double.infinity` に解決されて型不一致になるケース
+- 対策: `CGFloat.infinity` と明示する
+- `.frame(maxWidth: .infinity)` は `maxWidth` の型が `CGFloat?` のため暗黙変換で通る
+
 ## macOS / NSPanel + Escape キー
 
 - NSPanel 内に TextEditor（NSTextView）があると、Escape キーは NSTextView が消費するため `keyDown(with:)` がパネルまで届かない
