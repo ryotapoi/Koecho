@@ -10,6 +10,17 @@ struct GeneralSettingsView: View {
             }
             Section("Scripts") {
                 TextField("Timeout (sec)", value: $settings.scriptTimeout, format: .number)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Auto-run cycle shortcut")
+                        Spacer()
+                        ShortcutKeyRecorder(shortcutKey: $settings.autoRunShortcutKey)
+                            .frame(width: 120)
+                    }
+                    Text("Cycle through scripts to auto-run on confirm")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             Section("Replacement Rules") {
                 Toggle("Auto-replace", isOn: $settings.isAutoReplacementEnabled)

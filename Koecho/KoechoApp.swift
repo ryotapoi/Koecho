@@ -105,10 +105,39 @@ private struct MenuBarContent: View {
     let onTogglePanel: () -> Void
     @Environment(\.openWindow) private var openWindow
 
+    private var eligibleScripts: [Script] {
+        appState.settings.scripts.filter { !$0.requiresPrompt }
+    }
+
     var body: some View {
         Button(appState.isInputPanelVisible ? "Close Input Panel" : "Open Input Panel") {
             onTogglePanel()
         }
+
+        Menu("Auto-run on Confirm") {
+            Button {
+                appState.settings.autoRunScriptId = nil
+            } label: {
+                if appState.settings.autoRunScriptId == nil {
+                    Text("✓ None")
+                } else {
+                    Text("  None")
+                }
+            }
+            Divider()
+            ForEach(eligibleScripts) { script in
+                Button {
+                    appState.settings.autoRunScriptId = script.id
+                } label: {
+                    if appState.settings.autoRunScriptId == script.id {
+                        Text("✓ \(script.name)")
+                    } else {
+                        Text("  \(script.name)")
+                    }
+                }
+            }
+        }
+        .disabled(eligibleScripts.isEmpty)
 
         Divider()
 

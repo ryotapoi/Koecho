@@ -65,6 +65,10 @@ struct InputPanelContent: View {
                 scriptButtonBar
             }
 
+            if !eligibleScripts.isEmpty {
+                autoRunPicker
+            }
+
             if appState.promptScript != nil {
                 promptInputView
             }
@@ -139,6 +143,66 @@ struct InputPanelContent: View {
             .disabled(appState.isRunningScript)
         }
         .padding(.horizontal, 8)
+    }
+
+    private var eligibleScripts: [Script] {
+        appState.settings.scripts.filter { !$0.requiresPrompt }
+    }
+
+    private var autoRunPicker: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "bolt.fill")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("On confirm:")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Menu {
+                Button {
+                    appState.settings.autoRunScriptId = nil
+                } label: {
+                    if appState.settings.autoRunScriptId == nil {
+                        Text("✓ None")
+                    } else {
+                        Text("  None")
+                    }
+                }
+                Divider()
+                ForEach(eligibleScripts) { script in
+                    Button {
+                        appState.settings.autoRunScriptId = script.id
+                    } label: {
+                        if appState.settings.autoRunScriptId == script.id {
+                            Text("✓ \(script.name)")
+                        } else {
+                            Text("  \(script.name)")
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 2) {
+                    Text(appState.settings.autoRunScript?.name ?? "None")
+                        .font(.callout)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 9))
+                }
+                .foregroundStyle(.secondary)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help(autoRunShortcutHelpText)
+            Spacer()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 2)
+    }
+
+    private var autoRunShortcutHelpText: String {
+        if let shortcut = appState.settings.autoRunShortcutKey {
+            "Cycle auto-run script selection (\(shortcut.displayName))"
+        } else {
+            "Cycle auto-run script selection"
+        }
     }
 
     private var replacementShortcutHelpText: String {

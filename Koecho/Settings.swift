@@ -78,6 +78,29 @@ final class Settings {
         didSet { save() }
     }
 
+    private var _autoRunScriptId: UUID?
+    var autoRunScriptId: UUID? {
+        get { _autoRunScriptId }
+        set {
+            _autoRunScriptId = newValue
+            save()
+        }
+    }
+
+    private var _autoRunShortcutKey: ShortcutKey?
+    var autoRunShortcutKey: ShortcutKey? {
+        get { _autoRunShortcutKey }
+        set {
+            _autoRunShortcutKey = newValue
+            save()
+        }
+    }
+
+    var autoRunScript: Script? {
+        guard let id = autoRunScriptId else { return nil }
+        return scripts.first { $0.id == id && !$0.requiresPrompt }
+    }
+
     private var _hotkeyConfig: HotkeyConfig
     var hotkeyConfig: HotkeyConfig {
         get { _hotkeyConfig }
@@ -138,6 +161,25 @@ final class Settings {
             replacementRules = []
         }
 
+        if let uuidString = defaults.string(forKey: "autoRunScriptId") {
+            _autoRunScriptId = UUID(uuidString: uuidString)
+        } else {
+            _autoRunScriptId = nil
+        }
+
+        if let data = defaults.data(forKey: "autoRunShortcut") {
+            if data.isEmpty {
+                _autoRunShortcutKey = nil
+            } else if let decoded = try? JSONDecoder().decode(ShortcutKey.self, from: data) {
+                _autoRunShortcutKey = decoded
+            } else {
+                logger.warning("Failed to decode autoRunShortcut, using nil")
+                _autoRunShortcutKey = nil
+            }
+        } else {
+            _autoRunShortcutKey = nil
+        }
+
         if let data = defaults.data(forKey: "hotkeyConfig") {
             do {
                 _hotkeyConfig = try JSONDecoder().decode(HotkeyConfig.self, from: data)
@@ -163,6 +205,9 @@ final class Settings {
 
     func deleteScript(id: UUID) {
         scripts.removeAll { $0.id == id }
+        if autoRunScriptId == id {
+            autoRunScriptId = nil
+        }
     }
 
     func moveScripts(from source: IndexSet, to destination: Int) {
@@ -193,6 +238,16 @@ final class Settings {
             defaults.set(try? JSONEncoder().encode(shortcut), forKey: "replacementShortcut")
         } else {
             defaults.set(Data(), forKey: "replacementShortcut")
+        }
+        if let id = _autoRunScriptId {
+            defaults.set(id.uuidString, forKey: "autoRunScriptId")
+        } else {
+            defaults.removeObject(forKey: "autoRunScriptId")
+        }
+        if let shortcut = _autoRunShortcutKey {
+            defaults.set(try? JSONEncoder().encode(shortcut), forKey: "autoRunShortcut")
+        } else {
+            defaults.set(Data(), forKey: "autoRunShortcut")
         }
         defaults.set(_isAutoReplacementEnabled, forKey: "isAutoReplacementEnabled")
         defaults.set(_isHistoryEnabled, forKey: "isHistoryEnabled")

@@ -1061,4 +1061,158 @@ struct InputPanelControllerTests {
 
         #expect(appState.inputText == "hello world")
     }
+
+    // MARK: - Auto-Run Script
+
+    @Test func cycleAutoRunScript() {
+        let (controller, appState, _, _) = makeController()
+        let script0 = Script(name: "A", scriptPath: "/bin/echo")
+        let script1 = Script(name: "B", scriptPath: "/bin/echo")
+        let promptScript = Script(name: "P", scriptPath: "/bin/echo", requiresPrompt: true)
+        appState.settings.scripts = [script0, promptScript, script1]
+
+        // nil → script0
+        controller.cycleAutoRunScript()
+        #expect(appState.settings.autoRunScriptId == script0.id)
+
+        // script0 → script1
+        controller.cycleAutoRunScript()
+        #expect(appState.settings.autoRunScriptId == script1.id)
+
+        // script1 → nil
+        controller.cycleAutoRunScript()
+        #expect(appState.settings.autoRunScriptId == nil)
+    }
+
+    @Test func cycleAutoRunScriptNoEligible() {
+        let (controller, appState, _, _) = makeController()
+        let promptScript = Script(name: "P", scriptPath: "/bin/echo", requiresPrompt: true)
+        appState.settings.scripts = [promptScript]
+
+        controller.cycleAutoRunScript()
+        #expect(appState.settings.autoRunScriptId == nil)
+    }
+
+    @Test func confirmWithAutoRunScript() async throws {
+        let scriptPath = try makeScript("tr a-z A-Z")
+        let script = Script(name: "Upper", scriptPath: scriptPath)
+        let paster = MockPaster()
+        let (controller, appState, _, historyStore) = makeController(paster: paster)
+
+        appState.settings.scripts = [script]
+        appState.settings.autoRunScriptId = script.id
+
+        controller.showPanel()
+        appState.inputText = "hello"
+        appState.frontmostApplication = NSRunningApplication.current
+
+        await controller.confirm()
+
+        #expect(paster.pastedTexts == ["HELLO"])
+        #expect(appState.isInputPanelVisible == false)
+        #expect(historyStore.entries.count == 1)
+        #expect(historyStore.entries[0].text == "HELLO")
+    }
+
+    @Test func confirmAutoRunScriptError() async throws {
+        let scriptPath = try makeScript("exit 1")
+        let script = Script(name: "Fail", scriptPath: scriptPath)
+        let paster = MockPaster()
+        let (controller, appState, _, _) = makeController(paster: paster)
+
+        appState.settings.scripts = [script]
+        appState.settings.autoRunScriptId = script.id
+
+        controller.showPanel()
+        appState.inputText = "hello"
+        appState.frontmostApplication = NSRunningApplication.current
+
+        await controller.confirm()
+
+        #expect(appState.isInputPanelVisible == true)
+        #expect(appState.errorMessage != nil)
+        #expect(paster.pastedTexts.isEmpty)
+        #expect(appState.inputText == "hello")
+    }
+
+    @Test func confirmAutoRunScriptEmptyOutput() async throws {
+        let scriptPath = try makeScript("printf ''")
+        let script = Script(name: "Empty", scriptPath: scriptPath)
+        let paster = MockPaster()
+        let (controller, appState, _, _) = makeController(paster: paster)
+
+        appState.settings.scripts = [script]
+        appState.settings.autoRunScriptId = script.id
+
+        controller.showPanel()
+        appState.inputText = "hello"
+        appState.frontmostApplication = NSRunningApplication.current
+
+        await controller.confirm()
+
+        #expect(appState.isInputPanelVisible == true)
+        #expect(appState.errorMessage?.contains("empty output") == true)
+        #expect(paster.pastedTexts.isEmpty)
+        #expect(appState.inputText == "hello")
+    }
+
+    @Test func deleteScriptClearsAutoRun() {
+        let (_, appState, _, _) = makeController()
+        let script = Script(name: "Test", scriptPath: "/bin/echo")
+        appState.settings.scripts = [script]
+        appState.settings.autoRunScriptId = script.id
+
+        appState.settings.deleteScript(id: script.id)
+
+        #expect(appState.settings.autoRunScriptId == nil)
+    }
+
+    @Test func cancelDuringAutoRun() async throws {
+        let scriptPath = try makeScript("sleep 0.5 && echo done")
+        let script = Script(name: "Slow", scriptPath: scriptPath)
+        let paster = MockPaster()
+        let (controller, appState, _, _) = makeController(paster: paster)
+
+        appState.settings.scripts = [script]
+        appState.settings.autoRunScriptId = script.id
+
+        controller.showPanel()
+        appState.inputText = "hello"
+        appState.frontmostApplication = NSRunningApplication.current
+
+        let confirmTask = Task { @MainActor in
+            await controller.confirm()
+        }
+        await Task.yield()
+
+        controller.cancel()
+
+        await confirmTask.value
+
+        #expect(appState.isInputPanelVisible == false)
+        #expect(paster.pastedTexts.isEmpty)
+    }
+
+    @Test func autoRunShortcutPriority() {
+        let (controller, appState, _, _) = makeController()
+        let ctrlA = ShortcutKey(modifiers: [.control], character: "a")
+        appState.settings.autoRunShortcutKey = ctrlA
+        appState.settings.replacementShortcutKey = ctrlA
+        appState.settings.addReplacementRule(
+            ReplacementRule(pattern: "hello", replacement: "bye")
+        )
+        let script = Script(name: "A", scriptPath: "/bin/echo")
+        appState.settings.scripts = [script]
+
+        controller.showPanel()
+        appState.inputText = "hello"
+
+        let handled = controller.panel.onShortcutKey?(ctrlA)
+
+        #expect(handled == true)
+        // Auto-run cycle should have been triggered, not replacement
+        #expect(appState.settings.autoRunScriptId == script.id)
+        // Text should NOT have been replaced by replacement rules
+        #expect(appState.inputText == "hello")
+    }
 }

@@ -435,4 +435,80 @@ struct SettingsTests {
         #expect(settings.hotkeyConfig == .default)
     }
 
+    // MARK: - Auto-Run Script
+
+    @Test func autoRunScriptIdPersistence() {
+        let defaults = makeDefaults()
+        let scriptId = UUID()
+
+        let settings = Settings(defaults: defaults)
+        settings.autoRunScriptId = scriptId
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.autoRunScriptId == scriptId)
+    }
+
+    @Test func autoRunScriptIdNilPersistence() {
+        let defaults = makeDefaults()
+
+        let settings = Settings(defaults: defaults)
+        settings.autoRunScriptId = UUID()
+        settings.autoRunScriptId = nil
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.autoRunScriptId == nil)
+    }
+
+    @Test func autoRunScriptFiltersRequiresPrompt() {
+        let settings = Settings(defaults: makeDefaults())
+        let promptScript = Script(name: "Prompt", scriptPath: "/bin/echo", requiresPrompt: true)
+        let normalScript = Script(name: "Normal", scriptPath: "/bin/echo")
+        settings.scripts = [promptScript, normalScript]
+
+        settings.autoRunScriptId = promptScript.id
+        #expect(settings.autoRunScript == nil)
+
+        settings.autoRunScriptId = normalScript.id
+        #expect(settings.autoRunScript?.id == normalScript.id)
+    }
+
+    @Test func deleteScriptClearsAutoRunScriptId() {
+        let settings = Settings(defaults: makeDefaults())
+        let script = Script(name: "Test", scriptPath: "/bin/echo")
+        settings.scripts = [script]
+        settings.autoRunScriptId = script.id
+
+        settings.deleteScript(id: script.id)
+
+        #expect(settings.autoRunScriptId == nil)
+    }
+
+    @Test func autoRunShortcutKeyPersistence() {
+        let defaults = makeDefaults()
+        let shortcut = ShortcutKey(modifiers: [.control, .shift], character: "a")
+
+        let settings = Settings(defaults: defaults)
+        settings.autoRunShortcutKey = shortcut
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.autoRunShortcutKey == shortcut)
+    }
+
+    @Test func autoRunShortcutKeyNilPersistence() {
+        let defaults = makeDefaults()
+
+        let settings = Settings(defaults: defaults)
+        settings.autoRunShortcutKey = ShortcutKey(modifiers: [.control], character: "a")
+        settings.autoRunShortcutKey = nil
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.autoRunShortcutKey == nil)
+    }
+
+    @Test func defaultAutoRunSettings() {
+        let settings = Settings(defaults: makeDefaults())
+        #expect(settings.autoRunScriptId == nil)
+        #expect(settings.autoRunShortcutKey == nil)
+        #expect(settings.autoRunScript == nil)
+    }
 }

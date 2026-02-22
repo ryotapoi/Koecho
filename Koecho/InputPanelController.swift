@@ -82,6 +82,11 @@ final class InputPanelController {
 
         panel.onShortcutKey = { [weak self] shortcut in
             guard let self else { return false }
+            if let aShortcut = self.appState.settings.autoRunShortcutKey,
+               shortcut == aShortcut {
+                self.cycleAutoRunScript()
+                return true
+            }
             if let rShortcut = self.appState.settings.replacementShortcutKey,
                shortcut == rShortcut,
                !self.appState.settings.replacementRules.isEmpty {
@@ -120,6 +125,7 @@ final class InputPanelController {
             return
         }
 
+        appState.isRunningScript = false
         appState.frontmostApplication = NSWorkspace.shared.frontmostApplication
         logger.info("Recorded frontmost app: \(self.appState.frontmostApplication?.localizedName ?? "nil", privacy: .public)")
 
@@ -364,13 +370,54 @@ final class InputPanelController {
         if !rules.isEmpty {
             rawText = applyReplacementRules(rules, to: rawText)
         }
-        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
             paster.restoreClipboard()
             clearState()
             panel.orderOut(nil)
             logger.info("confirm() with empty text, treated as cancel")
             return
+        }
+
+        if let autoScript = appState.settings.autoRunScript {
+            guard appState.isInputPanelVisible else { return }
+
+            appState.inputText = text
+            if let textView {
+                textView.isSuppressingCallbacks = true
+                textView.string = text
+                textView.isSuppressingCallbacks = false
+            }
+
+            appState.isRunningScript = true
+            defer { appState.isRunningScript = false }
+
+            let context = ScriptRunnerContext(
+                selection: appState.selectedText,
+                selectionStart: appState.selectionStart,
+                selectionEnd: appState.selectionEnd,
+                prompt: ""
+            )
+            let runner = makeScriptRunner()
+            do {
+                let result = try await runner.run(
+                    scriptPath: autoScript.scriptPath,
+                    input: text,
+                    context: context
+                )
+                guard appState.isInputPanelVisible else { return }
+                text = result.output
+            } catch {
+                guard appState.isInputPanelVisible else { return }
+                appState.inputText = text
+                if let textView {
+                    textView.isSuppressingCallbacks = true
+                    textView.string = text
+                    textView.isSuppressingCallbacks = false
+                }
+                appState.errorMessage = scriptErrorMessage(for: error, script: autoScript)
+                return
+            }
         }
 
         guard let targetApp = appState.frontmostApplication else {
@@ -454,6 +501,21 @@ final class InputPanelController {
             "Script '\(script.name)' produced empty output."
         default:
             String(describing: error)
+        }
+    }
+
+    func cycleAutoRunScript() {
+        let eligible = appState.settings.scripts.filter { !$0.requiresPrompt }
+        guard !eligible.isEmpty else {
+            appState.settings.autoRunScriptId = nil
+            return
+        }
+        if let currentId = appState.settings.autoRunScriptId,
+           let idx = eligible.firstIndex(where: { $0.id == currentId }) {
+            let next = idx + 1
+            appState.settings.autoRunScriptId = next < eligible.count ? eligible[next].id : nil
+        } else {
+            appState.settings.autoRunScriptId = eligible[0].id
         }
     }
 
