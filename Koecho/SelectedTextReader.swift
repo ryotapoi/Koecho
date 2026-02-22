@@ -7,7 +7,11 @@ nonisolated struct SelectedTextResult: Sendable, Equatable {
     var end: String
 }
 
-nonisolated final class SelectedTextReader: Sendable {
+protocol SelectedTextReading {
+    func read(from pid: pid_t) -> SelectedTextResult?
+}
+
+nonisolated final class SelectedTextReader: SelectedTextReading, Sendable {
     private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "SelectedTextReader")
 
     func read(from pid: pid_t) -> SelectedTextResult? {

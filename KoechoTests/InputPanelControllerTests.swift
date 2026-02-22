@@ -26,15 +26,22 @@ private final class MockPaster: Pasting {
 }
 
 @MainActor
+private final class MockSelectedTextReader: SelectedTextReading {
+    var resultToReturn: SelectedTextResult?
+    func read(from pid: pid_t) -> SelectedTextResult? { resultToReturn }
+}
+
+@MainActor
 private func makeController(
     paster: MockPaster? = nil,
+    selectedTextReader: (any SelectedTextReading)? = nil,
     makeScriptRunner: (() -> ScriptRunner)? = nil
 ) -> (InputPanelController, AppState, MockPaster, HistoryStore) {
     let p = paster ?? MockPaster()
     let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
     let settings = Settings(defaults: defaults)
     let appState = AppState(settings: settings)
-    let reader = SelectedTextReader()
+    let reader: any SelectedTextReading = selectedTextReader ?? SelectedTextReader()
     let dir = FileManager.default.temporaryDirectory
         .appendingPathComponent("koecho-test-\(UUID().uuidString)")
     let historyStore = HistoryStore(directoryURL: dir)
@@ -947,6 +954,36 @@ struct InputPanelControllerTests {
         let (controller, _, _, _) = makeController()
         #expect(controller.panel.contentMinSize == NSSize(width: 200, height: 150))
         #expect(controller.panel.frameAutosaveName == "InputPanel")
+    }
+
+    // MARK: - Selected Text as Initial Input
+
+    @Test func showPanelWithSelectedTextSetsInputText() {
+        let mockReader = MockSelectedTextReader()
+        mockReader.resultToReturn = SelectedTextResult(text: "selected text", start: "5", end: "18")
+        let (controller, appState, _, _) = makeController(selectedTextReader: mockReader)
+
+        controller.showPanel()
+
+        #expect(appState.selectedText == "selected text")
+        #expect(appState.selectionStart == "5")
+        #expect(appState.selectionEnd == "18")
+        #expect(appState.inputText == "selected text")
+    }
+
+    @Test func confirmWithSelectedTextOnly() async {
+        let mockReader = MockSelectedTextReader()
+        mockReader.resultToReturn = SelectedTextResult(text: "selected text", start: "0", end: "13")
+        let paster = MockPaster()
+        let (controller, appState, _, _) = makeController(paster: paster, selectedTextReader: mockReader)
+
+        controller.showPanel()
+        appState.frontmostApplication = NSRunningApplication.current
+
+        await controller.confirm()
+
+        #expect(paster.pastedTexts == ["selected text"])
+        #expect(appState.isInputPanelVisible == false)
     }
 
     // MARK: - Auto Replacement

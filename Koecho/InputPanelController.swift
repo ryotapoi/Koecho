@@ -6,7 +6,7 @@ import SwiftUI
 final class InputPanelController {
     private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "InputPanelController")
     private let appState: AppState
-    private let selectedTextReader: SelectedTextReader
+    private let selectedTextReader: any SelectedTextReading
     private let paster: any Pasting
     private let makeScriptRunner: () -> ScriptRunner
     private let historyStore: HistoryStore
@@ -18,7 +18,7 @@ final class InputPanelController {
 
     init(
         appState: AppState,
-        selectedTextReader: SelectedTextReader,
+        selectedTextReader: any SelectedTextReading,
         paster: any Pasting,
         makeScriptRunner: @escaping () -> ScriptRunner,
         historyStore: HistoryStore
@@ -140,7 +140,7 @@ final class InputPanelController {
             appState.selectionEnd = ""
         }
 
-        appState.inputText = ""
+        appState.inputText = appState.selectedText
         appState.errorMessage = nil
         appState.isInputPanelVisible = true
         shouldStartDictation = true
@@ -155,18 +155,22 @@ final class InputPanelController {
         // and in the window hierarchy. Fallback to async for safety.
         if let textView, textView.window != nil {
             textView.isSuppressingCallbacks = true
-            textView.string = ""
+            textView.string = appState.inputText
             textView.isSuppressingCallbacks = false
             panel.makeFirstResponder(textView)
+            textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
+            textView.scrollRangeToVisible(textView.selectedRange())
             scheduleDictation()
         } else {
             DispatchQueue.main.async { [weak self] in
                 guard let self, let textView = self.textView else { return }
                 textView.isSuppressingCallbacks = true
-                textView.string = ""
+                textView.string = self.appState.inputText
                 textView.isSuppressingCallbacks = false
                 if textView.window != nil {
                     self.panel.makeFirstResponder(textView)
+                    textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
+                    textView.scrollRangeToVisible(textView.selectedRange())
                 }
                 self.scheduleDictation()
             }
