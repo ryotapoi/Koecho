@@ -29,6 +29,9 @@ playground.xcworkspace
 .build/
 .swiftpm/
 
+# Claude Code
+plans/
+
 # macOS
 .DS_Store
 .AppleDouble
