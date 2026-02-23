@@ -1,20 +1,20 @@
 import AppKit
 import SwiftUI
 
-struct DictationTextEditor: NSViewRepresentable {
+struct VoiceInputTextEditor: NSViewRepresentable {
     var text: String
     var isDisabled: Bool
     var onTextChanged: (String) -> Void
     var onTextCommitted: () -> Void
     var onAddReplacementRule: (String) -> Void
-    var onViewCreated: (DictationTextView) -> Void
+    var onViewCreated: (VoiceInputTextView) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let textView = DictationTextView()
+        let textView = VoiceInputTextView()
         textView.isRichText = false
         textView.allowsUndo = true
         textView.isAutomaticQuoteSubstitutionEnabled = false
@@ -56,7 +56,8 @@ struct DictationTextEditor: NSViewRepresentable {
 
         if textView.string != text,
            !textView.isSuppressingCallbacks,
-           !textView.hasMarkedText() {
+           !textView.hasMarkedText(),
+           textView.volatileRange == nil {
             textView.isSuppressingCallbacks = true
             textView.string = text
             textView.isSuppressingCallbacks = false
@@ -66,6 +67,6 @@ struct DictationTextEditor: NSViewRepresentable {
     }
 
     final class Coordinator {
-        var textView: DictationTextView?
+        var textView: VoiceInputTextView?
     }
 }

@@ -9,14 +9,14 @@ struct InputPanelContent: View {
     var onAddReplacementRule: (ReplacementRule) -> Void = { _ in }
     var onTextChanged: (String) -> Void = { _ in }
     var onTextCommitted: () -> Void = {}
-    var onTextViewCreated: (DictationTextView) -> Void = { _ in }
+    var onTextViewCreated: (VoiceInputTextView) -> Void = { _ in }
     var onFocusTextEditor: () -> Void = {}
 
     @FocusState private var isPromptFocused: Bool
 
     var body: some View {
         VStack(spacing: 4) {
-            DictationTextEditor(
+            VoiceInputTextEditor(
                 text: appState.inputText,
                 isDisabled: appState.isRunningScript,
                 onTextChanged: onTextChanged,
@@ -71,6 +71,18 @@ struct InputPanelContent: View {
 
             if appState.promptScript != nil {
                 promptInputView
+            }
+
+            if let status = appState.voiceEngineStatus {
+                HStack(spacing: 4) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(status)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 8)
             }
 
             if let errorMessage = appState.errorMessage {

@@ -5,6 +5,7 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         Form {
+            voiceInputSection
             Section("Clipboard") {
                 TextField("Clipboard restore delay (sec)", value: $settings.pasteDelay, format: .number)
             }
@@ -44,5 +45,22 @@ struct GeneralSettingsView: View {
         }
         .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder
+    private var voiceInputSection: some View {
+        if #available(macOS 26, *) {
+            Section("Voice Input") {
+                Picker("Engine", selection: $settings.voiceInputMode) {
+                    Text("System Dictation").tag(VoiceInputMode.dictation)
+                    Text("SpeechAnalyzer (On-device)").tag(VoiceInputMode.speechAnalyzer)
+                }
+                .pickerStyle(.segmented)
+                if settings.voiceInputMode == .speechAnalyzer {
+                    TextField("Language", text: $settings.speechAnalyzerLocale)
+                        .help("Locale identifier (e.g. ja-JP, en-US)")
+                }
+            }
+        }
     }
 }

@@ -18,6 +18,7 @@ final class AppState {
     var selectionStart: String = ""
     var selectionEnd: String = ""
     var pendingReplacementPattern: String?
+    var voiceEngineStatus: String?
 
     init(settings: Settings) {
         self.settings = settings

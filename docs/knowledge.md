@@ -32,12 +32,12 @@
 - `pasteDelay` / `scriptTimeout` は computed property + backing store パターンに移行済み（値クランプのため）。`init` では backing store に直接代入し `didSet` 問題を回避している
 - Swift バージョンアップ時に `@Observable` マクロの挙動が変わると壊れうるので、テストが通ることを確認する
 
-## macOS / DictationTextView + NSViewRepresentable
+## macOS / VoiceInputTextView + NSViewRepresentable
 
-- SwiftUI TextEditor の内部 NSTextView にアクセスする脆弱なハック（`findTextView(in:)`、isa-swizzling）を廃止し、DictationTextView（NSTextView サブクラス）+ DictationTextEditor（NSViewRepresentable）に置き換え済み（ADR 0010）
+- SwiftUI TextEditor の内部 NSTextView にアクセスする脆弱なハック（`findTextView(in:)`、isa-swizzling）を廃止し、VoiceInputTextView（NSTextView サブクラス）+ VoiceInputTextEditor（NSViewRepresentable）に置き換え済み（ADR 0010）
 - テキスト同期はコールバック方式。`didChangeText()` → `onTextChanged` で外向き同期、`updateNSView` で内向き同期。SwiftUI Binding は使わない
 - `didChangeText()` は `insertText` から内部的に呼ばれるので、`onTextChanged` は `didChangeText` のみで発火させる。`insertText` では `onTextCommitted`（Dictation 確定シグナル）のみ発火
-- フィードバックループ防止: `DictationTextView.isSuppressingCallbacks` フラグ。コントローラから `textView.string` を直接変更する箇所（clearTextView, stopDictation, applyReplacementRulesNow）すべてで true/false をセットする
+- フィードバックループ防止: `VoiceInputTextView.isSuppressingCallbacks` フラグ。コントローラから `textView.string` を直接変更する箇所（clearTextView, stopDictation, applyReplacementRulesNow）すべてで true/false をセットする
 - `updateNSView` でも `isSuppressingCallbacks` をチェックし、`hasMarkedText()` ガードと合わせて Dictation 中の上書きを防止
 - 初回表示では `makeNSView` → `onViewCreated` で textView 参照を取得するが、`makeKeyAndOrderFront` 直後はまだ SwiftUI レイアウトが完了しておらず textView が nil の場合がある。nil なら `DispatchQueue.main.async` で 1 サイクル遅延
 - `@FocusState` は prompt TextField のみに使用。TextEditor 側のフォーカスは `panel.makeFirstResponder(textView)` で直接管理
@@ -95,7 +95,7 @@
   - `NSTextStorage.didProcessEditingNotification` → 発火しない
   - ポーリングで `NSTextView.string` を読む → 未確定テキストが反映されていないので変化なし
 - 変更が検知される条件: フォーカスを外す、音声入力を停止する、キーボード入力する、カーソル移動する（いずれも marked text が確定されるタイミング）
-- 対策（現行）: DictationTextView の didChangeText() をトリガーに、`hasMarkedText()` が false のとき即座に置換ルールを適用。`hasMarkedText()` が true のときはアンダーラインプレビュー + ホバーツールチップを表示。Ctrl+R / Replace ボタンによる手動トリガーも併用可能（ADR 0011）
+- 対策（現行）: VoiceInputTextView の didChangeText() をトリガーに、`hasMarkedText()` が false のとき即座に置換ルールを適用。`hasMarkedText()` が true のときはアンダーラインプレビュー + ホバーツールチップを表示。Ctrl+R / Replace ボタンによる手動トリガーも併用可能（ADR 0011）
 
 ## macOS / Dictation + フォーカス遷移
 
@@ -117,7 +117,7 @@
 
 ## macOS / NSTextView context menu
 
-- DictationTextView サブクラスで `menu(for:)` を override し、標準メニュー + カスタムアイテム（「Add Replacement Rule…」）を追加
+- VoiceInputTextView サブクラスで `menu(for:)` を override し、標準メニュー + カスタムアイテム（「Add Replacement Rule…」）を追加
 - 選択テキストがない場合はカスタムアイテムを追加しない（`selectedRange().length > 0` でガード）
 - テスト時に `super.menu(for:)` を呼ぶとプロセスクラッシュが発生する場合がある。メニューアクションのテストはセレクタの直接呼び出し（`perform(Selector(("addReplacementRuleFromMenu:")))`) で行う
 
@@ -125,10 +125,34 @@
 
 - `NSLayoutManager.boundingRect(forGlyphRange:in:)` returns the bounding rect for a glyph range in text container coordinates. Add `textContainerOrigin` to convert to NSTextView coordinates
 - `layoutManager.glyphRange(forCharacterRange:actualCharacterRange:)` converts character ranges (NSRange) to glyph ranges needed by `boundingRect`
-- DictationTextView uses TextKit 1 by default (NSTextView does not opt into TextKit 2 unless explicitly configured), so `layoutManager` is always non-nil
+- VoiceInputTextView uses TextKit 1 by default (NSTextView does not opt into TextKit 2 unless explicitly configured), so `layoutManager` is always non-nil
 - **Adding NSView subviews to NSTextView during Dictation corrupts the marked text state and causes duplicate text on the first Dictation phrase.** Use `draw(_:)` override for visual decorations (underlines) and a separate floating NSWindow for tooltips instead
 - For multi-line text, use `enumerateLineFragments(forGlyphRange:)` to draw per visual line. `boundingRect` alone returns a single rect spanning the full width across line breaks
 - Tooltip NSWindow should be positioned above the text to avoid overlapping the Dictation microphone icon that appears below the cursor
+
+## macOS / Hardened Runtime + マイク権限
+
+- Hardened Runtime 有効時、マイクアクセスには `com.apple.security.device.audio-input` entitlement が必要
+- `NSMicrophoneUsageDescription`（Info.plist / ビルド設定）だけでは不十分。entitlements ファイルに entitlement を追加しないとマイクアクセスがブロックされ、権限ダイアログも表示されない
+- macOS の Settings > Privacy & Security > Microphone には手動追加 UI がない。アプリが初めてマイクにアクセスしたときにシステムダイアログが自動表示される
+
+## macOS 26 / SpeechAnalyzer
+
+- SpeechAnalyzer API は `Speech` フレームワーク内にある（独立フレームワークではない）。`import Speech` で使用可能
+- `DictationTranscriber` は句読点自動付与機能を持つ。`Preset` で `reportingOptions: [.volatileResults]` を指定すると volatile results が取得できる
+- `DictationTranscriber.Result` は `isFinal: Bool` と `text: AttributedString` を持つ。テキスト取得は `String(result.text.characters)`
+- `AnalyzerInput(buffer: AVAudioPCMBuffer)` でオーディオバッファを入力
+- `AVAudioEngine.inputNode` のタップコールバックは audio thread で実行される。`@MainActor` のプロパティに直接アクセスしてはいけない。`AsyncStream.Continuation` をローカル変数にキャプチャして `yield` する
+- 音声フォーマット変換: `SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith:considering:)` で最適フォーマット取得。入力フォーマットと異なる場合は `AVAudioConverter` で変換
+- モデルダウンロード: `AssetInventory.assetInstallationRequest(supporting:)` で確認。必要なら `downloadAndInstall()` で自動DL
+- Swift Testing の `@available(macOS 26, *)` と `@Test` マクロは互換性がない。`@available` をスイートに付けると `@Test` がコンパイルエラーになる。対策: ランタイムで `guard #available(macOS 26, *) else { return }` を使う
+
+## macOS / VoiceInputTextView volatile テキスト
+
+- volatile テキストは `textStorage` に直接挿入し、`NSLayoutManager.addTemporaryAttribute` でスタイリング（グレー前景色 + 薄い背景色）
+- volatile 操作（setVolatileText / clearVolatileText / finalizeVolatileText）では必ず `isSuppressingCallbacks = true` で囲む。そうしないと `didChangeText()` → `onTextChanged` が発火し、volatile テキストが `appState.inputText` に混入する
+- `shouldChangeText(in:replacementString:)` をオーバーライドし、キーボード入力前に volatile をクリア。NSRange のずれを防止
+- `VoiceInputTextEditor.updateNSView` の同期ガードに `volatileRange == nil` を追加。volatile 存在中は SwiftUI からの同期で volatile を消さない
 
 ## Swift / @MainActor + デフォルト引数
 

@@ -2,6 +2,11 @@ import Foundation
 import SwiftUI
 import os
 
+enum VoiceInputMode: String, Codable, CaseIterable {
+    case dictation
+    case speechAnalyzer
+}
+
 @MainActor @Observable
 final class Settings {
     private let defaults: UserDefaults
@@ -114,6 +119,30 @@ final class Settings {
         }
     }
 
+    private var _voiceInputMode: VoiceInputMode
+    var voiceInputMode: VoiceInputMode {
+        get { _voiceInputMode }
+        set {
+            _voiceInputMode = newValue
+            save()
+        }
+    }
+
+    private var _speechAnalyzerLocale: String
+    var speechAnalyzerLocale: String {
+        get { _speechAnalyzerLocale }
+        set {
+            _speechAnalyzerLocale = newValue
+            save()
+        }
+    }
+
+    /// Returns the effective voice input mode considering OS availability.
+    var effectiveVoiceInputMode: VoiceInputMode {
+        if #available(macOS 26, *) { return _voiceInputMode }
+        return .dictation
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
 
@@ -190,6 +219,15 @@ final class Settings {
         } else {
             _hotkeyConfig = .default
         }
+
+        if let rawMode = defaults.string(forKey: "voiceInputMode"),
+           let mode = VoiceInputMode(rawValue: rawMode) {
+            _voiceInputMode = mode
+        } else {
+            _voiceInputMode = .dictation
+        }
+
+        _speechAnalyzerLocale = defaults.string(forKey: "speechAnalyzerLocale") ?? "ja-JP"
 
         save()
     }
@@ -271,5 +309,7 @@ final class Settings {
         } catch {
             logger.error("Failed to encode hotkey config: \(error.localizedDescription)")
         }
+        defaults.set(_voiceInputMode.rawValue, forKey: "voiceInputMode")
+        defaults.set(_speechAnalyzerLocale, forKey: "speechAnalyzerLocale")
     }
 }

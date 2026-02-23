@@ -156,6 +156,34 @@
 
 ---
 
+## 音声入力エンジン
+
+### VoiceInputEngine プロトコル
+音声入力の抽象化レイヤー。DictationEngine と SpeechAnalyzerEngine の2つの実装がある。
+
+### DictationEngine（macOS 14+）
+- macOS 標準の Dictation（`startDictation:` セレクタ）を使用
+- NSTextView の marked text / insertText 経路でテキストを受け取る
+- 0.3 秒遅延付き開始（パネル表示直後の不安定さ対策）
+- `restart()` メソッドでフォーカス遷移後の再送信が可能（DictationEngine 固有）
+
+### SpeechAnalyzerEngine（macOS 26+）
+- Speech フレームワークの SpeechAnalyzer / DictationTranscriber を使用
+- AVAudioEngine でマイク入力を取得し、オンデバイスで音声認識
+- volatile（未確定）テキストをグレー + 薄い背景色で表示
+- isFinal で確定テキストを挿入、volatile テキストを置換
+- キーボードと音声の併用が可能（voiceInsertionPoint で挿入位置を追跡）
+- マイク権限（NSMicrophoneUsageDescription）が必要
+- 初回使用時にモデルの自動ダウンロードが発生する場合がある
+
+### 設定
+- Settings の Voice Input セクション（macOS 26+ のみ表示）でエンジンを選択
+- `effectiveVoiceInputMode` で OS 可用性を考慮した実効モードを返す
+- SpeechAnalyzer の locale は Settings で指定（デフォルト: ja-JP）
+- パネル表示時にエンジンが生成される（設定変更は次回パネル表示時に反映）
+
+---
+
 ## ペースト
 
 - CGEvent で Cmd+V をシミュレーション

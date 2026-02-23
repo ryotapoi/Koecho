@@ -511,4 +511,49 @@ struct SettingsTests {
         #expect(settings.autoRunShortcutKey == nil)
         #expect(settings.autoRunScript == nil)
     }
+
+    // MARK: - Voice Input Mode
+
+    @Test func defaultVoiceInputMode() {
+        let settings = Settings(defaults: makeDefaults())
+        #expect(settings.voiceInputMode == .dictation)
+    }
+
+    @Test func persistsVoiceInputMode() {
+        let defaults = makeDefaults()
+
+        let settings = Settings(defaults: defaults)
+        settings.voiceInputMode = .speechAnalyzer
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.voiceInputMode == .speechAnalyzer)
+    }
+
+    @Test func defaultSpeechAnalyzerLocale() {
+        let settings = Settings(defaults: makeDefaults())
+        #expect(settings.speechAnalyzerLocale == "ja-JP")
+    }
+
+    @Test func persistsSpeechAnalyzerLocale() {
+        let defaults = makeDefaults()
+
+        let settings = Settings(defaults: defaults)
+        settings.speechAnalyzerLocale = "en-US"
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.speechAnalyzerLocale == "en-US")
+    }
+
+    @Test func effectiveVoiceInputModeFallsToDictation() {
+        let settings = Settings(defaults: makeDefaults())
+        settings.voiceInputMode = .speechAnalyzer
+
+        // On macOS 26+ effectiveVoiceInputMode returns speechAnalyzer,
+        // on older OS it falls back to dictation.
+        if #available(macOS 26, *) {
+            #expect(settings.effectiveVoiceInputMode == .speechAnalyzer)
+        } else {
+            #expect(settings.effectiveVoiceInputMode == .dictation)
+        }
+    }
 }

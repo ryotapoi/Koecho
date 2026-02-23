@@ -1,15 +1,21 @@
 import AppKit
 
-final class DictationTextView: NSTextView {
+final class VoiceInputTextView: NSTextView {
     var onTextChanged: ((String) -> Void)?
     var onTextCommitted: (() -> Void)?
     var onAddReplacementRule: ((String) -> Void)?
+    var onCursorMoved: ((Int) -> Void)?
+    /// Called when volatile text is finalized by keyboard input.
+    var onVolatileFinalized: (() -> Void)?
 
     /// When true, `didChangeText()` will not fire `onTextChanged`.
     /// Used by both the NSViewRepresentable Coordinator (to prevent feedback
     /// loops during `updateNSView`) and the controller (when programmatically
     /// clearing the text view).
     var isSuppressingCallbacks = false
+
+    /// SpeechAnalyzer mode: range of volatile (unconfirmed) text in the text storage.
+    private(set) var volatileRange: NSRange?
 
     /// Replacement preview data drawn as underlines in `draw(_:)`.
     /// Subviews must not be added during Dictation — doing so corrupts
@@ -22,6 +28,95 @@ final class DictationTextView: NSTextView {
 
     /// Lightweight floating window for instant tooltip display.
     private var tipWindow: NSWindow?
+
+    // MARK: - Volatile text
+
+    /// Set volatile text at the given insertion point (UTF-16 offset).
+    /// Replaces any previous volatile text.
+    func setVolatileText(_ text: String?, at insertionPoint: Int) {
+        clearVolatileText()
+        guard let text, !text.isEmpty else { return }
+        let nsText = text as NSString
+        let storage = textStorage!
+        let clampedPoint = min(insertionPoint, storage.length)
+
+        isSuppressingCallbacks = true
+        storage.beginEditing()
+        storage.insert(NSAttributedString(string: text, attributes: typingAttributes), at: clampedPoint)
+        storage.endEditing()
+        isSuppressingCallbacks = false
+
+        let range = NSRange(location: clampedPoint, length: nsText.length)
+        volatileRange = range
+        applyVolatileStyling(range)
+    }
+
+    /// Remove volatile text from the text storage.
+    func clearVolatileText() {
+        guard let range = volatileRange else { return }
+        let storage = textStorage!
+        guard range.location + range.length <= storage.length else {
+            volatileRange = nil
+            return
+        }
+
+        isSuppressingCallbacks = true
+        storage.beginEditing()
+        storage.deleteCharacters(in: range)
+        storage.endEditing()
+        isSuppressingCallbacks = false
+
+        volatileRange = nil
+    }
+
+    /// Finalize volatile text: remove styling, keep the text, clear volatileRange.
+    func finalizeVolatileText() {
+        guard let range = volatileRange else { return }
+        let storage = textStorage!
+        guard range.location + range.length <= storage.length else {
+            volatileRange = nil
+            return
+        }
+
+        isSuppressingCallbacks = true
+        storage.beginEditing()
+        // Re-apply typingAttributes to restore normal text appearance.
+        // Simply removing foregroundColor can leave text with no explicit color,
+        // which may render incorrectly in dark mode.
+        storage.setAttributes(typingAttributes, range: range)
+        storage.endEditing()
+        layoutManager?.removeTemporaryAttribute(.foregroundColor, forCharacterRange: range)
+        layoutManager?.removeTemporaryAttribute(.backgroundColor, forCharacterRange: range)
+        isSuppressingCallbacks = false
+
+        volatileRange = nil
+    }
+
+    /// Return the finalized text (excluding volatile text).
+    var finalizedString: String {
+        guard let range = volatileRange else { return string }
+        let nsString = string as NSString
+        guard range.location + range.length <= nsString.length else { return string }
+        let mutable = NSMutableString(string: nsString)
+        mutable.deleteCharacters(in: range)
+        return mutable as String
+    }
+
+    private func applyVolatileStyling(_ range: NSRange) {
+        guard let layoutManager else { return }
+        layoutManager.addTemporaryAttribute(
+            .foregroundColor,
+            value: NSColor.secondaryLabelColor,
+            forCharacterRange: range
+        )
+        layoutManager.addTemporaryAttribute(
+            .backgroundColor,
+            value: NSColor.systemGray.withAlphaComponent(0.1),
+            forCharacterRange: range
+        )
+    }
+
+    // MARK: - Replacement previews
 
     func showReplacementPreviews(_ matches: [ReplacementMatch]) {
         previewMatches = matches
@@ -212,6 +307,19 @@ final class DictationTextView: NSTextView {
 
     // MARK: - Text change callbacks
 
+    override func shouldChangeText(in affectedCharRange: NSRange, replacementString: String?) -> Bool {
+        // Finalize volatile text before keyboard input so it becomes confirmed text.
+        if let range = volatileRange, !isSuppressingCallbacks {
+            if let storage = textStorage, range.location + range.length <= storage.length {
+                finalizeVolatileText()
+                onVolatileFinalized?()
+            } else {
+                clearVolatileText()
+            }
+        }
+        return super.shouldChangeText(in: affectedCharRange, replacementString: replacementString)
+    }
+
     override func didChangeText() {
         super.didChangeText()
         guard !isSuppressingCallbacks else { return }
@@ -221,6 +329,15 @@ final class DictationTextView: NSTextView {
     override func insertText(_ string: Any, replacementRange: NSRange) {
         super.insertText(string, replacementRange: replacementRange)
         onTextCommitted?()
+    }
+
+    // MARK: - Cursor movement
+
+    override func setSelectedRange(_ charRange: NSRange, affinity: NSSelectionAffinity, stillSelecting stillSelectingFlag: Bool) {
+        super.setSelectedRange(charRange, affinity: affinity, stillSelecting: stillSelectingFlag)
+        if !stillSelectingFlag, !isSuppressingCallbacks {
+            onCursorMoved?(charRange.location)
+        }
     }
 
     // MARK: - Context menu

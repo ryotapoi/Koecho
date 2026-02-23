@@ -11,10 +11,21 @@ final class InputPanelController {
     private let makeScriptRunner: () -> ScriptRunner
     private let historyStore: HistoryStore
     private var isConfirming = false
-    private var shouldStartDictation = false
-    private var dictationRetryWorkItem: DispatchWorkItem?
-    private var textView: DictationTextView?
+    private var isStoppingEngine = false
+    private var engine: any VoiceInputEngine
+    private var textView: VoiceInputTextView?
+    private var voiceInsertionPoint: Int = 0
+    private var currentVoiceTarget: VoiceTarget = .textEditor
+    /// True after volatile text was locally finalized (e.g. by cursor movement
+    /// or keyboard input). While set, SDK didFinalize is suppressed to prevent
+    /// duplicate insertion. Cleared on the next didUpdateVolatile.
+    private var isLocallyFinalized = false
     private(set) var panel: InputPanel
+
+    enum VoiceTarget {
+        case textEditor
+        case prompt
+    }
 
     init(
         appState: AppState,
@@ -28,6 +39,8 @@ final class InputPanelController {
         self.paster = paster
         self.makeScriptRunner = makeScriptRunner
         self.historyStore = historyStore
+
+        self.engine = DictationEngine()
 
         self.panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200))
 
@@ -44,9 +57,9 @@ final class InputPanelController {
             },
             onPromptFocused: { [weak self] in
                 guard let self else { return }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                    guard let self, self.appState.promptScript != nil else { return }
-                    self.startDictation()
+                self.currentVoiceTarget = .prompt
+                if let dictation = self.engine as? DictationEngine {
+                    dictation.restart()
                 }
             },
             onAddReplacementRule: { [weak self] rule in
@@ -59,9 +72,18 @@ final class InputPanelController {
                 self?.handleTextCommitted()
             },
             onTextViewCreated: { [weak self] view in
-                self?.textView = view
+                guard let self else { return }
+                self.textView = view
+                view.onCursorMoved = { [weak self] position in
+                    self?.handleCursorMoved(position)
+                }
+                view.onVolatileFinalized = { [weak self] in
+                    self?.isLocallyFinalized = true
+                }
+                self.configureEngineWithTextView()
             },
             onFocusTextEditor: { [weak self] in
+                self?.currentVoiceTarget = .textEditor
                 self?.focusTextView()
             }
         ))
@@ -149,7 +171,9 @@ final class InputPanelController {
         appState.inputText = appState.selectedText
         appState.errorMessage = nil
         appState.isInputPanelVisible = true
-        shouldStartDictation = true
+        engine = makeEngine()
+        voiceInsertionPoint = (appState.inputText as NSString).length
+        currentVoiceTarget = .textEditor
         panel.makeKeyAndOrderFront(nil)
         clearTextView()
 
@@ -166,7 +190,7 @@ final class InputPanelController {
             panel.makeFirstResponder(textView)
             textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
             textView.scrollRangeToVisible(textView.selectedRange())
-            scheduleDictation()
+            engine.start()
         } else {
             DispatchQueue.main.async { [weak self] in
                 guard let self, let textView = self.textView else { return }
@@ -178,48 +202,41 @@ final class InputPanelController {
                     textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
                     textView.scrollRangeToVisible(textView.selectedRange())
                 }
-                self.scheduleDictation()
+                self.engine.start()
             }
         }
     }
 
-    private func scheduleDictation() {
-        guard shouldStartDictation else { return }
-        shouldStartDictation = false
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.startDictation()
+    private func makeEngine() -> any VoiceInputEngine {
+        if #available(macOS 26, *),
+           appState.settings.effectiveVoiceInputMode == .speechAnalyzer {
+            let locale = Locale(identifier: appState.settings.speechAnalyzerLocale)
+            let engine = SpeechAnalyzerEngine(locale: locale)
+            engine.delegate = self
+            return engine
         }
-        dictationRetryWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
+        let engine = DictationEngine()
+        engine.configure(panel: panel, textView: textView)
+        return engine
     }
 
-    private func stopDictation() async {
-        guard let textView else { return }
-        textView.inputContext?.discardMarkedText()
-        panel.makeFirstResponder(nil)
-        // Give macOS time to finalize the Dictation session.
-        try? await Task.sleep(for: .milliseconds(100))
-        // Clear text view so no content leaks to the foreground app.
-        textView.isSuppressingCallbacks = true
-        textView.string = ""
-        textView.isSuppressingCallbacks = false
+    private func configureEngineWithTextView() {
+        if let dictation = engine as? DictationEngine {
+            dictation.configure(panel: panel, textView: textView)
+        }
     }
 
-    private func startDictation() {
-        guard appState.isInputPanelVisible else { return }
-
-        // Ensure textView is first responder before starting Dictation.
-        // On first show, clearTextView may have skipped makeFirstResponder
-        // because textView was not yet in the window hierarchy.
-        if let textView, panel.firstResponder !== textView {
-            panel.makeFirstResponder(textView)
+    private func handleCursorMoved(_ position: Int) {
+        guard !(engine is DictationEngine) else { return }
+        if let textView, textView.volatileRange != nil {
+            textView.finalizeVolatileText()
+            isLocallyFinalized = true
+            appState.inputText = textView.finalizedString
+            if appState.settings.isAutoReplacementEnabled {
+                applyOrPreviewReplacementRules()
+            }
         }
-
-        let selector = Selector(("startDictation:"))
-        if !NSApp.sendAction(selector, to: nil, from: nil) {
-            textView?.perform(selector, with: nil)
-        }
-        logger.debug("startDictation sent")
+        voiceInsertionPoint = position
     }
 
     func handleTextChanged(_ text: String) {
@@ -265,6 +282,15 @@ final class InputPanelController {
             return
         }
 
+        // Clear volatile text before script execution
+        textView?.clearVolatileText()
+        if let textView {
+            let tvString = textView.finalizedString
+            if !tvString.isEmpty {
+                appState.inputText = tvString
+            }
+        }
+
         let originalText = appState.inputText
         appState.isRunningScript = true
         defer {
@@ -291,6 +317,7 @@ final class InputPanelController {
             )
             guard appState.isInputPanelVisible else { return }
             appState.inputText = result.output
+            voiceInsertionPoint = (result.output as NSString).length
         } catch {
             guard appState.isInputPanelVisible else { return }
             appState.inputText = originalText
@@ -304,7 +331,10 @@ final class InputPanelController {
         let rules = appState.settings.replacementRules
         guard !rules.isEmpty else { return }
 
-        if let textView, textView.hasMarkedText() {
+        if let textView, textView.volatileRange != nil {
+            // Volatile text present — suppress preview to avoid NSRange mismatch
+            textView.clearReplacementPreviews()
+        } else if let textView, textView.hasMarkedText() {
             showReplacementPreview(rules: rules)
         } else {
             applyReplacementRulesNow()
@@ -334,6 +364,23 @@ final class InputPanelController {
         let currentText = appState.inputText
         let result = applyReplacementRules(rules, to: currentText)
         if result != currentText {
+            // Adjust voiceInsertionPoint based on replacement matches.
+            // Sort by location and filter to original text bounds for stability.
+            let currentNSLength = (currentText as NSString).length
+            let matches = findReplacementMatches(rules, in: currentText)
+                .filter { $0.range.location >= 0 && $0.range.location + $0.range.length <= currentNSLength }
+                .sorted { $0.range.location < $1.range.location }
+            var offset = 0
+            for match in matches {
+                let adjustedLocation = match.range.location + offset
+                if adjustedLocation < voiceInsertionPoint {
+                    let delta = (match.replacement as NSString).length - match.range.length
+                    voiceInsertionPoint += delta
+                    offset += delta
+                }
+            }
+            voiceInsertionPoint = max(0, min(voiceInsertionPoint, (result as NSString).length))
+
             appState.inputText = result
             appState.errorMessage = nil
             if let textView {
@@ -345,25 +392,43 @@ final class InputPanelController {
     }
 
     func cancelPrompt() {
+        currentVoiceTarget = .textEditor
         appState.promptScript = nil
         appState.promptText = ""
     }
 
     func confirm() async {
         guard appState.isInputPanelVisible, !isConfirming, !appState.isRunningScript else { return }
-        dictationRetryWorkItem?.cancel()
-        dictationRetryWorkItem = nil
 
         textView?.clearReplacementPreviews()
 
-        // Read text from textView directly — during Dictation,
-        // appState.inputText may not include marked text content.
-        // Fall back to appState.inputText when textView has no text
-        // (e.g., test environment where textView.string is not synced).
-        let textViewString = textView?.string ?? ""
-        var rawText = textViewString.isEmpty ? appState.inputText : textViewString
+        // For SpeechAnalyzer: stop engine and wait for final results
+        isStoppingEngine = true
+        await engine.stop()
+        isStoppingEngine = false
 
-        await stopDictation()
+        // Finalize any remaining volatile text (e.g. if stop() timed out)
+        if textView?.volatileRange != nil {
+            textView?.finalizeVolatileText()
+        }
+
+        // Read text: for SpeechAnalyzer use finalizedString, for Dictation use textView.string
+        // Fall back to appState.inputText in test environment
+        var rawText: String
+        if let textView {
+            // After stop + finalize, finalizedString == string (no volatile)
+            let tvString = textView.finalizedString
+            rawText = tvString.isEmpty ? appState.inputText : tvString
+        } else {
+            rawText = appState.inputText
+        }
+
+        // Clear text view so no content leaks to the foreground app.
+        if let textView {
+            textView.isSuppressingCallbacks = true
+            textView.string = ""
+            textView.isSuppressingCallbacks = false
+        }
 
         // Apply replacement rules after Dictation is stopped
         let rules = appState.settings.replacementRules
@@ -446,9 +511,6 @@ final class InputPanelController {
     }
 
     private func clearState() {
-        shouldStartDictation = false
-        dictationRetryWorkItem?.cancel()
-        dictationRetryWorkItem = nil
         textView?.clearReplacementPreviews()
         appState.inputText = ""
         appState.isInputPanelVisible = false
@@ -457,10 +519,12 @@ final class InputPanelController {
         appState.selectionStart = ""
         appState.selectionEnd = ""
         appState.errorMessage = nil
+        appState.voiceEngineStatus = nil
         appState.isRunningScript = false
         appState.promptScript = nil
         appState.promptText = ""
         appState.pendingReplacementPattern = nil
+        isLocallyFinalized = false
     }
 
     func cancel() {
@@ -469,11 +533,27 @@ final class InputPanelController {
             return
         }
 
+        engine.cancel()
         paster.restoreClipboard()
         clearState()
         panel.orderOut(nil)
 
         logger.info("Panel cancelled and hidden")
+    }
+
+    /// Switch to a new engine while the panel is visible.
+    /// Called when the user changes voiceInputMode in Settings.
+    func switchEngine() async {
+        guard appState.isInputPanelVisible, !isConfirming else { return }
+        await engine.stop()
+        textView?.clearVolatileText()
+        if let textView {
+            appState.inputText = textView.finalizedString
+        }
+        engine = makeEngine()
+        voiceInsertionPoint = textView?.selectedRange().location ?? (appState.inputText as NSString).length
+        engine.start()
+        logger.info("Engine switched while panel visible")
     }
 
     private func errorMessage(for error: any Error) -> String {
@@ -523,5 +603,101 @@ final class InputPanelController {
         appState.settings.addReplacementRule(rule)
         appState.pendingReplacementPattern = nil
         applyOrPreviewReplacementRules()
+    }
+}
+
+// MARK: - Voice text helpers
+
+extension InputPanelController {
+    /// Strip the first character of `text` if it duplicates the character at
+    /// `insertionPoint - 1` and is punctuation. DictationTranscriber with
+    /// `frequentFinalization` may include trailing punctuation from the previous
+    /// segment at the start of the next segment.
+    /// `insertionPoint` must already be clamped to storage bounds.
+    private func stripLeadingDuplicatePunctuation(_ text: String, at insertionPoint: Int) -> String {
+        guard let storage = textView?.textStorage,
+              insertionPoint > 0, !text.isEmpty else { return text }
+        let prevChar = (storage.string as NSString).substring(with: NSRange(location: insertionPoint - 1, length: 1))
+        let firstChar = String(text.prefix(1))
+        if prevChar == firstChar, Character(firstChar).isPunctuation {
+            return String(text.dropFirst())
+        }
+        return text
+    }
+
+    /// Insert finalized voice text at the given position in the text storage.
+    /// Updates `voiceInsertionPoint` to after the inserted text and syncs `appState.inputText`.
+    private func insertFinalizedText(_ text: String, at insertionPoint: Int) {
+        guard let textView, let storage = textView.textStorage else { return }
+        let clampedPoint = min(insertionPoint, storage.length)
+        let adjustedText = stripLeadingDuplicatePunctuation(text, at: clampedPoint)
+        guard !adjustedText.isEmpty else {
+            appState.inputText = textView.finalizedString
+            return
+        }
+        let nsText = adjustedText as NSString
+        textView.isSuppressingCallbacks = true
+        storage.beginEditing()
+        storage.insert(
+            NSAttributedString(string: adjustedText, attributes: textView.typingAttributes),
+            at: clampedPoint
+        )
+        storage.endEditing()
+        textView.isSuppressingCallbacks = false
+        voiceInsertionPoint = clampedPoint + nsText.length
+        appState.inputText = textView.finalizedString
+    }
+}
+
+// MARK: - VoiceInputDelegate
+
+extension InputPanelController: VoiceInputDelegate {
+    func voiceInput(didFinalize text: String) {
+        guard appState.isInputPanelVisible else { return }
+
+        switch currentVoiceTarget {
+        case .prompt:
+            appState.promptText += text
+            return
+        case .textEditor:
+            break
+        }
+
+        textView?.clearVolatileText()
+
+        // Skip if the user already locally finalized (via cursor movement or
+        // keyboard input). The flag is cleared by didUpdateVolatile when the
+        // SDK starts recognizing new speech.
+        if isLocallyFinalized { return }
+
+        insertFinalizedText(text, at: voiceInsertionPoint)
+
+        if !isStoppingEngine, appState.settings.isAutoReplacementEnabled {
+            applyOrPreviewReplacementRules()
+        }
+    }
+
+    func voiceInput(didUpdateVolatile text: String) {
+        guard appState.isInputPanelVisible else { return }
+
+        // A new volatile update means the SDK started recognizing new speech.
+        if isLocallyFinalized { isLocallyFinalized = false }
+
+        switch currentVoiceTarget {
+        case .prompt:
+            return
+        case .textEditor:
+            let point = min(voiceInsertionPoint, textView?.textStorage?.length ?? 0)
+            let adjustedText = stripLeadingDuplicatePunctuation(text, at: point)
+            textView?.setVolatileText(adjustedText, at: voiceInsertionPoint)
+        }
+    }
+
+    func voiceInput(didEncounterError message: String) {
+        appState.errorMessage = message
+    }
+
+    func voiceInput(didUpdateStatus status: String?) {
+        appState.voiceEngineStatus = status
     }
 }
