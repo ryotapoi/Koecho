@@ -154,6 +154,18 @@
 - `shouldChangeText(in:replacementString:)` をオーバーライドし、キーボード入力前に volatile をクリア。NSRange のずれを防止
 - `VoiceInputTextEditor.updateNSView` の同期ガードに `volatileRange == nil` を追加。volatile 存在中は SwiftUI からの同期で volatile を消さない
 
+## NSView / wantsUpdateLayer と draw(_:) の共存
+
+- `wantsUpdateLayer = true` にすると、macOS は `draw(_:)` を呼ばず `updateLayer()` のみ呼ぶ
+- `draw(_:)` でテキスト描画をしている NSView では `wantsUpdateLayer` を使えない
+- ダイナミックカラーの `.cgColor` 変換はアピアランス変更時に再取得が必要（呼び出し時の値で固定されるため）
+- `viewDidChangeEffectiveAppearance()` で CGColor を再設定するのが安全なパターン
+
+## SpeechAnalyzer 既知の問題（未確定・要調査）
+
+- 音声入力の先頭に「。」が挿入されることがある（再現条件不明）
+- volatile テキスト（未確定表示）がある状態でスクリプトを実行すると、volatile 部分がスクリプトに渡されない可能性がある
+
 ## Swift / @MainActor + デフォルト引数
 
 - `@MainActor` クラスの `init` にデフォルト引数で別の `@MainActor` 型のインスタンス生成を書くと、デフォルト引数式は caller の actor isolation を継承しないためコンパイルエラーになる

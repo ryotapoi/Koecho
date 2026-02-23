@@ -28,6 +28,12 @@ final class ShortcutKeyRecorderView: NSView {
 
     override var acceptsFirstResponder: Bool { true }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        updateLayerColors()
+        needsDisplay = true
+    }
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         setup()
@@ -172,11 +178,15 @@ final class ShortcutKeyRecorderView: NSView {
     }
 
     private func updateAppearance() {
+        updateLayerColors()
+        clearButton.isHidden = shortcutKey == nil && !isRecording
+        needsDisplay = true
+    }
+
+    private func updateLayerColors() {
         layer?.borderColor = isRecording
             ? NSColor.controlAccentColor.cgColor
             : NSColor.separatorColor.cgColor
         layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-        clearButton.isHidden = shortcutKey == nil && !isRecording
-        needsDisplay = true
     }
 }
