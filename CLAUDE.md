@@ -9,11 +9,28 @@ macOS標準のDictation機能を利用し、フローティングウィンドウ
 読み: こえこ / Ko-echo
 由来: Koe（声）+ chotto（ちょっと）。echo（反響）の意味も掛かっている。
 
-## ビルド・テスト
+## MCP ツール使い分け
 
-xcodebuild -project Koecho.xcodeproj -scheme Koecho -configuration Debug build   # ビルド
-xcodebuild -project Koecho.xcodeproj -scheme Koecho -configuration Debug \
-  -only-testing:KoechoTests test                                                  # テスト実行
+2つの MCP サーバーを併用する。Bash で `xcodebuild` を直接叩かない。
+
+### XcodeBuildMCP（優先）
+
+ビルド・テストはすべて XcodeBuildMCP のツールを使う。
+構造化レスポンスでエラーがファイル名・行番号付きで返るため、生ログのパースが不要。
+
+- ビルド: `build_sim`（macOS ターゲット）
+- テスト: `test_sim`（macOS ターゲット）
+
+### Apple Xcode MCP（補助）
+
+Xcode の内部状態にアクセスする必要があるときに使う（Xcode 起動が必要）。
+
+- Apple ドキュメント検索: `DocumentationSearch`（WebSearch より優先）
+- Swift REPL 実行: `ExecuteSnippet`（Bash の `swift` より優先）
+- SwiftUI プレビュー: `RenderPreview`
+- ライブ診断: `XcodeRefreshCodeIssuesInFile`
+
+## ビルド・テスト
 
 テストはSwift Testing（@Test マクロ）。テストファイルは KoechoTests/ 配下。
 
@@ -46,6 +63,8 @@ xcodebuild -project Koecho.xcodeproj -scheme Koecho -configuration Debug \
 - MenuBarExtra（メニューバー常駐）
 - UserDefaults（設定保存）
 - os.Logger（ロギング）
+- Speech framework / SpeechAnalyzer（macOS 26+ オンデバイス音声認識）
+- AVAudioEngine（マイク入力取得）
 
 ## 前提条件
 
