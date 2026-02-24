@@ -1,7 +1,8 @@
+import Speech
 import SwiftUI
 
 struct GeneralSettingsView: View {
-    @Bindable var settings: Settings
+    @Bindable var settings: Koecho.Settings
 
     var body: some View {
         Form {
@@ -57,10 +58,101 @@ struct GeneralSettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 if settings.voiceInputMode == .speechAnalyzer {
-                    TextField("Language", text: $settings.speechAnalyzerLocale)
-                        .help("Locale identifier (e.g. ja-JP, en-US)")
+                    SpeechAnalyzerLocalePicker(selection: $settings.speechAnalyzerLocale)
                 }
             }
         }
     }
+}
+
+// MARK: - SpeechAnalyzerLocalePicker
+
+@available(macOS 26, *)
+private struct SpeechAnalyzerLocalePicker: View {
+    @Binding var selection: String
+
+    @State private var locales: [LocaleItem] = []
+    @State private var isLoading = true
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView("Loading languages…")
+                    .controlSize(.small)
+            } else if locales.isEmpty {
+                TextField("Language", text: $selection)
+                    .help("Locale identifier (e.g. ja-JP, en-US)")
+            } else {
+                Picker("Language", selection: $selection) {
+                    ForEach(locales) { locale in
+                        Text(locale.label).tag(locale.identifier)
+                    }
+                }
+            }
+        }
+        .task { await loadLocales() }
+    }
+}
+
+@available(macOS 26, *)
+extension SpeechAnalyzerLocalePicker {
+    /// Load supported and installed locales from DictationTranscriber.
+    func loadLocales() async {
+        let supported = await DictationTranscriber.supportedLocales
+        let installed = await DictationTranscriber.installedLocales
+        let installedKeys = Set(installed.map { localeNormalizationKey($0) })
+
+        var items = supported.map { locale -> LocaleItem in
+            let identifier = locale.identifier
+            let displayName = Locale.current.localizedString(forIdentifier: identifier) ?? identifier
+            let isInstalled = installedKeys.contains(localeNormalizationKey(locale))
+            let label = if isInstalled {
+                "\(displayName) (\(identifier))"
+            } else {
+                "\(displayName) (\(identifier)) — May require download"
+            }
+            return LocaleItem(identifier: identifier, label: label, sortKey: displayName)
+        }
+        items.sort { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
+
+        // Validate and fix selection before publishing locales
+        if !items.isEmpty {
+            let identifiers = Set(items.map(\.identifier))
+            if !identifiers.contains(selection) {
+                // Try normalized comparison (languageCode + region)
+                if let match = findNormalizedMatch(for: selection, in: items) {
+                    selection = match.identifier
+                } else if let match = findNormalizedMatch(for: "ja-JP", in: items) {
+                    selection = match.identifier
+                } else {
+                    selection = items[0].identifier
+                }
+            }
+        }
+
+        locales = items
+        isLoading = false
+    }
+
+    private func localeNormalizationKey(_ locale: Locale) -> String {
+        let lang = locale.language.languageCode?.identifier ?? ""
+        let script = locale.language.script?.identifier ?? ""
+        let region = locale.language.region?.identifier ?? ""
+        return "\(lang)-\(script)-\(region)"
+    }
+
+    private func findNormalizedMatch(for identifier: String, in items: [LocaleItem]) -> LocaleItem? {
+        let source = Locale(identifier: identifier)
+        let sourceKey = localeNormalizationKey(source)
+        return items.first { item in
+            localeNormalizationKey(Locale(identifier: item.identifier)) == sourceKey
+        }
+    }
+}
+
+private struct LocaleItem: Identifiable {
+    let identifier: String
+    let label: String
+    let sortKey: String
+    var id: String { identifier }
 }

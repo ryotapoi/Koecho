@@ -146,6 +146,8 @@
 - 音声フォーマット変換: `SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith:considering:)` で最適フォーマット取得。入力フォーマットと異なる場合は `AVAudioConverter` で変換
 - モデルダウンロード: `AssetInventory.assetInstallationRequest(supporting:)` で確認。必要なら `downloadAndInstall()` で自動DL
 - Swift Testing の `@available(macOS 26, *)` と `@Test` マクロは互換性がない。`@available` をスイートに付けると `@Test` がコンパイルエラーになる。対策: ランタイムで `guard #available(macOS 26, *) else { return }` を使う
+- `import Speech` すると `Speech.Settings` がプロジェクトの `Settings` 型と名前衝突する。対策: `Koecho.Settings` とモジュール名で修飾する
+- `DictationTranscriber.supportedLocales` / `installedLocales` は static async プロパティ（throws ではない）。Locale の identifier 形式（`-` vs `_`）が不明なため、比較には `language.languageCode` + `language.script` + `language.region` で正規化する
 
 ## macOS / VoiceInputTextView volatile テキスト
 
