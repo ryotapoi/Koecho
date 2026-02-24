@@ -7,6 +7,7 @@ import Speech
 final class SpeechAnalyzerEngine: VoiceInputEngine {
     private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "SpeechAnalyzerEngine")
     private let locale: Locale
+    private let deviceUID: String?
     private(set) var state: VoiceInputState = .idle
     weak var delegate: (any VoiceInputDelegate)?
 
@@ -15,6 +16,7 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
     private var inputContinuation: AsyncStream<AnalyzerInput>.Continuation?
     private var resultTask: Task<Void, Never>?
     private var transcriber: DictationTranscriber?
+    private var acquiredAudioInput = false
 
     /// Shared preset used for both recognition and model download.
     static var defaultPreset: DictationTranscriber.Preset {
@@ -24,8 +26,9 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         return preset
     }
 
-    init(locale: Locale = .current) {
+    init(locale: Locale = .current, deviceUID: String? = nil) {
         self.locale = locale
+        self.deviceUID = deviceUID
     }
 
     func start() {
@@ -165,6 +168,24 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         let audioEngine = AVAudioEngine()
         self.audioEngine = audioEngine
 
+        if let deviceUID {
+            if let deviceID = AudioDeviceManager.resolveDeviceID(forUID: deviceUID),
+               let audioUnit = audioEngine.inputNode.audioUnit {
+                var id = deviceID
+                let status = AudioUnitSetProperty(
+                    audioUnit,
+                    kAudioOutputUnitProperty_CurrentDevice,
+                    kAudioUnitScope_Global, 0,
+                    &id, UInt32(MemoryLayout<AudioDeviceID>.size)
+                )
+                if status != noErr {
+                    logger.warning("Failed to set audio device (status: \(status)), using system default")
+                }
+            } else {
+                logger.warning("Audio device UID '\(deviceUID, privacy: .public)' not found or audioUnit unavailable, using system default")
+            }
+        }
+
         let inputNode = audioEngine.inputNode
         let inputFormat = inputNode.outputFormat(forBus: 0)
 
@@ -233,6 +254,9 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         let localConverter = converter
         let localAnalyzerFormat = analyzerFormat
 
+        AudioDeviceManager.acquireAudioInput()
+        acquiredAudioInput = true
+
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { buffer, _ in
             // This runs on the audio thread — do not access self
             let inputBuffer: AVAudioPCMBuffer
@@ -283,5 +307,9 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         transcriber = nil
         inputContinuation = nil
         resultTask = nil
+        if acquiredAudioInput {
+            AudioDeviceManager.releaseAudioInput()
+            acquiredAudioInput = false
+        }
     }
 }

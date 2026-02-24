@@ -137,6 +137,15 @@ final class Settings {
         }
     }
 
+    private var _audioInputDeviceUID: String?
+    var audioInputDeviceUID: String? {
+        get { _audioInputDeviceUID }
+        set {
+            _audioInputDeviceUID = newValue
+            save()
+        }
+    }
+
     /// Returns the effective voice input mode considering OS availability.
     var effectiveVoiceInputMode: VoiceInputMode {
         if #available(macOS 26, *) { return _voiceInputMode }
@@ -228,6 +237,7 @@ final class Settings {
         }
 
         _speechAnalyzerLocale = defaults.string(forKey: "speechAnalyzerLocale") ?? "ja-JP"
+        _audioInputDeviceUID = defaults.string(forKey: "audioInputDeviceUID")
 
         save()
     }
@@ -311,5 +321,10 @@ final class Settings {
         }
         defaults.set(_voiceInputMode.rawValue, forKey: "voiceInputMode")
         defaults.set(_speechAnalyzerLocale, forKey: "speechAnalyzerLocale")
+        if let uid = _audioInputDeviceUID {
+            defaults.set(uid, forKey: "audioInputDeviceUID")
+        } else {
+            defaults.removeObject(forKey: "audioInputDeviceUID")
+        }
     }
 }

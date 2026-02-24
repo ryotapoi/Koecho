@@ -544,6 +544,34 @@ struct SettingsTests {
         #expect(reloaded.speechAnalyzerLocale == "en-US")
     }
 
+    // MARK: - Audio Input Device
+
+    @Test func defaultAudioInputDeviceUID() {
+        let settings = Settings(defaults: makeDefaults())
+        #expect(settings.audioInputDeviceUID == nil)
+    }
+
+    @Test func persistsAudioInputDeviceUID() {
+        let defaults = makeDefaults()
+
+        let settings = Settings(defaults: defaults)
+        settings.audioInputDeviceUID = "BuiltInMicrophoneDevice"
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.audioInputDeviceUID == "BuiltInMicrophoneDevice")
+    }
+
+    @Test func persistsNilAudioInputDeviceUID() {
+        let defaults = makeDefaults()
+
+        let settings = Settings(defaults: defaults)
+        settings.audioInputDeviceUID = "SomeDevice"
+        settings.audioInputDeviceUID = nil
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.audioInputDeviceUID == nil)
+    }
+
     @Test func effectiveVoiceInputModeFallsToDictation() {
         let settings = Settings(defaults: makeDefaults())
         settings.voiceInputMode = .speechAnalyzer

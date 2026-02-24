@@ -170,6 +170,21 @@
 - 音声入力の先頭に「。」が挿入されることがある（再現条件不明）
 - volatile テキスト（未確定表示）がある状態でスクリプトを実行すると、volatile 部分がスクリプトに渡されない可能性がある
 
+## CoreAudio / オーディオデバイス管理
+
+- `AudioDeviceID` は transient（セッション内でのみ有効）。永続化にはデバイス UID（String）を使う。`kAudioDevicePropertyDeviceUID` で取得
+- UID → AudioDeviceID: `kAudioHardwarePropertyDeviceForUID` + `AudioValueTranslation`。`withUnsafeMutablePointer` で CFString と AudioDeviceID のポインタを渡す
+- AVAudioEngine は非デフォルト入力デバイスを正式にサポートしない。`inputNode` は遅延初期化されたシングルトンで、アクセス後に `AudioUnitSetProperty(kAudioOutputUnitProperty_CurrentDevice)` を設定しても内部ルーティングが更新されず、tap コールバックが呼ばれない。SpeechAnalyzerEngine は AVAudioEngine を使い続けるが非デフォルトデバイス対応は未解決
+- 非デフォルトデバイスからの入力取得には AUHAL (kAudioUnitSubType_HALOutput) を直接使う。手順: Enable IO (element 1 input) → Disable IO (element 0 output) → Set device → Set output format (element 1 output scope) → Allocate AudioBufferList → Set input callback → AudioUnitInitialize → AudioOutputUnitStart。コールバック内で `AudioUnitRender` を呼んでバッファにデータを引き込む
+- デバイス変更監視: `AudioObjectAddPropertyListenerBlock` on `kAudioHardwarePropertyDevices`。リスナーは `deinit` で `AudioObjectRemovePropertyListenerBlock` で解除。ブロックは必ず `[weak self]` でキャプチャ
+- デフォルト入力デバイス: `kAudioHardwarePropertyDefaultInputDevice` で取得。変更監視も同プロパティで。`deviceUID == nil` で monitoring 中にデフォルトデバイスが変わった場合は `startMonitoring(deviceUID: nil)` を再呼び出し（engine 再起動 + 音量リスナー付け替え）
+- 入力音量: `kAudioDevicePropertyVolumeScalar`（scope: input）。element: main が非対応なら element: 1 にフォールバック。Slider 連動時はフィードバックループ防止フラグ（`isUpdatingVolume`）が必要
+- レベル計測: CoreAudio にはリアルタイム入力レベル取得 API がない。AUHAL の input callback 内で `AudioUnitRender` → RMS 計算で取得。コールバックは audio I/O スレッドで実行されるため、メモリ確保・ロック取得・ObjC メッセージ送信は禁止
+- 設定画面のレベルメーター用 AUHAL と SpeechAnalyzerEngine の AVAudioEngine は同時に動くとクラッシュする（同一デバイスの inputNode に tap は 1 つ）。`AudioDeviceManager.isAudioInputInUse` static フラグ + `activeMonitoringInstance` weak 参照で双方向の排他制御
+- `@MainActor` クラスの `deinit` は nonisolated。CoreAudio のリスナー除去は `deinit` 内で直接 C API を呼ぶ（インスタンスメソッドは呼べない）
+- 入力デバイス判定: `kAudioDevicePropertyStreamConfiguration`（scope: input）でチャンネル数 > 0 をフィルタ
+- `AudioBufferList` の解析: `rawPointer.advanced(by: MemoryLayout<UInt32>.size)` で `AudioBuffer` 配列にアクセスするとアラインメントパディングでずれる。`UnsafeMutableAudioBufferListPointer` を使うのが正しい方法
+
 ## Swift / @MainActor + デフォルト引数
 
 - `@MainActor` クラスの `init` にデフォルト引数で別の `@MainActor` 型のインスタンス生成を書くと、デフォルト引数式は caller の actor isolation を継承しないためコンパイルエラーになる

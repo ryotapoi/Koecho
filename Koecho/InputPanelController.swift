@@ -211,7 +211,10 @@ final class InputPanelController {
         if #available(macOS 26, *),
            appState.settings.effectiveVoiceInputMode == .speechAnalyzer {
             let locale = Locale(identifier: appState.settings.speechAnalyzerLocale)
-            let engine = SpeechAnalyzerEngine(locale: locale)
+            let engine = SpeechAnalyzerEngine(
+                locale: locale,
+                deviceUID: appState.settings.audioInputDeviceUID
+            )
             engine.delegate = self
             return engine
         }
