@@ -29,8 +29,13 @@ playground.xcworkspace
 .build/
 .swiftpm/
 
-# Claude Code
-plans/
+# Claude Code local-only
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/*.local.*
+
+# Temporary files
+/tmp/
 
 # macOS
 .DS_Store
