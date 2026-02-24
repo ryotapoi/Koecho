@@ -144,7 +144,9 @@
 - `AnalyzerInput(buffer: AVAudioPCMBuffer)` でオーディオバッファを入力
 - `AVAudioEngine.inputNode` のタップコールバックは audio thread で実行される。`@MainActor` のプロパティに直接アクセスしてはいけない。`AsyncStream.Continuation` をローカル変数にキャプチャして `yield` する
 - 音声フォーマット変換: `SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith:considering:)` で最適フォーマット取得。入力フォーマットと異なる場合は `AVAudioConverter` で変換
-- モデルダウンロード: `AssetInventory.assetInstallationRequest(supporting:)` で確認。必要なら `downloadAndInstall()` で自動DL
+- モデルダウンロード: `AssetInventory.assetInstallationRequest(supporting:)` で確認。`nil` 返却 = インストール済み。非 nil なら `downloadAndInstall()` で DL。`assetInstallationRequest` は自動で `reserve()` を呼ぶため、明示的な reserve は不要
+- モデルリリース: `AssetInventory.release(reservedLocale:)` → `async -> Bool`（throws ではない）。`false` = 元々 reserved でなかった。リリース後もシステムが後で削除するため、即座に `installedLocales` から消えるとは限らない
+- `AssetInventory.reservedLocales` で予約済みロケール一覧を取得可能。identifier 形式が `supportedLocales` と異なる場合があるため、正規化キーで比較する
 - Swift Testing の `@available(macOS 26, *)` と `@Test` マクロは互換性がない。`@available` をスイートに付けると `@Test` がコンパイルエラーになる。対策: ランタイムで `guard #available(macOS 26, *) else { return }` を使う
 - `import Speech` すると `Speech.Settings` がプロジェクトの `Settings` 型と名前衝突する。対策: `Koecho.Settings` とモジュール名で修飾する
 - `DictationTranscriber.supportedLocales` / `installedLocales` は static async プロパティ（throws ではない）。Locale の identifier 形式（`-` vs `_`）が不明なため、比較には `language.languageCode` + `language.script` + `language.region` で正規化する

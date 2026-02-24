@@ -16,6 +16,14 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
     private var resultTask: Task<Void, Never>?
     private var transcriber: DictationTranscriber?
 
+    /// Shared preset used for both recognition and model download.
+    static var defaultPreset: DictationTranscriber.Preset {
+        var preset = DictationTranscriber.Preset.progressiveLongDictation
+        preset.transcriptionOptions.insert(.punctuation)
+        preset.reportingOptions.insert(.frequentFinalization)
+        return preset
+    }
+
     init(locale: Locale = .current) {
         self.locale = locale
     }
@@ -130,11 +138,7 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         }
 
         // 2. Create transcriber
-        // Use progressiveLongDictation as base (volatile results + long session)
-        // and add punctuation for automatic 。、etc.
-        var preset = DictationTranscriber.Preset.progressiveLongDictation
-        preset.transcriptionOptions.insert(.punctuation)
-        preset.reportingOptions.insert(.frequentFinalization)
+        let preset = Self.defaultPreset
         logger.info("Preset reportingOptions: \(String(describing: preset.reportingOptions), privacy: .public)")
         logger.info("Preset transcriptionOptions: \(String(describing: preset.transcriptionOptions), privacy: .public)")
         let transcriber = DictationTranscriber(locale: locale, preset: preset)

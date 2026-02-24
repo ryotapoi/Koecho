@@ -73,6 +73,9 @@ private struct SpeechAnalyzerLocalePicker: View {
 
     @State private var locales: [LocaleItem] = []
     @State private var isLoading = true
+    @State private var isDownloading = false
+    @State private var downloadError: String?
+    @State private var reservedLocales: [Locale] = []
 
     var body: some View {
         Group {
@@ -83,14 +86,49 @@ private struct SpeechAnalyzerLocalePicker: View {
                 TextField("Language", text: $selection)
                     .help("Locale identifier (e.g. ja-JP, en-US)")
             } else {
-                Picker("Language", selection: $selection) {
-                    ForEach(locales) { locale in
-                        Text(locale.label).tag(locale.identifier)
+                VStack(alignment: .leading, spacing: 4) {
+                    Picker("Language", selection: $selection) {
+                        ForEach(locales) { locale in
+                            Text(locale.label).tag(locale.identifier)
+                        }
                     }
+
+                    HStack {
+                        Spacer()
+                        if isDownloading {
+                            HStack(spacing: 6) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("Downloading model…")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else if let downloadError {
+                            Text(downloadError)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        } else if let item = selectedItem, item.isReserved {
+                            Button("Release Downloaded Model") {
+                                Task { await releaseAsset(for: selection) }
+                            }
+                            .font(.caption)
+                        }
+                    }
+                    .frame(height: 20)
                 }
             }
         }
         .task { await loadLocales() }
+        .task(id: selection) {
+            guard !isLoading, !locales.isEmpty else { return }
+            downloadError = nil
+            isDownloading = false
+            await downloadAsset(for: selection)
+        }
+    }
+
+    private var selectedItem: LocaleItem? {
+        locales.first { $0.identifier == selection }
     }
 }
 
@@ -101,17 +139,21 @@ extension SpeechAnalyzerLocalePicker {
         let supported = await DictationTranscriber.supportedLocales
         let installed = await DictationTranscriber.installedLocales
         let installedKeys = Set(installed.map { localeNormalizationKey($0) })
+        let reserved = await AssetInventory.reservedLocales
+        let reservedKeys = Set(reserved.map { localeNormalizationKey($0) })
+        reservedLocales = reserved
 
         var items = supported.map { locale -> LocaleItem in
             let identifier = locale.identifier
             let displayName = Locale.current.localizedString(forIdentifier: identifier) ?? identifier
-            let isInstalled = installedKeys.contains(localeNormalizationKey(locale))
-            let label = if isInstalled {
-                "\(displayName) (\(identifier))"
-            } else {
-                "\(displayName) (\(identifier)) — May require download"
-            }
-            return LocaleItem(identifier: identifier, label: label, sortKey: displayName)
+            let key = localeNormalizationKey(locale)
+            return LocaleItem(
+                identifier: identifier,
+                displayName: displayName,
+                sortKey: displayName,
+                isInstalled: installedKeys.contains(key),
+                isReserved: reservedKeys.contains(key)
+            )
         }
         items.sort { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
 
@@ -132,6 +174,14 @@ extension SpeechAnalyzerLocalePicker {
 
         locales = items
         isLoading = false
+
+        // Trigger download for the initial locale.
+        // .task(id: selection) may not fire if:
+        // - selection didn't change (selectionBefore == selection), or
+        // - selection was corrected during isLoading (task ran but hit guard)
+        if !items.isEmpty {
+            await downloadAsset(for: selection)
+        }
     }
 
     private func localeNormalizationKey(_ locale: Locale) -> String {
@@ -142,17 +192,96 @@ extension SpeechAnalyzerLocalePicker {
     }
 
     private func findNormalizedMatch(for identifier: String, in items: [LocaleItem]) -> LocaleItem? {
-        let source = Locale(identifier: identifier)
-        let sourceKey = localeNormalizationKey(source)
+        let sourceKey = localeNormalizationKey(identifier)
         return items.first { item in
-            localeNormalizationKey(Locale(identifier: item.identifier)) == sourceKey
+            localeNormalizationKey(item.identifier) == sourceKey
+        }
+    }
+
+    private func localeNormalizationKey(_ identifier: String) -> String {
+        localeNormalizationKey(Locale(identifier: identifier))
+    }
+
+    private func downloadAsset(for identifier: String) async {
+        guard !Task.isCancelled, selection == identifier else { return }
+
+        let locale = Locale(identifier: identifier)
+        let transcriber = DictationTranscriber(locale: locale, preset: SpeechAnalyzerEngine.defaultPreset)
+
+        do {
+            guard let request = try await AssetInventory.assetInstallationRequest(
+                supporting: [transcriber]
+            ) else {
+                // nil = already installed
+                await refreshLocaleStatus()
+                return
+            }
+            guard !Task.isCancelled, selection == identifier else { return }
+
+            isDownloading = true
+            try await request.downloadAndInstall()
+            guard !Task.isCancelled, selection == identifier else {
+                if selection == identifier {
+                    isDownloading = false
+                }
+                return
+            }
+            isDownloading = false
+            await refreshLocaleStatus()
+        } catch is CancellationError {
+            if selection == identifier {
+                isDownloading = false
+            }
+        } catch {
+            if selection == identifier {
+                isDownloading = false
+                downloadError = "Download failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func releaseAsset(for identifier: String) async {
+        let targetKey = localeNormalizationKey(identifier)
+        guard let reservedLocale = reservedLocales.first(where: {
+            localeNormalizationKey($0) == targetKey
+        }) else { return }
+
+        // Update UI immediately (prevent double-tap + responsive feedback)
+        if let index = locales.firstIndex(where: { $0.identifier == identifier }) {
+            locales[index].isReserved = false
+        }
+        await AssetInventory.release(reservedLocale: reservedLocale)
+        await refreshLocaleStatus()
+    }
+
+    private func refreshLocaleStatus() async {
+        let installed = await DictationTranscriber.installedLocales
+        let installedKeys = Set(installed.map { localeNormalizationKey($0) })
+        let reserved = await AssetInventory.reservedLocales
+        let reservedKeys = Set(reserved.map { localeNormalizationKey($0) })
+        reservedLocales = reserved
+
+        for i in locales.indices {
+            let key = localeNormalizationKey(locales[i].identifier)
+            locales[i].isInstalled = installedKeys.contains(key)
+            locales[i].isReserved = reservedKeys.contains(key)
         }
     }
 }
 
 private struct LocaleItem: Identifiable {
     let identifier: String
-    let label: String
+    let displayName: String
     let sortKey: String
+    var isInstalled: Bool
+    var isReserved: Bool
     var id: String { identifier }
+
+    var label: String {
+        if isInstalled {
+            "\(displayName) (\(identifier))"
+        } else {
+            "\(displayName) (\(identifier)) — Download required"
+        }
+    }
 }
