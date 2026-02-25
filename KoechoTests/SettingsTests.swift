@@ -572,6 +572,30 @@ struct SettingsTests {
         #expect(reloaded.audioInputDeviceUID == nil)
     }
 
+    // MARK: - Audio Input Device Name
+
+    @Test func defaultAudioInputDeviceName() {
+        let settings = Settings(defaults: makeDefaults())
+        #expect(settings.audioInputDeviceName == nil)
+    }
+
+    @Test func persistsAudioInputDeviceName() {
+        let defaults = makeDefaults()
+        let settings = Settings(defaults: defaults)
+        settings.audioInputDeviceName = "AirPods Pro"
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.audioInputDeviceName == "AirPods Pro")
+    }
+
+    @Test func persistsNilAudioInputDeviceName() {
+        let defaults = makeDefaults()
+        let settings = Settings(defaults: defaults)
+        settings.audioInputDeviceName = "AirPods Pro"
+        settings.audioInputDeviceName = nil
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.audioInputDeviceName == nil)
+    }
+
     // MARK: - Volume Ducking
 
     @Test func defaultVolumeDuckingSettings() {

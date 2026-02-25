@@ -146,6 +146,15 @@ final class Settings {
         }
     }
 
+    private var _audioInputDeviceName: String?
+    var audioInputDeviceName: String? {
+        get { _audioInputDeviceName }
+        set {
+            _audioInputDeviceName = newValue
+            save()
+        }
+    }
+
     private var _isVolumeDuckingEnabled: Bool
     var isVolumeDuckingEnabled: Bool {
         get { _isVolumeDuckingEnabled }
@@ -256,6 +265,7 @@ final class Settings {
 
         _speechAnalyzerLocale = defaults.string(forKey: "speechAnalyzerLocale") ?? "ja-JP"
         _audioInputDeviceUID = defaults.string(forKey: "audioInputDeviceUID")
+        _audioInputDeviceName = defaults.string(forKey: "audioInputDeviceName")
 
         _isVolumeDuckingEnabled = defaults.object(forKey: "isVolumeDuckingEnabled") as? Bool ?? false
         _volumeDuckingLevel = max(0, min(1, defaults.object(forKey: "volumeDuckingLevel") as? Float ?? 0.05))
@@ -346,6 +356,11 @@ final class Settings {
             defaults.set(uid, forKey: "audioInputDeviceUID")
         } else {
             defaults.removeObject(forKey: "audioInputDeviceUID")
+        }
+        if let name = _audioInputDeviceName {
+            defaults.set(name, forKey: "audioInputDeviceName")
+        } else {
+            defaults.removeObject(forKey: "audioInputDeviceName")
         }
         defaults.set(_isVolumeDuckingEnabled, forKey: "isVolumeDuckingEnabled")
         defaults.set(_volumeDuckingLevel, forKey: "volumeDuckingLevel")

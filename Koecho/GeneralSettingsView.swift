@@ -81,7 +81,10 @@ struct GeneralSettingsView: View {
                 .pickerStyle(.segmented)
                 if settings.voiceInputMode == .speechAnalyzer {
                     SpeechAnalyzerLocalePicker(selection: $settings.speechAnalyzerLocale)
-                    AudioInputDeviceSection(deviceUID: $settings.audioInputDeviceUID)
+                    AudioInputDeviceSection(
+                        deviceUID: $settings.audioInputDeviceUID,
+                        deviceName: $settings.audioInputDeviceName
+                    )
                 }
             }
         }
@@ -297,7 +300,13 @@ extension SpeechAnalyzerLocalePicker {
 @available(macOS 26, *)
 private struct AudioInputDeviceSection: View {
     @Binding var deviceUID: String?
+    @Binding var deviceName: String?
     @State private var deviceManager = AudioDeviceManager()
+
+    private var isSelectedDeviceDisconnected: Bool {
+        guard let uid = deviceUID else { return false }
+        return !deviceManager.inputDevices.contains { $0.uid == uid }
+    }
 
     var body: some View {
         Picker("Microphone", selection: $deviceUID) {
@@ -305,10 +314,23 @@ private struct AudioInputDeviceSection: View {
             ForEach(deviceManager.inputDevices) { device in
                 Text(device.name).tag(Optional(device.uid))
             }
+            if isSelectedDeviceDisconnected, let uid = deviceUID {
+                Text("\(deviceName ?? "Unknown device") (not connected)")
+                    .foregroundStyle(.secondary)
+                    .tag(Optional(uid))
+            }
+        }
+        .onChange(of: deviceUID) { _, newUID in
+            if let newUID,
+               let device = deviceManager.inputDevices.first(where: { $0.uid == newUID }) {
+                deviceName = device.name
+            } else if newUID == nil {
+                deviceName = nil
+            }
+            deviceManager.startMonitoring(deviceUID: newUID)
         }
 
-        if let uid = deviceUID,
-           !deviceManager.inputDevices.contains(where: { $0.uid == uid }) {
+        if isSelectedDeviceDisconnected {
             Text("Selected device is not available. Using system default.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -333,9 +355,6 @@ private struct AudioInputDeviceSection: View {
         InputLevelMeter(level: deviceManager.inputLevel)
             .onAppear { deviceManager.startMonitoring(deviceUID: deviceUID) }
             .onDisappear { deviceManager.stopMonitoring() }
-            .onChange(of: deviceUID) { _, newValue in
-                deviceManager.startMonitoring(deviceUID: newValue)
-            }
     }
 }
 
