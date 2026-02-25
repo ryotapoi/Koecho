@@ -18,8 +18,8 @@ macOS標準のDictation機能を利用し、フローティングウィンドウ
 ビルド・テストはすべて XcodeBuildMCP のツールを使う。
 構造化レスポンスでエラーがファイル名・行番号付きで返るため、生ログのパースが不要。
 
-- ビルド: `build_sim`（macOS ターゲット）
-- テスト: `test_sim`（macOS ターゲット）
+- ビルド: `build_macos`
+- テスト: `test_macos`（`-only-testing:KoechoTests` で UITests を除外）
 
 ### Apple Xcode MCP（補助）
 
