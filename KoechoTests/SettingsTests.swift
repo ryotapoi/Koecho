@@ -572,6 +572,47 @@ struct SettingsTests {
         #expect(reloaded.audioInputDeviceUID == nil)
     }
 
+    // MARK: - Volume Ducking
+
+    @Test func defaultVolumeDuckingSettings() {
+        let settings = Settings(defaults: makeDefaults())
+        #expect(settings.isVolumeDuckingEnabled == false)
+        #expect(settings.volumeDuckingLevel == 0.05)
+    }
+
+    @Test func persistsVolumeDuckingSettings() {
+        let defaults = makeDefaults()
+
+        let settings = Settings(defaults: defaults)
+        settings.isVolumeDuckingEnabled = true
+        settings.volumeDuckingLevel = 0.5
+
+        let reloaded = Settings(defaults: defaults)
+        #expect(reloaded.isVolumeDuckingEnabled == true)
+        #expect(reloaded.volumeDuckingLevel == 0.5)
+    }
+
+    @Test func clampsVolumeDuckingLevel() {
+        let settings = Settings(defaults: makeDefaults())
+
+        settings.volumeDuckingLevel = -0.5
+        #expect(settings.volumeDuckingLevel == 0.0)
+
+        settings.volumeDuckingLevel = 1.5
+        #expect(settings.volumeDuckingLevel == 1.0)
+
+        settings.volumeDuckingLevel = 0.7
+        #expect(settings.volumeDuckingLevel == 0.7)
+    }
+
+    @Test func clampsVolumeDuckingLevelOnInit() {
+        let defaults = makeDefaults()
+        defaults.set(Float(-0.5), forKey: "volumeDuckingLevel")
+
+        let settings = Settings(defaults: defaults)
+        #expect(settings.volumeDuckingLevel == 0.0)
+    }
+
     @Test func effectiveVoiceInputModeFallsToDictation() {
         let settings = Settings(defaults: makeDefaults())
         settings.voiceInputMode = .speechAnalyzer

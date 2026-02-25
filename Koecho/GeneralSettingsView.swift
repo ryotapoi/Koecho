@@ -7,6 +7,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             voiceInputSection
+            volumeDuckingSection
             Section("Clipboard") {
                 TextField("Clipboard restore delay (sec)", value: $settings.pasteDelay, format: .number)
             }
@@ -46,6 +47,27 @@ struct GeneralSettingsView: View {
         }
         .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var volumeDuckingSection: some View {
+        Section("Volume Ducking") {
+            Toggle("Lower system volume while input panel is open", isOn: $settings.isVolumeDuckingEnabled)
+            if settings.isVolumeDuckingEnabled {
+                HStack {
+                    Text("Target volume")
+                    Slider(
+                        value: $settings.volumeDuckingLevel,
+                        in: 0...1
+                    )
+                    Text("\(Int(round(settings.volumeDuckingLevel * 100)))%")
+                        .monospacedDigit()
+                        .frame(width: 40, alignment: .trailing)
+                }
+                Text("System output volume will be lowered to this level (or kept as-is if already lower) while the input panel is visible.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 
     @ViewBuilder

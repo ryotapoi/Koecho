@@ -13,6 +13,7 @@ final class InputPanelController {
     private var isConfirming = false
     private var isStoppingEngine = false
     private var engine: any VoiceInputEngine
+    private let ducker: any VolumeDucking
     private var textView: VoiceInputTextView?
     private var voiceInsertionPoint: Int = 0
     private var currentVoiceTarget: VoiceTarget = .textEditor
@@ -32,13 +33,15 @@ final class InputPanelController {
         selectedTextReader: any SelectedTextReading,
         paster: any Pasting,
         makeScriptRunner: @escaping () -> ScriptRunner,
-        historyStore: HistoryStore
+        historyStore: HistoryStore,
+        ducker: any VolumeDucking
     ) {
         self.appState = appState
         self.selectedTextReader = selectedTextReader
         self.paster = paster
         self.makeScriptRunner = makeScriptRunner
         self.historyStore = historyStore
+        self.ducker = ducker
 
         self.engine = DictationEngine()
 
@@ -136,7 +139,8 @@ final class InputPanelController {
             selectedTextReader: SelectedTextReader(),
             paster: ClipboardPaster(pasteDelay: appState.settings.pasteDelay),
             makeScriptRunner: { ScriptRunner(timeout: appState.settings.scriptTimeout) },
-            historyStore: historyStore
+            historyStore: historyStore,
+            ducker: OutputVolumeDucker(settings: appState.settings)
         )
     }
 
@@ -171,6 +175,7 @@ final class InputPanelController {
         appState.inputText = appState.selectedText
         appState.errorMessage = nil
         appState.isInputPanelVisible = true
+        ducker.duck()
         engine = makeEngine()
         voiceInsertionPoint = (appState.inputText as NSString).length
         currentVoiceTarget = .textEditor
@@ -515,6 +520,7 @@ final class InputPanelController {
 
     private func clearState() {
         textView?.clearReplacementPreviews()
+        ducker.restore()
         appState.inputText = ""
         appState.isInputPanelVisible = false
         appState.frontmostApplication = nil

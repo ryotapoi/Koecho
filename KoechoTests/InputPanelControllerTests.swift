@@ -32,12 +32,28 @@ private final class MockSelectedTextReader: SelectedTextReading {
 }
 
 @MainActor
+private final class MockVolumeDucker: VolumeDucking {
+    var duckCallCount = 0
+    var restoreCallCount = 0
+
+    func duck() {
+        duckCallCount += 1
+    }
+
+    func restore() {
+        restoreCallCount += 1
+    }
+}
+
+@MainActor
 private func makeController(
     paster: MockPaster? = nil,
     selectedTextReader: (any SelectedTextReading)? = nil,
-    makeScriptRunner: (() -> ScriptRunner)? = nil
-) -> (InputPanelController, AppState, MockPaster, HistoryStore) {
+    makeScriptRunner: (() -> ScriptRunner)? = nil,
+    ducker: MockVolumeDucker? = nil
+) -> (InputPanelController, AppState, MockPaster, HistoryStore, MockVolumeDucker) {
     let p = paster ?? MockPaster()
+    let d = ducker ?? MockVolumeDucker()
     let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
     let settings = Settings(defaults: defaults)
     let appState = AppState(settings: settings)
@@ -50,9 +66,10 @@ private func makeController(
         selectedTextReader: reader,
         paster: p,
         makeScriptRunner: makeScriptRunner ?? { ScriptRunner(timeout: appState.settings.scriptTimeout) },
-        historyStore: historyStore
+        historyStore: historyStore,
+        ducker: d
     )
-    return (controller, appState, p, historyStore)
+    return (controller, appState, p, historyStore, d)
 }
 
 @MainActor
@@ -71,7 +88,7 @@ private func makeScript(_ content: String) throws -> String {
 @Suite(.serialized)
 struct InputPanelControllerTests {
     @Test func showPanelSetsState() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
 
@@ -81,7 +98,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func cancelClearsState() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "some text"
@@ -94,7 +111,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func closeButtonCancelsPanel() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "some text"
@@ -105,7 +122,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func cancelClearsSelectedText() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.selectedText = "selected"
@@ -119,7 +136,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func cancelClearsTextAfterInput() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "hello world"
@@ -129,7 +146,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func showPanelTwicePreservesText() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "hello"
@@ -140,7 +157,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func cancelWhenNotVisibleIsNoop() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.cancel()
 
@@ -149,7 +166,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func showCancelShowCycle() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         #expect(appState.isInputPanelVisible == true)
@@ -167,7 +184,7 @@ struct InputPanelControllerTests {
 
     @Test func confirmSuccessClearsState() async {
         let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster)
+        let (controller, appState, _, _, _) = makeController(paster: paster)
 
         controller.showPanel()
         appState.inputText = "hello"
@@ -187,7 +204,7 @@ struct InputPanelControllerTests {
     @Test func confirmFailureShowsError() async {
         let paster = MockPaster()
         paster.errorToThrow = ClipboardPasterError.accessibilityNotTrusted
-        let (controller, appState, _, _) = makeController(paster: paster)
+        let (controller, appState, _, _, _) = makeController(paster: paster)
 
         controller.showPanel()
         appState.inputText = "hello"
@@ -202,7 +219,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func confirmWithEmptyTextActsAsCancel() async {
-        let (controller, appState, paster, _) = makeController()
+        let (controller, appState, paster, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "   \n  "
@@ -216,7 +233,7 @@ struct InputPanelControllerTests {
 
     @Test func confirmWhenNotVisibleIsNoop() async {
         let paster = MockPaster()
-        let (controller, _, _, _) = makeController(paster: paster)
+        let (controller, _, _, _, _) = makeController(paster: paster)
 
         await controller.confirm()
 
@@ -224,7 +241,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func confirmWithNoTargetAppSetsError() async {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "hello"
@@ -238,7 +255,7 @@ struct InputPanelControllerTests {
 
     @Test func cancelDuringConfirmIsIgnored() async throws {
         let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster)
+        let (controller, appState, _, _, _) = makeController(paster: paster)
 
         controller.showPanel()
         appState.inputText = "hello"
@@ -271,7 +288,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func showPanelClearsSelectedText() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         // Simulate leftover selected text from a previous session
         appState.selectedText = "old selection"
@@ -288,7 +305,7 @@ struct InputPanelControllerTests {
 
     @Test func cancelCallsRestoreClipboard() {
         let paster = MockPaster()
-        let (controller, _, _, _) = makeController(paster: paster)
+        let (controller, _, _, _, _) = makeController(paster: paster)
 
         controller.showPanel()
         controller.cancel()
@@ -297,7 +314,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func showPanelClearsErrorMessage() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         appState.errorMessage = "previous error"
         controller.showPanel()
@@ -310,7 +327,7 @@ struct InputPanelControllerTests {
     @Test func executeScriptReplacesText() async throws {
         let scriptPath = try makeScript("tr a-z A-Z")
         let script = Script(name: "Upper", scriptPath: scriptPath)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "hello"
@@ -324,7 +341,7 @@ struct InputPanelControllerTests {
     @Test func executeScriptFallsBackOnError() async throws {
         let scriptPath = try makeScript("exit 1")
         let script = Script(name: "Fail", scriptPath: scriptPath)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "original"
@@ -339,7 +356,7 @@ struct InputPanelControllerTests {
     @Test func executeScriptFallsBackOnEmptyOutput() async throws {
         let scriptPath = try makeScript("printf ''")
         let script = Script(name: "Empty", scriptPath: scriptPath)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "original"
@@ -356,7 +373,7 @@ struct InputPanelControllerTests {
             "echo \"sel=$KOECHO_SELECTION start=$KOECHO_SELECTION_START end=$KOECHO_SELECTION_END prompt=$KOECHO_PROMPT\""
         )
         let script = Script(name: "Context", scriptPath: scriptPath)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "input"
@@ -373,7 +390,7 @@ struct InputPanelControllerTests {
     @Test func executeScriptShowsPromptUI() async throws {
         let scriptPath = try makeScript("cat")
         let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "original"
@@ -389,7 +406,7 @@ struct InputPanelControllerTests {
     @Test func executeScriptWithPrompt() async throws {
         let scriptPath = try makeScript("echo \"prompt=$KOECHO_PROMPT\"")
         let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "input"
@@ -412,7 +429,7 @@ struct InputPanelControllerTests {
     @Test func cancelPromptClearsState() async throws {
         let scriptPath = try makeScript("cat")
         let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         await controller.executeScript(script)
@@ -429,7 +446,7 @@ struct InputPanelControllerTests {
     @Test func executeScriptWhileRunningIsNoop() async throws {
         let scriptPath = try makeScript("cat")
         let script = Script(name: "Test", scriptPath: scriptPath)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "original"
@@ -443,7 +460,7 @@ struct InputPanelControllerTests {
     @Test func executeScriptWhenNotVisibleIsNoop() async throws {
         let scriptPath = try makeScript("echo 'replaced'")
         let script = Script(name: "Test", scriptPath: scriptPath)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         // Don't call showPanel — panel is not visible
         appState.inputText = "original"
@@ -454,7 +471,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func clearStateClearsScriptState() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.isRunningScript = true
@@ -469,7 +486,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func confirmWhileRunningScriptIsNoop() async {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "hello"
@@ -486,7 +503,7 @@ struct InputPanelControllerTests {
     @Test func escapeWhilePromptCancelsPromptOnly() async throws {
         let scriptPath = try makeScript("cat")
         let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         await controller.executeScript(script)
@@ -505,7 +522,7 @@ struct InputPanelControllerTests {
         let scriptPath2 = try makeScript("echo 'other'")
         let script1 = Script(name: "Script1", scriptPath: scriptPath1, requiresPrompt: true)
         let script2 = Script(name: "Script2", scriptPath: scriptPath2)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "original"
@@ -525,7 +542,7 @@ struct InputPanelControllerTests {
     @Test func cancelDuringScriptDiscardsResult() async throws {
         let scriptPath = try makeScript("sleep 0.5 && echo done")
         let script = Script(name: "Slow", scriptPath: scriptPath)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "original"
@@ -550,7 +567,7 @@ struct InputPanelControllerTests {
 
     @Test func confirmAppliesReplacementRules() async {
         let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster)
+        let (controller, appState, _, _, _) = makeController(paster: paster)
 
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "hello", replacement: "bye")
@@ -567,7 +584,7 @@ struct InputPanelControllerTests {
 
     @Test func confirmWithReplacementRulesEmptyingText() async {
         let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster)
+        let (controller, appState, _, _, _) = makeController(paster: paster)
 
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: ".*", replacement: "", usesRegularExpression: true)
@@ -586,7 +603,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func scriptErrorMessages() async throws {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         controller.showPanel()
 
         // Test emptyScript
@@ -614,7 +631,7 @@ struct InputPanelControllerTests {
         // Test timeout
         let timeoutPath = try makeScript("sleep 10")
         let timeoutScript = Script(name: "Timeout", scriptPath: timeoutPath)
-        let (controller2, appState2, _, _) = makeController(
+        let (controller2, appState2, _, _, _) = makeController(
             makeScriptRunner: { ScriptRunner(timeout: 0.1) }
         )
         controller2.showPanel()
@@ -626,7 +643,7 @@ struct InputPanelControllerTests {
     // MARK: - Manual Replacement Rules
 
     @Test func applyReplacementRulesNowReplacesText() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
@@ -640,7 +657,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func applyReplacementRulesNowWhenNotVisibleIsNoop() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
@@ -654,7 +671,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func applyReplacementRulesNowDuringScriptIsNoop() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
@@ -669,7 +686,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func applyReplacementRulesNowWithNoRulesIsNoop() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "hello"
@@ -680,7 +697,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func applyReplacementRulesNowWithNoMatchIsNoop() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
@@ -694,7 +711,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func shortcutRAppliesReplacementRules() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
@@ -712,7 +729,7 @@ struct InputPanelControllerTests {
         let scriptPath = try makeScript("echo 'script output'")
         let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
         let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.scripts = [script]
         // No replacement rules — Ctrl+R should fall through to script
 
@@ -732,7 +749,7 @@ struct InputPanelControllerTests {
         let scriptPath = try makeScript("echo 'script output'")
         let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
         let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.scripts = [script]
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
@@ -749,7 +766,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func customShortcutKeyAppliesReplacementRules() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.replacementShortcutKey = ShortcutKey(modifiers: [.control], character: "x")
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
@@ -773,7 +790,7 @@ struct InputPanelControllerTests {
         let scriptPath = try makeScript("echo 'script output'")
         let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
         let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.scripts = [script]
         appState.settings.replacementShortcutKey = nil
         appState.settings.addReplacementRule(
@@ -795,7 +812,7 @@ struct InputPanelControllerTests {
         let scriptPath = try makeScript("echo 'cmd-shift output'")
         let cmdShiftC = ShortcutKey(modifiers: [.command, .shift], character: "c")
         let script = Script(name: "CmdShift", scriptPath: scriptPath, shortcutKey: cmdShiftC)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.scripts = [script]
 
         controller.showPanel()
@@ -813,7 +830,7 @@ struct InputPanelControllerTests {
         let cmdC = ShortcutKey(modifiers: [.command], character: "c")
         let cmdShiftC = ShortcutKey(modifiers: [.command, .shift], character: "c")
         let script = Script(name: "CmdC", scriptPath: "/bin/echo", shortcutKey: cmdC)
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.scripts = [script]
 
         controller.showPanel()
@@ -829,7 +846,7 @@ struct InputPanelControllerTests {
 
     @Test func confirmRecordsHistory() async {
         let paster = MockPaster()
-        let (controller, appState, _, historyStore) = makeController(paster: paster)
+        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
 
         controller.showPanel()
         appState.inputText = "hello"
@@ -843,7 +860,7 @@ struct InputPanelControllerTests {
 
     @Test func confirmRecordsTextAfterReplacement() async {
         let paster = MockPaster()
-        let (controller, appState, _, historyStore) = makeController(paster: paster)
+        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
 
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
@@ -861,7 +878,7 @@ struct InputPanelControllerTests {
 
     @Test func confirmDoesNotRecordWhenDisabled() async {
         let paster = MockPaster()
-        let (controller, appState, _, historyStore) = makeController(paster: paster)
+        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
 
         appState.settings.isHistoryEnabled = false
 
@@ -877,7 +894,7 @@ struct InputPanelControllerTests {
     @Test func confirmDoesNotRecordOnPasteFailure() async {
         let paster = MockPaster()
         paster.errorToThrow = ClipboardPasterError.accessibilityNotTrusted
-        let (controller, appState, _, historyStore) = makeController(paster: paster)
+        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
 
         controller.showPanel()
         appState.inputText = "hello"
@@ -890,7 +907,7 @@ struct InputPanelControllerTests {
 
     @Test func confirmDoesNotRecordEmptyText() async {
         let paster = MockPaster()
-        let (controller, appState, _, historyStore) = makeController(paster: paster)
+        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
 
         controller.showPanel()
         appState.inputText = "   \n  "
@@ -904,7 +921,7 @@ struct InputPanelControllerTests {
     // MARK: - Add Replacement Rule from Context Menu
 
     @Test func addReplacementRuleSavesAndApplies() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.inputText = "hello world hello"
@@ -920,7 +937,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func cancelClearsPendingReplacementPattern() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         appState.pendingReplacementPattern = "test"
@@ -931,7 +948,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func addReplacementRuleAppliesAllRules() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "world", replacement: "earth")
@@ -951,7 +968,7 @@ struct InputPanelControllerTests {
     // MARK: - Panel Configuration
 
     @Test func panelHasResizeConstraints() {
-        let (controller, _, _, _) = makeController()
+        let (controller, _, _, _, _) = makeController()
         #expect(controller.panel.contentMinSize == NSSize(width: 200, height: 150))
         #expect(controller.panel.frameAutosaveName == "InputPanel")
     }
@@ -961,7 +978,7 @@ struct InputPanelControllerTests {
     @Test func showPanelWithSelectedTextSetsInputText() {
         let mockReader = MockSelectedTextReader()
         mockReader.resultToReturn = SelectedTextResult(text: "selected text", start: "5", end: "18")
-        let (controller, appState, _, _) = makeController(selectedTextReader: mockReader)
+        let (controller, appState, _, _, _) = makeController(selectedTextReader: mockReader)
 
         controller.showPanel()
 
@@ -975,7 +992,7 @@ struct InputPanelControllerTests {
         let mockReader = MockSelectedTextReader()
         mockReader.resultToReturn = SelectedTextResult(text: "selected text", start: "0", end: "13")
         let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster, selectedTextReader: mockReader)
+        let (controller, appState, _, _, _) = makeController(paster: paster, selectedTextReader: mockReader)
 
         controller.showPanel()
         appState.frontmostApplication = NSRunningApplication.current
@@ -989,7 +1006,7 @@ struct InputPanelControllerTests {
     // MARK: - Auto Replacement
 
     @Test func autoReplacementTriggersImmediately() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
@@ -1002,7 +1019,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func autoReplacementDisabledDoesNotTrigger() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.isAutoReplacementEnabled = false
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
@@ -1015,7 +1032,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func autoReplacementAppliesMultipleInputs() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
@@ -1029,7 +1046,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func autoReplacementSkipsWhenNoRules() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
 
         controller.showPanel()
         controller.handleTextChanged("hello world")
@@ -1038,7 +1055,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func autoReplacementSkipsWhenNotVisible() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "hello", replacement: "bye")
         )
@@ -1050,7 +1067,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func autoReplacementSkipsDuringScriptExecution() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         appState.settings.addReplacementRule(
             ReplacementRule(pattern: "hello", replacement: "bye")
         )
@@ -1065,7 +1082,7 @@ struct InputPanelControllerTests {
     // MARK: - Auto-Run Script
 
     @Test func cycleAutoRunScript() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         let script0 = Script(name: "A", scriptPath: "/bin/echo")
         let script1 = Script(name: "B", scriptPath: "/bin/echo")
         let promptScript = Script(name: "P", scriptPath: "/bin/echo", requiresPrompt: true)
@@ -1085,7 +1102,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func cycleAutoRunScriptNoEligible() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         let promptScript = Script(name: "P", scriptPath: "/bin/echo", requiresPrompt: true)
         appState.settings.scripts = [promptScript]
 
@@ -1097,7 +1114,7 @@ struct InputPanelControllerTests {
         let scriptPath = try makeScript("tr a-z A-Z")
         let script = Script(name: "Upper", scriptPath: scriptPath)
         let paster = MockPaster()
-        let (controller, appState, _, historyStore) = makeController(paster: paster)
+        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
 
         appState.settings.scripts = [script]
         appState.settings.autoRunScriptId = script.id
@@ -1118,7 +1135,7 @@ struct InputPanelControllerTests {
         let scriptPath = try makeScript("exit 1")
         let script = Script(name: "Fail", scriptPath: scriptPath)
         let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster)
+        let (controller, appState, _, _, _) = makeController(paster: paster)
 
         appState.settings.scripts = [script]
         appState.settings.autoRunScriptId = script.id
@@ -1139,7 +1156,7 @@ struct InputPanelControllerTests {
         let scriptPath = try makeScript("printf ''")
         let script = Script(name: "Empty", scriptPath: scriptPath)
         let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster)
+        let (controller, appState, _, _, _) = makeController(paster: paster)
 
         appState.settings.scripts = [script]
         appState.settings.autoRunScriptId = script.id
@@ -1157,7 +1174,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func deleteScriptClearsAutoRun() {
-        let (_, appState, _, _) = makeController()
+        let (_, appState, _, _, _) = makeController()
         let script = Script(name: "Test", scriptPath: "/bin/echo")
         appState.settings.scripts = [script]
         appState.settings.autoRunScriptId = script.id
@@ -1171,7 +1188,7 @@ struct InputPanelControllerTests {
         let scriptPath = try makeScript("sleep 0.5 && echo done")
         let script = Script(name: "Slow", scriptPath: scriptPath)
         let paster = MockPaster()
-        let (controller, appState, _, _) = makeController(paster: paster)
+        let (controller, appState, _, _, _) = makeController(paster: paster)
 
         appState.settings.scripts = [script]
         appState.settings.autoRunScriptId = script.id
@@ -1194,7 +1211,7 @@ struct InputPanelControllerTests {
     }
 
     @Test func autoRunShortcutPriority() {
-        let (controller, appState, _, _) = makeController()
+        let (controller, appState, _, _, _) = makeController()
         let ctrlA = ShortcutKey(modifiers: [.control], character: "a")
         appState.settings.autoRunShortcutKey = ctrlA
         appState.settings.replacementShortcutKey = ctrlA
@@ -1214,5 +1231,40 @@ struct InputPanelControllerTests {
         #expect(appState.settings.autoRunScriptId == script.id)
         // Text should NOT have been replaced by replacement rules
         #expect(appState.inputText == "hello")
+    }
+
+    // MARK: - Volume Ducking
+
+    @Test func showPanelCallsDuck() {
+        let ducker = MockVolumeDucker()
+        let (controller, _, _, _, _) = makeController(ducker: ducker)
+        controller.showPanel()
+        #expect(ducker.duckCallCount == 1)
+    }
+
+    @Test func cancelCallsRestore() {
+        let ducker = MockVolumeDucker()
+        let (controller, _, _, _, _) = makeController(ducker: ducker)
+        controller.showPanel()
+        controller.cancel()
+        #expect(ducker.restoreCallCount == 1)
+    }
+
+    @Test func showPanelTwiceDoesNotDoubleDuck() {
+        let ducker = MockVolumeDucker()
+        let (controller, _, _, _, _) = makeController(ducker: ducker)
+        controller.showPanel()
+        controller.showPanel()
+        #expect(ducker.duckCallCount == 1)
+    }
+
+    @Test func confirmEmptyTextCallsRestore() async {
+        let ducker = MockVolumeDucker()
+        let (controller, appState, _, _, _) = makeController(ducker: ducker)
+        controller.showPanel()
+        appState.inputText = ""
+        await controller.confirm()
+        // Empty text path calls clearState() which calls restore()
+        #expect(ducker.restoreCallCount == 1)
     }
 }

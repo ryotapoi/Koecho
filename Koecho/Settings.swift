@@ -146,6 +146,24 @@ final class Settings {
         }
     }
 
+    private var _isVolumeDuckingEnabled: Bool
+    var isVolumeDuckingEnabled: Bool {
+        get { _isVolumeDuckingEnabled }
+        set {
+            _isVolumeDuckingEnabled = newValue
+            save()
+        }
+    }
+
+    private var _volumeDuckingLevel: Float
+    var volumeDuckingLevel: Float {
+        get { _volumeDuckingLevel }
+        set {
+            _volumeDuckingLevel = max(0, min(1, newValue))
+            save()
+        }
+    }
+
     /// Returns the effective voice input mode considering OS availability.
     var effectiveVoiceInputMode: VoiceInputMode {
         if #available(macOS 26, *) { return _voiceInputMode }
@@ -239,6 +257,9 @@ final class Settings {
         _speechAnalyzerLocale = defaults.string(forKey: "speechAnalyzerLocale") ?? "ja-JP"
         _audioInputDeviceUID = defaults.string(forKey: "audioInputDeviceUID")
 
+        _isVolumeDuckingEnabled = defaults.object(forKey: "isVolumeDuckingEnabled") as? Bool ?? false
+        _volumeDuckingLevel = max(0, min(1, defaults.object(forKey: "volumeDuckingLevel") as? Float ?? 0.05))
+
         save()
     }
 
@@ -326,5 +347,7 @@ final class Settings {
         } else {
             defaults.removeObject(forKey: "audioInputDeviceUID")
         }
+        defaults.set(_isVolumeDuckingEnabled, forKey: "isVolumeDuckingEnabled")
+        defaults.set(_volumeDuckingLevel, forKey: "volumeDuckingLevel")
     }
 }
