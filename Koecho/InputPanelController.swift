@@ -21,6 +21,11 @@ final class InputPanelController {
     /// or keyboard input). While set, SDK didFinalize is suppressed to prevent
     /// duplicate insertion. Cleared on the next didUpdateVolatile.
     private var isLocallyFinalized = false
+    /// Accumulated finalized text from SpeechAnalyzer for overlap detection.
+    private var accumulatedFinalizedText: String = ""
+    /// True after the transcriber has been restarted since the last voice input.
+    /// Prevents redundant restarts until new voice input arrives.
+    private var transcriberAlreadyRestarted = false
     private(set) var panel: InputPanel
 
     enum VoiceTarget {
@@ -80,8 +85,10 @@ final class InputPanelController {
                 view.onCursorMoved = { [weak self] position in
                     self?.handleCursorMoved(position)
                 }
-                view.onVolatileFinalized = { [weak self] in
-                    self?.isLocallyFinalized = true
+                view.onVolatileFinalized = { [weak self] volatileText in
+                    guard let self else { return }
+                    self.isLocallyFinalized = true
+                    self.accumulatedFinalizedText += volatileText
                 }
                 self.configureEngineWithTextView()
             },
@@ -179,6 +186,8 @@ final class InputPanelController {
         engine = makeEngine()
         voiceInsertionPoint = (appState.inputText as NSString).length
         currentVoiceTarget = .textEditor
+        accumulatedFinalizedText = ""
+        transcriberAlreadyRestarted = false
         panel.makeKeyAndOrderFront(nil)
         clearTextView()
 
@@ -237,8 +246,15 @@ final class InputPanelController {
     private func handleCursorMoved(_ position: Int) {
         guard !(engine is DictationEngine) else { return }
         if let textView, textView.volatileRange != nil {
-            textView.finalizeVolatileText()
-            isLocallyFinalized = true
+            if let range = textView.volatileRange,
+               range.location + range.length <= (textView.string as NSString).length {
+                let volatileText = (textView.string as NSString).substring(with: range)
+                textView.finalizeVolatileText()
+                isLocallyFinalized = true
+                accumulatedFinalizedText += volatileText
+            } else {
+                textView.clearVolatileText()
+            }
             appState.inputText = textView.finalizedString
             if appState.settings.isAutoReplacementEnabled {
                 applyOrPreviewReplacementRules()
@@ -259,6 +275,7 @@ final class InputPanelController {
         if appState.settings.isAutoReplacementEnabled {
             applyOrPreviewReplacementRules()
         }
+        restartTranscriberIfNeeded()
     }
 
     private func handleTextCommitted() {
@@ -534,6 +551,8 @@ final class InputPanelController {
         appState.promptText = ""
         appState.pendingReplacementPattern = nil
         isLocallyFinalized = false
+        accumulatedFinalizedText = ""
+        transcriberAlreadyRestarted = false
     }
 
     func cancel() {
@@ -561,6 +580,8 @@ final class InputPanelController {
         }
         engine = makeEngine()
         voiceInsertionPoint = textView?.selectedRange().location ?? (appState.inputText as NSString).length
+        accumulatedFinalizedText = ""
+        transcriberAlreadyRestarted = false
         engine.start()
         logger.info("Engine switched while panel visible")
     }
@@ -634,15 +655,49 @@ extension InputPanelController {
         return text
     }
 
+    private func restartTranscriberIfNeeded() {
+        if #available(macOS 26, *) {
+            guard !transcriberAlreadyRestarted,
+                  let saEngine = engine as? SpeechAnalyzerEngine else { return }
+            Task { @MainActor in
+                let didRestart = await saEngine.restartTranscriber()
+                if didRestart {
+                    self.transcriberAlreadyRestarted = true
+                }
+            }
+        }
+    }
+
+    /// Strip overlapping prefix from `newText` that matches the suffix of `accumulated`.
+    /// Used to prevent duplicate text when SpeechAnalyzer replays segment text.
+    /// Single non-punctuation character matches are skipped to avoid false positives.
+    private func stripOverlappingPrefix(_ newText: String, accumulated: String) -> String {
+        guard !accumulated.isEmpty, !newText.isEmpty else { return newText }
+        let accNS = accumulated as NSString
+        let newNS = newText as NSString
+        let maxSuffixLen = min(min(accNS.length, newNS.length), 512)
+        for suffixLen in stride(from: maxSuffixLen, through: 1, by: -1) {
+            let suffix = accNS.substring(from: accNS.length - suffixLen)
+            let prefix = newNS.substring(to: suffixLen)
+            if suffix == prefix {
+                if suffixLen == 1, let char = suffix.first, !char.isPunctuation { continue }
+                return newNS.substring(from: suffixLen)
+            }
+        }
+        return newText
+    }
+
     /// Insert finalized voice text at the given position in the text storage.
     /// Updates `voiceInsertionPoint` to after the inserted text and syncs `appState.inputText`.
-    private func insertFinalizedText(_ text: String, at insertionPoint: Int) {
-        guard let textView, let storage = textView.textStorage else { return }
+    /// Returns the text actually inserted (after duplicate punctuation stripping).
+    @discardableResult
+    private func insertFinalizedText(_ text: String, at insertionPoint: Int) -> String {
+        guard let textView, let storage = textView.textStorage else { return "" }
         let clampedPoint = min(insertionPoint, storage.length)
         let adjustedText = stripLeadingDuplicatePunctuation(text, at: clampedPoint)
         guard !adjustedText.isEmpty else {
             appState.inputText = textView.finalizedString
-            return
+            return ""
         }
         let nsText = adjustedText as NSString
         textView.isSuppressingCallbacks = true
@@ -655,6 +710,7 @@ extension InputPanelController {
         textView.isSuppressingCallbacks = false
         voiceInsertionPoint = clampedPoint + nsText.length
         appState.inputText = textView.finalizedString
+        return adjustedText
     }
 }
 
@@ -663,6 +719,7 @@ extension InputPanelController {
 extension InputPanelController: VoiceInputDelegate {
     func voiceInput(didFinalize text: String) {
         guard appState.isInputPanelVisible else { return }
+        transcriberAlreadyRestarted = false
 
         switch currentVoiceTarget {
         case .prompt:
@@ -679,7 +736,11 @@ extension InputPanelController: VoiceInputDelegate {
         // SDK starts recognizing new speech.
         if isLocallyFinalized { return }
 
-        insertFinalizedText(text, at: voiceInsertionPoint)
+        let newText = stripOverlappingPrefix(text, accumulated: accumulatedFinalizedText)
+        guard !newText.isEmpty else { return }
+
+        let inserted = insertFinalizedText(newText, at: voiceInsertionPoint)
+        accumulatedFinalizedText += inserted
 
         if !isStoppingEngine, appState.settings.isAutoReplacementEnabled {
             applyOrPreviewReplacementRules()
@@ -688,6 +749,7 @@ extension InputPanelController: VoiceInputDelegate {
 
     func voiceInput(didUpdateVolatile text: String) {
         guard appState.isInputPanelVisible else { return }
+        transcriberAlreadyRestarted = false
 
         // A new volatile update means the SDK started recognizing new speech.
         if isLocallyFinalized { isLocallyFinalized = false }

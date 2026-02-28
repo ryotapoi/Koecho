@@ -165,6 +165,17 @@
 - ダイナミックカラーの `.cgColor` 変換はアピアランス変更時に再取得が必要（呼び出し時の値で固定されるため）
 - `viewDidChangeEffectiveAppearance()` で CGColor を再設定するのが安全なパターン
 
+## SpeechAnalyzer / Transcriber 再生成による重複防止
+
+- `DictationTranscriber` + `frequentFinalization` では、キーボード入力（改行等）後の次の `didFinalize` に前セグメントのテキストが含まれる既知バグがある
+- 対策（Primary）: キーボード入力検知時に `DictationTranscriber` + `SpeechAnalyzer` + `AsyncStream` を再生成する。オーディオエンジン（AVAudioEngine）は維持し、tap を再インストールする
+- 対策（Secondary）: `accumulatedFinalizedText` で finalized テキストを蓄積し、`stripOverlappingPrefix` で重複除去
+- restart 時はオーディオ tap を再インストールする。tap クロージャが `localContinuation` をローカルキャプチャする既存パターン（ADR 0012）を維持
+- `isRestarting` フラグで多重実行防止。`transcriberAlreadyRestarted` フラグで「voice input 到着までの冗長 restart 防止」
+- restart 中に旧 resultTask から最後の emit がある可能性 → `isLocallyFinalized` が true の間は `didFinalize` がスキップされるので安全
+- restart 時はモデルダウンロード済みを前提。同一セッション中にモデルがアンロードされることは想定しない
+- ADR 0016 に詳細
+
 ## SpeechAnalyzer 既知の問題（未確定・要調査）
 
 - 音声入力の先頭に「。」が挿入されることがある（再現条件不明）

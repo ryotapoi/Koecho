@@ -6,7 +6,8 @@ final class VoiceInputTextView: NSTextView {
     var onAddReplacementRule: ((String) -> Void)?
     var onCursorMoved: ((Int) -> Void)?
     /// Called when volatile text is finalized by keyboard input.
-    var onVolatileFinalized: (() -> Void)?
+    /// The parameter is the volatile text that was finalized.
+    var onVolatileFinalized: ((String) -> Void)?
 
     /// When true, `didChangeText()` will not fire `onTextChanged`.
     /// Used by both the NSViewRepresentable Coordinator (to prevent feedback
@@ -311,8 +312,9 @@ final class VoiceInputTextView: NSTextView {
         // Finalize volatile text before keyboard input so it becomes confirmed text.
         if let range = volatileRange, !isSuppressingCallbacks {
             if let storage = textStorage, range.location + range.length <= storage.length {
+                let volatileText = (storage.string as NSString).substring(with: range)
                 finalizeVolatileText()
-                onVolatileFinalized?()
+                onVolatileFinalized?(volatileText)
             } else {
                 clearVolatileText()
             }

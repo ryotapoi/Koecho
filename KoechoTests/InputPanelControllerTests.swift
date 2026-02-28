@@ -1267,4 +1267,95 @@ struct InputPanelControllerTests {
         // Empty text path calls clearState() which calls restore()
         #expect(ducker.restoreCallCount == 1)
     }
+
+    // MARK: - SpeechAnalyzer Overlap Removal
+
+    @Test func overlapRemovalFullDuplicate() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+
+        // Simulate first finalize: "なんですか？"
+        controller.voiceInput(didFinalize: "なんですか？")
+        let firstText = appState.inputText
+
+        // Simulate second finalize with overlap: "なんですか？こんにちは。"
+        controller.voiceInput(didFinalize: "なんですか？こんにちは。")
+
+        // Only "こんにちは。" should be added
+        #expect(appState.inputText == firstText + "こんにちは。")
+    }
+
+    @Test func overlapRemovalPartialPunctuation() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+
+        // Simulate finalize ending with punctuation
+        controller.voiceInput(didFinalize: "hello.")
+
+        // Next finalize starts with the same punctuation
+        controller.voiceInput(didFinalize: ".world")
+
+        // The overlapping "." should be removed
+        #expect(appState.inputText == "hello.world")
+    }
+
+    @Test func overlapRemovalNoOverlap() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+
+        controller.voiceInput(didFinalize: "hello")
+        controller.voiceInput(didFinalize: " world")
+
+        #expect(appState.inputText == "hello world")
+    }
+
+    @Test func overlapRemovalCompleteDuplicate() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+
+        controller.voiceInput(didFinalize: "hello")
+        // Complete duplicate — should produce empty after stripping
+        controller.voiceInput(didFinalize: "hello")
+
+        #expect(appState.inputText == "hello")
+    }
+
+    @Test func overlapRemovalSingleNonPunctuationNotStripped() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+
+        controller.voiceInput(didFinalize: "あ")
+        // Single char non-punctuation overlap should NOT be stripped
+        controller.voiceInput(didFinalize: "あいう")
+
+        #expect(appState.inputText == "ああいう")
+    }
+
+    @Test func overlapRemovalResetOnShowPanel() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+        controller.voiceInput(didFinalize: "hello")
+
+        // Cancel and reopen
+        controller.cancel()
+        controller.showPanel()
+
+        // After reopen, accumulated should be reset — no stripping
+        controller.voiceInput(didFinalize: "hello")
+        #expect(appState.inputText == "hello")
+    }
+
+    @Test func overlapRemovalResetOnSwitchEngine() async {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+        controller.voiceInput(didFinalize: "hello")
+
+        await controller.switchEngine()
+
+        // After switch, accumulated should be reset — no stripping
+        controller.voiceInput(didFinalize: "hello")
+
+        // inputText should contain "hello" from after switch (first "hello" was cleared by switchEngine reading textView)
+        #expect(appState.inputText.contains("hello"))
+    }
 }

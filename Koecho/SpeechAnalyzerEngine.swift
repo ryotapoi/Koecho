@@ -17,6 +17,9 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
     private var resultTask: Task<Void, Never>?
     private var transcriber: DictationTranscriber?
     private var acquiredAudioInput = false
+    private var converter: AVAudioConverter?
+    private var analyzerFormat: AVAudioFormat?
+    private var isRestarting = false
 
     /// Shared preset used for both recognition and model download.
     static var defaultPreset: DictationTranscriber.Preset {
@@ -195,23 +198,25 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         }
 
         // 5. Get best format for analyzer
-        guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
+        guard let bestFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
             compatibleWith: [transcriber],
             considering: inputFormat
         ) else {
             reportError("No compatible audio format available.")
             return
         }
+        self.analyzerFormat = bestFormat
 
         // 6. Create format converter if needed
-        let needsConversion = inputFormat != analyzerFormat
-        var converter: AVAudioConverter?
+        let needsConversion = inputFormat != bestFormat
         if needsConversion {
-            guard let conv = AVAudioConverter(from: inputFormat, to: analyzerFormat) else {
+            guard let conv = AVAudioConverter(from: inputFormat, to: bestFormat) else {
                 reportError("Audio format conversion not supported.")
                 return
             }
-            converter = conv
+            self.converter = conv
+        } else {
+            self.converter = nil
         }
 
         // 7. Create async stream for audio input
@@ -226,6 +231,24 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         self.analyzer = analyzer
 
         // 9. Start consuming results
+        startResultTask(transcriber: transcriber)
+
+        // 10. Install audio tap and start
+        AudioDeviceManager.acquireAudioInput()
+        acquiredAudioInput = true
+
+        installAudioTap()
+
+        do {
+            try audioEngine.start()
+            logger.info("Audio engine started, listening...")
+        } catch {
+            reportError("Failed to start audio engine: \(error.localizedDescription)")
+            tearDown()
+        }
+    }
+
+    private func startResultTask(transcriber: DictationTranscriber) {
         let resultsTask = Task { [weak self] in
             do {
                 for try await result in transcriber.results {
@@ -246,17 +269,30 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
             }
         }
         self.resultTask = resultsTask
+    }
 
-        // 10. Install audio tap and start
-        // Capture continuation and converter as local variables to avoid
-        // accessing @MainActor self from audio thread.
-        let localContinuation = continuation
+    private func installAudioTap() {
+        guard let audioEngine, let analyzerFormat,
+              let localContinuation = inputContinuation else { return }
+        let inputNode = audioEngine.inputNode
+        let inputFormat = inputNode.outputFormat(forBus: 0)
+
+        // Recreate converter if input format changed (e.g. during restart)
+        let needsConversion = inputFormat != analyzerFormat
+        if needsConversion {
+            if converter == nil || converter?.inputFormat != inputFormat {
+                guard let conv = AVAudioConverter(from: inputFormat, to: analyzerFormat) else {
+                    reportError("Audio format conversion not supported.")
+                    return
+                }
+                converter = conv
+            }
+        } else {
+            converter = nil
+        }
+
         let localConverter = converter
         let localAnalyzerFormat = analyzerFormat
-
-        AudioDeviceManager.acquireAudioInput()
-        acquiredAudioInput = true
-
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { buffer, _ in
             // This runs on the audio thread — do not access self
             let inputBuffer: AVAudioPCMBuffer
@@ -280,14 +316,57 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
             }
             localContinuation.yield(AnalyzerInput(buffer: inputBuffer))
         }
+    }
 
-        do {
-            try audioEngine.start()
-            logger.info("Audio engine started, listening...")
-        } catch {
-            reportError("Failed to start audio engine: \(error.localizedDescription)")
-            tearDown()
+    /// Restart the transcriber to clear segment buffer.
+    /// Returns `true` if restart was actually performed.
+    @discardableResult
+    func restartTranscriber() async -> Bool {
+        guard state == .listening, !isRestarting, let audioEngine else { return false }
+        isRestarting = true
+        defer { isRestarting = false }
+        logger.info("Restarting transcriber to clear segment buffer")
+
+        // 1. Stop old: remove tap, finish stream, cancel analyzer
+        audioEngine.inputNode.removeTap(onBus: 0)
+        inputContinuation?.finish()
+        if let analyzer {
+            do { try await analyzer.cancelAndFinishNow() }
+            catch { logger.warning("cancelAndFinishNow error during restart: \(error)") }
         }
+        let oldResultTask = resultTask
+        oldResultTask?.cancel()
+        if let oldResultTask {
+            let timedOut = await withTaskGroup(of: Bool.self) { group in
+                group.addTask { await oldResultTask.value; return false }
+                group.addTask { try? await Task.sleep(for: .seconds(1)); return true }
+                let first = await group.next()!
+                group.cancelAll()
+                return first
+            }
+            if timedOut {
+                logger.warning("Result task timed out during restart, cancelling")
+                oldResultTask.cancel()
+            }
+        }
+
+        // 2. Re-check state (stop/cancel may have run during await)
+        guard state == .listening else { return false }
+
+        // 3. Create new transcriber/stream/analyzer
+        let preset = Self.defaultPreset
+        let newTranscriber = DictationTranscriber(locale: locale, preset: preset)
+        self.transcriber = newTranscriber
+        let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
+        self.inputContinuation = continuation
+        self.analyzer = SpeechAnalyzer(inputSequence: stream, modules: [newTranscriber])
+        startResultTask(transcriber: newTranscriber)
+
+        // 4. Re-install audio tap with new continuation
+        installAudioTap()
+        guard state == .listening else { return false }
+        logger.info("Transcriber restarted")
+        return true
     }
 
     private func reportError(_ message: String) {
@@ -307,6 +386,8 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         transcriber = nil
         inputContinuation = nil
         resultTask = nil
+        converter = nil
+        analyzerFormat = nil
         if acquiredAudioInput {
             AudioDeviceManager.releaseAudioInput()
             acquiredAudioInput = false
