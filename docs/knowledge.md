@@ -172,7 +172,7 @@
 - 対策（Secondary）: `accumulatedFinalizedText` で finalized テキストを蓄積し、`stripOverlappingPrefix` で重複除去
 - restart 時はオーディオ tap を再インストールする。tap クロージャが `localContinuation` をローカルキャプチャする既存パターン（ADR 0012）を維持
 - `isRestarting` フラグで多重実行防止。`transcriberAlreadyRestarted` フラグで「voice input 到着までの冗長 restart 防止」
-- restart 中に旧 resultTask から最後の emit がある可能性 → `isLocallyFinalized` が true の間は `didFinalize` がスキップされるので安全
+- restart 後にバッファ残存音声のリプレイが発生する。volatile は時間窓（restart 完了後 2 秒、`replaySuppressionDeadline`）+ `localFinalizedText` との prefix マッチングで抑制し、新規音声は時間窓内でも表示する。finalize は `localFinalizedText` との exact match で replay を判定（`replaySuppressionDeadline` がセットされている replay context でのみ）。replay finalize 到着時に `clearReplayState()` で全フラグクリア。万一スキップ漏れがあっても `stripOverlappingPrefix` がフォールバックとして機能する
 - restart 時はモデルダウンロード済みを前提。同一セッション中にモデルがアンロードされることは想定しない
 - ADR 0016 に詳細
 

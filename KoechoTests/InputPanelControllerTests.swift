@@ -1358,4 +1358,196 @@ struct InputPanelControllerTests {
         // inputText should contain "hello" from after switch (first "hello" was cleared by switchEngine reading textView)
         #expect(appState.inputText.contains("hello"))
     }
+
+    // MARK: - Replay Volatile Suppression
+
+    private func findTextView(in controller: InputPanelController) -> VoiceInputTextView? {
+        func find(in view: NSView) -> VoiceInputTextView? {
+            if let tv = view as? VoiceInputTextView { return tv }
+            for sub in view.subviews {
+                if let found = find(in: sub) { return found }
+            }
+            return nil
+        }
+        return controller.panel.contentView.flatMap { find(in: $0) }
+    }
+
+    /// Simulate local finalization: set volatile text, finalize it, trigger onVolatileFinalized.
+    private func simulateLocalFinalize(
+        controller: InputPanelController,
+        textView: VoiceInputTextView,
+        text: String
+    ) {
+        controller.voiceInput(didUpdateVolatile: text)
+        textView.finalizeVolatileText()
+        textView.onVolatileFinalized?(text)
+    }
+
+    @Test func replayVolatileSuppressedDuringTimeWindow() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+        guard let textView = findTextView(in: controller) else {
+            Issue.record("textView not found")
+            return
+        }
+
+        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
+        controller.replaySuppressionDeadline = Date.now + 10
+        let textAfterFinalize = appState.inputText
+
+        // Replay volatile "こん" — should be suppressed during time window
+        controller.voiceInput(didUpdateVolatile: "こん")
+        #expect(textView.volatileRange == nil)
+        #expect(appState.inputText == textAfterFinalize)
+    }
+
+    @Test func volatileDisplayedAfterDeadlineExpires() {
+        let (controller, _, _, _, _) = makeController()
+        controller.showPanel()
+        guard let textView = findTextView(in: controller) else {
+            Issue.record("textView not found")
+            return
+        }
+
+        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
+        // Set deadline in the past — expired
+        controller.replaySuppressionDeadline = Date.now - 1
+
+        // New volatile after deadline expired — should be displayed
+        controller.voiceInput(didUpdateVolatile: "あ")
+        #expect(textView.volatileRange != nil)
+        // Flags should be cleared
+        #expect(controller.isLocallyFinalized == false)
+    }
+
+    @Test func replayFinalizeSkippedByExactMatch() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+        guard let textView = findTextView(in: controller) else {
+            Issue.record("textView not found")
+            return
+        }
+
+        // Insert text via normal finalize first
+        controller.voiceInput(didFinalize: "こんにちは")
+        let textAfterFirstFinalize = appState.inputText
+
+        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
+        controller.replaySuppressionDeadline = Date.now + 10
+
+        // Replay finalize — exact match with localFinalizedText → skipped
+        controller.voiceInput(didFinalize: "こんにちは")
+        #expect(appState.inputText == textAfterFirstFinalize)
+        #expect(controller.isLocallyFinalized == false)
+        #expect(controller.replaySuppressionDeadline == nil)
+    }
+
+    @Test func replayFinalizeClearsDeadline() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+        guard let textView = findTextView(in: controller) else {
+            Issue.record("textView not found")
+            return
+        }
+
+        // Insert text via normal finalize first
+        controller.voiceInput(didFinalize: "こんにちは")
+
+        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
+        controller.replaySuppressionDeadline = Date.now + 10
+
+        // Replay finalize — clears deadline
+        controller.voiceInput(didFinalize: "こんにちは")
+        #expect(controller.replaySuppressionDeadline == nil)
+
+        // Next volatile should be displayed (deadline cleared)
+        controller.voiceInput(didUpdateVolatile: "あ")
+        #expect(textView.volatileRange != nil)
+    }
+
+    @Test func newFinalizeWhileLocallyFinalizedInsertsText() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+        guard let textView = findTextView(in: controller) else {
+            Issue.record("textView not found")
+            return
+        }
+
+        // Insert text via normal finalize first
+        controller.voiceInput(didFinalize: "こんにちは")
+
+        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
+        controller.replaySuppressionDeadline = Date.now + 10
+
+        // New speech finalize with no overlap — should be inserted
+        controller.voiceInput(didFinalize: "ありがとう")
+        #expect(appState.inputText.contains("ありがとう"))
+        #expect(controller.isLocallyFinalized == false)
+    }
+
+    @Test func newInputAfterReplay() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+        guard let textView = findTextView(in: controller) else {
+            Issue.record("textView not found")
+            return
+        }
+
+        // Insert text via normal finalize first
+        controller.voiceInput(didFinalize: "こんにちは")
+
+        // Local finalize (e.g. user presses Enter)
+        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
+        controller.replaySuppressionDeadline = Date.now + 10
+
+        // Replay finalize — clears flags
+        controller.voiceInput(didFinalize: "こんにちは")
+
+        // New volatile should now be displayed
+        controller.voiceInput(didUpdateVolatile: "あ")
+        #expect(textView.volatileRange != nil)
+
+        // New finalize should insert text
+        let textBeforeFinalize = appState.inputText
+        controller.voiceInput(didFinalize: "ありがとう")
+        #expect(appState.inputText != textBeforeFinalize)
+        #expect(appState.inputText.contains("ありがとう"))
+    }
+
+    @Test func sameTextReSpokenAfterReplay() {
+        let (controller, appState, _, _, _) = makeController()
+        controller.showPanel()
+        guard let textView = findTextView(in: controller) else {
+            Issue.record("textView not found")
+            return
+        }
+
+        // Insert text via normal finalize first so accumulatedFinalizedText is set
+        controller.voiceInput(didFinalize: "こんにちは")
+        let textAfterFirstFinalize = appState.inputText
+
+        // Now simulate local finalize (as if user typed Enter to restart transcriber)
+        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
+        controller.replaySuppressionDeadline = Date.now + 10
+
+        // Replay finalize — clears flags
+        controller.voiceInput(didFinalize: "こんにちは")
+
+        // Same text finalized again — stripOverlappingPrefix removes it
+        controller.voiceInput(didFinalize: "こんにちは")
+        #expect(appState.inputText == textAfterFirstFinalize)
+    }
+
+    @Test func volatileDisplayedWithoutDeadline() {
+        let (controller, _, _, _, _) = makeController()
+        controller.showPanel()
+        guard let textView = findTextView(in: controller) else {
+            Issue.record("textView not found")
+            return
+        }
+
+        // No simulateLocalFinalize, no deadline — initial state
+        controller.voiceInput(didUpdateVolatile: "あ")
+        #expect(textView.volatileRange != nil)
+    }
 }

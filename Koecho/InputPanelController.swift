@@ -19,10 +19,22 @@ final class InputPanelController {
     private var currentVoiceTarget: VoiceTarget = .textEditor
     /// True after volatile text was locally finalized (e.g. by cursor movement
     /// or keyboard input). While set, SDK didFinalize is suppressed to prevent
-    /// duplicate insertion. Cleared on the next didUpdateVolatile.
-    private var isLocallyFinalized = false
+    /// duplicate insertion. Cleared on replay finalize arrival, or when new
+    /// speech arrives after the replay suppression deadline has passed.
+    var isLocallyFinalized = false
+    /// Text that was locally finalized (volatile → confirmed by keyboard/cursor).
+    /// Used to detect replay finalize: if SDK finalize text ends with this value,
+    /// it's a replay and should be skipped.
+    var localFinalizedText: String?
     /// Accumulated finalized text from SpeechAnalyzer for overlap detection.
     private var accumulatedFinalizedText: String = ""
+    /// Duration to suppress volatile display after a transcriber restart.
+    /// Replay typically completes within 1 second; 2 seconds provides margin for
+    /// slow machines. The deadline is cleared early when replay finalize arrives.
+    private static let replaySuppressionDuration: TimeInterval = 2.0
+    /// Deadline until which volatile display is suppressed after a transcriber restart.
+    /// Set when restart completes; cleared on replay finalize or session reset.
+    var replaySuppressionDeadline: Date?
     /// True after the transcriber has been restarted since the last voice input.
     /// Prevents redundant restarts until new voice input arrives.
     private var transcriberAlreadyRestarted = false
@@ -88,7 +100,7 @@ final class InputPanelController {
                 view.onVolatileFinalized = { [weak self] volatileText in
                     guard let self else { return }
                     self.isLocallyFinalized = true
-                    self.accumulatedFinalizedText += volatileText
+                    self.localFinalizedText = volatileText
                 }
                 self.configureEngineWithTextView()
             },
@@ -186,8 +198,8 @@ final class InputPanelController {
         engine = makeEngine()
         voiceInsertionPoint = (appState.inputText as NSString).length
         currentVoiceTarget = .textEditor
+        clearReplayState()
         accumulatedFinalizedText = ""
-        transcriberAlreadyRestarted = false
         panel.makeKeyAndOrderFront(nil)
         clearTextView()
 
@@ -251,7 +263,7 @@ final class InputPanelController {
                 let volatileText = (textView.string as NSString).substring(with: range)
                 textView.finalizeVolatileText()
                 isLocallyFinalized = true
-                accumulatedFinalizedText += volatileText
+                localFinalizedText = volatileText
             } else {
                 textView.clearVolatileText()
             }
@@ -550,9 +562,8 @@ final class InputPanelController {
         appState.promptScript = nil
         appState.promptText = ""
         appState.pendingReplacementPattern = nil
-        isLocallyFinalized = false
+        clearReplayState()
         accumulatedFinalizedText = ""
-        transcriberAlreadyRestarted = false
     }
 
     func cancel() {
@@ -580,8 +591,8 @@ final class InputPanelController {
         }
         engine = makeEngine()
         voiceInsertionPoint = textView?.selectedRange().location ?? (appState.inputText as NSString).length
+        clearReplayState()
         accumulatedFinalizedText = ""
-        transcriberAlreadyRestarted = false
         engine.start()
         logger.info("Engine switched while panel visible")
     }
@@ -655,14 +666,30 @@ extension InputPanelController {
         return text
     }
 
+    /// Clear all replay-related flags. Called when the replay cycle ends
+    /// (finalize arrival, deadline expiry, or session reset).
+    private func clearReplayState() {
+        isLocallyFinalized = false
+        localFinalizedText = nil
+        replaySuppressionDeadline = nil
+        transcriberAlreadyRestarted = false
+    }
+
     private func restartTranscriberIfNeeded() {
         if #available(macOS 26, *) {
             guard !transcriberAlreadyRestarted,
                   let saEngine = engine as? SpeechAnalyzerEngine else { return }
+            // Only set deadline when volatile was locally finalized (the replay scenario).
+            // Without this guard, a restart from normal keyboard input (no volatile)
+            // would suppress volatile display for 2 seconds unnecessarily.
+            let shouldSuppressReplay = isLocallyFinalized
             Task { @MainActor in
                 let didRestart = await saEngine.restartTranscriber()
                 if didRestart {
                     self.transcriberAlreadyRestarted = true
+                    if shouldSuppressReplay {
+                        self.replaySuppressionDeadline = Date.now + Self.replaySuppressionDuration
+                    }
                 }
             }
         }
@@ -719,10 +746,10 @@ extension InputPanelController {
 extension InputPanelController: VoiceInputDelegate {
     func voiceInput(didFinalize text: String) {
         guard appState.isInputPanelVisible else { return }
-        transcriberAlreadyRestarted = false
 
         switch currentVoiceTarget {
         case .prompt:
+            transcriberAlreadyRestarted = false
             appState.promptText += text
             return
         case .textEditor:
@@ -731,10 +758,42 @@ extension InputPanelController: VoiceInputDelegate {
 
         textView?.clearVolatileText()
 
-        // Skip if the user already locally finalized (via cursor movement or
-        // keyboard input). The flag is cleared by didUpdateVolatile when the
-        // SDK starts recognizing new speech.
-        if isLocallyFinalized { return }
+        if isLocallyFinalized {
+            let localText = localFinalizedText
+            let isReplayContext = replaySuppressionDeadline != nil
+            clearReplayState()
+
+            // Only skip finalize in a replay context (transcriber was restarted
+            // after local finalization). Without this guard, re-speaking the same
+            // text after a normal Enter would be incorrectly dropped.
+            if isReplayContext, let localText {
+                // Exact match: SDK replayed the same segment text.
+                if text == localText {
+                    accumulatedFinalizedText += localText
+                    return
+                }
+                // Fallback: SDK added punctuation to the replayed text.
+                let newText = stripOverlappingPrefix(text, accumulated: accumulatedFinalizedText + localText)
+                if newText.isEmpty {
+                    accumulatedFinalizedText += localText
+                    return
+                }
+                // Partial overlap with new content — insert the non-overlapping part.
+                accumulatedFinalizedText += localText
+                let inserted = insertFinalizedText(newText, at: voiceInsertionPoint)
+                accumulatedFinalizedText += inserted
+                if !isStoppingEngine, appState.settings.isAutoReplacementEnabled {
+                    applyOrPreviewReplacementRules()
+                }
+                return
+            }
+
+            // Not a replay context — treat as normal finalize.
+            // The locally finalized text is already in the text view, so add it
+            // to accumulated and fall through to insert any new content.
+            accumulatedFinalizedText += localText ?? ""
+        }
+        transcriberAlreadyRestarted = false
 
         let newText = stripOverlappingPrefix(text, accumulated: accumulatedFinalizedText)
         guard !newText.isEmpty else { return }
@@ -749,15 +808,30 @@ extension InputPanelController: VoiceInputDelegate {
 
     func voiceInput(didUpdateVolatile text: String) {
         guard appState.isInputPanelVisible else { return }
-        transcriberAlreadyRestarted = false
 
-        // A new volatile update means the SDK started recognizing new speech.
-        if isLocallyFinalized { isLocallyFinalized = false }
+        // Suppress replay volatile during time window after transcriber restart.
+        if let deadline = replaySuppressionDeadline, Date.now < deadline {
+            // Within replay window — suppress volatile that looks like a replay
+            // (prefix of the locally finalized text). New speech that doesn't match
+            // the local text passes through to be displayed normally.
+            if currentVoiceTarget == .textEditor,
+               let localText = localFinalizedText,
+               localText.hasPrefix(text) || text.hasPrefix(localText) {
+                return
+            }
+            // Not a replay — clear replay state and fall through to display.
+            if isLocallyFinalized { clearReplayState() }
+        } else if isLocallyFinalized {
+            // Deadline expired (or none set) but replay finalize hasn't arrived.
+            // New speech arrived — clear all replay flags and resume normal processing.
+            clearReplayState()
+        }
 
         switch currentVoiceTarget {
         case .prompt:
             return
         case .textEditor:
+            transcriberAlreadyRestarted = false
             let point = min(voiceInsertionPoint, textView?.textStorage?.length ?? 0)
             let adjustedText = stripLeadingDuplicatePunctuation(text, at: point)
             textView?.setVolatileText(adjustedText, at: voiceInsertionPoint)
