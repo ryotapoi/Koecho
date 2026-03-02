@@ -37,6 +37,9 @@ CLAUDE.local.md
 # Temporary files
 /tmp/
 
+# Plan files (content captured in commits/tests/references/decisions)
+/backlog/plans/*.md
+
 # macOS
 .DS_Store
 .AppleDouble
