@@ -40,7 +40,7 @@ Xcode の内部状態にアクセスする必要があるときに使う（Xcode
   → スクリプト実行（その場でテキスト置換、何度でも可）
   → ホットキー再押下で確定 → ClipboardPaster (CGEvent Cmd+V) → フォアグラウンドアプリ
 
-詳細仕様: docs/spec.md
+詳細仕様: rules/spec.md
 
 ## コード規約
 
