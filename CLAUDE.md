@@ -80,45 +80,36 @@ Xcode の内部状態にアクセスする必要があるときに使う（Xcode
 - ClipboardPaster: ペースト後のクリップボード復元
 - SelectedTextReader: 権限なし・選択なし時の失敗ハンドリング
 
-## プランレビュー
+## 開発ワークフロー
 
-プランモードで実装計画を書き終えたら、ExitPlanMode の前にレビューループを実行する。
-**各ステップは前のステップの完了を待ってから実行すること。同時実行は禁止。**
+IMPORTANT: 以下のフローを必ずこの順番で実行すること。ステップを飛ばしてはならない。
 
-1. `/self-plan-review` を実行する（3観点並列レビュー）
-2. `/self-plan-review-swift` を実行する（Swift/Apple platform 固有レビュー）
-3. **新規の** 🔴 MUST / 🟡 SHOULD の指摘をプランに反映する
-4. 新規指摘があった場合 → 手順1に戻る（新規 MUST/SHOULD がゼロになるまでループ）
-5. `/codex-plan-review` を実行する（Codex セカンドオピニオン。**2回目以降は `--resume` をつけて呼ぶ**）
-6. 指摘があれば反映し、手順1に戻る
-7. 指摘なし → ExitPlanMode する
+### Step 1: 計画（プランモード）
 
-収束判定: 前回対処済みの指摘の再表現（「もっと明示的に」「セクションに切り出せ」等）は新規とみなさない。
-判断が必要な指摘は AskUserQuestion でユーザーに確認する。
+EnterPlanMode でプランを作成する。
 
-## 実装レビュー
+### Step 2: プランレビュー
 
-実装・テストが完了したら、コミット前にレビューループを実行する。
-**各ステップは前のステップの完了を待ってから実行すること。同時実行は禁止。**
+プランの記述が完了したら、**ExitPlanMode を直接呼んではならない**。
+必ず先に `/review-plan-all` スキルを Skill ツールで実行する。
+レビュー完了後に ExitPlanMode を呼ぶ。
 
-0. ビルドとテストを通す。失敗したら修正してから次へ進む
-1. プランから意図的に変更した箇所がある場合、`backlog/plans/` のプランファイルを更新する（該当 Step に変更内容と理由を追記）
-2. `/simplify` を実行する（DRY・code quality・efficiency の自動修正）
-3. `/self-impl-review` を実行する（最大4観点並列レビュー）
-4. `/self-impl-review-swift` を実行する（Swift/Apple platform 固有レビュー）
-5. **新規の** 🔴 MUST / 🟡 SHOULD の指摘を実装に反映する
-6. 新規指摘があった場合 → 手順3に戻る（新規 MUST/SHOULD がゼロになるまでループ）
-7. `/codex-impl-review` を実行する（Codex セカンドオピニオン。**2回目以降は `--resume` をつけて呼ぶ**）
-8. 指摘があれば反映し、手順3に戻る
-9. UI や操作感など自動テストではカバーできない変更がある場合、手動確認の手順をユーザーに提示してレスポンスを待つ
-10. 指摘なし → `/commit` する
+### Step 3: 実装
 
-収束判定: 前回対処済みの指摘の再表現は新規とみなさない。
-判断が必要な指摘は AskUserQuestion でユーザーに確認する。
+プラン承認後、`references/knowledge.md` を事前確認してから実装・テストを行う。
 
-## Codex 指摘の蓄積
+### Step 4: 実装レビュー
 
-`/codex-plan-review` や `/codex-impl-review` で MUST / SHOULD の指摘が出たら、`tmp/codex-findings.md` に追記する。
+実装・テストが完了したら、**コミットしてはならない**。
+必ず先に `/review-code-all` スキルを Skill ツールで実行する。
+
+### Step 5: コミット
+
+レビュー完了後、`/commit` スキルでコミットする。
+
+### Codex 指摘の蓄積
+
+`/review-plan-codex` や `/review-code-codex` で MUST / SHOULD の指摘が出たら、`tmp/codex-findings.md` に追記する。
 
 追記形式:
 ```
@@ -130,11 +121,6 @@ Xcode の内部状態にアクセスする必要があるときに使う（Xcode
 ```
 
 20〜30件溜まったら一括分類し、skill への反映を検討する。
-
-## コミット
-
-コミットは `/commit` スキルを使う。Conventional Commits 形式、英語。
-詳細は `.claude/skills/commit/SKILL.md` を参照。
 
 ## 言語
 
