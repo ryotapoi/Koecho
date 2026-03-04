@@ -2,12 +2,16 @@
 
 ## プロジェクト概要
 
-Koecho（こえこ / Ko-echo）はmacOS 14.0+向けの軽量音声入力ラッパーアプリ。
-macOS標準のDictation機能を利用し、フローティングウィンドウで音声テキストを受け取り、
-シェルスクリプトで加工してフォアグラウンドアプリにペーストする。
+Koecho は macOS 14.0+ 向けの軽量音声入力ラッパーアプリ。詳細: rules/mission.md
 
-読み: こえこ / Ko-echo
-由来: Koe（声）+ chotto（ちょっと）。echo（反響）の意味も掛かっている。
+## rules/
+
+rules/ に定義。実装時に参照すること。
+
+- プロダクト目的・非目標: rules/mission.md
+- コード規約・テスト方針・言語: rules/principles.md
+- 技術スタック・前提条件: rules/constraints.md
+- 機能スコープ: rules/scope.md
 
 ## MCP ツール使い分け
 
@@ -40,45 +44,7 @@ Xcode の内部状態にアクセスする必要があるときに使う（Xcode
   → スクリプト実行（その場でテキスト置換、何度でも可）
   → ホットキー再押下で確定 → ClipboardPaster (CGEvent Cmd+V) → フォアグラウンドアプリ
 
-詳細仕様: rules/spec.md
-
-## コード規約
-
-- SwiftUI + Model/Service パターン（AppState が中核状態を保持、ロジックは Services に分離）
-- @MainActor でUIスレッド安全性を確保
-- async/await ベースの非同期処理
-- ロギングは os.Logger（サブシステム: com.ryotapoi.koecho）
-- UserDefaults で設定保存（SwiftData 不使用）
-- エラーは用途別のカスタム enum
-- 後方互換性は維持しない。旧シンボルのリネーム保持・re-export・deprecated コメント・旧フォーマットへのフォールバック分岐は入れない。互換性維持が必要な場合はユーザーが明示する
-
-## 技術スタック
-
-- Swift / SwiftUI / macOS 14.0+
-- NSPanel（フローティングウィンドウ）
-- NSEvent（グローバルホットキー）
-- Process + Pipe（シェルスクリプト実行）
-- CGEvent（ペースト）
-- Accessibility API（選択テキスト取得）
-- MenuBarExtra（メニューバー常駐）
-- UserDefaults（設定保存）
-- os.Logger（ロギング）
-- Speech framework / SpeechAnalyzer（macOS 26+ オンデバイス音声認識）
-- AVAudioEngine（マイク入力取得）
-
-## 前提条件
-
-- App Sandbox は無効（CGEvent / Process / グローバルホットキー / Accessibility API のため）
-- アクセシビリティ権限が必要（ペースト・選択テキスト取得）
-- Input Monitoring 権限が必要（NSEvent.addGlobalMonitorForEvents）。macOS バージョンによりアクセシビリティ権限と別途必要になるケースがある
-- macOS Dictation がユーザーにより有効化されている必要がある（無効の場合はキーボード入力のみ）
-- Mac App Store 配布は対象外
-
-## テスト方針
-
-- ScriptRunner: タイムアウト / 空出力 / 非ゼロ終了のフォールバック
-- ClipboardPaster: ペースト後のクリップボード復元
-- SelectedTextReader: 権限なし・選択なし時の失敗ハンドリング
+詳細仕様: rules/scope.md
 
 ## 開発ワークフロー
 
@@ -96,7 +62,7 @@ EnterPlanMode でプランを作成する。
 
 ### Step 3: 実装
 
-プラン承認後、`references/knowledge.md` を事前確認してから実装・テストを行う。
+プラン承認後、`rules/` と `references/knowledge.md` を事前確認してから実装・テストを行う。
 
 ### Step 4: 実装レビュー
 
@@ -122,10 +88,6 @@ EnterPlanMode でプランを作成する。
 
 20〜30件溜まったら一括分類し、skill への反映を検討する。
 
-## 言語
-
-コミットメッセージは英語（Conventional Commits）。ドキュメントは日本語の場合がある。コード（変数名、コメント）は英語で書く。
-
 ## ドキュメント管理
 
 - 同じ情報を複数のドキュメントに書かない。各情報の置き場所は1箇所に限定する
@@ -135,7 +97,7 @@ EnterPlanMode でプランを作成する。
 
 | ディレクトリ | 役割 |
 |---|---|
-| `rules/` | 方針・スコープ・拘束的制約（spec.md） |
+| `rules/` | 方針・スコープ・拘束的制約（mission / scope / constraints / principles） |
 | `decisions/` | 意思決定ログ（ADR） |
 | `references/` | 実装判断に影響する補助情報（knowledge.md） |
 | `backlog/plans/` | 実装計画ファイル（gitignore 対象、/simplify が diff で参照） |
