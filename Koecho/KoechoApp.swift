@@ -23,7 +23,7 @@ struct KoechoApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("Koecho", systemImage: "mic.fill") {
+        MenuBarExtra("Koecho", image: "MenuBarIcon") {
             MenuBarContent(appState: appState, onTogglePanel: { togglePanel() })
         }
         .menuBarExtraStyle(.menu)
