@@ -164,15 +164,15 @@ extension SpeechAnalyzerLocalePicker {
     func loadLocales() async {
         let supported = await DictationTranscriber.supportedLocales
         let installed = await DictationTranscriber.installedLocales
-        let installedKeys = Set(installed.map { localeNormalizationKey($0) })
+        let installedKeys = Set(installed.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
         let reserved = await AssetInventory.reservedLocales
-        let reservedKeys = Set(reserved.map { localeNormalizationKey($0) })
+        let reservedKeys = Set(reserved.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
         reservedLocales = reserved
 
         var items = supported.map { locale -> LocaleItem in
             let identifier = locale.identifier
             let displayName = Locale.current.localizedString(forIdentifier: identifier) ?? identifier
-            let key = localeNormalizationKey(locale)
+            let key = SpeechAnalyzerEngine.localeNormalizationKey(locale)
             return LocaleItem(
                 identifier: identifier,
                 displayName: displayName,
@@ -210,22 +210,11 @@ extension SpeechAnalyzerLocalePicker {
         }
     }
 
-    private func localeNormalizationKey(_ locale: Locale) -> String {
-        let lang = locale.language.languageCode?.identifier ?? ""
-        let script = locale.language.script?.identifier ?? ""
-        let region = locale.language.region?.identifier ?? ""
-        return "\(lang)-\(script)-\(region)"
-    }
-
     private func findNormalizedMatch(for identifier: String, in items: [LocaleItem]) -> LocaleItem? {
-        let sourceKey = localeNormalizationKey(identifier)
+        let sourceKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
         return items.first { item in
-            localeNormalizationKey(item.identifier) == sourceKey
+            SpeechAnalyzerEngine.localeNormalizationKey(item.identifier) == sourceKey
         }
-    }
-
-    private func localeNormalizationKey(_ identifier: String) -> String {
-        localeNormalizationKey(Locale(identifier: identifier))
     }
 
     private func downloadAsset(for identifier: String) async {
@@ -267,9 +256,9 @@ extension SpeechAnalyzerLocalePicker {
     }
 
     private func releaseAsset(for identifier: String) async {
-        let targetKey = localeNormalizationKey(identifier)
+        let targetKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
         guard let reservedLocale = reservedLocales.first(where: {
-            localeNormalizationKey($0) == targetKey
+            SpeechAnalyzerEngine.localeNormalizationKey($0) == targetKey
         }) else { return }
 
         // Update UI immediately (prevent double-tap + responsive feedback)
@@ -277,18 +266,19 @@ extension SpeechAnalyzerLocalePicker {
             locales[index].isReserved = false
         }
         await AssetInventory.release(reservedLocale: reservedLocale)
+        SpeechAnalyzerEngine.invalidateModelCache(for: Locale(identifier: identifier))
         await refreshLocaleStatus()
     }
 
     private func refreshLocaleStatus() async {
         let installed = await DictationTranscriber.installedLocales
-        let installedKeys = Set(installed.map { localeNormalizationKey($0) })
+        let installedKeys = Set(installed.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
         let reserved = await AssetInventory.reservedLocales
-        let reservedKeys = Set(reserved.map { localeNormalizationKey($0) })
+        let reservedKeys = Set(reserved.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
         reservedLocales = reserved
 
         for i in locales.indices {
-            let key = localeNormalizationKey(locales[i].identifier)
+            let key = SpeechAnalyzerEngine.localeNormalizationKey(locales[i].identifier)
             locales[i].isInstalled = installedKeys.contains(key)
             locales[i].isReserved = reservedKeys.contains(key)
         }

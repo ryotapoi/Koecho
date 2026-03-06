@@ -21,6 +21,27 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
     private var analyzerFormat: AVAudioFormat?
     private var isRestarting = false
 
+    /// Locales verified as having models installed during this app session.
+    private static var verifiedLocales: Set<String> = []
+
+    /// Normalized key for locale-based cache lookups (languageCode-script-region).
+    static func localeNormalizationKey(_ locale: Locale) -> String {
+        let lang = locale.language.languageCode?.identifier ?? ""
+        let script = locale.language.script?.identifier ?? ""
+        let region = locale.language.region?.identifier ?? ""
+        return "\(lang)-\(script)-\(region)"
+    }
+
+    /// Convenience overload accepting a locale identifier string.
+    static func localeNormalizationKey(_ identifier: String) -> String {
+        localeNormalizationKey(Locale(identifier: identifier))
+    }
+
+    /// Invalidate the model cache for a locale (e.g. after releasing a model).
+    static func invalidateModelCache(for locale: Locale) {
+        verifiedLocales.remove(localeNormalizationKey(locale))
+    }
+
     /// Shared preset used for both recognition and model download.
     static var defaultPreset: DictationTranscriber.Preset {
         var preset = DictationTranscriber.Preset.progressiveLongDictation
@@ -150,21 +171,25 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         let transcriber = DictationTranscriber(locale: locale, preset: preset)
         self.transcriber = transcriber
 
-        // 3. Check / download model
-        do {
-            if let request = try await AssetInventory.assetInstallationRequest(
-                supporting: [transcriber]
-            ) {
-                logger.info("Downloading speech model...")
-                delegate?.voiceInput(didUpdateStatus: "Downloading speech model...")
-                try await request.downloadAndInstall()
-                logger.info("Speech model downloaded")
+        // 3. Check / download model (skip if already verified this session)
+        let localeKey = Self.localeNormalizationKey(locale)
+        if !Self.verifiedLocales.contains(localeKey) {
+            do {
+                if let request = try await AssetInventory.assetInstallationRequest(
+                    supporting: [transcriber]
+                ) {
+                    logger.info("Downloading speech model...")
+                    delegate?.voiceInput(didUpdateStatus: "Downloading speech model...")
+                    try await request.downloadAndInstall()
+                    logger.info("Speech model downloaded")
+                    delegate?.voiceInput(didUpdateStatus: nil)
+                }
+                Self.verifiedLocales.insert(localeKey)
+            } catch {
                 delegate?.voiceInput(didUpdateStatus: nil)
+                reportError("Failed to download speech model: \(error.localizedDescription)")
+                return
             }
-        } catch {
-            delegate?.voiceInput(didUpdateStatus: nil)
-            reportError("Failed to download speech model: \(error.localizedDescription)")
-            return
         }
 
         // 4. Setup audio engine

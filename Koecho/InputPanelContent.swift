@@ -26,6 +26,7 @@ struct InputPanelContent: View {
                 },
                 onViewCreated: onTextViewCreated
             )
+            .opacity(appState.voiceEngineStatus != nil ? 0.5 : 1.0)
             .frame(minHeight: 60, maxHeight: CGFloat.infinity)
             .popover(
                 isPresented: Binding(
