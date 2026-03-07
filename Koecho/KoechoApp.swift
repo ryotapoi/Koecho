@@ -17,7 +17,7 @@ struct KoechoApp: App {
     }
 
     private func requestAccessibilityIfNeeded() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
+        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
         let trusted = AXIsProcessTrustedWithOptions(options)
         logger.info("Accessibility trusted: \(trusted)")
     }

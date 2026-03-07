@@ -3,8 +3,8 @@
 - [ ] T7: 音声認識言語の簡易切り替え（SpeechAnalyzer モード）
 - [x] モデルダウンロード中の UX 改善（SpeechAnalyzer）
 - [x] アイコン変更
-- [ ] Swift 6 language mode 移行（現在 Swift 5 mode。warning 2種の解消含む）
-- [ ] `nonisolated(unsafe)` warning 解消（swift#81962 修正待ち。AudioDeviceManager / OutputVolumeDucker）
+- [x] Swift 6 language mode 移行（現在 Swift 5 mode。warning 2種の解消含む）
+- [x] `nonisolated(unsafe)` warning 解消（swift#81962 修正待ち。AudioDeviceManager / OutputVolumeDucker）
 - [x] B1: 初回パネル表示時の Dictation 自動開始失敗（改善済み、完全解消困難。ADR 0005）
 - [x] SpeechAnalyzer 有効時に初回起動でデフォルトエンジンにする
 - [x] SpeechAnalyzer のデフォルト言語を macOS の言語設定または English にする

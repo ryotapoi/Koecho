@@ -2,6 +2,7 @@ import AppKit
 import Testing
 @testable import Koecho
 
+@MainActor
 struct ShortcutKeyTests {
     // MARK: - displayName
 

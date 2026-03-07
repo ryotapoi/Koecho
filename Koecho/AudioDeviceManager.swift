@@ -37,25 +37,23 @@ final class AudioDeviceManager {
 
     // MARK: - Private state
 
-    // nonisolated(unsafe) because the AUHAL input callback accesses these
-    // from the audio I/O thread. Safe because start/stop are serialized on
-    // @MainActor and the callback only runs between start and stop.
-    private nonisolated(unsafe) var monitoringAudioUnit: AudioComponentInstance?
-    private nonisolated(unsafe) var monitoringBufferList: UnsafeMutableAudioBufferListPointer?
-    private nonisolated(unsafe) var lastLevelUpdate: ContinuousClock.Instant = .now
+    // Accessed from the AUHAL input callback on the audio I/O thread.
+    // Safe because start/stop are serialized on @MainActor and the callback
+    // only runs between start and stop.
+    @ObservationIgnored private nonisolated(unsafe) var monitoringAudioUnit: AudioComponentInstance?
+    @ObservationIgnored private nonisolated(unsafe) var monitoringBufferList: UnsafeMutableAudioBufferListPointer?
+    @ObservationIgnored private nonisolated(unsafe) var lastLevelUpdate: ContinuousClock.Instant = .now
 
     private var monitoringDeviceUID: String?
     private var monitoredDeviceID: AudioDeviceID = kAudioObjectUnknown
     private var isUpdatingVolume = false
 
     // CoreAudio listener blocks (retained for removal in deinit).
-    // nonisolated(unsafe) so deinit (which is nonisolated) can access them.
-    // Safe because no concurrent access occurs at deinitialization time.
-    private nonisolated(unsafe) var deviceListListenerBlock: AudioObjectPropertyListenerBlock?
-    private nonisolated(unsafe) var defaultDeviceListenerBlock: AudioObjectPropertyListenerBlock?
-    private nonisolated(unsafe) var volumeListenerBlock: AudioObjectPropertyListenerBlock?
-    private nonisolated(unsafe) var volumeListenerDeviceID: AudioDeviceID = kAudioObjectUnknown
-    private nonisolated(unsafe) var volumeListenerElement: AudioObjectPropertyElement = kAudioObjectPropertyElementMain
+    @ObservationIgnored private nonisolated(unsafe) var deviceListListenerBlock: AudioObjectPropertyListenerBlock?
+    @ObservationIgnored private nonisolated(unsafe) var defaultDeviceListenerBlock: AudioObjectPropertyListenerBlock?
+    @ObservationIgnored private nonisolated(unsafe) var volumeListenerBlock: AudioObjectPropertyListenerBlock?
+    @ObservationIgnored private nonisolated(unsafe) var volumeListenerDeviceID: AudioDeviceID = kAudioObjectUnknown
+    @ObservationIgnored private nonisolated(unsafe) var volumeListenerElement: AudioObjectPropertyElement = kAudioObjectPropertyElementMain
 
     // MARK: - Init / Deinit
 

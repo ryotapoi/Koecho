@@ -15,11 +15,10 @@ final class OutputVolumeDucker: VolumeDucking {
 
     private(set) var isDucked = false
 
-    // nonisolated(unsafe) for deinit access (same pattern as AudioDeviceManager)
-    private nonisolated(unsafe) var savedVolume: Float?
-    private nonisolated(unsafe) var duckedDeviceID: AudioDeviceID = kAudioObjectUnknown
-    private nonisolated(unsafe) var duckedElement: AudioObjectPropertyElement = kAudioObjectPropertyElementMain
-    private nonisolated(unsafe) var defaultOutputDeviceListenerBlock: AudioObjectPropertyListenerBlock?
+    @ObservationIgnored private nonisolated(unsafe) var savedVolume: Float?
+    @ObservationIgnored private nonisolated(unsafe) var duckedDeviceID: AudioDeviceID = kAudioObjectUnknown
+    @ObservationIgnored private nonisolated(unsafe) var duckedElement: AudioObjectPropertyElement = kAudioObjectPropertyElementMain
+    @ObservationIgnored private nonisolated(unsafe) var defaultOutputDeviceListenerBlock: AudioObjectPropertyListenerBlock?
 
     init(settings: Settings) {
         self.settings = settings

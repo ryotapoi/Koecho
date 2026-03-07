@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import Koecho
 
+@MainActor
 struct SelectedTextReaderTests {
     @Test func readReturnsNilInTestEnvironment() {
         let reader = SelectedTextReader()

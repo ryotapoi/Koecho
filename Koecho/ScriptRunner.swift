@@ -71,25 +71,8 @@ nonisolated final class ScriptRunner: Sendable {
                 }
             }
 
-            // Timeout work item (scheduled after process.run() succeeds)
-            let timeoutWork = DispatchWorkItem {
-                state.markTimedOut()
-                let pid = process.processIdentifier
-                process.terminate()
-
-                // Schedule SIGKILL in case SIGTERM is ignored
-                let sigkillWork = DispatchWorkItem {
-                    Darwin.kill(pid, SIGKILL)
-                }
-                state.setKillWork(sigkillWork)
-                DispatchQueue.global().asyncAfter(
-                    deadline: .now() + killDelay,
-                    execute: sigkillWork
-                )
-            }
-
             process.terminationHandler = { terminatedProcess in
-                timeoutWork.cancel()
+                state.cancelTimeoutWork()
                 state.cancelKillWork()
 
                 let timedOut = state.isTimedOut
@@ -136,6 +119,22 @@ nonisolated final class ScriptRunner: Sendable {
                 try process.run()
 
                 // Schedule timeout only after process is running (pid is valid)
+                let timeoutWork = DispatchWorkItem {
+                    state.markTimedOut()
+                    let pid = process.processIdentifier
+                    process.terminate()
+
+                    // Schedule SIGKILL in case SIGTERM is ignored
+                    let sigkillWork = DispatchWorkItem {
+                        Darwin.kill(pid, SIGKILL)
+                    }
+                    state.setKillWork(sigkillWork)
+                    DispatchQueue.global().asyncAfter(
+                        deadline: .now() + killDelay,
+                        execute: sigkillWork
+                    )
+                }
+                state.setTimeoutWork(timeoutWork)
                 DispatchQueue.global().asyncAfter(
                     deadline: .now() + timeout,
                     execute: timeoutWork
@@ -183,6 +182,7 @@ nonisolated private final class RunState: @unchecked Sendable {
     private let lock = NSLock()
     private var _didTimeout = false
     private var _resumed = false
+    private var _timeoutWork: DispatchWorkItem?
     private var _killWork: DispatchWorkItem?
 
     var isTimedOut: Bool {
@@ -203,6 +203,18 @@ nonisolated private final class RunState: @unchecked Sendable {
         let shouldResume = !_resumed
         _resumed = true
         return shouldResume
+    }
+
+    func setTimeoutWork(_ work: DispatchWorkItem) {
+        lock.lock()
+        _timeoutWork = work
+        lock.unlock()
+    }
+
+    func cancelTimeoutWork() {
+        lock.lock()
+        _timeoutWork?.cancel()
+        lock.unlock()
     }
 
     func setKillWork(_ work: DispatchWorkItem) {

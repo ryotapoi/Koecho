@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 import os
 import Speech
 
@@ -138,13 +138,8 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
             audioEngine.stop()
         }
         if let analyzer {
-            let logger = self.logger
             Task { [analyzer] in
-                do {
-                    try await analyzer.cancelAndFinishNow()
-                } catch {
-                    logger.warning("cancelAndFinishNow error: \(error)")
-                }
+                await analyzer.cancelAndFinishNow()
             }
         }
         tearDown()
@@ -284,7 +279,7 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
     }
 
     private func startResultTask(transcriber: DictationTranscriber) {
-        let resultsTask = Task { [weak self] in
+        let resultsTask = Task { @MainActor [weak self] in
             do {
                 for try await result in transcriber.results {
                     guard let self, self.state == .listening || self.state == .stopping else { break }
@@ -328,7 +323,7 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
 
         let localConverter = converter
         let localAnalyzerFormat = analyzerFormat
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { buffer, _ in
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { @Sendable buffer, _ in
             // This runs on the audio thread — do not access self
             let inputBuffer: AVAudioPCMBuffer
             if let localConverter {
@@ -366,8 +361,7 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         audioEngine.inputNode.removeTap(onBus: 0)
         inputContinuation?.finish()
         if let analyzer {
-            do { try await analyzer.cancelAndFinishNow() }
-            catch { logger.warning("cancelAndFinishNow error during restart: \(error)") }
+            await analyzer.cancelAndFinishNow()
         }
         let oldResultTask = resultTask
         oldResultTask?.cancel()

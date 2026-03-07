@@ -4,6 +4,7 @@ import Foundation
 import Testing
 @testable import Koecho
 
+@MainActor
 struct HotkeyConfigTests {
     // MARK: - keyCode Mapping
 

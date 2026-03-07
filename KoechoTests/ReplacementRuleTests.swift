@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import Koecho
 
+@MainActor
 struct ReplacementRuleTests {
     // MARK: - Plain text search
 

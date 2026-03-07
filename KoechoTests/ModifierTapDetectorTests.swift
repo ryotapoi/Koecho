@@ -2,6 +2,7 @@ import Carbon.HIToolbox
 import Testing
 @testable import Koecho
 
+@MainActor
 struct ModifierTapDetectorTests {
     let fnKeyCode = UInt16(kVK_Function)
 
