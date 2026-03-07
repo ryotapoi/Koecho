@@ -516,7 +516,11 @@ struct SettingsTests {
 
     @Test func defaultVoiceInputMode() {
         let settings = Settings(defaults: makeDefaults())
-        #expect(settings.voiceInputMode == .dictation)
+        if #available(macOS 26, *) {
+            #expect(settings.voiceInputMode == .speechAnalyzer)
+        } else {
+            #expect(settings.voiceInputMode == .dictation)
+        }
     }
 
     @Test func persistsVoiceInputMode() {
@@ -531,7 +535,7 @@ struct SettingsTests {
 
     @Test func defaultSpeechAnalyzerLocale() {
         let settings = Settings(defaults: makeDefaults())
-        #expect(settings.speechAnalyzerLocale == "ja-JP")
+        #expect(settings.speechAnalyzerLocale == Settings.systemSpeechAnalyzerLocale())
     }
 
     @Test func persistsSpeechAnalyzerLocale() {
@@ -542,6 +546,15 @@ struct SettingsTests {
 
         let reloaded = Settings(defaults: defaults)
         #expect(reloaded.speechAnalyzerLocale == "en-US")
+    }
+
+    @Test func systemSpeechAnalyzerLocaleMapping() {
+        #expect(Settings.systemSpeechAnalyzerLocale(preferredLanguage: "ja-JP") == "ja-JP")
+        #expect(Settings.systemSpeechAnalyzerLocale(preferredLanguage: "en-US") == "en-US")
+        #expect(Settings.systemSpeechAnalyzerLocale(preferredLanguage: "zh-Hant-TW") == "zh-Hant-TW")
+        #expect(Settings.systemSpeechAnalyzerLocale(preferredLanguage: "en_US") == "en-US")
+        #expect(Settings.systemSpeechAnalyzerLocale(preferredLanguage: "") == "en-US")
+        #expect(Settings.systemSpeechAnalyzerLocale(preferredLanguage: nil) == "en-US")
     }
 
     // MARK: - Audio Input Device

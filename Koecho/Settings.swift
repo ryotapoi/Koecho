@@ -260,10 +260,15 @@ final class Settings {
            let mode = VoiceInputMode(rawValue: rawMode) {
             _voiceInputMode = mode
         } else {
-            _voiceInputMode = .dictation
+            if #available(macOS 26, *) {
+                _voiceInputMode = .speechAnalyzer
+            } else {
+                _voiceInputMode = .dictation
+            }
         }
 
-        _speechAnalyzerLocale = defaults.string(forKey: "speechAnalyzerLocale") ?? "ja-JP"
+        _speechAnalyzerLocale = defaults.string(forKey: "speechAnalyzerLocale")
+            ?? Self.systemSpeechAnalyzerLocale()
         _audioInputDeviceUID = defaults.string(forKey: "audioInputDeviceUID")
         _audioInputDeviceName = defaults.string(forKey: "audioInputDeviceName")
 
@@ -308,6 +313,15 @@ final class Settings {
 
     func moveReplacementRules(from source: IndexSet, to destination: Int) {
         replacementRules.move(fromOffsets: source, toOffset: destination)
+    }
+
+    nonisolated static func systemSpeechAnalyzerLocale(
+        preferredLanguage: String? = Locale.preferredLanguages.first
+    ) -> String {
+        guard let preferred = preferredLanguage, !preferred.isEmpty else {
+            return "en-US"
+        }
+        return preferred.replacingOccurrences(of: "_", with: "-")
     }
 
     private func save() {

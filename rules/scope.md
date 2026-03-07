@@ -180,7 +180,7 @@
 ### 設定
 - Settings の Voice Input セクション（macOS 26+ のみ表示）でエンジンを選択
 - `effectiveVoiceInputMode` で OS 可用性を考慮した実効モードを返す
-- SpeechAnalyzer の locale は Settings で指定（デフォルト: ja-JP）
+- SpeechAnalyzer の locale は Settings で指定（デフォルト: macOS の優先言語設定から自動判定、フォールバック en-US）
 - パネル表示時にエンジンが生成される（設定変更は次回パネル表示時に反映）
 
 ---
