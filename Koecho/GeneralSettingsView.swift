@@ -220,6 +220,12 @@ extension SpeechAnalyzerLocalePicker {
     private func downloadAsset(for identifier: String) async {
         guard !Task.isCancelled, selection == identifier else { return }
 
+        // Skip if already verified this session
+        let localeKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
+        if SpeechAnalyzerEngine.isModelVerified(localeKey: localeKey) {
+            return
+        }
+
         let locale = Locale(identifier: identifier)
         let transcriber = DictationTranscriber(locale: locale, preset: SpeechAnalyzerEngine.defaultPreset)
 
@@ -228,6 +234,7 @@ extension SpeechAnalyzerLocalePicker {
                 supporting: [transcriber]
             ) else {
                 // nil = already installed
+                SpeechAnalyzerEngine.markModelVerified(localeKey: localeKey)
                 await refreshLocaleStatus()
                 return
             }
@@ -242,6 +249,7 @@ extension SpeechAnalyzerLocalePicker {
                 return
             }
             isDownloading = false
+            SpeechAnalyzerEngine.markModelVerified(localeKey: localeKey)
             await refreshLocaleStatus()
         } catch is CancellationError {
             if selection == identifier {

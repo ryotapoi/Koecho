@@ -37,6 +37,16 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
         localeNormalizationKey(Locale(identifier: identifier))
     }
 
+    /// Check if a locale's model has been verified this session.
+    static func isModelVerified(localeKey: String) -> Bool {
+        verifiedLocales.contains(localeKey)
+    }
+
+    /// Mark a locale's model as verified for this session.
+    static func markModelVerified(localeKey: String) {
+        verifiedLocales.insert(localeKey)
+    }
+
     /// Invalidate the model cache for a locale (e.g. after releasing a model).
     static func invalidateModelCache(for locale: Locale) {
         verifiedLocales.remove(localeNormalizationKey(locale))
@@ -173,7 +183,7 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
 
         // 3. Check / download model (skip if already verified this session)
         let localeKey = Self.localeNormalizationKey(locale)
-        if !Self.verifiedLocales.contains(localeKey) {
+        if !Self.isModelVerified(localeKey: localeKey) {
             do {
                 if let request = try await AssetInventory.assetInstallationRequest(
                     supporting: [transcriber]
@@ -184,7 +194,7 @@ final class SpeechAnalyzerEngine: VoiceInputEngine {
                     logger.info("Speech model downloaded")
                     delegate?.voiceInput(didUpdateStatus: nil)
                 }
-                Self.verifiedLocales.insert(localeKey)
+                Self.markModelVerified(localeKey: localeKey)
             } catch {
                 delegate?.voiceInput(didUpdateStatus: nil)
                 reportError("Failed to download speech model: \(error.localizedDescription)")

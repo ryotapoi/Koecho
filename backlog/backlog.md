@@ -1,7 +1,7 @@
 # Backlog
 
 - [ ] T7: 音声認識言語の簡易切り替え（SpeechAnalyzer モード）
-- [ ] モデルダウンロード中の UX 改善（SpeechAnalyzer）
+- [x] モデルダウンロード中の UX 改善（SpeechAnalyzer）
 - [x] アイコン変更
 - [ ] Swift 6 language mode 移行（現在 Swift 5 mode。warning 2種の解消含む）
 - [ ] `nonisolated(unsafe)` warning 解消（swift#81962 修正待ち。AudioDeviceManager / OutputVolumeDucker）
