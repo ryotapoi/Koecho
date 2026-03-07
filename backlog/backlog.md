@@ -6,8 +6,8 @@
 - [ ] Swift 6 language mode 移行（現在 Swift 5 mode。warning 2種の解消含む）
 - [ ] `nonisolated(unsafe)` warning 解消（swift#81962 修正待ち。AudioDeviceManager / OutputVolumeDucker）
 - [x] B1: 初回パネル表示時の Dictation 自動開始失敗（改善済み、完全解消困難。ADR 0005）
-- [ ] SpeechAnalyzer 有効時に初回起動でデフォルトエンジンにする
-- [ ] SpeechAnalyzer のデフォルト言語を macOS の言語設定または English にする
+- [x] SpeechAnalyzer 有効時に初回起動でデフォルトエンジンにする
+- [x] SpeechAnalyzer のデフォルト言語を macOS の言語設定または English にする
 - [x] メニューに「最後の History をコピー」を追加（設定を開かずに選択可能に）
 
 ## 詳細
