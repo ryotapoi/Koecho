@@ -24,7 +24,7 @@ struct KoechoApp: App {
 
     var body: some Scene {
         MenuBarExtra("Koecho", image: "MenuBarIcon") {
-            MenuBarContent(appState: appState, onTogglePanel: { togglePanel() })
+            MenuBarContent(appState: appState, historyStore: historyStore, onTogglePanel: { togglePanel() })
         }
         .menuBarExtraStyle(.menu)
         .environment(appState)
@@ -102,6 +102,7 @@ struct KoechoApp: App {
 
 private struct MenuBarContent: View {
     let appState: AppState
+    let historyStore: HistoryStore
     let onTogglePanel: () -> Void
     @Environment(\.openWindow) private var openWindow
 
@@ -138,6 +139,14 @@ private struct MenuBarContent: View {
             }
         }
         .disabled(eligibleScripts.isEmpty)
+
+        Button("Copy Last History") {
+            if let entry = historyStore.entries.first {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(entry.text, forType: .string)
+            }
+        }
+        .disabled(historyStore.entries.isEmpty)
 
         Divider()
 
