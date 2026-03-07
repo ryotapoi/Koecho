@@ -145,7 +145,8 @@
 - `AVAudioEngine.inputNode` のタップコールバックは audio thread で実行される。`@MainActor` のプロパティに直接アクセスしてはいけない。`AsyncStream.Continuation` をローカル変数にキャプチャして `yield` する
 - 音声フォーマット変換: `SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith:considering:)` で最適フォーマット取得。入力フォーマットと異なる場合は `AVAudioConverter` で変換
 - モデルダウンロード: `AssetInventory.assetInstallationRequest(supporting:)` で確認。`nil` 返却 = インストール済み。非 nil なら `downloadAndInstall()` で DL。`assetInstallationRequest` は自動で `reserve()` を呼ぶため、明示的な reserve は不要
-- モデルリリース: `AssetInventory.release(reservedLocale:)` → `async -> Bool`（throws ではない）。`false` = 元々 reserved でなかった。リリース後もシステムが後で削除するため、即座に `installedLocales` から消えるとは限らない
+- モデルリリース: `AssetInventory.release(reservedLocale:)` → `async -> Bool`（throws ではない）。`false` = 元々 reserved でなかった。`release()` は reservation を解除するだけで、モデルファイルは即座には削除されない。`release()` 後も `DictationTranscriber.installedLocales` にロケールが残り続けるが、`AssetInventory.status(forModules:)` は `.supported`（= 再 DL 必要）を返す。つまり `installedLocales` は「ディスク上にファイルがある」を示すだけで、モデルの利用可能状態は `status` が正しい。OS 再起動やディスク逼迫でファイルが削除される可能性がある
+- `AssetInventory.status(forModules:)` → `async -> AssetInventory.Status`。ロケールごとにモデルの状態を返す。`.installed` = 利用可能、`.supported` = DL 必要、`.downloading` = DL 中、`.unsupported` = 非対応
 - `AssetInventory.reservedLocales` で予約済みロケール一覧を取得可能。identifier 形式が `supportedLocales` と異なる場合があるため、正規化キーで比較する
 - Swift Testing の `@available(macOS 26, *)` と `@Test` マクロは互換性がない。`@available` をスイートに付けると `@Test` がコンパイルエラーになる。対策: ランタイムで `guard #available(macOS 26, *) else { return }` を使う
 - `import Speech` すると `Speech.Settings` がプロジェクトの `Settings` 型と名前衝突する。対策: `Koecho.Settings` とモジュール名で修飾する
