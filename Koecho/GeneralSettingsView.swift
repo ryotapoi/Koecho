@@ -80,7 +80,7 @@ struct GeneralSettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 if settings.voiceInputMode == .speechAnalyzer {
-                    SpeechAnalyzerLocalePicker(selection: $settings.speechAnalyzerLocale)
+                    SpeechAnalyzerLanguageSection(selection: $settings.speechAnalyzerLocale)
                     AudioInputDeviceSection(
                         deviceUID: $settings.audioInputDeviceUID,
                         deviceName: $settings.audioInputDeviceName
@@ -91,53 +91,75 @@ struct GeneralSettingsView: View {
     }
 }
 
-// MARK: - SpeechAnalyzerLocalePicker
+// MARK: - performModelDownload
 
 @available(macOS 26, *)
-private struct SpeechAnalyzerLocalePicker: View {
+@MainActor
+private func performModelDownload(for identifier: String) async throws -> Bool {
+    let localeKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
+    let locale = Locale(identifier: identifier)
+    let transcriber = DictationTranscriber(locale: locale, preset: SpeechAnalyzerEngine.defaultPreset)
+
+    guard let request = try await AssetInventory.assetInstallationRequest(
+        supporting: [transcriber]
+    ) else {
+        // nil = already installed
+        SpeechAnalyzerEngine.markModelVerified(localeKey: localeKey)
+        return false
+    }
+
+    try await request.downloadAndInstall()
+    SpeechAnalyzerEngine.markModelVerified(localeKey: localeKey)
+    return true
+}
+
+// MARK: - SpeechAnalyzerLanguageSection
+
+@available(macOS 26, *)
+private struct SpeechAnalyzerLanguageSection: View {
     @Binding var selection: String
 
-    @State private var locales: [LocaleItem] = []
+    @State private var allLocales: [LocaleItem] = []
     @State private var isLoading = true
     @State private var isDownloading = false
     @State private var downloadError: String?
-    @State private var reservedLocales: [Locale] = []
+    @State private var isManageSheetPresented = false
+
+    private var reservedLocales: [LocaleItem] {
+        allLocales.filter { $0.isReserved }
+    }
 
     var body: some View {
         Group {
             if isLoading {
                 ProgressView("Loading languages…")
                     .controlSize(.small)
-            } else if locales.isEmpty {
-                TextField("Language", text: $selection)
-                    .help("Locale identifier (e.g. ja-JP, en-US)")
             } else {
                 VStack(alignment: .leading, spacing: 4) {
-                    Picker("Language", selection: $selection) {
-                        ForEach(locales) { locale in
-                            Text(locale.label).tag(locale.identifier)
+                    if reservedLocales.isEmpty {
+                        Text("No languages downloaded")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker("Language", selection: $selection) {
+                            ForEach(reservedLocales) { locale in
+                                Text(locale.displayLabel).tag(locale.identifier)
+                            }
                         }
                     }
 
                     HStack {
+                        Button("Manage Languages…") { isManageSheetPresented = true }
+                            .buttonStyle(.link)
                         Spacer()
                         if isDownloading {
                             HStack(spacing: 6) {
-                                ProgressView()
-                                    .controlSize(.small)
+                                ProgressView().controlSize(.small)
                                 Text("Downloading model…")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(.caption).foregroundStyle(.secondary)
                             }
                         } else if let downloadError {
                             Text(downloadError)
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                        } else if let item = selectedItem, item.isReserved {
-                            Button("Release Downloaded Model") {
-                                Task { await releaseAsset(for: selection) }
-                            }
-                            .font(.caption)
+                                .font(.caption).foregroundStyle(.red)
                         }
                     }
                     .frame(height: 20)
@@ -146,28 +168,27 @@ private struct SpeechAnalyzerLocalePicker: View {
         }
         .task { await loadLocales() }
         .task(id: selection) {
-            guard !isLoading, !locales.isEmpty else { return }
+            guard !isLoading else { return }
             downloadError = nil
             isDownloading = false
             await downloadAsset(for: selection)
         }
-    }
-
-    private var selectedItem: LocaleItem? {
-        locales.first { $0.identifier == selection }
+        .sheet(isPresented: $isManageSheetPresented, onDismiss: {
+            Task { await refreshReservedList() }
+        }) {
+            LanguageManagementSheet(supportedLocales: allLocales)
+        }
     }
 }
 
 @available(macOS 26, *)
-extension SpeechAnalyzerLocalePicker {
-    /// Load supported and installed locales from DictationTranscriber.
-    func loadLocales() async {
-        let supported = await DictationTranscriber.supportedLocales
-        let installed = await DictationTranscriber.installedLocales
-        let installedKeys = Set(installed.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
-        let reserved = await AssetInventory.reservedLocales
+extension SpeechAnalyzerLanguageSection {
+    private func loadLocales() async {
+        async let supportedTask = DictationTranscriber.supportedLocales
+        async let reservedTask = AssetInventory.reservedLocales
+        let supported = await supportedTask
+        let reserved = await reservedTask
         let reservedKeys = Set(reserved.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
-        reservedLocales = reserved
 
         var items = supported.map { locale -> LocaleItem in
             let identifier = locale.identifier
@@ -177,17 +198,18 @@ extension SpeechAnalyzerLocalePicker {
                 identifier: identifier,
                 displayName: displayName,
                 sortKey: displayName,
-                isInstalled: installedKeys.contains(key),
                 isReserved: reservedKeys.contains(key)
             )
         }
         items.sort { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
 
-        // Validate and fix selection before publishing locales
+        allLocales = items
+
+        // Validate and fix selection
         if !items.isEmpty {
-            let identifiers = Set(items.map(\.identifier))
-            if !identifiers.contains(selection) {
-                // Try normalized comparison (languageCode + region)
+            let reservedIdentifiers = Set(reservedLocales.map(\.identifier))
+            let allIdentifiers = Set(items.map(\.identifier))
+            if !reservedIdentifiers.contains(selection), !allIdentifiers.contains(selection) {
                 if let match = findNormalizedMatch(for: selection, in: items) {
                     selection = match.identifier
                 } else if let match = findNormalizedMatch(for: "ja-JP", in: items) {
@@ -198,15 +220,57 @@ extension SpeechAnalyzerLocalePicker {
             }
         }
 
-        locales = items
         isLoading = false
+        await downloadAsset(for: selection)
+    }
 
-        // Trigger download for the initial locale.
-        // .task(id: selection) may not fire if:
-        // - selection didn't change (selectionBefore == selection), or
-        // - selection was corrected during isLoading (task ran but hit guard)
-        if !items.isEmpty {
-            await downloadAsset(for: selection)
+    private func refreshReservedList() async {
+        let reserved = await AssetInventory.reservedLocales
+        let reservedKeys = Set(reserved.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
+
+        for i in allLocales.indices {
+            let key = SpeechAnalyzerEngine.localeNormalizationKey(allLocales[i].identifier)
+            allLocales[i].isReserved = reservedKeys.contains(key)
+        }
+
+        let reservedIdentifiers = Set(reservedLocales.map(\.identifier))
+        if !reservedIdentifiers.contains(selection) {
+            if let first = reservedLocales.first {
+                selection = first.identifier
+            } else {
+                // No reserved locales — trigger auto-download for current selection
+                await downloadAsset(for: selection)
+            }
+        }
+    }
+
+    private func downloadAsset(for identifier: String) async {
+        guard !Task.isCancelled, selection == identifier else { return }
+
+        let localeKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
+        if SpeechAnalyzerEngine.isModelVerified(localeKey: localeKey) {
+            return
+        }
+
+        do {
+            guard !Task.isCancelled, selection == identifier else { return }
+            isDownloading = true
+            _ = try await performModelDownload(for: identifier)
+            guard !Task.isCancelled, selection == identifier else {
+                if selection == identifier { isDownloading = false }
+                return
+            }
+            isDownloading = false
+            if let index = allLocales.firstIndex(where: { $0.identifier == identifier }) {
+                allLocales[index].isReserved = true
+            }
+        } catch is CancellationError {
+            if selection == identifier { isDownloading = false }
+        } catch {
+            if selection == identifier {
+                isDownloading = false
+                downloadError = "Download failed: \(error.localizedDescription)"
+            }
         }
     }
 
@@ -216,80 +280,97 @@ extension SpeechAnalyzerLocalePicker {
             SpeechAnalyzerEngine.localeNormalizationKey(item.identifier) == sourceKey
         }
     }
+}
 
-    private func downloadAsset(for identifier: String) async {
-        guard !Task.isCancelled, selection == identifier else { return }
+// MARK: - LanguageManagementSheet
 
-        // Skip if already verified this session
-        let localeKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
-        if SpeechAnalyzerEngine.isModelVerified(localeKey: localeKey) {
-            return
-        }
+@available(macOS 26, *)
+private struct LanguageManagementSheet: View {
+    let supportedLocales: [LocaleItem]
 
-        let locale = Locale(identifier: identifier)
-        let transcriber = DictationTranscriber(locale: locale, preset: SpeechAnalyzerEngine.defaultPreset)
+    @Environment(\.dismiss) private var dismiss
+    @State private var locales: [LocaleItem] = []
+    @State private var downloadingIdentifiers: Set<String> = []
+    @State private var errors: [String: String] = [:]
 
-        do {
-            guard let request = try await AssetInventory.assetInstallationRequest(
-                supporting: [transcriber]
-            ) else {
-                // nil = already installed
-                SpeechAnalyzerEngine.markModelVerified(localeKey: localeKey)
-                await refreshLocaleStatus()
-                return
-            }
-            guard !Task.isCancelled, selection == identifier else { return }
-
-            isDownloading = true
-            try await request.downloadAndInstall()
-            guard !Task.isCancelled, selection == identifier else {
-                if selection == identifier {
-                    isDownloading = false
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(locales) { item in
+                    VStack(alignment: .leading) {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(item.displayName)
+                                Text(item.identifier).font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if downloadingIdentifiers.contains(item.identifier) {
+                                ProgressView().controlSize(.small)
+                            } else if item.isReserved {
+                                Button("Release") {
+                                    Task { await releaseLocale(item) }
+                                }
+                                .buttonStyle(.bordered)
+                            } else {
+                                Button("Download") {
+                                    Task { await downloadLocale(item) }
+                                }
+                                .buttonStyle(.borderedProminent)
+                            }
+                        }
+                        if let error = errors[item.identifier] {
+                            Text(error).font(.caption).foregroundStyle(.red)
+                        }
+                    }
                 }
-                return
             }
-            isDownloading = false
-            SpeechAnalyzerEngine.markModelVerified(localeKey: localeKey)
-            await refreshLocaleStatus()
-        } catch is CancellationError {
-            if selection == identifier {
-                isDownloading = false
+            .navigationTitle("Manage Languages")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
             }
-        } catch {
-            if selection == identifier {
-                isDownloading = false
-                downloadError = "Download failed: \(error.localizedDescription)"
-            }
+        }
+        .frame(minWidth: 400, minHeight: 300)
+        .task { locales = supportedLocales; await refreshStatus() }
+    }
+
+    private func refreshStatus() async {
+        let reserved = await AssetInventory.reservedLocales
+        let reservedKeys = Set(reserved.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
+        for i in locales.indices {
+            let key = SpeechAnalyzerEngine.localeNormalizationKey(locales[i].identifier)
+            locales[i].isReserved = reservedKeys.contains(key)
         }
     }
 
-    private func releaseAsset(for identifier: String) async {
-        let targetKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
-        guard let reservedLocale = reservedLocales.first(where: {
+    private func downloadLocale(_ item: LocaleItem) async {
+        downloadingIdentifiers.insert(item.identifier)
+        errors[item.identifier] = nil
+        do {
+            _ = try await performModelDownload(for: item.identifier)
+            if let index = locales.firstIndex(where: { $0.identifier == item.identifier }) {
+                locales[index].isReserved = true
+            }
+        } catch {
+            errors[item.identifier] = "Download failed: \(error.localizedDescription)"
+        }
+        downloadingIdentifiers.remove(item.identifier)
+    }
+
+    private func releaseLocale(_ item: LocaleItem) async {
+        let targetKey = SpeechAnalyzerEngine.localeNormalizationKey(item.identifier)
+        let reserved = await AssetInventory.reservedLocales
+        guard let reservedLocale = reserved.first(where: {
             SpeechAnalyzerEngine.localeNormalizationKey($0) == targetKey
         }) else { return }
 
-        // Update UI immediately (prevent double-tap + responsive feedback)
-        if let index = locales.firstIndex(where: { $0.identifier == identifier }) {
+        // Optimistic UI update
+        if let index = locales.firstIndex(where: { $0.identifier == item.identifier }) {
             locales[index].isReserved = false
         }
         await AssetInventory.release(reservedLocale: reservedLocale)
-        SpeechAnalyzerEngine.invalidateModelCache(for: Locale(identifier: identifier))
-        await refreshLocaleStatus()
-    }
-
-    private func refreshLocaleStatus() async {
-        let installed = await DictationTranscriber.installedLocales
-        let installedKeys = Set(installed.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
-        let reserved = await AssetInventory.reservedLocales
-        let reservedKeys = Set(reserved.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
-        reservedLocales = reserved
-
-        for i in locales.indices {
-            let key = SpeechAnalyzerEngine.localeNormalizationKey(locales[i].identifier)
-            locales[i].isInstalled = installedKeys.contains(key)
-            locales[i].isReserved = reservedKeys.contains(key)
-        }
+        SpeechAnalyzerEngine.invalidateModelCache(for: Locale(identifier: item.identifier))
     }
 }
 
@@ -391,15 +472,10 @@ private struct LocaleItem: Identifiable {
     let identifier: String
     let displayName: String
     let sortKey: String
-    var isInstalled: Bool
     var isReserved: Bool
     var id: String { identifier }
 
-    var label: String {
-        if isInstalled {
-            "\(displayName) (\(identifier))"
-        } else {
-            "\(displayName) (\(identifier)) — Download required"
-        }
+    var displayLabel: String {
+        "\(displayName) (\(identifier))"
     }
 }
