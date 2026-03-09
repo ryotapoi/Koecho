@@ -201,3 +201,9 @@
 
 - `@MainActor` クラスの `init` にデフォルト引数で別の `@MainActor` 型のインスタンス生成を書くと、デフォルト引数式は caller の actor isolation を継承しないためコンパイルエラーになる
 - 対策: designated init（引数必須）+ convenience init（デフォルト値生成）に分離する。`convenience init` は `@MainActor` クラスの isolation を持つため、中で `@MainActor` 型を生成できる
+
+## InputPanelController サービス分割（ADR 0017）
+
+- VoiceInputCoordinator は `init` で `makeEngine()` を呼んだ後、必ず `engine.delegate = self` を設定すること。`regenerateEngine()` 経由なら自動で設定されるが、`init` では手動設定が必要
+- `textView` は coordinator + 3 サービスに配布される。`onTextViewCreated` callback 内で全サービスに設定し、voiceCoordinator には `configureEngineWithTextView()` も追加で呼ぶ
+- `clearTextView()` の `DispatchQueue.main.async` フォールバック: `makeKeyAndOrderFront` 直後は SwiftUI レイアウト未完了で textView.window が nil の場合がある。1 サイクル遅延で回避

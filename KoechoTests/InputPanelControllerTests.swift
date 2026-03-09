@@ -4,48 +4,6 @@ import Testing
 @testable import Koecho
 
 @MainActor
-private final class MockPaster: Pasting {
-    var pastedTexts: [String] = []
-    var errorToThrow: (any Error)?
-    var restoreClipboardCallCount = 0
-    var onPaste: (() async -> Void)?
-
-    func paste(text: String, to application: NSRunningApplication, using pasteboard: NSPasteboard) async throws {
-        if let error = errorToThrow {
-            throw error
-        }
-        if let onPaste {
-            await onPaste()
-        }
-        pastedTexts.append(text)
-    }
-
-    func restoreClipboard() {
-        restoreClipboardCallCount += 1
-    }
-}
-
-@MainActor
-private final class MockSelectedTextReader: SelectedTextReading {
-    var resultToReturn: SelectedTextResult?
-    func read(from pid: pid_t) -> SelectedTextResult? { resultToReturn }
-}
-
-@MainActor
-private final class MockVolumeDucker: VolumeDucking {
-    var duckCallCount = 0
-    var restoreCallCount = 0
-
-    func duck() {
-        duckCallCount += 1
-    }
-
-    func restore() {
-        restoreCallCount += 1
-    }
-}
-
-@MainActor
 private func makeController(
     paster: MockPaster? = nil,
     selectedTextReader: (any SelectedTextReading)? = nil,

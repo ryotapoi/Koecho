@@ -1,6 +1,6 @@
 import AppKit
 
-final class VoiceInputTextView: NSTextView {
+final class VoiceInputTextView: NSTextView, TextViewOperating {
     var onTextChanged: ((String) -> Void)?
     var onTextCommitted: (() -> Void)?
     var onAddReplacementRule: ((String) -> Void)?
@@ -30,13 +30,25 @@ final class VoiceInputTextView: NSTextView {
     /// Lightweight floating window for instant tooltip display.
     private var tipWindow: NSWindow?
 
+    // MARK: - TextViewOperating
+
+    func setString(_ text: String, suppressingCallbacks: Bool) {
+        if suppressingCallbacks { isSuppressingCallbacks = true }
+        string = text
+        if suppressingCallbacks { isSuppressingCallbacks = false }
+    }
+
+    func makeFirstResponder(in panel: InputPanel) {
+        panel.makeFirstResponder(self)
+    }
+
     // MARK: - Volatile text
 
     /// Set volatile text at the given insertion point (UTF-16 offset).
     /// Replaces any previous volatile text.
-    func setVolatileText(_ text: String?, at insertionPoint: Int) {
+    func setVolatileText(_ text: String, at insertionPoint: Int) {
         clearVolatileText()
-        guard let text, !text.isEmpty else { return }
+        guard !text.isEmpty else { return }
         let nsText = text as NSString
         let storage = textStorage!
         let clampedPoint = min(insertionPoint, storage.length)
