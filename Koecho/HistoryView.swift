@@ -61,8 +61,7 @@ struct HistoryView: View {
     }
 
     private func copyEntry(_ entry: HistoryEntry) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(entry.text, forType: .string)
+        historyStore.copyToClipboard(entry: entry)
         withAnimation {
             copiedEntryID = entry.id
         }

@@ -27,6 +27,16 @@ struct ReplacementRule: Codable, Identifiable, Equatable, Sendable {
         if replacement.isEmpty { return pattern }
         return "\(pattern) → \(replacement)"
     }
+
+    func validate() -> String? {
+        guard usesRegularExpression, !pattern.isEmpty else { return nil }
+        do {
+            _ = try NSRegularExpression(pattern: pattern)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
 }
 
 struct ReplacementMatch: Equatable {

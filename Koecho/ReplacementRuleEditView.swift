@@ -3,15 +3,7 @@ import SwiftUI
 struct ReplacementRuleEditView: View {
     @Binding var rule: ReplacementRule
 
-    private var patternValidationError: String? {
-        guard rule.usesRegularExpression, !rule.pattern.isEmpty else { return nil }
-        do {
-            _ = try NSRegularExpression(pattern: rule.pattern)
-            return nil
-        } catch {
-            return error.localizedDescription
-        }
-    }
+    private var patternValidationError: String? { rule.validate() }
 
     var body: some View {
         Form {

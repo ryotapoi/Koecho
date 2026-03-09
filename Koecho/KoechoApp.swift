@@ -198,10 +198,7 @@ private struct MenuBarContent: View {
         recognitionLanguageMenu
 
         Button("Copy Last History") {
-            if let entry = historyStore.entries.first {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(entry.text, forType: .string)
-            }
+            historyStore.copyLatestToClipboard()
         }
         .disabled(historyStore.entries.isEmpty)
 

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import os
 
@@ -30,6 +31,18 @@ final class HistoryStore {
     func deleteEntry(id: UUID) {
         entries.removeAll { $0.id == id }
         save()
+    }
+
+    func copyToClipboard(entry: HistoryEntry, using pasteboard: NSPasteboard = .general) {
+        pasteboard.clearContents()
+        pasteboard.setString(entry.text, forType: .string)
+    }
+
+    @discardableResult
+    func copyLatestToClipboard(using pasteboard: NSPasteboard = .general) -> Bool {
+        guard let entry = entries.first else { return false }
+        copyToClipboard(entry: entry, using: pasteboard)
+        return true
     }
 
     func purge(maxCount: Int, retentionDays: Int) {

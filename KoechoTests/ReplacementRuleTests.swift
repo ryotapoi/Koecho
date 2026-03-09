@@ -220,6 +220,33 @@ struct ReplacementRuleTests {
         #expect(matches.isEmpty)
     }
 
+    // MARK: - validate
+
+    @Test func validatePlainTextReturnsNil() {
+        let rule = ReplacementRule(pattern: "hello")
+        #expect(rule.validate() == nil)
+    }
+
+    @Test func validateRegexEmptyPatternReturnsNil() {
+        let rule = ReplacementRule(pattern: "", usesRegularExpression: true)
+        #expect(rule.validate() == nil)
+    }
+
+    @Test func validateRegexValidPatternReturnsNil() {
+        let rule = ReplacementRule(pattern: "\\d+", usesRegularExpression: true)
+        #expect(rule.validate() == nil)
+    }
+
+    @Test func validateRegexInvalidPatternReturnsError() {
+        let rule = ReplacementRule(pattern: "[invalid", usesRegularExpression: true)
+        #expect(rule.validate() != nil)
+    }
+
+    @Test func validatePlainTextWithRegexMetacharactersReturnsNil() {
+        let rule = ReplacementRule(pattern: "$100")
+        #expect(rule.validate() == nil)
+    }
+
     // MARK: - displayName
 
     @Test func displayNameEmptyPattern() {

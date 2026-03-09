@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Koecho
@@ -152,6 +153,47 @@ struct HistoryStoreTests {
         let dir = makeTempDirectory()
         let store = HistoryStore(directoryURL: dir)
         #expect(store.entries.isEmpty)
+    }
+
+    // MARK: - Clipboard
+
+    private func makeTestPasteboard() -> NSPasteboard {
+        NSPasteboard(name: NSPasteboard.Name("com.ryotapoi.koecho.test.\(UUID().uuidString)"))
+    }
+
+    @Test func copyToClipboardSetsText() {
+        let dir = makeTempDirectory()
+        let store = HistoryStore(directoryURL: dir)
+        let entry = HistoryEntry(text: "clipboard test")
+        let pb = makeTestPasteboard()
+
+        store.copyToClipboard(entry: entry, using: pb)
+
+        #expect(pb.string(forType: .string) == "clipboard test")
+    }
+
+    @Test func copyLatestToClipboardCopiesFirstEntry() {
+        let dir = makeTempDirectory()
+        let store = HistoryStore(directoryURL: dir)
+        let settings = makeSettings()
+        let pb = makeTestPasteboard()
+
+        store.add(text: "first", settings: settings)
+        store.add(text: "second", settings: settings)
+        let result = store.copyLatestToClipboard(using: pb)
+
+        #expect(result == true)
+        #expect(pb.string(forType: .string) == "second")
+    }
+
+    @Test func copyLatestToClipboardReturnsFalseWhenEmpty() {
+        let dir = makeTempDirectory()
+        let store = HistoryStore(directoryURL: dir)
+        let pb = makeTestPasteboard()
+
+        let result = store.copyLatestToClipboard(using: pb)
+
+        #expect(result == false)
     }
 
     @Test func purgePersistsResult() {

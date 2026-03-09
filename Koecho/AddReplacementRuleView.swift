@@ -11,13 +11,7 @@ struct AddReplacementRuleView: View {
     @FocusState private var isReplacementFocused: Bool
 
     private var patternValidationError: String? {
-        guard usesRegularExpression else { return nil }
-        do {
-            _ = try NSRegularExpression(pattern: pattern)
-            return nil
-        } catch {
-            return error.localizedDescription
-        }
+        ReplacementRule(pattern: pattern, usesRegularExpression: usesRegularExpression).validate()
     }
 
     private var isValid: Bool {

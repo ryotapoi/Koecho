@@ -54,12 +54,14 @@ func restorePasteboard(_ pasteboard: NSPasteboard, from items: [PasteboardItem])
 final class ClipboardPaster: Pasting {
     private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "ClipboardPaster")
     let pasteDelay: TimeInterval
+    private let cgEventClient: any CGEventClient
     private var restoreTask: Task<Void, Never>?
     private var savedContents: [PasteboardItem]?
     private var savedPasteboard: NSPasteboard?
 
-    nonisolated init(pasteDelay: TimeInterval) {
+    nonisolated init(pasteDelay: TimeInterval, cgEventClient: any CGEventClient = LiveCGEventClient()) {
         self.pasteDelay = pasteDelay
+        self.cgEventClient = cgEventClient
     }
 
     func paste(
@@ -67,7 +69,7 @@ final class ClipboardPaster: Pasting {
         to application: NSRunningApplication,
         using pasteboard: NSPasteboard = .general
     ) async throws {
-        guard AXIsProcessTrusted() else {
+        guard cgEventClient.isProcessTrusted() else {
             logger.error("Accessibility not trusted")
             throw ClipboardPasterError.accessibilityNotTrusted
         }
@@ -96,7 +98,7 @@ final class ClipboardPaster: Pasting {
         // and the caller's catch block will call restoreClipboard().
         try await Task.sleep(for: .milliseconds(100))
 
-        try simulatePaste()
+        try cgEventClient.simulatePaste()
 
         let delay = pasteDelay
         let saved = savedContents
@@ -119,28 +121,5 @@ final class ClipboardPaster: Pasting {
         savedContents = nil
         savedPasteboard = nil
         logger.debug("Clipboard restored (immediate)")
-    }
-
-    private func simulatePaste() throws {
-        guard let source = CGEventSource(stateID: .hidSystemState) else {
-            logger.error("Failed to create CGEventSource")
-            throw ClipboardPasterError.failedToCreateCGEvent
-        }
-
-        // Key code 9 = V
-        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true),
-              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false)
-        else {
-            logger.error("Failed to create CGEvent for Cmd+V")
-            throw ClipboardPasterError.failedToCreateCGEvent
-        }
-
-        keyDown.flags = .maskCommand
-        keyUp.flags = .maskCommand
-
-        keyDown.post(tap: .cghidEventTap)
-        keyUp.post(tap: .cghidEventTap)
-
-        logger.debug("Simulated Cmd+V paste")
     }
 }

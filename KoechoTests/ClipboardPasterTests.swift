@@ -2,6 +2,21 @@ import AppKit
 import Testing
 @testable import Koecho
 
+private final class MockCGEventClient: CGEventClient, @unchecked Sendable {
+    var trusted = true
+    var simulatePasteCallCount = 0
+    var simulatePasteError: (any Error)?
+
+    func isProcessTrusted() -> Bool { trusted }
+
+    func simulatePaste() throws {
+        simulatePasteCallCount += 1
+        if let error = simulatePasteError {
+            throw error
+        }
+    }
+}
+
 @MainActor
 struct ClipboardPasterTests {
     private func makeTestPasteboard() -> NSPasteboard {
@@ -102,5 +117,38 @@ struct ClipboardPasterTests {
         #expect(ClipboardPasterError.failedToCreateCGEvent == ClipboardPasterError.failedToCreateCGEvent)
         #expect(ClipboardPasterError.targetAppTerminated == ClipboardPasterError.targetAppTerminated)
         #expect(ClipboardPasterError.accessibilityNotTrusted != ClipboardPasterError.targetAppTerminated)
+    }
+
+    @Test func clipboardPasterNotTrustedThrows() async {
+        let client = MockCGEventClient()
+        client.trusted = false
+        let paster = ClipboardPaster(pasteDelay: 0.1, cgEventClient: client)
+        let app = NSRunningApplication.current
+
+        await #expect(throws: ClipboardPasterError.accessibilityNotTrusted) {
+            try await paster.paste(text: "test", to: app, using: makeTestPasteboard())
+        }
+    }
+
+    @Test func clipboardPasterCallsSimulatePaste() async throws {
+        let client = MockCGEventClient()
+        let paster = ClipboardPaster(pasteDelay: 0.1, cgEventClient: client)
+        let app = NSRunningApplication.current
+        let pb = makeTestPasteboard()
+
+        try await paster.paste(text: "hello", to: app, using: pb)
+
+        #expect(client.simulatePasteCallCount == 1)
+    }
+
+    @Test func clipboardPasterSimulatePasteErrorPropagates() async {
+        let client = MockCGEventClient()
+        client.simulatePasteError = ClipboardPasterError.failedToCreateCGEvent
+        let paster = ClipboardPaster(pasteDelay: 0.1, cgEventClient: client)
+        let app = NSRunningApplication.current
+
+        await #expect(throws: ClipboardPasterError.failedToCreateCGEvent) {
+            try await paster.paste(text: "test", to: app, using: makeTestPasteboard())
+        }
     }
 }
