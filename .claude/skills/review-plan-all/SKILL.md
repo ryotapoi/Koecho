@@ -34,6 +34,15 @@ argument-hint: [plan-file-path]
 
 初回はそのまま、2回目以降は `--resume` をつけて呼ぶ。
 
+Codex の出力に 🔴 MUST / 🟡 SHOULD / 🔵 NIT の指摘がある場合（LGTM でない場合）、指摘をメインリポジトリの `tmp/codex-findings.md` に追記する。パスは `"$(dirname "$(git rev-parse --git-common-dir)")/tmp/codex-findings.md"` で解決する（worktree でもメインリポに書く）。ファイルやディレクトリが存在しない場合は作成する。
+
+```markdown
+## YYYY-MM-DD plan: <変更の概要（1行）>
+
+- 🔴/🟡/🔵 指摘内容の要約（1行）
+- ...
+```
+
 ### 6. 新規指摘があれば反映し、手順1に戻る
 
 Codex レビューが2回目の場合、自動で反映せず指摘内容をユーザーに提示する。ユーザーがさらにループするか終了するか判断する。
