@@ -6,6 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A3A4BF992F6049EC00B51060 /* KoechoCore in Frameworks */ = {isa = PBXBuildFile; productRef = A3A4BF982F6049EC00B51060 /* KoechoCore */; };
+		A3A4BF9B2F6049EC00B51060 /* KoechoPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = A3A4BF9A2F6049EC00B51060 /* KoechoPlatform */; };
+		A3A4BF9E2F6049FD00B51060 /* KoechoCore in Frameworks */ = {isa = PBXBuildFile; productRef = A3A4BF9D2F6049FD00B51060 /* KoechoCore */; };
+		A3A4BFA02F6049FD00B51060 /* KoechoPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = A3A4BF9F2F6049FD00B51060 /* KoechoPlatform */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		A32CA8CC2F3F684C00C04356 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +59,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A3A4BF9B2F6049EC00B51060 /* KoechoPlatform in Frameworks */,
+				A3A4BF992F6049EC00B51060 /* KoechoCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -59,6 +68,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A3A4BFA02F6049FD00B51060 /* KoechoPlatform in Frameworks */,
+				A3A4BF9E2F6049FD00B51060 /* KoechoCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +89,7 @@
 				A32CA8C02F3F684B00C04356 /* Koecho */,
 				A32CA8CE2F3F684C00C04356 /* KoechoTests */,
 				A32CA8D82F3F684C00C04356 /* KoechoUITests */,
+				A3A4BF9C2F6049FD00B51060 /* Frameworks */,
 				A32CA8BF2F3F684B00C04356 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +102,13 @@
 				A32CA8D52F3F684C00C04356 /* KoechoUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A3A4BF9C2F6049FD00B51060 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,6 +131,8 @@
 			);
 			name = Koecho;
 			packageProductDependencies = (
+				A3A4BF982F6049EC00B51060 /* KoechoCore */,
+				A3A4BF9A2F6049EC00B51060 /* KoechoPlatform */,
 			);
 			productName = Koecho;
 			productReference = A32CA8BE2F3F684B00C04356 /* Koecho.app */;
@@ -135,6 +156,8 @@
 			);
 			name = KoechoTests;
 			packageProductDependencies = (
+				A3A4BF9D2F6049FD00B51060 /* KoechoCore */,
+				A3A4BF9F2F6049FD00B51060 /* KoechoPlatform */,
 			);
 			productName = KoechoTests;
 			productReference = A32CA8CB2F3F684C00C04356 /* KoechoTests.xctest */;
@@ -195,6 +218,9 @@
 			);
 			mainGroup = A32CA8B52F3F684B00C04356;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A3A4BF972F6049EC00B51060 /* XCLocalSwiftPackageReference "Packages/KoechoKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A32CA8BF2F3F684B00C04356 /* Products */;
 			projectDirPath = "";
@@ -573,6 +599,34 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A3A4BF972F6049EC00B51060 /* XCLocalSwiftPackageReference "Packages/KoechoKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/KoechoKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A3A4BF982F6049EC00B51060 /* KoechoCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = KoechoCore;
+		};
+		A3A4BF9A2F6049EC00B51060 /* KoechoPlatform */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = KoechoPlatform;
+		};
+		A3A4BF9D2F6049FD00B51060 /* KoechoCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3A4BF972F6049EC00B51060 /* XCLocalSwiftPackageReference "Packages/KoechoKit" */;
+			productName = KoechoCore;
+		};
+		A3A4BF9F2F6049FD00B51060 /* KoechoPlatform */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3A4BF972F6049EC00B51060 /* XCLocalSwiftPackageReference "Packages/KoechoKit" */;
+			productName = KoechoPlatform;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A32CA8B62F3F684B00C04356 /* Project object */;
 }

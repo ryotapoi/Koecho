@@ -1,7 +1,9 @@
 import SwiftUI
+import KoechoCore
+import KoechoPlatform
 
 struct SettingsView: View {
-    @Bindable var settings: Settings
+    @Bindable var settings: KoechoCore.Settings
     let historyStore: HistoryStore
     @State private var selection: SettingsPage = .general
 

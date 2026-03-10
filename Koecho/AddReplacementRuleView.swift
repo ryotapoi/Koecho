@@ -1,4 +1,5 @@
 import SwiftUI
+import KoechoCore
 
 struct AddReplacementRuleView: View {
     let pattern: String

@@ -1,4 +1,6 @@
 import AppKit
+import KoechoCore
+import KoechoPlatform
 
 @MainActor
 final class ReplacementService {

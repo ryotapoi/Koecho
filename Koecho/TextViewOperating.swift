@@ -1,4 +1,5 @@
 import AppKit
+import KoechoCore
 
 @MainActor
 protocol TextViewOperating: AnyObject {

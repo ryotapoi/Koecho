@@ -1,4 +1,6 @@
 import SwiftUI
+import KoechoCore
+import KoechoPlatform
 
 struct InputPanelContent: View {
     @Bindable var appState: AppState

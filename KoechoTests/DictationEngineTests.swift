@@ -1,4 +1,5 @@
 import AppKit
+import KoechoCore
 import Testing
 @testable import Koecho
 

@@ -1,5 +1,6 @@
 import AppKit
 import os
+import KoechoCore
 
 @MainActor
 final class DictationEngine: VoiceInputEngine {

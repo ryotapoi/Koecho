@@ -1,5 +1,7 @@
 import AppKit
 import os
+import KoechoCore
+import KoechoPlatform
 
 @MainActor
 final class VoiceInputCoordinator: VoiceInputDelegate {

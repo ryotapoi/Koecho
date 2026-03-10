@@ -1,5 +1,7 @@
 import Speech
 import SwiftUI
+import KoechoCore
+import KoechoPlatform
 
 struct GeneralSettingsView: View {
     @Bindable var voiceInput: VoiceInputSettings

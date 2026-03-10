@@ -1,3 +1,4 @@
+import KoechoPlatform
 @testable import Koecho
 
 @MainActor

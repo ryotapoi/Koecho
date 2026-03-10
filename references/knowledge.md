@@ -202,6 +202,15 @@
 - `@MainActor` クラスの `init` にデフォルト引数で別の `@MainActor` 型のインスタンス生成を書くと、デフォルト引数式は caller の actor isolation を継承しないためコンパイルエラーになる
 - 対策: designated init（引数必須）+ convenience init（デフォルト値生成）に分離する。`convenience init` は `@MainActor` クラスの isolation を持つため、中で `@MainActor` 型を生成できる
 
+## SPM モジュール分離（ADR 0018）
+
+- SwiftUI の `Settings` 型と KoechoCore の `Settings` クラスが名前衝突する。`import SwiftUI` + `import KoechoCore` している App target のファイルでは `KoechoCore.Settings` と明示が必要
+- `Array.move(fromOffsets:toOffset:)` は SwiftUI が提供する extension。SPM ターゲットで `import Observation` のみの場合は使えない。名前衝突を避けるため `moveElements(fromOffsets:toOffset:)` として自前実装
+- `@Observable` は `import Observation` で使えるが、`import SwiftUI` 経由で暗黙に使っていたファイルは明示的に `import Observation` が必要
+- Carbon の `kVK_Function` 等の定数を KoechoCore で使う場合はリテラル値（`63`）に置き換える。`import Carbon.HIToolbox` は macOS 依存
+- ShortcutKey の `Modifier.flag`（NSEvent.ModifierFlags）や HotkeyConfig の `keyCode`（Carbon 依存）は platform extension として KoechoPlatform に配置。model 本体は KoechoCore に残す
+- SPM テストファイルで `JSONEncoder`/`JSONDecoder` を使う場合は `import Foundation` が必要（`import Testing` だけでは不足）
+
 ## InputPanelController サービス分割（ADR 0017）
 
 - VoiceInputCoordinator は `init` で `makeEngine()` を呼んだ後、必ず `engine.delegate = self` を設定すること。`regenerateEngine()` 経由なら自動で設定されるが、`init` では手動設定が必要

@@ -1,4 +1,6 @@
 import Foundation
+import KoechoCore
+import KoechoPlatform
 
 @MainActor
 final class ScriptExecutionService {

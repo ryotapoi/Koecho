@@ -1,4 +1,5 @@
 import Foundation
+import KoechoCore
 @testable import Koecho
 
 @MainActor

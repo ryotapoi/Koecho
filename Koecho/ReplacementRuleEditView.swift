@@ -1,4 +1,5 @@
 import SwiftUI
+import KoechoCore
 
 struct ReplacementRuleEditView: View {
     @Binding var rule: ReplacementRule

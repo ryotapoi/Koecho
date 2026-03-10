@@ -1,4 +1,5 @@
 import AppKit
+import KoechoPlatform
 @testable import Koecho
 
 @MainActor

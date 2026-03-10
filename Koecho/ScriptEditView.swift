@@ -1,4 +1,5 @@
 import SwiftUI
+import KoechoCore
 
 struct ScriptEditView: View {
     @Binding var script: Script

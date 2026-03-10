@@ -1,4 +1,5 @@
 import AppKit
+import KoechoCore
 
 final class VoiceInputTextView: NSTextView, TextViewOperating {
     var onTextChanged: ((String) -> Void)?

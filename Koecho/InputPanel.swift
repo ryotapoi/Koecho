@@ -1,4 +1,6 @@
 import AppKit
+import KoechoCore
+import KoechoPlatform
 
 final class InputPanel: NSPanel {
     var onEscape: (() -> Void)?

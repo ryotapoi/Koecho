@@ -1,5 +1,7 @@
 import AppKit
 import SwiftUI
+import KoechoCore
+import KoechoPlatform
 
 struct ShortcutKeyRecorder: NSViewRepresentable {
     @Binding var shortcutKey: ShortcutKey?

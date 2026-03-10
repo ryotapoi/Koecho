@@ -1,6 +1,8 @@
 import AppKit
 import os
 import SwiftUI
+import KoechoCore
+import KoechoPlatform
 
 @MainActor
 final class InputPanelController {

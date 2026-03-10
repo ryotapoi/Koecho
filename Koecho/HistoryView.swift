@@ -1,4 +1,6 @@
 import SwiftUI
+import KoechoCore
+import KoechoPlatform
 
 struct HistoryView: View {
     var historyStore: HistoryStore

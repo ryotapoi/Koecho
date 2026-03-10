@@ -3,11 +3,11 @@
 - [x] T7: メニューバーから音声認識言語を切り替え（SpeechAnalyzer モード）
 - [ ] T8: 言語ダウンロード時にメニューバーの言語一覧をリアルタイム更新
 - [x] B2: Release Download Model 後に言語一覧のステータスが更新されない
-- [x] A1: View からロジック抽出 + Client Protocol 導入 → [Phase 1](architecture-improvement.md#phase-1-view-からロジック抽出--client-protocol-導入)
-- [x] A2: InputPanelController 分割 → [Phase 2](architecture-improvement.md#phase-2-inputpanelcontroller-分割)
-- [x] A3: Settings 分割 → [Phase 3](architecture-improvement.md#phase-3-settings-分割)
+- [x] A1: View からロジック抽出 + Client Protocol 導入
+- [x] A2: InputPanelController 分割 → ADR 0017
+- [x] A3: Settings 分割
 - [ ] B3: スクリプトパスにシングルクォートと引数を含む場合に実行できない
-- [ ] A4: SPM モジュール分離 → [Phase 4](architecture-improvement.md#phase-4-spm-モジュール分離)
+- [x] A4: SPM モジュール分離 → ADR 0018
 
 ## 詳細
 

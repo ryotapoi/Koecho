@@ -1,4 +1,5 @@
 import SwiftUI
+import KoechoCore
 
 struct ScriptManagementView: View {
     @Bindable var settings: ScriptSettings

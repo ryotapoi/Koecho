@@ -2,6 +2,8 @@ import AppKit
 import Speech
 import SwiftUI
 import os
+import KoechoCore
+import KoechoPlatform
 
 @main
 struct KoechoApp: App {

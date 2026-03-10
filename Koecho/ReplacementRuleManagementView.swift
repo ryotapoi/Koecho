@@ -1,4 +1,5 @@
 import SwiftUI
+import KoechoCore
 
 struct ReplacementRuleManagementView: View {
     @Bindable var settings: ReplacementSettings
