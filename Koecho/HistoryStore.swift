@@ -16,7 +16,7 @@ final class HistoryStore {
         load()
     }
 
-    func add(text: String, settings: Settings) {
+    func add(text: String, settings: HistorySettings) {
         guard settings.isHistoryEnabled else { return }
         let entry = HistoryEntry(text: text)
         entries.insert(entry, at: 0)

@@ -34,7 +34,7 @@ import Testing
     @Test func applyNowTransformsText() {
         let (service, appState, mockTV, vipPointer) = makeService(inputText: "えーと天気")
         defer { vipPointer.deallocate() }
-        appState.settings.addReplacementRule(
+        appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
@@ -49,7 +49,7 @@ import Testing
         let (service, appState, _, vipPointer) = makeService(inputText: "えーと天気")
         defer { vipPointer.deallocate() }
         vipPointer.pointee = 5 // after "えーと天気" = 5 UTF-16 units
-        appState.settings.addReplacementRule(
+        appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
@@ -65,7 +65,7 @@ import Testing
             isInputPanelVisible: false
         )
         defer { vipPointer.deallocate() }
-        appState.settings.addReplacementRule(
+        appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
@@ -86,7 +86,7 @@ import Testing
     @Test func applyNowWithEmptyText() {
         let (service, appState, _, vipPointer) = makeService(inputText: "")
         defer { vipPointer.deallocate() }
-        appState.settings.addReplacementRule(
+        appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "hello", replacement: "bye")
         )
 
@@ -101,7 +101,7 @@ import Testing
         let (service, appState, _, vipPointer) = makeService(inputText: "えーと天気")
         defer { vipPointer.deallocate() }
         vipPointer.pointee = 5
-        appState.settings.addReplacementRule(
+        appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
@@ -125,7 +125,7 @@ import Testing
     @Test func applyOrPreviewSuppressesWhenVolatilePresent() {
         let (service, appState, mockTV, vipPointer) = makeService(inputText: "hello")
         defer { vipPointer.deallocate() }
-        appState.settings.addReplacementRule(
+        appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "hello", replacement: "bye")
         )
         mockTV.volatileRange = NSRange(location: 5, length: 3)
@@ -139,7 +139,7 @@ import Testing
     @Test func applyOrPreviewShowsPreviewWhenMarkedText() {
         let (service, appState, mockTV, vipPointer) = makeService(inputText: "hello")
         defer { vipPointer.deallocate() }
-        appState.settings.addReplacementRule(
+        appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "hello", replacement: "bye")
         )
         mockTV.markedText = true
@@ -154,10 +154,10 @@ import Testing
     @Test func multipleRulesChainedApplication() {
         let (service, appState, _, vipPointer) = makeService(inputText: "えーとあのー天気")
         defer { vipPointer.deallocate() }
-        appState.settings.addReplacementRule(
+        appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
-        appState.settings.addReplacementRule(
+        appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "あのー", replacement: "")
         )
 
@@ -175,7 +175,7 @@ import Testing
 
         service.addRule(ReplacementRule(pattern: "hello", replacement: "bye"))
 
-        #expect(appState.settings.replacementRules.count == 1)
+        #expect(appState.settings.replacement.replacementRules.count == 1)
         #expect(appState.pendingReplacementPattern == nil)
         #expect(appState.inputText == "bye world")
     }

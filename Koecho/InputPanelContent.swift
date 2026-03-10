@@ -47,7 +47,7 @@ struct InputPanelContent: View {
                 }
             }
 
-            if !appState.settings.replacementRules.isEmpty {
+            if !appState.settings.replacement.replacementRules.isEmpty {
                 HStack {
                     Button {
                         onApplyReplacementRules()
@@ -62,7 +62,7 @@ struct InputPanelContent: View {
                 .padding(.horizontal, 8)
             }
 
-            if !appState.settings.scripts.isEmpty {
+            if !appState.settings.script.scripts.isEmpty {
                 scriptButtonBar
             }
 
@@ -110,7 +110,7 @@ struct InputPanelContent: View {
     private var scriptButtonBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
-                ForEach(appState.settings.scripts) { script in
+                ForEach(appState.settings.script.scripts) { script in
                     Button {
                         Task { await onExecuteScript(script) }
                     } label: {
@@ -159,7 +159,7 @@ struct InputPanelContent: View {
     }
 
     private var eligibleScripts: [Script] {
-        appState.settings.scripts.filter { !$0.requiresPrompt }
+        appState.settings.script.scripts.filter { !$0.requiresPrompt }
     }
 
     private var autoRunPicker: some View {
@@ -172,9 +172,9 @@ struct InputPanelContent: View {
                 .foregroundStyle(.secondary)
             Menu {
                 Button {
-                    appState.settings.autoRunScriptId = nil
+                    appState.settings.script.autoRunScriptId = nil
                 } label: {
-                    if appState.settings.autoRunScriptId == nil {
+                    if appState.settings.script.autoRunScriptId == nil {
                         Text("✓ None")
                     } else {
                         Text("  None")
@@ -183,9 +183,9 @@ struct InputPanelContent: View {
                 Divider()
                 ForEach(eligibleScripts) { script in
                     Button {
-                        appState.settings.autoRunScriptId = script.id
+                        appState.settings.script.autoRunScriptId = script.id
                     } label: {
-                        if appState.settings.autoRunScriptId == script.id {
+                        if appState.settings.script.autoRunScriptId == script.id {
                             Text("✓ \(script.name)")
                         } else {
                             Text("  \(script.name)")
@@ -194,7 +194,7 @@ struct InputPanelContent: View {
                 }
             } label: {
                 HStack(spacing: 2) {
-                    Text(appState.settings.autoRunScript?.name ?? "None")
+                    Text(appState.settings.script.autoRunScript?.name ?? "None")
                         .font(.callout)
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.system(size: 9))
@@ -211,7 +211,7 @@ struct InputPanelContent: View {
     }
 
     private var autoRunShortcutHelpText: String {
-        if let shortcut = appState.settings.autoRunShortcutKey {
+        if let shortcut = appState.settings.script.autoRunShortcutKey {
             "Cycle auto-run script selection (\(shortcut.displayName))"
         } else {
             "Cycle auto-run script selection"
@@ -219,7 +219,7 @@ struct InputPanelContent: View {
     }
 
     private var replacementShortcutHelpText: String {
-        if let shortcut = appState.settings.replacementShortcutKey {
+        if let shortcut = appState.settings.replacement.replacementShortcutKey {
             "Apply replacement rules (\(shortcut.displayName))"
         } else {
             "Apply replacement rules"

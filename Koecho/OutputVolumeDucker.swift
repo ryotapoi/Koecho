@@ -11,7 +11,7 @@ protocol VolumeDucking {
 @MainActor @Observable
 final class OutputVolumeDucker: VolumeDucking {
     private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "OutputVolumeDucker")
-    private let settings: Settings
+    private let settings: VolumeDuckingSettings
 
     private(set) var isDucked = false
 
@@ -20,7 +20,7 @@ final class OutputVolumeDucker: VolumeDucking {
     @ObservationIgnored private nonisolated(unsafe) var duckedElement: AudioObjectPropertyElement = kAudioObjectPropertyElementMain
     @ObservationIgnored private nonisolated(unsafe) var defaultOutputDeviceListenerBlock: AudioObjectPropertyListenerBlock?
 
-    init(settings: Settings) {
+    init(settings: VolumeDuckingSettings) {
         self.settings = settings
     }
 

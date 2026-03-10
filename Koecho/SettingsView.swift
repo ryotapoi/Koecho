@@ -16,13 +16,20 @@ struct SettingsView: View {
         } detail: {
             switch selection {
             case .general:
-                GeneralSettingsView(settings: settings)
+                GeneralSettingsView(
+                    voiceInput: settings.voiceInput,
+                    script: settings.script,
+                    replacement: settings.replacement,
+                    history: settings.history,
+                    paste: settings.paste,
+                    volumeDucking: settings.volumeDucking
+                )
             case .hotkey:
-                HotkeySettingsView(settings: settings)
+                HotkeySettingsView(settings: settings.hotkey)
             case .replacementRules:
-                ReplacementRuleManagementView(settings: settings)
+                ReplacementRuleManagementView(settings: settings.replacement)
             case .scripts:
-                ScriptManagementView(settings: settings)
+                ScriptManagementView(settings: settings.script)
             case .history:
                 HistoryView(historyStore: historyStore)
             }

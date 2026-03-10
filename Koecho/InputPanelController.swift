@@ -41,11 +41,11 @@ final class InputPanelController {
             appState: appState,
             makeEngine: { () -> any VoiceInputEngine in
                 if #available(macOS 26, *),
-                   appState.settings.effectiveVoiceInputMode == .speechAnalyzer {
-                    let locale = Locale(identifier: appState.settings.speechAnalyzerLocale)
+                   appState.settings.voiceInput.effectiveVoiceInputMode == .speechAnalyzer {
+                    let locale = Locale(identifier: appState.settings.voiceInput.speechAnalyzerLocale)
                     return SpeechAnalyzerEngine(
                         locale: locale,
-                        deviceUID: appState.settings.audioInputDeviceUID
+                        deviceUID: appState.settings.voiceInput.audioInputDeviceUID
                     )
                 }
                 return DictationEngine()
@@ -70,7 +70,7 @@ final class InputPanelController {
             self?.replacementService.applyOrPreview()
         }
         voiceCoordinator.onCursorAutoReplacement = { [weak self] in
-            guard let self, self.appState.settings.isAutoReplacementEnabled else { return }
+            guard let self, self.appState.settings.replacement.isAutoReplacementEnabled else { return }
             self.replacementService.applyOrPreview()
         }
 
@@ -134,18 +134,18 @@ final class InputPanelController {
 
         panel.onShortcutKey = { [weak self] shortcut in
             guard let self else { return false }
-            if let aShortcut = self.appState.settings.autoRunShortcutKey,
+            if let aShortcut = self.appState.settings.script.autoRunShortcutKey,
                shortcut == aShortcut {
                 self.scriptService.cycleAutoRunScript()
                 return true
             }
-            if let rShortcut = self.appState.settings.replacementShortcutKey,
+            if let rShortcut = self.appState.settings.replacement.replacementShortcutKey,
                shortcut == rShortcut,
-               !self.appState.settings.replacementRules.isEmpty {
+               !self.appState.settings.replacement.replacementRules.isEmpty {
                 self.replacementService.applyOrPreview()
                 return true
             }
-            guard let script = self.appState.settings.scripts.first(where: { $0.shortcutKey == shortcut })
+            guard let script = self.appState.settings.script.scripts.first(where: { $0.shortcutKey == shortcut })
             else { return false }
             Task { @MainActor in
                 await self.scriptService.execute(script)
@@ -164,10 +164,10 @@ final class InputPanelController {
         self.init(
             appState: appState,
             selectedTextReader: SelectedTextReader(),
-            paster: ClipboardPaster(pasteDelay: appState.settings.pasteDelay),
-            makeScriptRunner: { ScriptRunner(timeout: appState.settings.scriptTimeout) },
+            paster: ClipboardPaster(pasteDelay: appState.settings.paste.pasteDelay),
+            makeScriptRunner: { ScriptRunner(timeout: appState.settings.script.scriptTimeout) },
             historyStore: historyStore,
-            ducker: OutputVolumeDucker(settings: appState.settings)
+            ducker: OutputVolumeDucker(settings: appState.settings.volumeDucking)
         )
     }
 
@@ -217,7 +217,7 @@ final class InputPanelController {
             return
         }
 
-        if let autoScript = appState.settings.autoRunScript {
+        if let autoScript = appState.settings.script.autoRunScript {
             guard appState.isInputPanelVisible else { return }
 
             appState.inputText = text
@@ -252,7 +252,7 @@ final class InputPanelController {
 
         do {
             try await paster.paste(text: text, to: targetApp, using: .general)
-            historyStore.add(text: text, settings: appState.settings)
+            historyStore.add(text: text, settings: appState.settings.history)
             logger.info("Paste completed successfully")
         } catch {
             paster.restoreClipboard()
@@ -292,7 +292,7 @@ final class InputPanelController {
             appState.inputText = text
         }
         appState.errorMessage = nil
-        if appState.settings.isAutoReplacementEnabled {
+        if appState.settings.replacement.isAutoReplacementEnabled {
             replacementService.applyOrPreview()
         }
         voiceCoordinator.handleTextChanged()
@@ -361,7 +361,7 @@ final class InputPanelController {
             appState.inputText = textView.string
         }
         replacementService.clearPreviews()
-        if appState.settings.isAutoReplacementEnabled {
+        if appState.settings.replacement.isAutoReplacementEnabled {
             replacementService.applyOrPreview()
         }
     }

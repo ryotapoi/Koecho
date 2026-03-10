@@ -35,8 +35,8 @@ struct AppStateTests {
         let settings = Settings(defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!)
         let appState = AppState(settings: settings)
 
-        appState.settings.pasteDelay = 10.0
-        #expect(appState.settings.pasteDelay == 10.0)
+        appState.settings.paste.pasteDelay = 10.0
+        #expect(appState.settings.paste.pasteDelay == 10.0)
     }
 
     @Test func stateModification() {

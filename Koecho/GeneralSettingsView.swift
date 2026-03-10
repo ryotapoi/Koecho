@@ -2,22 +2,27 @@ import Speech
 import SwiftUI
 
 struct GeneralSettingsView: View {
-    @Bindable var settings: Koecho.Settings
+    @Bindable var voiceInput: VoiceInputSettings
+    @Bindable var script: ScriptSettings
+    @Bindable var replacement: ReplacementSettings
+    @Bindable var history: HistorySettings
+    @Bindable var paste: PasteSettings
+    @Bindable var volumeDucking: VolumeDuckingSettings
 
     var body: some View {
         Form {
             voiceInputSection
             volumeDuckingSection
             Section("Clipboard") {
-                TextField("Clipboard restore delay (sec)", value: $settings.pasteDelay, format: .number)
+                TextField("Clipboard restore delay (sec)", value: $paste.pasteDelay, format: .number)
             }
             Section("Scripts") {
-                TextField("Timeout (sec)", value: $settings.scriptTimeout, format: .number)
+                TextField("Timeout (sec)", value: $script.scriptTimeout, format: .number)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("Auto-run cycle shortcut")
                         Spacer()
-                        ShortcutKeyRecorder(shortcutKey: $settings.autoRunShortcutKey)
+                        ShortcutKeyRecorder(shortcutKey: $script.autoRunShortcutKey)
                             .frame(width: 120)
                     }
                     Text("Cycle through scripts to auto-run on confirm")
@@ -26,12 +31,12 @@ struct GeneralSettingsView: View {
                 }
             }
             Section("Replacement Rules") {
-                Toggle("Auto-replace", isOn: $settings.isAutoReplacementEnabled)
+                Toggle("Auto-replace", isOn: $replacement.isAutoReplacementEnabled)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("Shortcut key")
                         Spacer()
-                        ShortcutKeyRecorder(shortcutKey: $settings.replacementShortcutKey)
+                        ShortcutKeyRecorder(shortcutKey: $replacement.replacementShortcutKey)
                             .frame(width: 120)
                     }
                     Text("Avoid shortcuts used by other apps or the system")
@@ -40,9 +45,9 @@ struct GeneralSettingsView: View {
                 }
             }
             Section("History") {
-                Toggle("Enable History", isOn: $settings.isHistoryEnabled)
-                TextField("Max entries", value: $settings.historyMaxCount, format: .number)
-                TextField("Retention days", value: $settings.historyRetentionDays, format: .number)
+                Toggle("Enable History", isOn: $history.isHistoryEnabled)
+                TextField("Max entries", value: $history.historyMaxCount, format: .number)
+                TextField("Retention days", value: $history.historyRetentionDays, format: .number)
             }
         }
         .formStyle(.grouped)
@@ -51,15 +56,15 @@ struct GeneralSettingsView: View {
 
     private var volumeDuckingSection: some View {
         Section("Volume Ducking") {
-            Toggle("Lower system volume while input panel is open", isOn: $settings.isVolumeDuckingEnabled)
-            if settings.isVolumeDuckingEnabled {
+            Toggle("Lower system volume while input panel is open", isOn: $volumeDucking.isVolumeDuckingEnabled)
+            if volumeDucking.isVolumeDuckingEnabled {
                 HStack {
                     Text("Target volume")
                     Slider(
-                        value: $settings.volumeDuckingLevel,
+                        value: $volumeDucking.volumeDuckingLevel,
                         in: 0...1
                     )
-                    Text("\(Int(round(settings.volumeDuckingLevel * 100)))%")
+                    Text("\(Int(round(volumeDucking.volumeDuckingLevel * 100)))%")
                         .monospacedDigit()
                         .frame(width: 40, alignment: .trailing)
                 }
@@ -74,16 +79,16 @@ struct GeneralSettingsView: View {
     private var voiceInputSection: some View {
         if #available(macOS 26, *) {
             Section("Voice Input") {
-                Picker("Engine", selection: $settings.voiceInputMode) {
+                Picker("Engine", selection: $voiceInput.voiceInputMode) {
                     Text("System Dictation").tag(VoiceInputMode.dictation)
                     Text("SpeechAnalyzer (On-device)").tag(VoiceInputMode.speechAnalyzer)
                 }
                 .pickerStyle(.segmented)
-                if settings.voiceInputMode == .speechAnalyzer {
-                    SpeechAnalyzerLanguageSection(selection: $settings.speechAnalyzerLocale)
+                if voiceInput.voiceInputMode == .speechAnalyzer {
+                    SpeechAnalyzerLanguageSection(selection: $voiceInput.speechAnalyzerLocale)
                     AudioInputDeviceSection(
-                        deviceUID: $settings.audioInputDeviceUID,
-                        deviceName: $settings.audioInputDeviceName
+                        deviceUID: $voiceInput.audioInputDeviceUID,
+                        deviceName: $voiceInput.audioInputDeviceName
                     )
                 }
             }

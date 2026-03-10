@@ -133,7 +133,7 @@ import Testing
 
     @Test func didFinalizeCallsOnAutoReplacement() {
         let (coordinator, appState, mockTV, _) = makeCoordinator(inputText: "")
-        appState.settings.isAutoReplacementEnabled = true
+        appState.settings.replacement.isAutoReplacementEnabled = true
         let storage = NSTextStorage(string: "")
         mockTV.textStorage = storage
         mockTV.typingAttributes = [:]
@@ -147,7 +147,7 @@ import Testing
 
     @Test func didFinalizeSkipsAutoReplacementWhenDisabled() {
         let (coordinator, appState, mockTV, _) = makeCoordinator(inputText: "")
-        appState.settings.isAutoReplacementEnabled = false
+        appState.settings.replacement.isAutoReplacementEnabled = false
         let storage = NSTextStorage(string: "")
         mockTV.textStorage = storage
         mockTV.typingAttributes = [:]

@@ -35,11 +35,11 @@ struct KoechoApp: App {
                     if #available(macOS 26, *) {
                         let newKey = SpeechAnalyzerEngine.localeNormalizationKey(newLocale)
                         let currentKey = SpeechAnalyzerEngine.localeNormalizationKey(
-                            appState.settings.speechAnalyzerLocale
+                            appState.settings.voiceInput.speechAnalyzerLocale
                         )
                         guard newKey != currentKey else { return }
                     }
-                    appState.settings.speechAnalyzerLocale = newLocale
+                    appState.settings.voiceInput.speechAnalyzerLocale = newLocale
                     Task { @MainActor in
                         await panelController?.switchEngine()
                     }
@@ -53,15 +53,15 @@ struct KoechoApp: App {
             if !didPurge {
                 didPurge = true
                 historyStore.purge(
-                    maxCount: appState.settings.historyMaxCount,
-                    retentionDays: appState.settings.historyRetentionDays
+                    maxCount: appState.settings.history.historyMaxCount,
+                    retentionDays: appState.settings.history.historyRetentionDays
                 )
             }
         }
-        .onChange(of: appState.settings.hotkeyConfig) { _, newConfig in
+        .onChange(of: appState.settings.hotkey.hotkeyConfig) { _, newConfig in
             hotkeyService?.updateConfig(newConfig)
         }
-        .onChange(of: appState.settings.speechAnalyzerLocale, initial: true) {
+        .onChange(of: appState.settings.voiceInput.speechAnalyzerLocale, initial: true) {
             Task { await refreshDownloadedLocales() }
         }
 
@@ -75,7 +75,7 @@ struct KoechoApp: App {
     private func startHotkeyService() {
         guard hotkeyService == nil else { return }
         let service = HotkeyService(
-            hotkeyConfig: appState.settings.hotkeyConfig,
+            hotkeyConfig: appState.settings.hotkey.hotkeyConfig,
             isPanelVisible: { [appState] in appState.isInputPanelVisible },
             onSingleTap: { handleSingleTap() },
             onDoubleTap: { handleDoubleTap() }
@@ -92,7 +92,7 @@ struct KoechoApp: App {
     }
 
     private func handleSingleTap() {
-        switch appState.settings.hotkeyConfig.tapMode {
+        switch appState.settings.hotkey.hotkeyConfig.tapMode {
         case .singleToggle:
             togglePanel()
         case .doubleTapToShow:
@@ -113,7 +113,7 @@ struct KoechoApp: App {
 
     private func refreshDownloadedLocales() async {
         guard #available(macOS 26, *),
-              appState.settings.effectiveVoiceInputMode == .speechAnalyzer else {
+              appState.settings.voiceInput.effectiveVoiceInputMode == .speechAnalyzer else {
             downloadedLocales = []
             return
         }
@@ -131,11 +131,11 @@ struct KoechoApp: App {
         // Stale selection correction
         if !items.isEmpty {
             let currentKey = SpeechAnalyzerEngine.localeNormalizationKey(
-                appState.settings.speechAnalyzerLocale
+                appState.settings.voiceInput.speechAnalyzerLocale
             )
             let hasMatch = items.contains { $0.normalizedKey == currentKey }
             if !hasMatch, let first = items.first {
-                appState.settings.speechAnalyzerLocale = first.identifier
+                appState.settings.voiceInput.speechAnalyzerLocale = first.identifier
             }
         }
     }
@@ -162,7 +162,7 @@ private struct MenuBarContent: View {
     @Environment(\.openWindow) private var openWindow
 
     private var eligibleScripts: [Script] {
-        appState.settings.scripts.filter { !$0.requiresPrompt }
+        appState.settings.script.scripts.filter { !$0.requiresPrompt }
     }
 
     var body: some View {
@@ -172,9 +172,9 @@ private struct MenuBarContent: View {
 
         Menu("Auto-run on Confirm") {
             Button {
-                appState.settings.autoRunScriptId = nil
+                appState.settings.script.autoRunScriptId = nil
             } label: {
-                if appState.settings.autoRunScriptId == nil {
+                if appState.settings.script.autoRunScriptId == nil {
                     Text("✓ None")
                 } else {
                     Text("  None")
@@ -183,9 +183,9 @@ private struct MenuBarContent: View {
             Divider()
             ForEach(eligibleScripts) { script in
                 Button {
-                    appState.settings.autoRunScriptId = script.id
+                    appState.settings.script.autoRunScriptId = script.id
                 } label: {
-                    if appState.settings.autoRunScriptId == script.id {
+                    if appState.settings.script.autoRunScriptId == script.id {
                         Text("✓ \(script.name)")
                     } else {
                         Text("  \(script.name)")
@@ -223,10 +223,10 @@ private struct MenuBarContent: View {
     @ViewBuilder
     private var recognitionLanguageMenu: some View {
         if #available(macOS 26, *),
-           appState.settings.effectiveVoiceInputMode == .speechAnalyzer,
+           appState.settings.voiceInput.effectiveVoiceInputMode == .speechAnalyzer,
            downloadedLocales.count >= 2 {
             let currentKey = SpeechAnalyzerEngine.localeNormalizationKey(
-                appState.settings.speechAnalyzerLocale
+                appState.settings.voiceInput.speechAnalyzerLocale
             )
             Menu("Recognition Language") {
                 ForEach(downloadedLocales) { locale in

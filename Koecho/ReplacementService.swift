@@ -21,7 +21,7 @@ final class ReplacementService {
     func applyOrPreview() {
         guard appState.isInputPanelVisible,
               !appState.isRunningScript else { return }
-        let rules = appState.settings.replacementRules
+        let rules = appState.settings.replacement.replacementRules
         guard !rules.isEmpty else { return }
 
         if let textView, textView.volatileRange != nil {
@@ -36,7 +36,7 @@ final class ReplacementService {
     func applyNow() {
         guard appState.isInputPanelVisible,
               !appState.isRunningScript else { return }
-        let rules = appState.settings.replacementRules
+        let rules = appState.settings.replacement.replacementRules
         guard !rules.isEmpty else { return }
         textView?.clearReplacementPreviews()
         let currentText = appState.inputText
@@ -66,7 +66,7 @@ final class ReplacementService {
     }
 
     func applyRules(to text: String) -> String {
-        let rules = appState.settings.replacementRules
+        let rules = appState.settings.replacement.replacementRules
         guard !rules.isEmpty else { return text }
         return applyReplacementRules(rules, to: text)
     }
@@ -76,7 +76,7 @@ final class ReplacementService {
     }
 
     func addRule(_ rule: ReplacementRule) {
-        appState.settings.addReplacementRule(rule)
+        appState.settings.replacement.addReplacementRule(rule)
         appState.pendingReplacementPattern = nil
         applyOrPreview()
     }

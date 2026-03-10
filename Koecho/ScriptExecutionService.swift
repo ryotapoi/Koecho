@@ -82,17 +82,17 @@ final class ScriptExecutionService {
     }
 
     func cycleAutoRunScript() {
-        let eligible = appState.settings.scripts.filter { !$0.requiresPrompt }
+        let eligible = appState.settings.script.scripts.filter { !$0.requiresPrompt }
         guard !eligible.isEmpty else {
-            appState.settings.autoRunScriptId = nil
+            appState.settings.script.autoRunScriptId = nil
             return
         }
-        if let currentId = appState.settings.autoRunScriptId,
+        if let currentId = appState.settings.script.autoRunScriptId,
            let idx = eligible.firstIndex(where: { $0.id == currentId }) {
             let next = idx + 1
-            appState.settings.autoRunScriptId = next < eligible.count ? eligible[next].id : nil
+            appState.settings.script.autoRunScriptId = next < eligible.count ? eligible[next].id : nil
         } else {
-            appState.settings.autoRunScriptId = eligible[0].id
+            appState.settings.script.autoRunScriptId = eligible[0].id
         }
     }
 

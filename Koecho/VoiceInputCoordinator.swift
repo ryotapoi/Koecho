@@ -162,7 +162,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
                 accumulatedFinalizedText += localText
                 let inserted = insertFinalizedText(newText, at: voiceInsertionPoint)
                 accumulatedFinalizedText += inserted
-                if !isStoppingEngine, appState.settings.isAutoReplacementEnabled {
+                if !isStoppingEngine, appState.settings.replacement.isAutoReplacementEnabled {
                     onAutoReplacement?()
                 }
                 return
@@ -178,7 +178,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
         let inserted = insertFinalizedText(newText, at: voiceInsertionPoint)
         accumulatedFinalizedText += inserted
 
-        if !isStoppingEngine, appState.settings.isAutoReplacementEnabled {
+        if !isStoppingEngine, appState.settings.replacement.isAutoReplacementEnabled {
             onAutoReplacement?()
         }
     }

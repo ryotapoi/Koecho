@@ -11,14 +11,14 @@ import Testing
     ) -> (ScriptExecutionService, AppState, MockTextViewOperating) {
         let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
         let settings = Settings(defaults: defaults)
-        settings.scriptTimeout = scriptTimeout
+        settings.script.scriptTimeout = scriptTimeout
         let appState = AppState(settings: settings)
         appState.isInputPanelVisible = isInputPanelVisible
         appState.inputText = inputText
 
         let service = ScriptExecutionService(
             appState: appState,
-            makeScriptRunner: { ScriptRunner(timeout: settings.scriptTimeout) },
+            makeScriptRunner: { ScriptRunner(timeout: settings.script.scriptTimeout) },
             setVoiceInsertionPoint: { _ in },
             isConfirming: { false }
         )
@@ -109,29 +109,29 @@ import Testing
         let (service, appState, _) = makeService()
         let script1 = Script(name: "S1", scriptPath: "cat")
         let script2 = Script(name: "S2", scriptPath: "cat")
-        appState.settings.scripts = [script1, script2]
+        appState.settings.script.scripts = [script1, script2]
 
         // nil → first
         service.cycleAutoRunScript()
-        #expect(appState.settings.autoRunScriptId == script1.id)
+        #expect(appState.settings.script.autoRunScriptId == script1.id)
 
         // first → second
         service.cycleAutoRunScript()
-        #expect(appState.settings.autoRunScriptId == script2.id)
+        #expect(appState.settings.script.autoRunScriptId == script2.id)
 
         // second → nil
         service.cycleAutoRunScript()
-        #expect(appState.settings.autoRunScriptId == nil)
+        #expect(appState.settings.script.autoRunScriptId == nil)
     }
 
     @Test func cycleAutoRunScriptSkipsPromptScripts() {
         let (service, appState, _) = makeService()
         let script1 = Script(name: "S1", scriptPath: "cat", requiresPrompt: true)
         let script2 = Script(name: "S2", scriptPath: "cat")
-        appState.settings.scripts = [script1, script2]
+        appState.settings.script.scripts = [script1, script2]
 
         service.cycleAutoRunScript()
-        #expect(appState.settings.autoRunScriptId == script2.id)
+        #expect(appState.settings.script.autoRunScriptId == script2.id)
     }
 
     // MARK: - cancelPrompt

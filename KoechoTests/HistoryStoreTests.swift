@@ -17,9 +17,9 @@ struct HistoryStoreTests {
         isHistoryEnabled: Bool = true,
         historyMaxCount: Int = 500,
         historyRetentionDays: Int = 30
-    ) -> Settings {
+    ) -> HistorySettings {
         let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-        let settings = Settings(defaults: defaults)
+        let settings = HistorySettings(defaults: defaults)
         settings.isHistoryEnabled = isHistoryEnabled
         settings.historyMaxCount = historyMaxCount
         settings.historyRetentionDays = historyRetentionDays

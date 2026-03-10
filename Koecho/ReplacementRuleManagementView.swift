@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ReplacementRuleManagementView: View {
-    @Bindable var settings: Settings
+    @Bindable var settings: ReplacementSettings
     @State private var selection: UUID?
 
     var body: some View {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct HotkeySettingsView: View {
-    @Bindable var settings: Settings
+    @Bindable var settings: HotkeySettings
 
     private var keySelection: Binding<HotkeyKeyChoice> {
         Binding(

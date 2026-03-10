@@ -4,9 +4,9 @@ import Testing
 
 @MainActor
 struct OutputVolumeDuckerTests {
-    private func makeSettings(enabled: Bool = false, level: Float = 0.05) -> Settings {
+    private func makeSettings(enabled: Bool = false, level: Float = 0.05) -> VolumeDuckingSettings {
         let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-        let settings = Settings(defaults: defaults)
+        let settings = VolumeDuckingSettings(defaults: defaults)
         settings.isVolumeDuckingEnabled = enabled
         settings.volumeDuckingLevel = level
         return settings
