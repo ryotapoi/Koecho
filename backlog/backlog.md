@@ -6,7 +6,6 @@
 - [x] A1: View からロジック抽出 + Client Protocol 導入
 - [x] A2: InputPanelController 分割 → ADR 0017
 - [x] A3: Settings 分割
-- [ ] B3: スクリプトパスにシングルクォートと引数を含む場合に実行できない
 - [x] A4: SPM モジュール分離 → ADR 0018
 
 ## 詳細
@@ -23,8 +22,3 @@
 ### B2: Release Download Model 後に言語一覧のステータスが更新されない
 - 再現手順: 設定画面で Italian を選択 → Release Download Model を押す → Japanese を選択する → その後、言語一覧を見ても Italian に「Download required」が表示されない
 - アプリ再起動後も表示は変わらない。実際にはモデルが解放されていない、またはステータス表示が更新されていない可能性がある
-
-### B3: スクリプトパスにシングルクォートと引数を含む場合に実行できない
-- 再現手順: スクリプトをファイル選択で登録すると `'/Users/ryota/.local/bin/claude-fmt'` のようにシングルクォートで囲まれる。引数なしなら動くが、`'/Users/ryota/.local/bin/claude-fmt' f` のように引数を追加すると動かない
-- `/Users/ryota/.local/bin/claude-fmt f` のようにクォートなしで書けば動く
-- 原因: シェルコマンド構築時のクォート処理の問題と思われる
