@@ -4,13 +4,9 @@ import os
 
 public nonisolated struct SelectedTextResult: Sendable, Equatable {
     public var text: String
-    public var start: String
-    public var end: String
 
-    public init(text: String, start: String, end: String) {
+    public init(text: String) {
         self.text = text
-        self.start = start
-        self.end = end
     }
 }
 
@@ -42,15 +38,7 @@ public nonisolated final class SelectedTextReader: SelectedTextReading, Sendable
             return nil
         }
 
-        var start = ""
-        var end = ""
-
-        if let range = accessibilityClient.selectedTextRange(of: element) {
-            start = String(range.location)
-            end = String(range.location + range.length)
-        }
-
         logger.info("Read selected text (\(text.count) chars) from pid \(pid)")
-        return SelectedTextResult(text: text, start: start, end: end)
+        return SelectedTextResult(text: text)
     }
 }

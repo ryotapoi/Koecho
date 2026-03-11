@@ -54,12 +54,7 @@ final class ScriptExecutionService {
 
         appState.errorMessage = nil
 
-        let context = ScriptRunnerContext(
-            selection: appState.selectedText,
-            selectionStart: appState.selectionStart,
-            selectionEnd: appState.selectionEnd,
-            prompt: appState.promptText
-        )
+        let context = makeScriptContext(prompt: appState.promptText)
 
         let runner = makeScriptRunner()
         do {
@@ -99,12 +94,7 @@ final class ScriptExecutionService {
     }
 
     func runAutoScript(_ script: Script, on text: String) async throws -> String {
-        let context = ScriptRunnerContext(
-            selection: appState.selectedText,
-            selectionStart: appState.selectionStart,
-            selectionEnd: appState.selectionEnd,
-            prompt: ""
-        )
+        let context = ScriptRunnerContext(prompt: "")
         let runner = makeScriptRunner()
         let result = try await runner.run(
             scriptPath: script.scriptPath,
@@ -112,6 +102,23 @@ final class ScriptExecutionService {
             context: context
         )
         return result.output
+    }
+
+    private func makeScriptContext(prompt: String) -> ScriptRunnerContext {
+        let range = textView?.selectedRange() ?? NSRange(location: 0, length: 0)
+        let selection: String
+        if let textView, range.length > 0,
+           range.location + range.length <= (textView.string as NSString).length {
+            selection = (textView.string as NSString).substring(with: range)
+        } else {
+            selection = ""
+        }
+        return ScriptRunnerContext(
+            selection: selection,
+            selectionStart: String(range.location),
+            selectionEnd: String(range.location + range.length),
+            prompt: prompt
+        )
     }
 
     func scriptErrorMessage(for error: any Error, script: Script) -> String {

@@ -43,28 +43,23 @@ import Testing
     }
 
     @Test func showReadsSelectedText() {
-        let result = SelectedTextResult(text: "hello", start: "1", end: "5")
+        let result = SelectedTextResult(text: "hello")
         let (manager, appState, _, _, _) = makeManager(selectedTextResult: result)
         // Simulate having a frontmost app by setting it directly before show reads it
         appState.frontmostApplication = NSRunningApplication.current
 
         manager.show()
 
-        #expect(appState.selectedText == "hello")
-        #expect(appState.selectionStart == "1")
-        #expect(appState.selectionEnd == "5")
         #expect(appState.inputText == "hello")
     }
 
-    @Test func showSetsEmptySelectionWhenReaderReturnsNil() {
+    @Test func showSetsEmptyInputWhenReaderReturnsNil() {
         let (manager, appState, _, _, _) = makeManager(selectedTextResult: nil)
         appState.frontmostApplication = NSRunningApplication.current
 
         manager.show()
 
-        #expect(appState.selectedText == "")
-        #expect(appState.selectionStart == "")
-        #expect(appState.selectionEnd == "")
+        #expect(appState.inputText == "")
     }
 
     @Test func showCallsDuckerDuck() {
@@ -100,9 +95,6 @@ import Testing
         appState.inputText = "hello"
         appState.isInputPanelVisible = true
         appState.frontmostApplication = NSRunningApplication.current
-        appState.selectedText = "hello"
-        appState.selectionStart = "1"
-        appState.selectionEnd = "5"
         appState.errorMessage = "error"
         appState.voiceEngineStatus = "Listening"
         appState.isRunningScript = true
@@ -114,9 +106,6 @@ import Testing
         #expect(appState.inputText == "")
         #expect(appState.isInputPanelVisible == false)
         #expect(appState.frontmostApplication == nil)
-        #expect(appState.selectedText == "")
-        #expect(appState.selectionStart == "")
-        #expect(appState.selectionEnd == "")
         #expect(appState.errorMessage == nil)
         #expect(appState.voiceEngineStatus == nil)
         #expect(appState.isRunningScript == false)

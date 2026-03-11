@@ -93,6 +93,21 @@ import Testing
         #expect(result == "hello world")
     }
 
+    @Test func runAutoScriptPassesEmptySelection() async throws {
+        let scriptPath = try makeScript(
+            "echo \"sel=$KOECHO_SELECTION start=$KOECHO_SELECTION_START end=$KOECHO_SELECTION_END\""
+        )
+        defer { try? FileManager.default.removeItem(atPath: scriptPath) }
+
+        let (service, _, mockTV) = makeService(inputText: "hello")
+        mockTV.selectedRangeValue = NSRange(location: 3, length: 2)
+        let script = Script(name: "Test", scriptPath: scriptPath)
+
+        let result = try await service.runAutoScript(script, on: "hello")
+
+        #expect(result == "sel= start= end=")
+    }
+
     @Test func runAutoScriptErrorThrows() async {
         let (service, _, _) = makeService(inputText: "hello")
         let script = Script(name: "Test", scriptPath: "exit 1")
@@ -134,6 +149,63 @@ import Testing
 
         service.cycleAutoRunScript()
         #expect(appState.settings.script.autoRunScriptId == script2.id)
+    }
+
+    // MARK: - Panel selection context
+
+    private func makeScript(_ content: String) throws -> String {
+        let dir = FileManager.default.temporaryDirectory
+        let path = dir.appendingPathComponent("koecho-test-\(UUID().uuidString).sh").path
+        try ("#!/bin/sh\n" + content).write(toFile: path, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path)
+        return path
+    }
+
+    @Test func executePassesPanelSelection() async throws {
+        let scriptPath = try makeScript(
+            "echo \"sel=$KOECHO_SELECTION start=$KOECHO_SELECTION_START end=$KOECHO_SELECTION_END\""
+        )
+        defer { try? FileManager.default.removeItem(atPath: scriptPath) }
+
+        let (service, appState, mockTV) = makeService(inputText: "hello world")
+        mockTV.string = "hello world"
+        mockTV.selectedRangeValue = NSRange(location: 6, length: 5)
+        let script = Script(name: "Test", scriptPath: scriptPath)
+
+        await service.execute(script)
+
+        #expect(appState.inputText == "sel=world start=6 end=11")
+    }
+
+    @Test func executeWithNoSelectionPassesCursorPosition() async throws {
+        let scriptPath = try makeScript(
+            "echo \"sel=$KOECHO_SELECTION start=$KOECHO_SELECTION_START end=$KOECHO_SELECTION_END\""
+        )
+        defer { try? FileManager.default.removeItem(atPath: scriptPath) }
+
+        let (service, appState, mockTV) = makeService(inputText: "hello")
+        mockTV.string = "hello"
+        mockTV.selectedRangeValue = NSRange(location: 3, length: 0)
+        let script = Script(name: "Test", scriptPath: scriptPath)
+
+        await service.execute(script)
+
+        #expect(appState.inputText == "sel= start=3 end=3")
+    }
+
+    @Test func executeWithNilTextViewPassesZeros() async throws {
+        let scriptPath = try makeScript(
+            "echo \"sel=$KOECHO_SELECTION start=$KOECHO_SELECTION_START end=$KOECHO_SELECTION_END\""
+        )
+        defer { try? FileManager.default.removeItem(atPath: scriptPath) }
+
+        let (service, appState, _) = makeService(inputText: "hello")
+        service.textView = nil
+        let script = Script(name: "Test", scriptPath: scriptPath)
+
+        await service.execute(script)
+
+        #expect(appState.inputText == "sel= start=0 end=0")
     }
 
     // MARK: - cancelPrompt

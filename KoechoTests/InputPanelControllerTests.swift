@@ -81,20 +81,6 @@ struct InputPanelControllerTests {
         #expect(appState.inputText == "")
     }
 
-    @Test func cancelClearsSelectedText() {
-        let (controller, appState, _, _, _) = makeController()
-
-        controller.showPanel()
-        appState.selectedText = "selected"
-        appState.selectionStart = "0"
-        appState.selectionEnd = "8"
-        controller.cancel()
-
-        #expect(appState.selectedText == "")
-        #expect(appState.selectionStart == "")
-        #expect(appState.selectionEnd == "")
-    }
-
     @Test func cancelClearsTextAfterInput() {
         let (controller, appState, _, _, _) = makeController()
 
@@ -156,7 +142,6 @@ struct InputPanelControllerTests {
         #expect(appState.isInputPanelVisible == false)
         #expect(appState.inputText == "")
         #expect(appState.frontmostApplication == nil)
-        #expect(appState.selectedText == "")
         #expect(appState.errorMessage == nil)
         #expect(paster.pastedTexts == ["hello"])
     }
@@ -247,22 +232,6 @@ struct InputPanelControllerTests {
         #expect(paster.pastedTexts == ["hello"])
     }
 
-    @Test func showPanelClearsSelectedText() {
-        let (controller, appState, _, _, _) = makeController()
-
-        // Simulate leftover selected text from a previous session
-        appState.selectedText = "old selection"
-        appState.selectionStart = "5"
-        appState.selectionEnd = "18"
-
-        controller.showPanel()
-
-        // In test environment, SelectedTextReader returns nil, so these should be cleared
-        #expect(appState.selectedText == "")
-        #expect(appState.selectionStart == "")
-        #expect(appState.selectionEnd == "")
-    }
-
     @Test func cancelCallsRestoreClipboard() {
         let paster = MockPaster()
         let (controller, _, _, _, _) = makeController(paster: paster)
@@ -337,14 +306,12 @@ struct InputPanelControllerTests {
 
         controller.showPanel()
         appState.inputText = "input"
-        appState.selectedText = "selected"
-        appState.selectionStart = "10"
-        appState.selectionEnd = "18"
         appState.promptText = "my prompt"
 
         await controller.executeScript(script)
 
-        #expect(appState.inputText == "sel=selected start=10 end=18 prompt=my prompt")
+        // Selection comes from textView (no text selected in mock), so selection is empty
+        #expect(appState.inputText == "sel= start=0 end=0 prompt=my prompt")
     }
 
     @Test func executeScriptShowsPromptUI() async throws {
@@ -937,20 +904,17 @@ struct InputPanelControllerTests {
 
     @Test func showPanelWithSelectedTextSetsInputText() {
         let mockReader = MockSelectedTextReader()
-        mockReader.resultToReturn = SelectedTextResult(text: "selected text", start: "5", end: "18")
+        mockReader.resultToReturn = SelectedTextResult(text: "selected text")
         let (controller, appState, _, _, _) = makeController(selectedTextReader: mockReader)
 
         controller.showPanel()
 
-        #expect(appState.selectedText == "selected text")
-        #expect(appState.selectionStart == "5")
-        #expect(appState.selectionEnd == "18")
         #expect(appState.inputText == "selected text")
     }
 
     @Test func confirmWithSelectedTextOnly() async {
         let mockReader = MockSelectedTextReader()
-        mockReader.resultToReturn = SelectedTextResult(text: "selected text", start: "0", end: "13")
+        mockReader.resultToReturn = SelectedTextResult(text: "selected text")
         let paster = MockPaster()
         let (controller, appState, _, _, _) = makeController(paster: paster, selectedTextReader: mockReader)
 

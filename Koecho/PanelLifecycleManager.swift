@@ -25,23 +25,12 @@ final class PanelLifecycleManager {
         appState.isRunningScript = false
         appState.frontmostApplication = NSWorkspace.shared.frontmostApplication
 
-        if let app = appState.frontmostApplication {
-            if let result = selectedTextReader.read(from: app.processIdentifier) {
-                appState.selectedText = result.text
-                appState.selectionStart = result.start
-                appState.selectionEnd = result.end
-            } else {
-                appState.selectedText = ""
-                appState.selectionStart = ""
-                appState.selectionEnd = ""
-            }
+        if let app = appState.frontmostApplication,
+           let result = selectedTextReader.read(from: app.processIdentifier) {
+            appState.inputText = result.text
         } else {
-            appState.selectedText = ""
-            appState.selectionStart = ""
-            appState.selectionEnd = ""
+            appState.inputText = ""
         }
-
-        appState.inputText = appState.selectedText
         appState.errorMessage = nil
         appState.isInputPanelVisible = true
         ducker.duck()
@@ -53,9 +42,6 @@ final class PanelLifecycleManager {
         appState.inputText = ""
         appState.isInputPanelVisible = false
         appState.frontmostApplication = nil
-        appState.selectedText = ""
-        appState.selectionStart = ""
-        appState.selectionEnd = ""
         appState.errorMessage = nil
         appState.voiceEngineStatus = nil
         appState.isRunningScript = false

@@ -5,7 +5,6 @@ public protocol AccessibilityClient: Sendable {
     func isProcessTrusted() -> Bool
     func focusedUIElement(for pid: pid_t) -> AXUIElement?
     func selectedText(of element: AXUIElement) -> String?
-    func selectedTextRange(of element: AXUIElement) -> CFRange?
 }
 
 public nonisolated struct LiveAccessibilityClient: AccessibilityClient {
@@ -47,22 +46,4 @@ public nonisolated struct LiveAccessibilityClient: AccessibilityClient {
         return text
     }
 
-    public func selectedTextRange(of element: AXUIElement) -> CFRange? {
-        var rangeValue: CFTypeRef?
-        let result = AXUIElementCopyAttributeValue(
-            element,
-            kAXSelectedTextRangeAttribute as CFString,
-            &rangeValue
-        )
-        guard result == .success, let rangeRef = rangeValue,
-              CFGetTypeID(rangeRef as CFTypeRef) == AXValueGetTypeID()
-        else {
-            return nil
-        }
-        var range = CFRange(location: 0, length: 0)
-        guard AXValueGetValue(rangeRef as! AXValue, .cfRange, &range) else {
-            return nil
-        }
-        return range
-    }
 }
