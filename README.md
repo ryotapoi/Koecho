@@ -24,9 +24,10 @@ Invoke with a hotkey, edit text by voice and keyboard, process it with shell scr
 
 1. Download the latest zip from [Releases](https://github.com/ryotapoi/Koecho/releases)
 2. Unzip and move `Koecho.app` to `/Applications`
-3. On first launch, macOS will warn that the developer cannot be verified (the app is not signed with an Apple Developer ID)
-   - Right-click Koecho.app and select "Open"
-   - Click "Open" in the confirmation dialog
+3. The app will be blocked on first launch (it is not signed with an Apple Developer ID)
+   - Open System Settings > Privacy & Security
+   - Click "Open Anyway" next to the blocked Koecho.app message
+   - A confirmation alert will appear — click "Open Anyway" again
    - Subsequent launches will work normally
 
 ### Build from source
