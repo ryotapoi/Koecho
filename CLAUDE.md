@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 
-Koecho は macOS 14.0+ 向けの軽量音声入力ラッパーアプリ。詳細: rules/mission.md
+Koecho は macOS 14.0+ 向けの軽量音声入力アプリ。詳細: rules/mission.md
 
 ## rules/
 
