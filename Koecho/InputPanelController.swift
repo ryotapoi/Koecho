@@ -23,6 +23,7 @@ final class InputPanelController {
         selectedTextReader: any SelectedTextReading,
         paster: any Pasting,
         makeScriptRunner: @escaping () -> ScriptRunner,
+        makeEngine: (() -> any VoiceInputEngine)? = nil,
         historyStore: HistoryStore,
         ducker: any VolumeDucking
     ) {
@@ -39,19 +40,21 @@ final class InputPanelController {
             panel: panel
         )
 
+        let engineFactory = makeEngine ?? { () -> any VoiceInputEngine in
+            if #available(macOS 26, *),
+               appState.settings.voiceInput.effectiveVoiceInputMode == .speechAnalyzer {
+                let locale = Locale(identifier: appState.settings.voiceInput.speechAnalyzerLocale)
+                return SpeechAnalyzerEngine(
+                    locale: locale,
+                    deviceUID: appState.settings.voiceInput.audioInputDeviceUID
+                )
+            }
+            return DictationEngine()
+        }
+
         self.voiceCoordinator = VoiceInputCoordinator(
             appState: appState,
-            makeEngine: { () -> any VoiceInputEngine in
-                if #available(macOS 26, *),
-                   appState.settings.voiceInput.effectiveVoiceInputMode == .speechAnalyzer {
-                    let locale = Locale(identifier: appState.settings.voiceInput.speechAnalyzerLocale)
-                    return SpeechAnalyzerEngine(
-                        locale: locale,
-                        deviceUID: appState.settings.voiceInput.audioInputDeviceUID
-                    )
-                }
-                return DictationEngine()
-            },
+            makeEngine: engineFactory,
             panel: panel
         )
 

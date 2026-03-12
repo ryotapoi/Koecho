@@ -80,6 +80,13 @@
 - 置換文字列にリテラルの `$` を含めたい場合は `NSRegularExpression.escapedTemplate(for:)` でエスケープが必要
 - `escapedPattern(for:)` は検索パターン用、`escapedTemplate(for:)` は置換テンプレート用。両方忘れずに使い分ける
 
+## テスト / TEST_HOST アプリのライフサイクル隔離
+
+- `TEST_HOST = Koecho.app` のため、テスト実行時にアプリ本体が起動する。`@main` の `App.init()` → `body` → `onChange(initial: true)` が走り、ホットキー登録・アクセシビリティダイアログ・パネル表示等の副作用が発生する
+- `main.swift` 方式（`@main` を外して `NSApplication.shared.run()` / `RunLoop.main.run()` でテスト時に分岐）は、テストランナーと干渉して xcodebuild CLI・Xcode GUI 両方で問題が発生した。`app.run()` がメインスレッドをブロックし、テストバンドルのロード/実行がトリガーされない
+- 対策: `@main` を維持し、`KoechoApp` 内で `NSClassFromString("XCTestCase") != nil` を `static let` で検出。`init()` と各 `onChange` ハンドラでガードして副作用をスキップ
+- テストで `showPanel()` するたびに本物の `DictationEngine` が生成されマイクが起動する問題も発生。`InputPanelController.init` に `makeEngine` パラメータ（Optional、デフォルト nil）を追加し、テストから `MockVoiceInputEngine` を注入して回避
+
 ## テスト / UserDefaults 分離
 
 - `UserDefaults.standard` を使うテストは前回のテスト実行データが残留し、次回のテストに干渉する

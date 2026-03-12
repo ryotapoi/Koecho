@@ -7,6 +7,7 @@ import KoechoPlatform
 
 @main
 struct KoechoApp: App {
+    private static let isTesting = NSClassFromString("XCTestCase") != nil
     private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "App")
     @State private var appState = AppState()
     @State private var historyStore = HistoryStore()
@@ -16,6 +17,7 @@ struct KoechoApp: App {
     @State private var downloadedLocales: [MenuLocaleItem] = []
 
     init() {
+        guard !Self.isTesting else { return }
         logger.info("Koecho launched")
         requestAccessibilityIfNeeded()
     }
@@ -51,6 +53,7 @@ struct KoechoApp: App {
         .menuBarExtraStyle(.menu)
         .environment(appState)
         .onChange(of: appState.isInputPanelVisible, initial: true) {
+            guard !Self.isTesting else { return }
             startHotkeyService()
             if !didPurge {
                 didPurge = true
@@ -61,9 +64,11 @@ struct KoechoApp: App {
             }
         }
         .onChange(of: appState.settings.hotkey.hotkeyConfig) { _, newConfig in
+            guard !Self.isTesting else { return }
             hotkeyService?.updateConfig(newConfig)
         }
         .onChange(of: appState.settings.voiceInput.speechAnalyzerLocale, initial: true) {
+            guard !Self.isTesting else { return }
             Task { await refreshDownloadedLocales() }
         }
 

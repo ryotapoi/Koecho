@@ -6,12 +6,39 @@ import Testing
 @testable import Koecho
 
 @MainActor
+private final class TestContext {
+    let controller: InputPanelController
+    let appState: AppState
+    let paster: MockPaster
+    let historyStore: HistoryStore
+    let ducker: MockVolumeDucker
+
+    init(
+        controller: InputPanelController,
+        appState: AppState,
+        paster: MockPaster,
+        historyStore: HistoryStore,
+        ducker: MockVolumeDucker
+    ) {
+        self.controller = controller
+        self.appState = appState
+        self.paster = paster
+        self.historyStore = historyStore
+        self.ducker = ducker
+    }
+
+    isolated deinit {
+        controller.panel.orderOut(nil)
+    }
+}
+
+@MainActor
 private func makeController(
     paster: MockPaster? = nil,
     selectedTextReader: (any SelectedTextReading)? = nil,
     makeScriptRunner: (() -> ScriptRunner)? = nil,
     ducker: MockVolumeDucker? = nil
-) -> (InputPanelController, AppState, MockPaster, HistoryStore, MockVolumeDucker) {
+) -> TestContext {
     let p = paster ?? MockPaster()
     let d = ducker ?? MockVolumeDucker()
     let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
@@ -26,10 +53,17 @@ private func makeController(
         selectedTextReader: reader,
         paster: p,
         makeScriptRunner: makeScriptRunner ?? { ScriptRunner(timeout: appState.settings.script.scriptTimeout) },
+        makeEngine: { MockVoiceInputEngine() },
         historyStore: historyStore,
         ducker: d
     )
-    return (controller, appState, p, historyStore, d)
+    return TestContext(
+        controller: controller,
+        appState: appState,
+        paster: p,
+        historyStore: historyStore,
+        ducker: d
+    )
 }
 
 @MainActor
@@ -48,163 +82,163 @@ private func makeScript(_ content: String) throws -> String {
 @Suite(.serialized)
 struct InputPanelControllerTests {
     @Test func showPanelSetsState() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
+        ctx.controller.showPanel()
 
-        #expect(appState.isInputPanelVisible == true)
-        #expect(appState.inputText == "")
-        #expect(controller.panel.isVisible)
+        #expect(ctx.appState.isInputPanelVisible == true)
+        #expect(ctx.appState.inputText == "")
+        #expect(ctx.controller.panel.isVisible)
     }
 
     @Test func cancelClearsState() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "some text"
-        controller.cancel()
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "some text"
+        ctx.controller.cancel()
 
-        #expect(appState.isInputPanelVisible == false)
-        #expect(appState.inputText == "")
-        #expect(appState.frontmostApplication == nil)
-        #expect(!controller.panel.isVisible)
+        #expect(ctx.appState.isInputPanelVisible == false)
+        #expect(ctx.appState.inputText == "")
+        #expect(ctx.appState.frontmostApplication == nil)
+        #expect(!ctx.controller.panel.isVisible)
     }
 
     @Test func closeButtonCancelsPanel() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "some text"
-        controller.panel.close()
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "some text"
+        ctx.controller.panel.close()
 
-        #expect(appState.isInputPanelVisible == false)
-        #expect(appState.inputText == "")
+        #expect(ctx.appState.isInputPanelVisible == false)
+        #expect(ctx.appState.inputText == "")
     }
 
     @Test func cancelClearsTextAfterInput() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "hello world"
-        controller.cancel()
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello world"
+        ctx.controller.cancel()
 
-        #expect(appState.inputText == "")
+        #expect(ctx.appState.inputText == "")
     }
 
     @Test func showPanelTwicePreservesText() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        controller.showPanel()
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.controller.showPanel()
 
-        #expect(appState.inputText == "hello")
-        #expect(appState.isInputPanelVisible == true)
+        #expect(ctx.appState.inputText == "hello")
+        #expect(ctx.appState.isInputPanelVisible == true)
     }
 
     @Test func cancelWhenNotVisibleIsNoop() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.cancel()
+        ctx.controller.cancel()
 
-        #expect(appState.isInputPanelVisible == false)
-        #expect(appState.inputText == "")
+        #expect(ctx.appState.isInputPanelVisible == false)
+        #expect(ctx.appState.inputText == "")
     }
 
     @Test func showCancelShowCycle() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        #expect(appState.isInputPanelVisible == true)
+        ctx.controller.showPanel()
+        #expect(ctx.appState.isInputPanelVisible == true)
 
-        controller.cancel()
-        #expect(appState.isInputPanelVisible == false)
+        ctx.controller.cancel()
+        #expect(ctx.appState.isInputPanelVisible == false)
 
-        controller.showPanel()
-        #expect(appState.isInputPanelVisible == true)
-        #expect(appState.inputText == "")
-        #expect(controller.panel.isVisible)
+        ctx.controller.showPanel()
+        #expect(ctx.appState.isInputPanelVisible == true)
+        #expect(ctx.appState.inputText == "")
+        #expect(ctx.controller.panel.isVisible)
     }
 
     // MARK: - confirm tests
 
     @Test func confirmSuccessClearsState() async {
         let paster = MockPaster()
-        let (controller, appState, _, _, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        controller.showPanel()
-        appState.inputText = "hello"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
         // Set a fake frontmost app — use current app as a stand-in
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(appState.isInputPanelVisible == false)
-        #expect(appState.inputText == "")
-        #expect(appState.frontmostApplication == nil)
-        #expect(appState.errorMessage == nil)
+        #expect(ctx.appState.isInputPanelVisible == false)
+        #expect(ctx.appState.inputText == "")
+        #expect(ctx.appState.frontmostApplication == nil)
+        #expect(ctx.appState.errorMessage == nil)
         #expect(paster.pastedTexts == ["hello"])
     }
 
     @Test func confirmFailureShowsError() async {
         let paster = MockPaster()
         paster.errorToThrow = ClipboardPasterError.accessibilityNotTrusted
-        let (controller, appState, _, _, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(appState.isInputPanelVisible == true)
-        #expect(appState.inputText == "hello")
-        #expect(appState.errorMessage != nil)
+        #expect(ctx.appState.isInputPanelVisible == true)
+        #expect(ctx.appState.inputText == "hello")
+        #expect(ctx.appState.errorMessage != nil)
         #expect(paster.restoreClipboardCallCount == 1)
     }
 
     @Test func confirmWithEmptyTextActsAsCancel() async {
-        let (controller, appState, paster, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "   \n  "
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "   \n  "
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(appState.isInputPanelVisible == false)
-        #expect(appState.inputText == "")
-        #expect(paster.restoreClipboardCallCount == 1)
+        #expect(ctx.appState.isInputPanelVisible == false)
+        #expect(ctx.appState.inputText == "")
+        #expect(ctx.paster.restoreClipboardCallCount == 1)
     }
 
     @Test func confirmWhenNotVisibleIsNoop() async {
         let paster = MockPaster()
-        let (controller, _, _, _, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
         #expect(paster.pastedTexts.isEmpty)
     }
 
     @Test func confirmWithNoTargetAppSetsError() async {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = nil
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = nil
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(appState.errorMessage == "No target application")
-        #expect(appState.isInputPanelVisible == true)
+        #expect(ctx.appState.errorMessage == "No target application")
+        #expect(ctx.appState.isInputPanelVisible == true)
     }
 
     @Test func cancelDuringConfirmIsIgnored() async throws {
         let paster = MockPaster()
-        let (controller, appState, _, _, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
         // Make paste suspend so we can call cancel() while confirm() is in progress
         paster.onPaste = {
@@ -214,7 +248,7 @@ struct InputPanelControllerTests {
 
         // Start confirm in a Task so we can call cancel() after it begins
         let confirmTask = Task { @MainActor in
-            await controller.confirm()
+            await ctx.controller.confirm()
         }
         // Wait for confirmTask to progress past stopDictation() (100ms sleep)
         // and reach the onPaste suspension point
@@ -222,33 +256,33 @@ struct InputPanelControllerTests {
 
         // Panel should be hidden (confirm hides it before paste) but isConfirming is true
         // cancel() should be ignored because isConfirming is true
-        controller.cancel()
+        ctx.controller.cancel()
 
         await confirmTask.value
 
         // Confirm should have succeeded — cancel was ignored
-        #expect(appState.isInputPanelVisible == false)
-        #expect(appState.inputText == "")
+        #expect(ctx.appState.isInputPanelVisible == false)
+        #expect(ctx.appState.inputText == "")
         #expect(paster.pastedTexts == ["hello"])
     }
 
     @Test func cancelCallsRestoreClipboard() {
         let paster = MockPaster()
-        let (controller, _, _, _, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        controller.showPanel()
-        controller.cancel()
+        ctx.controller.showPanel()
+        ctx.controller.cancel()
 
         #expect(paster.restoreClipboardCallCount == 1)
     }
 
     @Test func showPanelClearsErrorMessage() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        appState.errorMessage = "previous error"
-        controller.showPanel()
+        ctx.appState.errorMessage = "previous error"
+        ctx.controller.showPanel()
 
-        #expect(appState.errorMessage == nil)
+        #expect(ctx.appState.errorMessage == nil)
     }
 
     // MARK: - executeScript tests
@@ -256,45 +290,45 @@ struct InputPanelControllerTests {
     @Test func executeScriptReplacesText() async throws {
         let scriptPath = try makeScript("tr a-z A-Z")
         let script = Script(name: "Upper", scriptPath: scriptPath)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "hello"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
 
-        await controller.executeScript(script)
+        await ctx.controller.executeScript(script)
 
-        #expect(appState.inputText == "HELLO")
-        #expect(appState.errorMessage == nil)
+        #expect(ctx.appState.inputText == "HELLO")
+        #expect(ctx.appState.errorMessage == nil)
     }
 
     @Test func executeScriptFallsBackOnError() async throws {
         let scriptPath = try makeScript("exit 1")
         let script = Script(name: "Fail", scriptPath: scriptPath)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "original"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "original"
 
-        await controller.executeScript(script)
+        await ctx.controller.executeScript(script)
 
-        #expect(appState.inputText == "original")
-        #expect(appState.errorMessage?.contains("Fail") == true)
-        #expect(appState.errorMessage?.contains("exit 1") == true)
+        #expect(ctx.appState.inputText == "original")
+        #expect(ctx.appState.errorMessage?.contains("Fail") == true)
+        #expect(ctx.appState.errorMessage?.contains("exit 1") == true)
     }
 
     @Test func executeScriptFallsBackOnEmptyOutput() async throws {
         let scriptPath = try makeScript("printf ''")
         let script = Script(name: "Empty", scriptPath: scriptPath)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "original"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "original"
 
-        await controller.executeScript(script)
+        await ctx.controller.executeScript(script)
 
-        #expect(appState.inputText == "original")
-        #expect(appState.errorMessage?.contains("Empty") == true)
-        #expect(appState.errorMessage?.contains("empty output") == true)
+        #expect(ctx.appState.inputText == "original")
+        #expect(ctx.appState.errorMessage?.contains("Empty") == true)
+        #expect(ctx.appState.errorMessage?.contains("empty output") == true)
     }
 
     @Test func executeScriptPassesContext() async throws {
@@ -302,146 +336,146 @@ struct InputPanelControllerTests {
             "echo \"sel=$KOECHO_SELECTION start=$KOECHO_SELECTION_START end=$KOECHO_SELECTION_END prompt=$KOECHO_PROMPT\""
         )
         let script = Script(name: "Context", scriptPath: scriptPath)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "input"
-        appState.promptText = "my prompt"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "input"
+        ctx.appState.promptText = "my prompt"
 
-        await controller.executeScript(script)
+        await ctx.controller.executeScript(script)
 
         // Selection comes from textView (no text selected in mock), so selection is empty
-        #expect(appState.inputText == "sel= start=0 end=0 prompt=my prompt")
+        #expect(ctx.appState.inputText == "sel= start=0 end=0 prompt=my prompt")
     }
 
     @Test func executeScriptShowsPromptUI() async throws {
         let scriptPath = try makeScript("cat")
         let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "original"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "original"
 
-        await controller.executeScript(script)
+        await ctx.controller.executeScript(script)
 
         // First call with requiresPrompt sets promptScript but doesn't run
-        #expect(appState.promptScript == script)
-        #expect(appState.inputText == "original")
-        #expect(appState.isRunningScript == false)
+        #expect(ctx.appState.promptScript == script)
+        #expect(ctx.appState.inputText == "original")
+        #expect(ctx.appState.isRunningScript == false)
     }
 
     @Test func executeScriptWithPrompt() async throws {
         let scriptPath = try makeScript("echo \"prompt=$KOECHO_PROMPT\"")
         let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "input"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "input"
 
         // First call: show prompt UI
-        await controller.executeScript(script)
-        #expect(appState.promptScript == script)
+        await ctx.controller.executeScript(script)
+        #expect(ctx.appState.promptScript == script)
 
         // Simulate user entering prompt text
-        appState.promptText = "user prompt"
+        ctx.appState.promptText = "user prompt"
 
         // Second call: execute with prompt
-        await controller.executeScript(script)
+        await ctx.controller.executeScript(script)
 
-        #expect(appState.inputText == "prompt=user prompt")
-        #expect(appState.promptScript == nil)
-        #expect(appState.promptText == "")
+        #expect(ctx.appState.inputText == "prompt=user prompt")
+        #expect(ctx.appState.promptScript == nil)
+        #expect(ctx.appState.promptText == "")
     }
 
     @Test func cancelPromptClearsState() async throws {
         let scriptPath = try makeScript("cat")
         let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        await controller.executeScript(script)
-        appState.promptText = "some text"
+        ctx.controller.showPanel()
+        await ctx.controller.executeScript(script)
+        ctx.appState.promptText = "some text"
 
-        #expect(appState.promptScript == script)
+        #expect(ctx.appState.promptScript == script)
 
-        controller.cancelPrompt()
+        ctx.controller.cancelPrompt()
 
-        #expect(appState.promptScript == nil)
-        #expect(appState.promptText == "")
+        #expect(ctx.appState.promptScript == nil)
+        #expect(ctx.appState.promptText == "")
     }
 
     @Test func executeScriptWhileRunningIsNoop() async throws {
         let scriptPath = try makeScript("cat")
         let script = Script(name: "Test", scriptPath: scriptPath)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "original"
-        appState.isRunningScript = true
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "original"
+        ctx.appState.isRunningScript = true
 
-        await controller.executeScript(script)
+        await ctx.controller.executeScript(script)
 
-        #expect(appState.inputText == "original")
+        #expect(ctx.appState.inputText == "original")
     }
 
     @Test func executeScriptWhenNotVisibleIsNoop() async throws {
         let scriptPath = try makeScript("echo 'replaced'")
         let script = Script(name: "Test", scriptPath: scriptPath)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
         // Don't call showPanel — panel is not visible
-        appState.inputText = "original"
+        ctx.appState.inputText = "original"
 
-        await controller.executeScript(script)
+        await ctx.controller.executeScript(script)
 
-        #expect(appState.inputText == "original")
+        #expect(ctx.appState.inputText == "original")
     }
 
     @Test func clearStateClearsScriptState() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.isRunningScript = true
-        appState.promptScript = Script(name: "Test", scriptPath: "/tmp/test.sh")
-        appState.promptText = "prompt"
+        ctx.controller.showPanel()
+        ctx.appState.isRunningScript = true
+        ctx.appState.promptScript = Script(name: "Test", scriptPath: "/tmp/test.sh")
+        ctx.appState.promptText = "prompt"
 
-        controller.cancel()
+        ctx.controller.cancel()
 
-        #expect(appState.isRunningScript == false)
-        #expect(appState.promptScript == nil)
-        #expect(appState.promptText == "")
+        #expect(ctx.appState.isRunningScript == false)
+        #expect(ctx.appState.promptScript == nil)
+        #expect(ctx.appState.promptText == "")
     }
 
     @Test func confirmWhileRunningScriptIsNoop() async {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
-        appState.isRunningScript = true
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
+        ctx.appState.isRunningScript = true
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
         // confirm should be no-op, state unchanged
-        #expect(appState.isInputPanelVisible == true)
-        #expect(appState.inputText == "hello")
+        #expect(ctx.appState.isInputPanelVisible == true)
+        #expect(ctx.appState.inputText == "hello")
     }
 
     @Test func escapeWhilePromptCancelsPromptOnly() async throws {
         let scriptPath = try makeScript("cat")
         let script = Script(name: "Prompt", scriptPath: scriptPath, requiresPrompt: true)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        await controller.executeScript(script)
-        #expect(appState.promptScript == script)
+        ctx.controller.showPanel()
+        await ctx.controller.executeScript(script)
+        #expect(ctx.appState.promptScript == script)
 
         // Simulate Escape via onEscape callback
-        controller.panel.onEscape?()
+        ctx.controller.panel.onEscape?()
 
         // Prompt should be cancelled but panel stays visible
-        #expect(appState.promptScript == nil)
-        #expect(appState.isInputPanelVisible == true)
+        #expect(ctx.appState.promptScript == nil)
+        #expect(ctx.appState.isInputPanelVisible == true)
     }
 
     @Test func executeScriptDuringPromptForDifferentScriptIsNoop() async throws {
@@ -449,267 +483,267 @@ struct InputPanelControllerTests {
         let scriptPath2 = try makeScript("echo 'other'")
         let script1 = Script(name: "Script1", scriptPath: scriptPath1, requiresPrompt: true)
         let script2 = Script(name: "Script2", scriptPath: scriptPath2)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "original"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "original"
 
         // Show prompt for script1
-        await controller.executeScript(script1)
-        #expect(appState.promptScript == script1)
+        await ctx.controller.executeScript(script1)
+        #expect(ctx.appState.promptScript == script1)
 
         // Try to execute script2 while prompt is shown for script1
-        await controller.executeScript(script2)
+        await ctx.controller.executeScript(script2)
 
         // Should be no-op
-        #expect(appState.inputText == "original")
-        #expect(appState.promptScript == script1)
+        #expect(ctx.appState.inputText == "original")
+        #expect(ctx.appState.promptScript == script1)
     }
 
     @Test func cancelDuringScriptDiscardsResult() async throws {
         let scriptPath = try makeScript("sleep 0.5 && echo done")
         let script = Script(name: "Slow", scriptPath: scriptPath)
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "original"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "original"
 
         let executeTask = Task { @MainActor in
-            await controller.executeScript(script)
+            await ctx.controller.executeScript(script)
         }
         // Yield to let executeScript start
         await Task.yield()
 
         // Cancel while script is running
-        controller.cancel()
+        ctx.controller.cancel()
 
         await executeTask.value
 
         // Result should be discarded because panel was cancelled
-        #expect(appState.inputText == "")
-        #expect(appState.isInputPanelVisible == false)
+        #expect(ctx.appState.inputText == "")
+        #expect(ctx.appState.isInputPanelVisible == false)
     }
 
     // MARK: - Replacement Rules on Confirm
 
     @Test func confirmAppliesReplacementRules() async {
         let paster = MockPaster()
-        let (controller, appState, _, _, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        appState.settings.replacement.addReplacementRule(
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "hello", replacement: "bye")
         )
 
-        controller.showPanel()
-        appState.inputText = "hello world"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello world"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
         #expect(paster.pastedTexts == ["bye world"])
     }
 
     @Test func confirmWithReplacementRulesEmptyingText() async {
         let paster = MockPaster()
-        let (controller, appState, _, _, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        appState.settings.replacement.addReplacementRule(
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: ".*", replacement: "", usesRegularExpression: true)
         )
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
         // All text removed by replacement → treated as cancel
         #expect(paster.pastedTexts.isEmpty)
-        #expect(appState.isInputPanelVisible == false)
+        #expect(ctx.appState.isInputPanelVisible == false)
         #expect(paster.restoreClipboardCallCount == 1)
     }
 
     @Test func scriptErrorMessages() async throws {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
+        let ctx = makeController()
+        ctx.controller.showPanel()
 
         // Test emptyScript
         let emptyScriptEntry = Script(name: "Empty", scriptPath: "")
-        appState.inputText = "text"
-        await controller.executeScript(emptyScriptEntry)
-        #expect(appState.errorMessage == "Script command is empty.")
+        ctx.appState.inputText = "text"
+        await ctx.controller.executeScript(emptyScriptEntry)
+        #expect(ctx.appState.errorMessage == "Script command is empty.")
 
         // Test nonZeroExit with stderr
         let failPath = try makeScript("echo 'err msg' >&2; exit 2")
         let failScript = Script(name: "Fail", scriptPath: failPath)
-        appState.errorMessage = nil
-        appState.inputText = "text"
-        await controller.executeScript(failScript)
-        #expect(appState.errorMessage == "Script 'Fail' failed (exit 2): err msg")
+        ctx.appState.errorMessage = nil
+        ctx.appState.inputText = "text"
+        await ctx.controller.executeScript(failScript)
+        #expect(ctx.appState.errorMessage == "Script 'Fail' failed (exit 2): err msg")
 
         // Test emptyOutput
         let emptyPath = try makeScript("printf ''")
         let emptyScript = Script(name: "Empty", scriptPath: emptyPath)
-        appState.errorMessage = nil
-        appState.inputText = "text"
-        await controller.executeScript(emptyScript)
-        #expect(appState.errorMessage == "Script 'Empty' produced empty output.")
+        ctx.appState.errorMessage = nil
+        ctx.appState.inputText = "text"
+        await ctx.controller.executeScript(emptyScript)
+        #expect(ctx.appState.errorMessage == "Script 'Empty' produced empty output.")
 
         // Test timeout
         let timeoutPath = try makeScript("sleep 10")
         let timeoutScript = Script(name: "Timeout", scriptPath: timeoutPath)
-        let (controller2, appState2, _, _, _) = makeController(
+        let ctx2 = makeController(
             makeScriptRunner: { ScriptRunner(timeout: 0.1) }
         )
-        controller2.showPanel()
-        appState2.inputText = "text"
-        await controller2.executeScript(timeoutScript)
-        #expect(appState2.errorMessage == "Script 'Timeout' timed out.")
+        ctx2.controller.showPanel()
+        ctx2.appState.inputText = "text"
+        await ctx2.controller.executeScript(timeoutScript)
+        #expect(ctx2.appState.errorMessage == "Script 'Timeout' timed out.")
     }
 
     // MARK: - Manual Replacement Rules
 
     @Test func applyReplacementRulesNowReplacesText() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        appState.inputText = "えーと天気"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "えーと天気"
 
-        controller.applyReplacementRulesNow()
+        ctx.controller.applyReplacementRulesNow()
 
-        #expect(appState.inputText == "天気")
+        #expect(ctx.appState.inputText == "天気")
     }
 
     @Test func applyReplacementRulesNowWhenNotVisibleIsNoop() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
         // Don't call showPanel — panel is not visible
-        appState.inputText = "えーと天気"
+        ctx.appState.inputText = "えーと天気"
 
-        controller.applyReplacementRulesNow()
+        ctx.controller.applyReplacementRulesNow()
 
-        #expect(appState.inputText == "えーと天気")
+        #expect(ctx.appState.inputText == "えーと天気")
     }
 
     @Test func applyReplacementRulesNowDuringScriptIsNoop() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        appState.inputText = "えーと天気"
-        appState.isRunningScript = true
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "えーと天気"
+        ctx.appState.isRunningScript = true
 
-        controller.applyReplacementRulesNow()
+        ctx.controller.applyReplacementRulesNow()
 
-        #expect(appState.inputText == "えーと天気")
+        #expect(ctx.appState.inputText == "えーと天気")
     }
 
     @Test func applyReplacementRulesNowWithNoRulesIsNoop() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "hello"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
 
-        controller.applyReplacementRulesNow()
+        ctx.controller.applyReplacementRulesNow()
 
-        #expect(appState.inputText == "hello")
+        #expect(ctx.appState.inputText == "hello")
     }
 
     @Test func applyReplacementRulesNowWithNoMatchIsNoop() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        appState.inputText = "hello"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
 
-        controller.applyReplacementRulesNow()
+        ctx.controller.applyReplacementRulesNow()
 
-        #expect(appState.inputText == "hello")
+        #expect(ctx.appState.inputText == "hello")
     }
 
     @Test func shortcutRAppliesReplacementRules() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        appState.inputText = "えーと天気"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "えーと天気"
 
-        let handled = controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "r"))
+        let handled = ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "r"))
 
         #expect(handled == true)
-        #expect(appState.inputText == "天気")
+        #expect(ctx.appState.inputText == "天気")
     }
 
     @Test func shortcutRFallsBackToScriptWhenNoRules() async throws {
         let scriptPath = try makeScript("echo 'script output'")
         let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
         let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.script.scripts = [script]
+        let ctx = makeController()
+        ctx.appState.settings.script.scripts = [script]
         // No replacement rules — Ctrl+R should fall through to script
 
-        controller.showPanel()
-        appState.inputText = "original"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "original"
 
-        let handled = controller.panel.onShortcutKey?(ctrlR)
+        let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
 
         #expect(handled == true)
         // Let the script Task execute
         await Task.yield()
         try await Task.sleep(for: .milliseconds(500))
-        #expect(appState.inputText == "script output")
+        #expect(ctx.appState.inputText == "script output")
     }
 
     @Test func shortcutRTakesPriorityOverScript() async throws {
         let scriptPath = try makeScript("echo 'script output'")
         let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
         let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.script.scripts = [script]
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.script.scripts = [script]
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        appState.inputText = "えーと天気"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "えーと天気"
 
-        let handled = controller.panel.onShortcutKey?(ctrlR)
+        let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
 
         #expect(handled == true)
         // Text should be replaced by replacement rules, not by script
-        #expect(appState.inputText == "天気")
+        #expect(ctx.appState.inputText == "天気")
     }
 
     @Test func customShortcutKeyAppliesReplacementRules() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.replacementShortcutKey = ShortcutKey(modifiers: [.control], character: "x")
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.replacementShortcutKey = ShortcutKey(modifiers: [.control], character: "x")
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        appState.inputText = "えーと天気"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "えーと天気"
 
         // Ctrl+X should apply replacement rules
-        let handledX = controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "x"))
+        let handledX = ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "x"))
         #expect(handledX == true)
-        #expect(appState.inputText == "天気")
+        #expect(ctx.appState.inputText == "天気")
 
         // Ctrl+R should NOT apply replacement rules (no longer the shortcut)
-        appState.inputText = "えーと天気"
-        let handledR = controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "r"))
+        ctx.appState.inputText = "えーと天気"
+        let handledR = ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "r"))
         #expect(handledR == false)
     }
 
@@ -717,187 +751,187 @@ struct InputPanelControllerTests {
         let scriptPath = try makeScript("echo 'script output'")
         let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
         let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.script.scripts = [script]
-        appState.settings.replacement.replacementShortcutKey = nil
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.script.scripts = [script]
+        ctx.appState.settings.replacement.replacementShortcutKey = nil
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        appState.inputText = "えーと天気"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "えーと天気"
 
         // Ctrl+R should fall through to script (replacement shortcut is nil)
-        let handled = controller.panel.onShortcutKey?(ctrlR)
+        let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
         #expect(handled == true)
         await Task.yield()
         try await Task.sleep(for: .milliseconds(500))
-        #expect(appState.inputText == "script output")
+        #expect(ctx.appState.inputText == "script output")
     }
 
     @Test func cmdShiftShortcutExecutesScript() async throws {
         let scriptPath = try makeScript("echo 'cmd-shift output'")
         let cmdShiftC = ShortcutKey(modifiers: [.command, .shift], character: "c")
         let script = Script(name: "CmdShift", scriptPath: scriptPath, shortcutKey: cmdShiftC)
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.script.scripts = [script]
+        let ctx = makeController()
+        ctx.appState.settings.script.scripts = [script]
 
-        controller.showPanel()
-        appState.inputText = "original"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "original"
 
-        let handled = controller.panel.onShortcutKey?(cmdShiftC)
+        let handled = ctx.controller.panel.onShortcutKey?(cmdShiftC)
 
         #expect(handled == true)
         await Task.yield()
         try await Task.sleep(for: .milliseconds(500))
-        #expect(appState.inputText == "cmd-shift output")
+        #expect(ctx.appState.inputText == "cmd-shift output")
     }
 
     @Test func modifierMismatchDoesNotExecuteScript() {
         let cmdC = ShortcutKey(modifiers: [.command], character: "c")
         let cmdShiftC = ShortcutKey(modifiers: [.command, .shift], character: "c")
         let script = Script(name: "CmdC", scriptPath: "/bin/echo", shortcutKey: cmdC)
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.script.scripts = [script]
+        let ctx = makeController()
+        ctx.appState.settings.script.scripts = [script]
 
-        controller.showPanel()
-        appState.inputText = "original"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "original"
 
         // Cmd+Shift+C should NOT match Cmd+C
-        let handled = controller.panel.onShortcutKey?(cmdShiftC)
+        let handled = ctx.controller.panel.onShortcutKey?(cmdShiftC)
         #expect(handled == false)
-        #expect(appState.inputText == "original")
+        #expect(ctx.appState.inputText == "original")
     }
 
     // MARK: - History
 
     @Test func confirmRecordsHistory() async {
         let paster = MockPaster()
-        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(historyStore.entries.count == 1)
-        #expect(historyStore.entries[0].text == "hello")
+        #expect(ctx.historyStore.entries.count == 1)
+        #expect(ctx.historyStore.entries[0].text == "hello")
     }
 
     @Test func confirmRecordsTextAfterReplacement() async {
         let paster = MockPaster()
-        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        appState.settings.replacement.addReplacementRule(
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        appState.inputText = "えーと今日はいい天気"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "えーと今日はいい天気"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(historyStore.entries.count == 1)
-        #expect(historyStore.entries[0].text == "今日はいい天気")
+        #expect(ctx.historyStore.entries.count == 1)
+        #expect(ctx.historyStore.entries[0].text == "今日はいい天気")
     }
 
     @Test func confirmDoesNotRecordWhenDisabled() async {
         let paster = MockPaster()
-        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        appState.settings.history.isHistoryEnabled = false
+        ctx.appState.settings.history.isHistoryEnabled = false
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(historyStore.entries.isEmpty)
+        #expect(ctx.historyStore.entries.isEmpty)
     }
 
     @Test func confirmDoesNotRecordOnPasteFailure() async {
         let paster = MockPaster()
         paster.errorToThrow = ClipboardPasterError.accessibilityNotTrusted
-        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(historyStore.entries.isEmpty)
+        #expect(ctx.historyStore.entries.isEmpty)
     }
 
     @Test func confirmDoesNotRecordEmptyText() async {
         let paster = MockPaster()
-        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        controller.showPanel()
-        appState.inputText = "   \n  "
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "   \n  "
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(historyStore.entries.isEmpty)
+        #expect(ctx.historyStore.entries.isEmpty)
     }
 
     // MARK: - Add Replacement Rule from Context Menu
 
     @Test func addReplacementRuleSavesAndApplies() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.inputText = "hello world hello"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello world hello"
 
         let rule = ReplacementRule(pattern: "hello", replacement: "hi")
-        controller.addReplacementRule(rule)
+        ctx.controller.addReplacementRule(rule)
 
-        #expect(appState.settings.replacement.replacementRules.count == 1)
-        #expect(appState.settings.replacement.replacementRules[0].pattern == "hello")
-        #expect(appState.settings.replacement.replacementRules[0].replacement == "hi")
-        #expect(appState.inputText == "hi world hi")
-        #expect(appState.pendingReplacementPattern == nil)
+        #expect(ctx.appState.settings.replacement.replacementRules.count == 1)
+        #expect(ctx.appState.settings.replacement.replacementRules[0].pattern == "hello")
+        #expect(ctx.appState.settings.replacement.replacementRules[0].replacement == "hi")
+        #expect(ctx.appState.inputText == "hi world hi")
+        #expect(ctx.appState.pendingReplacementPattern == nil)
     }
 
     @Test func cancelClearsPendingReplacementPattern() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        appState.pendingReplacementPattern = "test"
+        ctx.controller.showPanel()
+        ctx.appState.pendingReplacementPattern = "test"
 
-        controller.cancel()
+        ctx.controller.cancel()
 
-        #expect(appState.pendingReplacementPattern == nil)
+        #expect(ctx.appState.pendingReplacementPattern == nil)
     }
 
     @Test func addReplacementRuleAppliesAllRules() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        appState.settings.replacement.addReplacementRule(
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "world", replacement: "earth")
         )
 
-        controller.showPanel()
-        appState.inputText = "hello world"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello world"
 
         let newRule = ReplacementRule(pattern: "hello", replacement: "hi")
-        controller.addReplacementRule(newRule)
+        ctx.controller.addReplacementRule(newRule)
 
         // Both existing and new rules should be applied
-        #expect(appState.settings.replacement.replacementRules.count == 2)
-        #expect(appState.inputText == "hi earth")
+        #expect(ctx.appState.settings.replacement.replacementRules.count == 2)
+        #expect(ctx.appState.inputText == "hi earth")
     }
 
     // MARK: - Panel Configuration
 
     @Test func panelHasResizeConstraints() {
-        let (controller, _, _, _, _) = makeController()
-        #expect(controller.panel.contentMinSize == NSSize(width: 200, height: 150))
-        #expect(controller.panel.frameAutosaveName == "InputPanel")
+        let ctx = makeController()
+        #expect(ctx.controller.panel.contentMinSize == NSSize(width: 200, height: 150))
+        #expect(ctx.controller.panel.frameAutosaveName == "InputPanel")
     }
 
     // MARK: - Selected Text as Initial Input
@@ -905,289 +939,289 @@ struct InputPanelControllerTests {
     @Test func showPanelWithSelectedTextSetsInputText() {
         let mockReader = MockSelectedTextReader()
         mockReader.resultToReturn = SelectedTextResult(text: "selected text")
-        let (controller, appState, _, _, _) = makeController(selectedTextReader: mockReader)
+        let ctx = makeController(selectedTextReader: mockReader)
 
-        controller.showPanel()
+        ctx.controller.showPanel()
 
-        #expect(appState.inputText == "selected text")
+        #expect(ctx.appState.inputText == "selected text")
     }
 
     @Test func confirmWithSelectedTextOnly() async {
         let mockReader = MockSelectedTextReader()
         mockReader.resultToReturn = SelectedTextResult(text: "selected text")
         let paster = MockPaster()
-        let (controller, appState, _, _, _) = makeController(paster: paster, selectedTextReader: mockReader)
+        let ctx = makeController(paster: paster, selectedTextReader: mockReader)
 
-        controller.showPanel()
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
         #expect(paster.pastedTexts == ["selected text"])
-        #expect(appState.isInputPanelVisible == false)
+        #expect(ctx.appState.isInputPanelVisible == false)
     }
 
     // MARK: - Auto Replacement
 
     @Test func autoReplacementTriggersImmediately() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        controller.handleTextChanged("えーと天気")
+        ctx.controller.showPanel()
+        ctx.controller.handleTextChanged("えーと天気")
 
         // Replacement is applied immediately on text change
-        #expect(appState.inputText == "天気")
+        #expect(ctx.appState.inputText == "天気")
     }
 
     @Test func autoReplacementDisabledDoesNotTrigger() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.isAutoReplacementEnabled = false
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.isAutoReplacementEnabled = false
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        controller.handleTextChanged("えーと天気")
+        ctx.controller.showPanel()
+        ctx.controller.handleTextChanged("えーと天気")
 
-        #expect(appState.inputText == "えーと天気")
+        #expect(ctx.appState.inputText == "えーと天気")
     }
 
     @Test func autoReplacementAppliesMultipleInputs() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "えーと", replacement: "")
         )
 
-        controller.showPanel()
-        controller.handleTextChanged("えーと天気")
-        #expect(appState.inputText == "天気")
+        ctx.controller.showPanel()
+        ctx.controller.handleTextChanged("えーと天気")
+        #expect(ctx.appState.inputText == "天気")
 
-        controller.handleTextChanged("えーとこんにちは")
-        #expect(appState.inputText == "こんにちは")
+        ctx.controller.handleTextChanged("えーとこんにちは")
+        #expect(ctx.appState.inputText == "こんにちは")
     }
 
     @Test func autoReplacementSkipsWhenNoRules() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
 
-        controller.showPanel()
-        controller.handleTextChanged("hello world")
+        ctx.controller.showPanel()
+        ctx.controller.handleTextChanged("hello world")
 
-        #expect(appState.inputText == "hello world")
+        #expect(ctx.appState.inputText == "hello world")
     }
 
     @Test func autoReplacementSkipsWhenNotVisible() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "hello", replacement: "bye")
         )
 
         // Don't call showPanel
-        controller.handleTextChanged("hello world")
+        ctx.controller.handleTextChanged("hello world")
 
-        #expect(appState.inputText == "hello world")
+        #expect(ctx.appState.inputText == "hello world")
     }
 
     @Test func autoReplacementSkipsDuringScriptExecution() {
-        let (controller, appState, _, _, _) = makeController()
-        appState.settings.replacement.addReplacementRule(
+        let ctx = makeController()
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "hello", replacement: "bye")
         )
 
-        controller.showPanel()
-        appState.isRunningScript = true
-        controller.handleTextChanged("hello world")
+        ctx.controller.showPanel()
+        ctx.appState.isRunningScript = true
+        ctx.controller.handleTextChanged("hello world")
 
-        #expect(appState.inputText == "hello world")
+        #expect(ctx.appState.inputText == "hello world")
     }
 
     // MARK: - Auto-Run Script
 
     @Test func cycleAutoRunScript() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
         let script0 = Script(name: "A", scriptPath: "/bin/echo")
         let script1 = Script(name: "B", scriptPath: "/bin/echo")
         let promptScript = Script(name: "P", scriptPath: "/bin/echo", requiresPrompt: true)
-        appState.settings.script.scripts = [script0, promptScript, script1]
+        ctx.appState.settings.script.scripts = [script0, promptScript, script1]
 
         // nil → script0
-        controller.cycleAutoRunScript()
-        #expect(appState.settings.script.autoRunScriptId == script0.id)
+        ctx.controller.cycleAutoRunScript()
+        #expect(ctx.appState.settings.script.autoRunScriptId == script0.id)
 
         // script0 → script1
-        controller.cycleAutoRunScript()
-        #expect(appState.settings.script.autoRunScriptId == script1.id)
+        ctx.controller.cycleAutoRunScript()
+        #expect(ctx.appState.settings.script.autoRunScriptId == script1.id)
 
         // script1 → nil
-        controller.cycleAutoRunScript()
-        #expect(appState.settings.script.autoRunScriptId == nil)
+        ctx.controller.cycleAutoRunScript()
+        #expect(ctx.appState.settings.script.autoRunScriptId == nil)
     }
 
     @Test func cycleAutoRunScriptNoEligible() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
         let promptScript = Script(name: "P", scriptPath: "/bin/echo", requiresPrompt: true)
-        appState.settings.script.scripts = [promptScript]
+        ctx.appState.settings.script.scripts = [promptScript]
 
-        controller.cycleAutoRunScript()
-        #expect(appState.settings.script.autoRunScriptId == nil)
+        ctx.controller.cycleAutoRunScript()
+        #expect(ctx.appState.settings.script.autoRunScriptId == nil)
     }
 
     @Test func confirmWithAutoRunScript() async throws {
         let scriptPath = try makeScript("tr a-z A-Z")
         let script = Script(name: "Upper", scriptPath: scriptPath)
         let paster = MockPaster()
-        let (controller, appState, _, historyStore, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        appState.settings.script.scripts = [script]
-        appState.settings.script.autoRunScriptId = script.id
+        ctx.appState.settings.script.scripts = [script]
+        ctx.appState.settings.script.autoRunScriptId = script.id
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
         #expect(paster.pastedTexts == ["HELLO"])
-        #expect(appState.isInputPanelVisible == false)
-        #expect(historyStore.entries.count == 1)
-        #expect(historyStore.entries[0].text == "HELLO")
+        #expect(ctx.appState.isInputPanelVisible == false)
+        #expect(ctx.historyStore.entries.count == 1)
+        #expect(ctx.historyStore.entries[0].text == "HELLO")
     }
 
     @Test func confirmAutoRunScriptError() async throws {
         let scriptPath = try makeScript("exit 1")
         let script = Script(name: "Fail", scriptPath: scriptPath)
         let paster = MockPaster()
-        let (controller, appState, _, _, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        appState.settings.script.scripts = [script]
-        appState.settings.script.autoRunScriptId = script.id
+        ctx.appState.settings.script.scripts = [script]
+        ctx.appState.settings.script.autoRunScriptId = script.id
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(appState.isInputPanelVisible == true)
-        #expect(appState.errorMessage != nil)
+        #expect(ctx.appState.isInputPanelVisible == true)
+        #expect(ctx.appState.errorMessage != nil)
         #expect(paster.pastedTexts.isEmpty)
-        #expect(appState.inputText == "hello")
+        #expect(ctx.appState.inputText == "hello")
     }
 
     @Test func confirmAutoRunScriptEmptyOutput() async throws {
         let scriptPath = try makeScript("printf ''")
         let script = Script(name: "Empty", scriptPath: scriptPath)
         let paster = MockPaster()
-        let (controller, appState, _, _, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        appState.settings.script.scripts = [script]
-        appState.settings.script.autoRunScriptId = script.id
+        ctx.appState.settings.script.scripts = [script]
+        ctx.appState.settings.script.autoRunScriptId = script.id
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
-        await controller.confirm()
+        await ctx.controller.confirm()
 
-        #expect(appState.isInputPanelVisible == true)
-        #expect(appState.errorMessage?.contains("empty output") == true)
+        #expect(ctx.appState.isInputPanelVisible == true)
+        #expect(ctx.appState.errorMessage?.contains("empty output") == true)
         #expect(paster.pastedTexts.isEmpty)
-        #expect(appState.inputText == "hello")
+        #expect(ctx.appState.inputText == "hello")
     }
 
     @Test func deleteScriptClearsAutoRun() {
-        let (_, appState, _, _, _) = makeController()
+        let ctx = makeController()
         let script = Script(name: "Test", scriptPath: "/bin/echo")
-        appState.settings.script.scripts = [script]
-        appState.settings.script.autoRunScriptId = script.id
+        ctx.appState.settings.script.scripts = [script]
+        ctx.appState.settings.script.autoRunScriptId = script.id
 
-        appState.settings.script.deleteScript(id: script.id)
+        ctx.appState.settings.script.deleteScript(id: script.id)
 
-        #expect(appState.settings.script.autoRunScriptId == nil)
+        #expect(ctx.appState.settings.script.autoRunScriptId == nil)
     }
 
     @Test func cancelDuringAutoRun() async throws {
         let scriptPath = try makeScript("sleep 0.5 && echo done")
         let script = Script(name: "Slow", scriptPath: scriptPath)
         let paster = MockPaster()
-        let (controller, appState, _, _, _) = makeController(paster: paster)
+        let ctx = makeController(paster: paster)
 
-        appState.settings.script.scripts = [script]
-        appState.settings.script.autoRunScriptId = script.id
+        ctx.appState.settings.script.scripts = [script]
+        ctx.appState.settings.script.autoRunScriptId = script.id
 
-        controller.showPanel()
-        appState.inputText = "hello"
-        appState.frontmostApplication = NSRunningApplication.current
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
+        ctx.appState.frontmostApplication = NSRunningApplication.current
 
         let confirmTask = Task { @MainActor in
-            await controller.confirm()
+            await ctx.controller.confirm()
         }
         await Task.yield()
 
-        controller.cancel()
+        ctx.controller.cancel()
 
         await confirmTask.value
 
-        #expect(appState.isInputPanelVisible == false)
+        #expect(ctx.appState.isInputPanelVisible == false)
         #expect(paster.pastedTexts.isEmpty)
     }
 
     @Test func autoRunShortcutPriority() {
-        let (controller, appState, _, _, _) = makeController()
+        let ctx = makeController()
         let ctrlA = ShortcutKey(modifiers: [.control], character: "a")
-        appState.settings.script.autoRunShortcutKey = ctrlA
-        appState.settings.replacement.replacementShortcutKey = ctrlA
-        appState.settings.replacement.addReplacementRule(
+        ctx.appState.settings.script.autoRunShortcutKey = ctrlA
+        ctx.appState.settings.replacement.replacementShortcutKey = ctrlA
+        ctx.appState.settings.replacement.addReplacementRule(
             ReplacementRule(pattern: "hello", replacement: "bye")
         )
         let script = Script(name: "A", scriptPath: "/bin/echo")
-        appState.settings.script.scripts = [script]
+        ctx.appState.settings.script.scripts = [script]
 
-        controller.showPanel()
-        appState.inputText = "hello"
+        ctx.controller.showPanel()
+        ctx.appState.inputText = "hello"
 
-        let handled = controller.panel.onShortcutKey?(ctrlA)
+        let handled = ctx.controller.panel.onShortcutKey?(ctrlA)
 
         #expect(handled == true)
         // Auto-run cycle should have been triggered, not replacement
-        #expect(appState.settings.script.autoRunScriptId == script.id)
+        #expect(ctx.appState.settings.script.autoRunScriptId == script.id)
         // Text should NOT have been replaced by replacement rules
-        #expect(appState.inputText == "hello")
+        #expect(ctx.appState.inputText == "hello")
     }
 
     // MARK: - Volume Ducking
 
     @Test func showPanelCallsDuck() {
         let ducker = MockVolumeDucker()
-        let (controller, _, _, _, _) = makeController(ducker: ducker)
-        controller.showPanel()
+        let ctx = makeController(ducker: ducker)
+        ctx.controller.showPanel()
         #expect(ducker.duckCallCount == 1)
     }
 
     @Test func cancelCallsRestore() {
         let ducker = MockVolumeDucker()
-        let (controller, _, _, _, _) = makeController(ducker: ducker)
-        controller.showPanel()
-        controller.cancel()
+        let ctx = makeController(ducker: ducker)
+        ctx.controller.showPanel()
+        ctx.controller.cancel()
         #expect(ducker.restoreCallCount == 1)
     }
 
     @Test func showPanelTwiceDoesNotDoubleDuck() {
         let ducker = MockVolumeDucker()
-        let (controller, _, _, _, _) = makeController(ducker: ducker)
-        controller.showPanel()
-        controller.showPanel()
+        let ctx = makeController(ducker: ducker)
+        ctx.controller.showPanel()
+        ctx.controller.showPanel()
         #expect(ducker.duckCallCount == 1)
     }
 
     @Test func confirmEmptyTextCallsRestore() async {
         let ducker = MockVolumeDucker()
-        let (controller, appState, _, _, _) = makeController(ducker: ducker)
-        controller.showPanel()
-        appState.inputText = ""
-        await controller.confirm()
+        let ctx = makeController(ducker: ducker)
+        ctx.controller.showPanel()
+        ctx.appState.inputText = ""
+        await ctx.controller.confirm()
         // Empty text path calls clearState() which calls restore()
         #expect(ducker.restoreCallCount == 1)
     }
@@ -1195,92 +1229,92 @@ struct InputPanelControllerTests {
     // MARK: - SpeechAnalyzer Overlap Removal
 
     @Test func overlapRemovalFullDuplicate() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
+        let ctx = makeController()
+        ctx.controller.showPanel()
 
         // Simulate first finalize: "なんですか？"
-        controller.voiceInput(didFinalize: "なんですか？")
-        let firstText = appState.inputText
+        ctx.controller.voiceInput(didFinalize: "なんですか？")
+        let firstText = ctx.appState.inputText
 
         // Simulate second finalize with overlap: "なんですか？こんにちは。"
-        controller.voiceInput(didFinalize: "なんですか？こんにちは。")
+        ctx.controller.voiceInput(didFinalize: "なんですか？こんにちは。")
 
         // Only "こんにちは。" should be added
-        #expect(appState.inputText == firstText + "こんにちは。")
+        #expect(ctx.appState.inputText == firstText + "こんにちは。")
     }
 
     @Test func overlapRemovalPartialPunctuation() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
+        let ctx = makeController()
+        ctx.controller.showPanel()
 
         // Simulate finalize ending with punctuation
-        controller.voiceInput(didFinalize: "hello.")
+        ctx.controller.voiceInput(didFinalize: "hello.")
 
         // Next finalize starts with the same punctuation
-        controller.voiceInput(didFinalize: ".world")
+        ctx.controller.voiceInput(didFinalize: ".world")
 
         // The overlapping "." should be removed
-        #expect(appState.inputText == "hello.world")
+        #expect(ctx.appState.inputText == "hello.world")
     }
 
     @Test func overlapRemovalNoOverlap() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
+        let ctx = makeController()
+        ctx.controller.showPanel()
 
-        controller.voiceInput(didFinalize: "hello")
-        controller.voiceInput(didFinalize: " world")
+        ctx.controller.voiceInput(didFinalize: "hello")
+        ctx.controller.voiceInput(didFinalize: " world")
 
-        #expect(appState.inputText == "hello world")
+        #expect(ctx.appState.inputText == "hello world")
     }
 
     @Test func overlapRemovalCompleteDuplicate() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
+        let ctx = makeController()
+        ctx.controller.showPanel()
 
-        controller.voiceInput(didFinalize: "hello")
+        ctx.controller.voiceInput(didFinalize: "hello")
         // Complete duplicate — should produce empty after stripping
-        controller.voiceInput(didFinalize: "hello")
+        ctx.controller.voiceInput(didFinalize: "hello")
 
-        #expect(appState.inputText == "hello")
+        #expect(ctx.appState.inputText == "hello")
     }
 
     @Test func overlapRemovalSingleNonPunctuationNotStripped() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
+        let ctx = makeController()
+        ctx.controller.showPanel()
 
-        controller.voiceInput(didFinalize: "あ")
+        ctx.controller.voiceInput(didFinalize: "あ")
         // Single char non-punctuation overlap should NOT be stripped
-        controller.voiceInput(didFinalize: "あいう")
+        ctx.controller.voiceInput(didFinalize: "あいう")
 
-        #expect(appState.inputText == "ああいう")
+        #expect(ctx.appState.inputText == "ああいう")
     }
 
     @Test func overlapRemovalResetOnShowPanel() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
-        controller.voiceInput(didFinalize: "hello")
+        let ctx = makeController()
+        ctx.controller.showPanel()
+        ctx.controller.voiceInput(didFinalize: "hello")
 
         // Cancel and reopen
-        controller.cancel()
-        controller.showPanel()
+        ctx.controller.cancel()
+        ctx.controller.showPanel()
 
         // After reopen, accumulated should be reset — no stripping
-        controller.voiceInput(didFinalize: "hello")
-        #expect(appState.inputText == "hello")
+        ctx.controller.voiceInput(didFinalize: "hello")
+        #expect(ctx.appState.inputText == "hello")
     }
 
     @Test func overlapRemovalResetOnSwitchEngine() async {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
-        controller.voiceInput(didFinalize: "hello")
+        let ctx = makeController()
+        ctx.controller.showPanel()
+        ctx.controller.voiceInput(didFinalize: "hello")
 
-        await controller.switchEngine()
+        await ctx.controller.switchEngine()
 
         // After switch, accumulated should be reset — no stripping
-        controller.voiceInput(didFinalize: "hello")
+        ctx.controller.voiceInput(didFinalize: "hello")
 
         // inputText should contain "hello" from after switch (first "hello" was cleared by switchEngine reading textView)
-        #expect(appState.inputText.contains("hello"))
+        #expect(ctx.appState.inputText.contains("hello"))
     }
 
     // MARK: - Replay Volatile Suppression
@@ -1308,170 +1342,170 @@ struct InputPanelControllerTests {
     }
 
     @Test func replayVolatileSuppressedDuringTimeWindow() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
-        guard let textView = findTextView(in: controller) else {
+        let ctx = makeController()
+        ctx.controller.showPanel()
+        guard let textView = findTextView(in: ctx.controller) else {
             Issue.record("textView not found")
             return
         }
 
-        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
-        controller.replaySuppressionDeadline = Date.now + 10
-        let textAfterFinalize = appState.inputText
+        simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
+        ctx.controller.replaySuppressionDeadline = Date.now + 10
+        let textAfterFinalize = ctx.appState.inputText
 
         // Replay volatile "こん" — should be suppressed during time window
-        controller.voiceInput(didUpdateVolatile: "こん")
+        ctx.controller.voiceInput(didUpdateVolatile: "こん")
         #expect(textView.volatileRange == nil)
-        #expect(appState.inputText == textAfterFinalize)
+        #expect(ctx.appState.inputText == textAfterFinalize)
     }
 
     @Test func volatileDisplayedAfterDeadlineExpires() {
-        let (controller, _, _, _, _) = makeController()
-        controller.showPanel()
-        guard let textView = findTextView(in: controller) else {
+        let ctx = makeController()
+        ctx.controller.showPanel()
+        guard let textView = findTextView(in: ctx.controller) else {
             Issue.record("textView not found")
             return
         }
 
-        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
+        simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
         // Set deadline in the past — expired
-        controller.replaySuppressionDeadline = Date.now - 1
+        ctx.controller.replaySuppressionDeadline = Date.now - 1
 
         // New volatile after deadline expired — should be displayed
-        controller.voiceInput(didUpdateVolatile: "あ")
+        ctx.controller.voiceInput(didUpdateVolatile: "あ")
         #expect(textView.volatileRange != nil)
         // Flags should be cleared
-        #expect(controller.isLocallyFinalized == false)
+        #expect(ctx.controller.isLocallyFinalized == false)
     }
 
     @Test func replayFinalizeSkippedByExactMatch() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
-        guard let textView = findTextView(in: controller) else {
+        let ctx = makeController()
+        ctx.controller.showPanel()
+        guard let textView = findTextView(in: ctx.controller) else {
             Issue.record("textView not found")
             return
         }
 
         // Insert text via normal finalize first
-        controller.voiceInput(didFinalize: "こんにちは")
-        let textAfterFirstFinalize = appState.inputText
+        ctx.controller.voiceInput(didFinalize: "こんにちは")
+        let textAfterFirstFinalize = ctx.appState.inputText
 
-        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
-        controller.replaySuppressionDeadline = Date.now + 10
+        simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
+        ctx.controller.replaySuppressionDeadline = Date.now + 10
 
         // Replay finalize — exact match with localFinalizedText → skipped
-        controller.voiceInput(didFinalize: "こんにちは")
-        #expect(appState.inputText == textAfterFirstFinalize)
-        #expect(controller.isLocallyFinalized == false)
-        #expect(controller.replaySuppressionDeadline == nil)
+        ctx.controller.voiceInput(didFinalize: "こんにちは")
+        #expect(ctx.appState.inputText == textAfterFirstFinalize)
+        #expect(ctx.controller.isLocallyFinalized == false)
+        #expect(ctx.controller.replaySuppressionDeadline == nil)
     }
 
     @Test func replayFinalizeClearsDeadline() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
-        guard let textView = findTextView(in: controller) else {
+        let ctx = makeController()
+        ctx.controller.showPanel()
+        guard let textView = findTextView(in: ctx.controller) else {
             Issue.record("textView not found")
             return
         }
 
         // Insert text via normal finalize first
-        controller.voiceInput(didFinalize: "こんにちは")
+        ctx.controller.voiceInput(didFinalize: "こんにちは")
 
-        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
-        controller.replaySuppressionDeadline = Date.now + 10
+        simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
+        ctx.controller.replaySuppressionDeadline = Date.now + 10
 
         // Replay finalize — clears deadline
-        controller.voiceInput(didFinalize: "こんにちは")
-        #expect(controller.replaySuppressionDeadline == nil)
+        ctx.controller.voiceInput(didFinalize: "こんにちは")
+        #expect(ctx.controller.replaySuppressionDeadline == nil)
 
         // Next volatile should be displayed (deadline cleared)
-        controller.voiceInput(didUpdateVolatile: "あ")
+        ctx.controller.voiceInput(didUpdateVolatile: "あ")
         #expect(textView.volatileRange != nil)
     }
 
     @Test func newFinalizeWhileLocallyFinalizedInsertsText() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
-        guard let textView = findTextView(in: controller) else {
+        let ctx = makeController()
+        ctx.controller.showPanel()
+        guard let textView = findTextView(in: ctx.controller) else {
             Issue.record("textView not found")
             return
         }
 
         // Insert text via normal finalize first
-        controller.voiceInput(didFinalize: "こんにちは")
+        ctx.controller.voiceInput(didFinalize: "こんにちは")
 
-        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
-        controller.replaySuppressionDeadline = Date.now + 10
+        simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
+        ctx.controller.replaySuppressionDeadline = Date.now + 10
 
         // New speech finalize with no overlap — should be inserted
-        controller.voiceInput(didFinalize: "ありがとう")
-        #expect(appState.inputText.contains("ありがとう"))
-        #expect(controller.isLocallyFinalized == false)
+        ctx.controller.voiceInput(didFinalize: "ありがとう")
+        #expect(ctx.appState.inputText.contains("ありがとう"))
+        #expect(ctx.controller.isLocallyFinalized == false)
     }
 
     @Test func newInputAfterReplay() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
-        guard let textView = findTextView(in: controller) else {
+        let ctx = makeController()
+        ctx.controller.showPanel()
+        guard let textView = findTextView(in: ctx.controller) else {
             Issue.record("textView not found")
             return
         }
 
         // Insert text via normal finalize first
-        controller.voiceInput(didFinalize: "こんにちは")
+        ctx.controller.voiceInput(didFinalize: "こんにちは")
 
         // Local finalize (e.g. user presses Enter)
-        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
-        controller.replaySuppressionDeadline = Date.now + 10
+        simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
+        ctx.controller.replaySuppressionDeadline = Date.now + 10
 
         // Replay finalize — clears flags
-        controller.voiceInput(didFinalize: "こんにちは")
+        ctx.controller.voiceInput(didFinalize: "こんにちは")
 
         // New volatile should now be displayed
-        controller.voiceInput(didUpdateVolatile: "あ")
+        ctx.controller.voiceInput(didUpdateVolatile: "あ")
         #expect(textView.volatileRange != nil)
 
         // New finalize should insert text
-        let textBeforeFinalize = appState.inputText
-        controller.voiceInput(didFinalize: "ありがとう")
-        #expect(appState.inputText != textBeforeFinalize)
-        #expect(appState.inputText.contains("ありがとう"))
+        let textBeforeFinalize = ctx.appState.inputText
+        ctx.controller.voiceInput(didFinalize: "ありがとう")
+        #expect(ctx.appState.inputText != textBeforeFinalize)
+        #expect(ctx.appState.inputText.contains("ありがとう"))
     }
 
     @Test func sameTextReSpokenAfterReplay() {
-        let (controller, appState, _, _, _) = makeController()
-        controller.showPanel()
-        guard let textView = findTextView(in: controller) else {
+        let ctx = makeController()
+        ctx.controller.showPanel()
+        guard let textView = findTextView(in: ctx.controller) else {
             Issue.record("textView not found")
             return
         }
 
         // Insert text via normal finalize first so accumulatedFinalizedText is set
-        controller.voiceInput(didFinalize: "こんにちは")
-        let textAfterFirstFinalize = appState.inputText
+        ctx.controller.voiceInput(didFinalize: "こんにちは")
+        let textAfterFirstFinalize = ctx.appState.inputText
 
         // Now simulate local finalize (as if user typed Enter to restart transcriber)
-        simulateLocalFinalize(controller: controller, textView: textView, text: "こんにちは")
-        controller.replaySuppressionDeadline = Date.now + 10
+        simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
+        ctx.controller.replaySuppressionDeadline = Date.now + 10
 
         // Replay finalize — clears flags
-        controller.voiceInput(didFinalize: "こんにちは")
+        ctx.controller.voiceInput(didFinalize: "こんにちは")
 
         // Same text finalized again — stripOverlappingPrefix removes it
-        controller.voiceInput(didFinalize: "こんにちは")
-        #expect(appState.inputText == textAfterFirstFinalize)
+        ctx.controller.voiceInput(didFinalize: "こんにちは")
+        #expect(ctx.appState.inputText == textAfterFirstFinalize)
     }
 
     @Test func volatileDisplayedWithoutDeadline() {
-        let (controller, _, _, _, _) = makeController()
-        controller.showPanel()
-        guard let textView = findTextView(in: controller) else {
+        let ctx = makeController()
+        ctx.controller.showPanel()
+        guard let textView = findTextView(in: ctx.controller) else {
             Issue.record("textView not found")
             return
         }
 
         // No simulateLocalFinalize, no deadline — initial state
-        controller.voiceInput(didUpdateVolatile: "あ")
+        ctx.controller.voiceInput(didUpdateVolatile: "あ")
         #expect(textView.volatileRange != nil)
     }
 }
