@@ -41,7 +41,7 @@ public nonisolated final class ScriptRunner: Sendable {
     public let timeout: TimeInterval
     public let killDelay: TimeInterval
 
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "ScriptRunner")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ScriptRunner")
 
     public init(timeout: TimeInterval = 30.0, killDelay: TimeInterval = 5.0) {
         self.timeout = timeout

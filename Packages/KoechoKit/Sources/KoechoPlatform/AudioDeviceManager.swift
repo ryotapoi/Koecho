@@ -1,11 +1,12 @@
 import AudioToolbox
 import CoreAudio
+import KoechoCore
 import Observation
 import os
 
 @MainActor @Observable
 public final class AudioDeviceManager {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "AudioDeviceManager")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "AudioDeviceManager")
 
     public private(set) var inputDevices: [AudioInputDevice] = []
     public var inputLevel: Float { levelMonitor.inputLevel }

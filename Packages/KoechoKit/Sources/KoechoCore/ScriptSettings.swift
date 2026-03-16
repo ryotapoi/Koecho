@@ -5,7 +5,7 @@ import os
 @MainActor @Observable
 public final class ScriptSettings {
     private let defaults: UserDefaults
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "ScriptSettings")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ScriptSettings")
 
     private var _scripts: [Script]
     public var scripts: [Script] {

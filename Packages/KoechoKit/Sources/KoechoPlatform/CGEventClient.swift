@@ -9,7 +9,7 @@ public protocol CGEventClient: Sendable {
 }
 
 public nonisolated struct LiveCGEventClient: CGEventClient {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "CGEventClient")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "CGEventClient")
 
     public init() {}
 

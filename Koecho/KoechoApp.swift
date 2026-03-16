@@ -8,7 +8,7 @@ import KoechoPlatform
 @main
 struct KoechoApp: App {
     private static let isTesting = NSClassFromString("XCTestCase") != nil
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "App")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "App")
     @State private var appState = AppState()
     @State private var historyStore = HistoryStore()
     @State private var panelController: InputPanelController?

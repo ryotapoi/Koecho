@@ -5,7 +5,7 @@ import KoechoPlatform
 
 @MainActor
 final class VoiceInputCoordinator: VoiceInputDelegate {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "VoiceInputCoordinator")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "VoiceInputCoordinator")
     private let appState: AppState
     private let makeEngine: () -> any VoiceInputEngine
     private let panel: InputPanel

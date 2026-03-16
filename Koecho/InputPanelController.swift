@@ -6,7 +6,7 @@ import KoechoPlatform
 
 @MainActor
 final class InputPanelController {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "InputPanelController")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "InputPanelController")
     private let appState: AppState
     private let paster: any Pasting
     private let historyStore: HistoryStore

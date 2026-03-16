@@ -51,7 +51,7 @@ public struct ReplacementMatch: Equatable {
 
 /// Build an NSRegularExpression for the given rule. Returns nil for invalid patterns.
 private func buildRegex(for rule: ReplacementRule) -> NSRegularExpression? {
-    let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "ReplacementRule")
+    let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ReplacementRule")
 
     let regexPattern: String
     if rule.usesRegularExpression {

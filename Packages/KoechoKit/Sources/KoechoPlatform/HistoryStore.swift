@@ -6,7 +6,7 @@ import os
 
 @MainActor @Observable
 public final class HistoryStore {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "HistoryStore")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "HistoryStore")
     private let fileURL: URL
     public private(set) var entries: [HistoryEntry] = []
 

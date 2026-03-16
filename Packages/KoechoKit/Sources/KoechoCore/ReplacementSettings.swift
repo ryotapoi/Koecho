@@ -5,7 +5,7 @@ import os
 @MainActor @Observable
 public final class ReplacementSettings {
     private let defaults: UserDefaults
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "ReplacementSettings")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ReplacementSettings")
 
     private var _replacementRules: [ReplacementRule]
     public var replacementRules: [ReplacementRule] {

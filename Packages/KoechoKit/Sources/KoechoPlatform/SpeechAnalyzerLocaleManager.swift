@@ -25,7 +25,7 @@ public struct LocaleItem: Identifiable, Sendable {
 @available(macOS 26, *)
 @MainActor @Observable
 public final class SpeechAnalyzerLocaleManager {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "SpeechAnalyzerLocaleManager")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "SpeechAnalyzerLocaleManager")
 
     public private(set) var allLocales: [LocaleItem] = []
     public private(set) var isLoading = true

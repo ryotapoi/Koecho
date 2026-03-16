@@ -4,7 +4,7 @@ import os
 
 @MainActor
 public final class HotkeyService {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "HotkeyService")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "HotkeyService")
     public private(set) var detector: ModifierTapDetector
     private var globalMonitor: Any?
     private var localMonitor: Any?

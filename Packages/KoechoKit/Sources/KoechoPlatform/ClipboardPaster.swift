@@ -58,7 +58,7 @@ public func restorePasteboard(_ pasteboard: NSPasteboard, from items: [Pasteboar
 
 @MainActor
 public final class ClipboardPaster: Pasting {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "ClipboardPaster")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ClipboardPaster")
     public let pasteDelay: TimeInterval
     private let cgEventClient: any CGEventClient
     private var restoreTask: Task<Void, Never>?

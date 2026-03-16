@@ -4,7 +4,7 @@ import KoechoCore
 
 @MainActor
 final class DictationEngine: VoiceInputEngine {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "DictationEngine")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "DictationEngine")
     private(set) var state: VoiceInputState = .idle
     weak var delegate: (any VoiceInputDelegate)?
     private weak var panel: InputPanel?

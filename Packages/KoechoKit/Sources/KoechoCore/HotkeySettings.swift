@@ -5,7 +5,7 @@ import os
 @MainActor @Observable
 public final class HotkeySettings {
     private let defaults: UserDefaults
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "HotkeySettings")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "HotkeySettings")
 
     private var _hotkeyConfig: HotkeyConfig
     public var hotkeyConfig: HotkeyConfig {

@@ -12,7 +12,7 @@ public protocol VolumeDucking {
 
 @MainActor @Observable
 public final class OutputVolumeDucker: VolumeDucking {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "OutputVolumeDucker")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "OutputVolumeDucker")
     private let settings: VolumeDuckingSettings
 
     public private(set) var isDucked = false

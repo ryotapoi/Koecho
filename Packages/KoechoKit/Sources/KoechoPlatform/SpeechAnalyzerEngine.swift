@@ -6,7 +6,7 @@ import Speech
 @available(macOS 26, *)
 @MainActor
 public final class SpeechAnalyzerEngine: VoiceInputEngine {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "SpeechAnalyzerEngine")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "SpeechAnalyzerEngine")
     private let locale: Locale
     private let deviceUID: String?
     public private(set) var state: VoiceInputState = .idle

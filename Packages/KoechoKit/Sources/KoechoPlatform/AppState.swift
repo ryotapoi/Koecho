@@ -5,7 +5,7 @@ import os
 
 @MainActor @Observable
 public final class AppState {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "AppState")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "AppState")
 
     public let settings: Settings
 

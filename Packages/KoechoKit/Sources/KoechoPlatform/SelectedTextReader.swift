@@ -15,7 +15,7 @@ public protocol SelectedTextReading {
 }
 
 public nonisolated final class SelectedTextReader: SelectedTextReading, Sendable {
-    private let logger = Logger(subsystem: "com.ryotapoi.koecho", category: "SelectedTextReader")
+    private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "SelectedTextReader")
     private let accessibilityClient: any AccessibilityClient
 
     public init(accessibilityClient: any AccessibilityClient = LiveAccessibilityClient()) {
