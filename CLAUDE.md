@@ -11,7 +11,8 @@ Koecho は macOS 14.0+ 向けの軽量音声入力アプリ。詳細: rules/miss
 - プロダクト目的・非目標: rules/mission.md
 - コード規約・テスト方針・言語: rules/principles.md
 - 技術スタック・前提条件: rules/constraints.md
-- 機能スコープ・アーキテクチャ: rules/scope.md
+- 機能スコープ: rules/scope.md
+- モジュール構成・依存方向: rules/architecture.md
 - 開発ワークフロー: rules/workflow.md
 - Xcode 操作（ビルド・テスト・ドキュメント検索）: rules/xcode-mcp.md
 - 情報管理の原則（フォルダ構成・情報分類・SSoT）: rules/information-management.md

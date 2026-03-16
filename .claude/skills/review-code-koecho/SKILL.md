@@ -69,6 +69,9 @@ Task ツールで `subagent_type: Plan, model: "sonnet"` を使う。
 ### 実装レビュー追加観点
 9. **旧 UserDefaults キーの削除処理を忘れない**: 設定キーをリネーム・統合した場合、Settings.init() / save() に旧キーの removeObject(forKey:) を入れること
 10. **startDictation: の冪等性を保つ**: start() は state != .idle のとき no-op にする。listening 中の再呼び出しでトグル停止しないこと
+11. **モジュール配置と依存方向の遵守**: 新しい import が `Koecho → KoechoPlatform → KoechoCore` の方向に従っているか。KoechoCore に macOS 固有 API (Carbon, CoreAudio, AppKit 等) の import が漏れていないか（rules/architecture.md 参照）
+12. **共通化の妥当性**: KoechoPlatform と Koecho (App) 間で共有するコードが KoechoCore に正しく配置されているか。ローカルなヘルパーが本来 KoechoCore に属する概念を扱っていないか
+13. **リファクタリングと機能実装のコミット分離**: diff にリファクタリング（rename、ファイル移動、構造変更）と機能実装（新しいビジネスロジック）が混在していないか
 
 上記に該当しないが Koecho 固有の設計判断に関わる問題も自由に指摘してよい。
 

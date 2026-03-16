@@ -67,6 +67,9 @@ Task ツールで `subagent_type: Plan, model: "sonnet"` を使う。
 6. **stopDictation() のテキストクリアと後続処理の干渉を考慮する**: stopDictation() はリーク防止のため textView をクリアする。auto-run 等で後続処理がある場合、テキスト復元が必要
 7. **SPM モジュール分離時の import / dependency / public 漏れ**: ファイル移動時に import 追加（`import Observation` 等）、Package.swift の dependency 追加、型の `public` 化を全件確認すること
 8. **プラン内のファイルパスと検証コマンドのスコープを正確にする**: ファイルパスはリポジトリルートからの正確なパスを使う。検証コマンド（test_macos 等）が全パッケージテストをカバーしているか確認する
+9. **モジュール配置は依存方向 `Koecho → KoechoPlatform → KoechoCore` に従う**: 新しいコードの配置先が rules/architecture.md の責務定義と合っているか。定義された方向に違反する依存がないか
+10. **共通化は依存方向に沿って配置する**: KoechoPlatform と Koecho (App) 間で共有するコードは KoechoCore に置く。片方だけ変更したくなったとき分離できるか検討されているか
+11. **リファクタリングと機能実装を同一ステップに混ぜない**: 既存コードの構造改善が必要なら、機能実装の前ステップとして分離されているか
 
 上記に該当しないが Koecho 固有の設計判断に関わる問題も自由に指摘してよい。
 
