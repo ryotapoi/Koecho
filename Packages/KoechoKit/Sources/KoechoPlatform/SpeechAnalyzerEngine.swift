@@ -203,7 +203,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         self.audioEngine = audioEngine
 
         if let deviceUID {
-            if let deviceID = AudioDeviceManager.resolveDeviceID(forUID: deviceUID),
+            if let deviceID = AudioDeviceListing.resolveDeviceID(forUID: deviceUID),
                let audioUnit = audioEngine.inputNode.audioUnit {
                 var id = deviceID
                 let status = AudioUnitSetProperty(
@@ -265,7 +265,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         startResultTask(transcriber: transcriber)
 
         // 10. Install audio tap and start
-        AudioDeviceManager.acquireAudioInput()
+        AudioInputExclusiveAccess.acquire()
         acquiredAudioInput = true
 
         installAudioTap()
@@ -419,7 +419,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         converter = nil
         analyzerFormat = nil
         if acquiredAudioInput {
-            AudioDeviceManager.releaseAudioInput()
+            AudioInputExclusiveAccess.release()
             acquiredAudioInput = false
         }
     }
