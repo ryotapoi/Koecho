@@ -174,27 +174,7 @@ private struct MenuBarContent: View {
         }
 
         Menu("Auto-run on Confirm") {
-            Button {
-                appState.settings.script.autoRunScriptId = nil
-            } label: {
-                if appState.settings.script.autoRunScriptId == nil {
-                    Text("✓ None")
-                } else {
-                    Text("  None")
-                }
-            }
-            Divider()
-            ForEach(appState.settings.script.eligibleAutoRunScripts) { script in
-                Button {
-                    appState.settings.script.autoRunScriptId = script.id
-                } label: {
-                    if appState.settings.script.autoRunScriptId == script.id {
-                        Text("✓ \(script.name)")
-                    } else {
-                        Text("  \(script.name)")
-                    }
-                }
-            }
+            AutoRunScriptMenuContent(scriptSettings: appState.settings.script)
         }
         .disabled(appState.settings.script.eligibleAutoRunScripts.isEmpty)
 

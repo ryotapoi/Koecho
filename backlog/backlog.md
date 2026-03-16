@@ -5,7 +5,7 @@
 - [x] T9: AudioDeviceManager の責務分割
 - [x] T10: eligibleScripts フィルタの一元化
 - [x] T11: SpeechAnalyzerEngine タイムアウト待機パターンの共通化
-- [ ] T12: auto-run ピッカー UI の状態操作ロジック共通化
+- [x] T12: auto-run ピッカー UI の状態操作ロジック共通化
 - [ ] T13: Logger subsystem 文字列リテラルの定数化
 - [ ] T14: isProcessTrusted() の重複定義解消
 - [ ] T15: ScriptSettings / ReplacementSettings の try? encode 一貫性修正

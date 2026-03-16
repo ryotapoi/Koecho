@@ -169,27 +169,7 @@ struct InputPanelContent: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
             Menu {
-                Button {
-                    appState.settings.script.autoRunScriptId = nil
-                } label: {
-                    if appState.settings.script.autoRunScriptId == nil {
-                        Text("✓ None")
-                    } else {
-                        Text("  None")
-                    }
-                }
-                Divider()
-                ForEach(appState.settings.script.eligibleAutoRunScripts) { script in
-                    Button {
-                        appState.settings.script.autoRunScriptId = script.id
-                    } label: {
-                        if appState.settings.script.autoRunScriptId == script.id {
-                            Text("✓ \(script.name)")
-                        } else {
-                            Text("  \(script.name)")
-                        }
-                    }
-                }
+                AutoRunScriptMenuContent(scriptSettings: appState.settings.script)
             } label: {
                 HStack(spacing: 2) {
                     Text(appState.settings.script.autoRunScript?.name ?? "None")
