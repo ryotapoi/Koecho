@@ -3,7 +3,7 @@
 ## v1.0.1 — コード改善（healthcheck 2026-03-15）
 
 - [x] T9: AudioDeviceManager の責務分割
-- [ ] T10: eligibleScripts フィルタの一元化
+- [x] T10: eligibleScripts フィルタの一元化
 - [ ] T11: SpeechAnalyzerEngine タイムアウト待機パターンの共通化
 - [ ] T12: auto-run ピッカー UI の状態操作ロジック共通化
 - [ ] T13: Logger subsystem 文字列リテラルの定数化

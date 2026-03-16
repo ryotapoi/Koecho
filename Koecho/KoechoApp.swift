@@ -168,10 +168,6 @@ private struct MenuBarContent: View {
     let onSwitchLanguage: (String) -> Void
     @Environment(\.openWindow) private var openWindow
 
-    private var eligibleScripts: [Script] {
-        appState.settings.script.scripts.filter { !$0.requiresPrompt }
-    }
-
     var body: some View {
         Button(appState.isInputPanelVisible ? "Close Input Panel" : "Open Input Panel") {
             onTogglePanel()
@@ -188,7 +184,7 @@ private struct MenuBarContent: View {
                 }
             }
             Divider()
-            ForEach(eligibleScripts) { script in
+            ForEach(appState.settings.script.eligibleAutoRunScripts) { script in
                 Button {
                     appState.settings.script.autoRunScriptId = script.id
                 } label: {
@@ -200,7 +196,7 @@ private struct MenuBarContent: View {
                 }
             }
         }
-        .disabled(eligibleScripts.isEmpty)
+        .disabled(appState.settings.script.eligibleAutoRunScripts.isEmpty)
 
         recognitionLanguageMenu
 

@@ -40,9 +40,13 @@ public final class ScriptSettings {
         }
     }
 
+    public var eligibleAutoRunScripts: [Script] {
+        scripts.filter { !$0.requiresPrompt }
+    }
+
     public var autoRunScript: Script? {
         guard let id = autoRunScriptId else { return nil }
-        return scripts.first { $0.id == id && !$0.requiresPrompt }
+        return eligibleAutoRunScripts.first { $0.id == id }
     }
 
     public init(defaults: UserDefaults) {

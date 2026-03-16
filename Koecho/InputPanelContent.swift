@@ -68,7 +68,7 @@ struct InputPanelContent: View {
                 scriptButtonBar
             }
 
-            if !eligibleScripts.isEmpty {
+            if !appState.settings.script.eligibleAutoRunScripts.isEmpty {
                 autoRunPicker
             }
 
@@ -160,10 +160,6 @@ struct InputPanelContent: View {
         .padding(.horizontal, 8)
     }
 
-    private var eligibleScripts: [Script] {
-        appState.settings.script.scripts.filter { !$0.requiresPrompt }
-    }
-
     private var autoRunPicker: some View {
         HStack(spacing: 4) {
             Image(systemName: "bolt.fill")
@@ -183,7 +179,7 @@ struct InputPanelContent: View {
                     }
                 }
                 Divider()
-                ForEach(eligibleScripts) { script in
+                ForEach(appState.settings.script.eligibleAutoRunScripts) { script in
                     Button {
                         appState.settings.script.autoRunScriptId = script.id
                     } label: {

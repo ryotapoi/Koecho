@@ -193,6 +193,40 @@ struct ScriptSettingsTests {
         #expect(reloaded.autoRunScriptId == nil)
     }
 
+    // MARK: - Eligible Auto-Run Scripts
+
+    @Test func eligibleAutoRunScriptsEmpty() {
+        let settings = ScriptSettings(defaults: makeDefaults())
+        #expect(settings.eligibleAutoRunScripts.isEmpty)
+    }
+
+    @Test func eligibleAutoRunScriptsExcludesPromptScripts() {
+        let settings = ScriptSettings(defaults: makeDefaults())
+        settings.scripts = [
+            Script(name: "Prompt Only", scriptPath: "/bin/echo", requiresPrompt: true),
+        ]
+        #expect(settings.eligibleAutoRunScripts.isEmpty)
+    }
+
+    @Test func eligibleAutoRunScriptsIncludesNonPromptScripts() {
+        let settings = ScriptSettings(defaults: makeDefaults())
+        let a = Script(name: "A", scriptPath: "/bin/a")
+        let b = Script(name: "B", scriptPath: "/bin/b")
+        settings.scripts = [a, b]
+        #expect(settings.eligibleAutoRunScripts.count == 2)
+        #expect(settings.eligibleAutoRunScripts[0].id == a.id)
+        #expect(settings.eligibleAutoRunScripts[1].id == b.id)
+    }
+
+    @Test func eligibleAutoRunScriptsFiltersMixed() {
+        let settings = ScriptSettings(defaults: makeDefaults())
+        let prompt = Script(name: "Prompt", scriptPath: "/bin/echo", requiresPrompt: true)
+        let normal = Script(name: "Normal", scriptPath: "/bin/echo")
+        settings.scripts = [prompt, normal]
+        #expect(settings.eligibleAutoRunScripts.count == 1)
+        #expect(settings.eligibleAutoRunScripts[0].id == normal.id)
+    }
+
     @Test func autoRunScriptFiltersRequiresPrompt() {
         let settings = ScriptSettings(defaults: makeDefaults())
         let promptScript = Script(name: "Prompt", scriptPath: "/bin/echo", requiresPrompt: true)

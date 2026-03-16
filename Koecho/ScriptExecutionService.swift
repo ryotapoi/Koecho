@@ -79,7 +79,7 @@ final class ScriptExecutionService {
     }
 
     func cycleAutoRunScript() {
-        let eligible = appState.settings.script.scripts.filter { !$0.requiresPrompt }
+        let eligible = appState.settings.script.eligibleAutoRunScripts
         guard !eligible.isEmpty else {
             appState.settings.script.autoRunScriptId = nil
             return
