@@ -97,14 +97,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
             let finalizeTask = Task {
                 try await analyzer.finalizeAndFinishThroughEndOfInput()
             }
-            let timedOut = await withTaskGroup(of: Bool.self) { group in
-                group.addTask { try? await finalizeTask.value; return false }
-                group.addTask { try? await Task.sleep(for: .seconds(1)); return true }
-                let first = await group.next()!
-                group.cancelAll()
-                return first
-            }
-            if timedOut {
+            if await waitWithTimeout(finalizeTask, seconds: 1) {
                 logger.warning("finalizeAndFinishThroughEndOfInput timed out")
                 finalizeTask.cancel()
             }
@@ -112,14 +105,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
 
         // Wait for result task with timeout
         if let resultTask {
-            let timedOut = await withTaskGroup(of: Bool.self) { group in
-                group.addTask { await resultTask.value; return false }
-                group.addTask { try? await Task.sleep(for: .seconds(1)); return true }
-                let first = await group.next()!
-                group.cancelAll()
-                return first
-            }
-            if timedOut {
+            if await waitWithTimeout(resultTask, seconds: 1) {
                 logger.warning("Result task timed out during stop, cancelling")
                 resultTask.cancel()
             }
@@ -367,14 +353,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         let oldResultTask = resultTask
         oldResultTask?.cancel()
         if let oldResultTask {
-            let timedOut = await withTaskGroup(of: Bool.self) { group in
-                group.addTask { await oldResultTask.value; return false }
-                group.addTask { try? await Task.sleep(for: .seconds(1)); return true }
-                let first = await group.next()!
-                group.cancelAll()
-                return first
-            }
-            if timedOut {
+            if await waitWithTimeout(oldResultTask, seconds: 1) {
                 logger.warning("Result task timed out during restart, cancelling")
                 oldResultTask.cancel()
             }
@@ -404,6 +383,20 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         tearDown()
         state = .error(message)
         delegate?.voiceInput(didEncounterError: message)
+    }
+
+    /// Race a task against a timeout. Returns `true` if the timeout fires first.
+    private func waitWithTimeout<Failure>(
+        _ task: Task<Void, Failure>,
+        seconds: Double
+    ) async -> Bool where Failure: Error {
+        await withTaskGroup(of: Bool.self) { group in
+            group.addTask { _ = try? await task.value; return false }
+            group.addTask { try? await Task.sleep(for: .seconds(seconds)); return true }
+            let first = await group.next()!
+            group.cancelAll()
+            return first
+        }
     }
 
     private func tearDown() {
