@@ -60,21 +60,7 @@ public final class SpeechAnalyzerLocaleManager {
 
         allLocales = items
 
-        // Validate and fix selection
-        var correctedSelection: String?
-        if !items.isEmpty {
-            let reservedIdentifiers = Set(reservedLocales.map(\.identifier))
-            let allIdentifiers = Set(items.map(\.identifier))
-            if !reservedIdentifiers.contains(currentSelection), !allIdentifiers.contains(currentSelection) {
-                if let match = findNormalizedMatch(for: currentSelection, in: items) {
-                    correctedSelection = match.identifier
-                } else if let match = findNormalizedMatch(for: "ja-JP", in: items) {
-                    correctedSelection = match.identifier
-                } else {
-                    correctedSelection = items[0].identifier
-                }
-            }
-        }
+        let correctedSelection = correctSelection(currentSelection: currentSelection, items: items)
 
         isLoading = false
 
@@ -160,6 +146,21 @@ public final class SpeechAnalyzerLocaleManager {
 
     public func clearDownloadError() {
         downloadError = nil
+    }
+
+    func correctSelection(currentSelection: String, items: [LocaleItem]) -> String? {
+        guard !items.isEmpty else { return nil }
+        let allIdentifiers = Set(items.map(\.identifier))
+        if allIdentifiers.contains(currentSelection) {
+            return nil
+        }
+        if let match = findNormalizedMatch(for: currentSelection, in: items) {
+            return match.identifier
+        }
+        if let match = findNormalizedMatch(for: "ja-JP", in: items) {
+            return match.identifier
+        }
+        return items[0].identifier
     }
 
     public func findNormalizedMatch(for identifier: String, in items: [LocaleItem]) -> LocaleItem? {

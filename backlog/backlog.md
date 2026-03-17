@@ -9,7 +9,7 @@
 - [x] T13: Logger subsystem 文字列リテラルの定数化
 - [x] T14: isProcessTrusted() の重複定義解消
 - [x] T15: ScriptSettings / ReplacementSettings の try? encode 一貫性修正
-- [ ] T16: SpeechAnalyzerLocaleManager のテストカバレッジ改善
+- [x] T16: SpeechAnalyzerLocaleManager のテストカバレッジ改善
 
 ## v1.1 — 音声入力オフモード
 

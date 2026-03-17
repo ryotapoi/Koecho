@@ -58,4 +58,76 @@ struct SpeechAnalyzerLocaleManagerTests {
         let manager = SpeechAnalyzerLocaleManager()
         #expect(manager.reservedLocales.isEmpty)
     }
+
+    // MARK: - correctSelection
+
+    @Test func correctSelectionWhenSelectionInReserved() {
+        guard #available(macOS 26, *) else { return }
+        let manager = SpeechAnalyzerLocaleManager()
+        let items = [
+            LocaleItem(identifier: "en-US", displayName: "English (US)", sortKey: "English (US)", isReserved: true),
+        ]
+        let result = manager.correctSelection(currentSelection: "en-US", items: items)
+        #expect(result == nil)
+    }
+
+    @Test func correctSelectionWhenSelectionInAll() {
+        guard #available(macOS 26, *) else { return }
+        let manager = SpeechAnalyzerLocaleManager()
+        let items = [
+            LocaleItem(identifier: "en-US", displayName: "English (US)", sortKey: "English (US)", isReserved: false),
+        ]
+        let result = manager.correctSelection(currentSelection: "en-US", items: items)
+        #expect(result == nil)
+    }
+
+    @Test func correctSelectionNormalizedMatch() {
+        guard #available(macOS 26, *) else { return }
+        let manager = SpeechAnalyzerLocaleManager()
+        let items = [
+            LocaleItem(identifier: "en_US", displayName: "English (US)", sortKey: "English (US)", isReserved: true),
+        ]
+        let result = manager.correctSelection(currentSelection: "en-US", items: items)
+        #expect(result == "en_US")
+    }
+
+    @Test func correctSelectionJaJPFallback() {
+        guard #available(macOS 26, *) else { return }
+        let manager = SpeechAnalyzerLocaleManager()
+        let items = [
+            LocaleItem(identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese", isReserved: true),
+            LocaleItem(identifier: "fr-FR", displayName: "French", sortKey: "French", isReserved: true),
+        ]
+        let result = manager.correctSelection(currentSelection: "de-DE", items: items)
+        #expect(result == "ja-JP")
+    }
+
+    @Test func correctSelectionFirstItemFallback() {
+        guard #available(macOS 26, *) else { return }
+        let manager = SpeechAnalyzerLocaleManager()
+        let items = [
+            LocaleItem(identifier: "fr-FR", displayName: "French", sortKey: "French", isReserved: true),
+            LocaleItem(identifier: "de-DE", displayName: "German", sortKey: "German", isReserved: true),
+        ]
+        let result = manager.correctSelection(currentSelection: "zh-CN", items: items)
+        #expect(result == "fr-FR")
+    }
+
+    @Test func correctSelectionEmptyItems() {
+        guard #available(macOS 26, *) else { return }
+        let manager = SpeechAnalyzerLocaleManager()
+        let result = manager.correctSelection(currentSelection: "en-US", items: [])
+        #expect(result == nil)
+    }
+
+    @Test func correctSelectionNormalizedPriorityOverJaJP() {
+        guard #available(macOS 26, *) else { return }
+        let manager = SpeechAnalyzerLocaleManager()
+        let items = [
+            LocaleItem(identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese", isReserved: true),
+            LocaleItem(identifier: "en_US", displayName: "English (US)", sortKey: "English (US)", isReserved: true),
+        ]
+        let result = manager.correctSelection(currentSelection: "en-US", items: items)
+        #expect(result == "en_US")
+    }
 }
