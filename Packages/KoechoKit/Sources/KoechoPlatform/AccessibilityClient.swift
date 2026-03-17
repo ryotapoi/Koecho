@@ -11,7 +11,7 @@ public nonisolated struct LiveAccessibilityClient: AccessibilityClient {
     public init() {}
 
     public func isProcessTrusted() -> Bool {
-        AXIsProcessTrusted()
+        checkAccessibilityTrust()
     }
 
     public func focusedUIElement(for pid: pid_t) -> AXUIElement? {

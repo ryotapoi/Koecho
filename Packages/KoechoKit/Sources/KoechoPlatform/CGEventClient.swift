@@ -1,4 +1,3 @@
-import ApplicationServices
 import CoreGraphics
 import KoechoCore
 import os
@@ -14,7 +13,7 @@ public nonisolated struct LiveCGEventClient: CGEventClient {
     public init() {}
 
     public func isProcessTrusted() -> Bool {
-        AXIsProcessTrusted()
+        checkAccessibilityTrust()
     }
 
     public func simulatePaste() throws {
