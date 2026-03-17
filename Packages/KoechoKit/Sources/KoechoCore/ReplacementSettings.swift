@@ -89,7 +89,12 @@ public final class ReplacementSettings {
             logger.error("Failed to encode replacement rules: \(error.localizedDescription)")
         }
         if let shortcut = _replacementShortcutKey {
-            defaults.set(try? JSONEncoder().encode(shortcut), forKey: "replacementShortcut")
+            do {
+                let data = try JSONEncoder().encode(shortcut)
+                defaults.set(data, forKey: "replacementShortcut")
+            } catch {
+                logger.error("Failed to encode replacementShortcut: \(error.localizedDescription)")
+            }
         } else {
             defaults.set(Data(), forKey: "replacementShortcut")
         }

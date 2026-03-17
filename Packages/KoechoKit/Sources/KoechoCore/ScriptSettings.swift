@@ -123,7 +123,12 @@ public final class ScriptSettings {
             defaults.removeObject(forKey: "autoRunScriptId")
         }
         if let shortcut = _autoRunShortcutKey {
-            defaults.set(try? JSONEncoder().encode(shortcut), forKey: "autoRunShortcut")
+            do {
+                let data = try JSONEncoder().encode(shortcut)
+                defaults.set(data, forKey: "autoRunShortcut")
+            } catch {
+                logger.error("Failed to encode autoRunShortcut: \(error.localizedDescription)")
+            }
         } else {
             defaults.set(Data(), forKey: "autoRunShortcut")
         }

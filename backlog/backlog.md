@@ -8,7 +8,7 @@
 - [x] T12: auto-run ピッカー UI の状態操作ロジック共通化
 - [x] T13: Logger subsystem 文字列リテラルの定数化
 - [x] T14: isProcessTrusted() の重複定義解消
-- [ ] T15: ScriptSettings / ReplacementSettings の try? encode 一貫性修正
+- [x] T15: ScriptSettings / ReplacementSettings の try? encode 一貫性修正
 - [ ] T16: SpeechAnalyzerLocaleManager のテストカバレッジ改善
 
 ## v1.1 — 音声入力オフモード
