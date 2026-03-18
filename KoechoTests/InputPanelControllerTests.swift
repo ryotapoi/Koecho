@@ -1508,4 +1508,43 @@ struct InputPanelControllerTests {
         ctx.controller.voiceInput(didUpdateVolatile: "あ")
         #expect(textView.volatileRange != nil)
     }
+
+    // MARK: - Voice Input Off Mode
+
+    @Test func showPanelWithVoiceOffSkipsDucking() {
+        let ducker = MockVolumeDucker()
+        let ctx = makeController(ducker: ducker)
+        ctx.appState.settings.voiceInput.voiceInputMode = .off
+        ctx.controller.showPanel()
+
+        #expect(ducker.duckCallCount == 0)
+    }
+
+    @Test func showPanelWithVoiceOnDucks() {
+        let ducker = MockVolumeDucker()
+        let ctx = makeController(ducker: ducker)
+        ctx.appState.settings.voiceInput.voiceInputMode = .dictation
+        ctx.controller.showPanel()
+
+        #expect(ducker.duckCallCount == 1)
+    }
+
+    @Test func confirmWithVoiceOffIsIdempotent() async {
+        let ctx = makeController()
+        ctx.appState.settings.voiceInput.voiceInputMode = .off
+        ctx.controller.showPanel()
+
+        // confirm with empty text — should not crash
+        await ctx.controller.confirm()
+        #expect(ctx.appState.isInputPanelVisible == false)
+    }
+
+    @Test func cancelWithVoiceOffIsIdempotent() {
+        let ctx = makeController()
+        ctx.appState.settings.voiceInput.voiceInputMode = .off
+        ctx.controller.showPanel()
+
+        ctx.controller.cancel()
+        #expect(ctx.appState.isInputPanelVisible == false)
+    }
 }

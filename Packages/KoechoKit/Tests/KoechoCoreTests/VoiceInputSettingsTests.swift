@@ -100,6 +100,55 @@ struct VoiceInputSettingsTests {
         #expect(reloaded.audioInputDeviceName == nil)
     }
 
+    @Test func persistsOffMode() {
+        let defaults = makeDefaults()
+
+        let settings = VoiceInputSettings(defaults: defaults)
+        settings.voiceInputMode = .off
+
+        let reloaded = VoiceInputSettings(defaults: defaults)
+        #expect(reloaded.voiceInputMode == .off)
+    }
+
+    @Test func offModeCycle() {
+        let defaults = makeDefaults()
+        let settings = VoiceInputSettings(defaults: defaults)
+
+        settings.voiceInputMode = .off
+        #expect(settings.effectiveVoiceInputMode == .off)
+
+        settings.voiceInputMode = .dictation
+        #expect(settings.effectiveVoiceInputMode == .dictation)
+
+        let reloaded = VoiceInputSettings(defaults: defaults)
+        #expect(reloaded.voiceInputMode == .dictation)
+    }
+
+    @Test func migratesLegacyVoiceInputDisabled() {
+        let defaults = makeDefaults()
+        defaults.set(false, forKey: "isVoiceInputEnabled")
+        defaults.set("speechAnalyzer", forKey: "voiceInputMode")
+
+        let settings = VoiceInputSettings(defaults: defaults)
+        #expect(settings.voiceInputMode == .off)
+        #expect(defaults.object(forKey: "isVoiceInputEnabled") == nil)
+    }
+
+    @Test func legacyVoiceInputEnabledTrueDoesNotMigrate() {
+        let defaults = makeDefaults()
+        defaults.set(true, forKey: "isVoiceInputEnabled")
+        defaults.set("speechAnalyzer", forKey: "voiceInputMode")
+
+        let settings = VoiceInputSettings(defaults: defaults)
+        #expect(settings.voiceInputMode == .speechAnalyzer)
+    }
+
+    @Test func effectiveVoiceInputModeOffPreserved() {
+        let settings = VoiceInputSettings(defaults: makeDefaults())
+        settings.voiceInputMode = .off
+        #expect(settings.effectiveVoiceInputMode == .off)
+    }
+
     @Test func effectiveVoiceInputModeFallsToDictation() {
         let settings = VoiceInputSettings(defaults: makeDefaults())
         settings.voiceInputMode = .speechAnalyzer

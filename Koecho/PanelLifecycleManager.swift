@@ -21,7 +21,7 @@ final class PanelLifecycleManager {
         self.panel = panel
     }
 
-    func show() {
+    func show(duckVolume: Bool = true) {
         appState.isRunningScript = false
         appState.frontmostApplication = NSWorkspace.shared.frontmostApplication
 
@@ -33,7 +33,9 @@ final class PanelLifecycleManager {
         }
         appState.errorMessage = nil
         appState.isInputPanelVisible = true
-        ducker.duck()
+        if duckVolume {
+            ducker.duck()
+        }
         panel.makeKeyAndOrderFront(nil)
     }
 

@@ -76,6 +76,14 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
 
     func prepareForShow() {
         regenerateEngine()
+        resetShowState()
+    }
+
+    func prepareForShowWithoutEngine() {
+        resetShowState()
+    }
+
+    private func resetShowState() {
         voiceInsertionPoint = (appState.inputText as NSString).length
         currentVoiceTarget = .textEditor
         clearReplayState()

@@ -179,11 +179,12 @@
 - 初回使用時にモデルの自動ダウンロードが発生する場合がある
 
 ### 設定
-- Settings の Voice Input セクション（macOS 26+ のみ表示）でエンジンを選択
+- Settings の Voice Input セクション（全 macOS バージョンで表示）でエンジンを選択
 - `effectiveVoiceInputMode` で OS 可用性を考慮した実効モードを返す
 - SpeechAnalyzer の locale は Settings で指定（デフォルト: macOS の優先言語設定から自動判定、フォールバック en-US）
 - パネル表示時にエンジンが生成される（設定変更は次回パネル表示時に反映）
 - メニューバーからの認識言語切り替え時は、パネル表示中でも即時反映（switchEngine で再生成）
+- 音声入力オフモード: `voiceInputMode = .off` でエンジン生成・起動・ボリュームダッキングをスキップ。キーボード入力のみで使用可能。Settings のエンジン選択で Off を選択して切り替え
 
 ---
 

@@ -15,6 +15,7 @@ struct GeneralSettingsView: View {
         Form {
             voiceInputSection
             volumeDuckingSection
+                .disabled(voiceInput.effectiveVoiceInputMode == .off)
             Section("Clipboard") {
                 TextField("Clipboard restore delay (sec)", value: $paste.pasteDelay, format: .number)
             }
@@ -77,11 +78,11 @@ struct GeneralSettingsView: View {
         }
     }
 
-    @ViewBuilder
     private var voiceInputSection: some View {
-        if #available(macOS 26, *) {
-            Section("Voice Input") {
+        Section("Voice Input") {
+            if #available(macOS 26, *) {
                 Picker("Engine", selection: $voiceInput.voiceInputMode) {
+                    Text("Off").tag(VoiceInputMode.off)
                     Text("System Dictation").tag(VoiceInputMode.dictation)
                     Text("SpeechAnalyzer (On-device)").tag(VoiceInputMode.speechAnalyzer)
                 }
@@ -93,6 +94,11 @@ struct GeneralSettingsView: View {
                         deviceName: $voiceInput.audioInputDeviceName
                     )
                 }
+            } else {
+                Toggle("Voice input", isOn: Binding(
+                    get: { voiceInput.voiceInputMode != .off },
+                    set: { voiceInput.voiceInputMode = $0 ? .dictation : .off }
+                ))
             }
         }
     }

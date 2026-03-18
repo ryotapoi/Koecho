@@ -2,6 +2,7 @@ import Foundation
 import Observation
 
 public enum VoiceInputMode: String, Codable, CaseIterable, Sendable {
+    case off
     case dictation
     case speechAnalyzer
 }
@@ -48,6 +49,7 @@ public final class VoiceInputSettings {
 
     public var effectiveVoiceInputMode: VoiceInputMode {
         if #available(macOS 26, *) { return _voiceInputMode }
+        if _voiceInputMode == .off { return .off }
         return .dictation
     }
 
@@ -63,6 +65,13 @@ public final class VoiceInputSettings {
             } else {
                 _voiceInputMode = .dictation
             }
+        }
+
+        // Migrate legacy isVoiceInputEnabled=false to .off mode
+        if defaults.object(forKey: "isVoiceInputEnabled") != nil,
+           !defaults.bool(forKey: "isVoiceInputEnabled") {
+            _voiceInputMode = .off
+            defaults.removeObject(forKey: "isVoiceInputEnabled")
         }
 
         _speechAnalyzerLocale = defaults.string(forKey: "speechAnalyzerLocale")

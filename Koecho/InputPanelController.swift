@@ -185,9 +185,14 @@ final class InputPanelController {
             return
         }
 
-        lifecycleManager.show()
-        voiceCoordinator.prepareForShow()
-        clearTextView()
+        let voiceEnabled = appState.settings.voiceInput.effectiveVoiceInputMode != .off
+        lifecycleManager.show(duckVolume: voiceEnabled)
+        if voiceEnabled {
+            voiceCoordinator.prepareForShow()
+        } else {
+            voiceCoordinator.prepareForShowWithoutEngine()
+        }
+        clearTextView(startEngine: voiceEnabled)
 
         logger.info("Panel shown, isKeyWindow: \(self.panel.isKeyWindow)")
     }
@@ -376,13 +381,15 @@ final class InputPanelController {
         textView.makeFirstResponder(in: panel)
     }
 
-    private func clearTextView() {
+    private func clearTextView(startEngine: Bool = true) {
         if let textView, textView.window != nil {
             textView.setString(appState.inputText, suppressingCallbacks: true)
             textView.makeFirstResponder(in: panel)
             textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
             textView.scrollRangeToVisible(textView.selectedRange())
-            voiceCoordinator.startEngine()
+            if startEngine {
+                voiceCoordinator.startEngine()
+            }
         } else {
             DispatchQueue.main.async { [weak self] in
                 guard let self, let textView = self.textView else { return }
@@ -392,7 +399,9 @@ final class InputPanelController {
                     textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
                     textView.scrollRangeToVisible(textView.selectedRange())
                 }
-                self.voiceCoordinator.startEngine()
+                if startEngine {
+                    self.voiceCoordinator.startEngine()
+                }
             }
         }
     }
