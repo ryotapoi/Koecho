@@ -65,15 +65,26 @@ struct InputPanelContent: View {
             }
 
             if !appState.settings.script.scripts.isEmpty {
-                scriptButtonBar
+                ScriptButtonBar(
+                    scripts: appState.settings.script.scripts,
+                    isDisabled: appState.isRunningScript || appState.promptScript != nil,
+                    onExecuteScript: onExecuteScript
+                )
             }
 
             if !appState.settings.script.eligibleAutoRunScripts.isEmpty {
-                autoRunPicker
+                AutoRunPicker(scriptSettings: appState.settings.script)
             }
 
             if appState.promptScript != nil {
-                promptInputView
+                PromptInputView(
+                    promptText: $appState.promptText,
+                    promptScript: appState.promptScript,
+                    isRunningScript: appState.isRunningScript,
+                    onExecuteScript: onExecuteScript,
+                    onCancelPrompt: onCancelPrompt,
+                    isFocused: $isPromptFocused
+                )
             }
 
             if let status = appState.voiceEngineStatus {
@@ -122,93 +133,6 @@ struct InputPanelContent: View {
         }
     }
 
-    private var scriptButtonBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                ForEach(appState.settings.script.scripts) { script in
-                    Button {
-                        Task { await onExecuteScript(script) }
-                    } label: {
-                        Text(script.name)
-                            .font(.caption)
-                    }
-                    .help(shortcutHelpText(for: script))
-                    .disabled(appState.isRunningScript || appState.promptScript != nil)
-                }
-            }
-            .padding(.horizontal, 8)
-        }
-    }
-
-    private var promptInputView: some View {
-        HStack(spacing: 4) {
-            TextField("Prompt", text: $appState.promptText)
-                .focused($isPromptFocused)
-                .textFieldStyle(.roundedBorder)
-                .font(.caption)
-                .onSubmit {
-                    if let script = appState.promptScript {
-                        Task { await onExecuteScript(script) }
-                    }
-                }
-
-            Button {
-                if let script = appState.promptScript {
-                    Task { await onExecuteScript(script) }
-                }
-            } label: {
-                Text("Run")
-                    .font(.caption)
-            }
-            .disabled(appState.isRunningScript)
-
-            Button {
-                onCancelPrompt()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption)
-            }
-            .disabled(appState.isRunningScript)
-        }
-        .padding(.horizontal, 8)
-    }
-
-    private var autoRunPicker: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "bolt.fill")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text("On confirm:")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Menu {
-                AutoRunScriptMenuContent(scriptSettings: appState.settings.script)
-            } label: {
-                HStack(spacing: 2) {
-                    Text(appState.settings.script.autoRunScript?.name ?? "None")
-                        .font(.callout)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 9))
-                }
-                .foregroundStyle(.secondary)
-            }
-            .menuStyle(.borderlessButton)
-            .fixedSize()
-            .help(autoRunShortcutHelpText)
-            Spacer()
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 2)
-    }
-
-    private var autoRunShortcutHelpText: String {
-        if let shortcut = appState.settings.script.autoRunShortcutKey {
-            "Cycle auto-run script selection (\(shortcut.displayName))"
-        } else {
-            "Cycle auto-run script selection"
-        }
-    }
-
     private var replacementShortcutHelpText: String {
         if let shortcut = appState.settings.replacement.replacementShortcutKey {
             "Apply replacement rules (\(shortcut.displayName))"
@@ -217,11 +141,4 @@ struct InputPanelContent: View {
         }
     }
 
-    private func shortcutHelpText(for script: Script) -> String {
-        if let shortcut = script.shortcutKey {
-            "\(script.name) (\(shortcut.displayName))"
-        } else {
-            script.name
-        }
-    }
 }
