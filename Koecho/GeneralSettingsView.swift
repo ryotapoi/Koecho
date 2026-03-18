@@ -13,8 +13,8 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         Form {
-            voiceInputSection
-            volumeDuckingSection
+            VoiceInputSection(voiceInput: voiceInput)
+            VolumeDuckingSection(volumeDucking: volumeDucking)
                 .disabled(voiceInput.effectiveVoiceInputMode == .off)
             Section("Clipboard") {
                 TextField("Clipboard restore delay (sec)", value: $paste.pasteDelay, format: .number)
@@ -57,7 +57,14 @@ struct GeneralSettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    private var volumeDuckingSection: some View {
+}
+
+// MARK: - VolumeDuckingSection
+
+private struct VolumeDuckingSection: View {
+    @Bindable var volumeDucking: VolumeDuckingSettings
+
+    var body: some View {
         Section("Volume Ducking") {
             Toggle("Lower system volume while input panel is open", isOn: $volumeDucking.isVolumeDuckingEnabled)
             if volumeDucking.isVolumeDuckingEnabled {
@@ -77,8 +84,14 @@ struct GeneralSettingsView: View {
             }
         }
     }
+}
 
-    private var voiceInputSection: some View {
+// MARK: - VoiceInputSection
+
+private struct VoiceInputSection: View {
+    @Bindable var voiceInput: VoiceInputSettings
+
+    var body: some View {
         Section("Voice Input") {
             if #available(macOS 26, *) {
                 Picker("Engine", selection: $voiceInput.voiceInputMode) {
