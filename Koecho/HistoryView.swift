@@ -6,6 +6,7 @@ struct HistoryView: View {
     var historyStore: HistoryStore
     @State private var searchText = ""
     @State private var copiedEntryID: UUID?
+    @State private var resetCopiedTask: Task<Void, Never>?
     @State private var popoverEntryID: UUID?
 
     private var filteredEntries: [HistoryEntry] {
@@ -67,11 +68,12 @@ struct HistoryView: View {
         withAnimation {
             copiedEntryID = entry.id
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        resetCopiedTask?.cancel()
+        resetCopiedTask = Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled else { return }
             withAnimation {
-                if copiedEntryID == entry.id {
-                    copiedEntryID = nil
-                }
+                copiedEntryID = nil
             }
         }
     }

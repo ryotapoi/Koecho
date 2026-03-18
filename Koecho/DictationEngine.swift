@@ -9,7 +9,7 @@ final class DictationEngine: VoiceInputEngine {
     weak var delegate: (any VoiceInputDelegate)?
     private weak var panel: InputPanel?
     private weak var textView: VoiceInputTextView?
-    private var retryWorkItem: DispatchWorkItem?
+    private var retryTask: Task<Void, Never>?
 
     /// Configure with panel and textView references.
     /// Called when textView is created and when panel is shown.
@@ -19,28 +19,29 @@ final class DictationEngine: VoiceInputEngine {
     }
 
     func start() {
-        guard state == .idle, retryWorkItem == nil else { return }
+        guard state == .idle, retryTask == nil else { return }
         guard panel != nil else { return }
 
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.sendStartDictation()
+        retryTask = Task {
+            do {
+                try await Task.sleep(for: .milliseconds(300))
+                sendStartDictation()
+            } catch {}
         }
-        retryWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
     }
 
     /// Reset state and start again. Used after focus transitions
     /// where macOS stops the Dictation session.
     func restart() {
-        retryWorkItem?.cancel()
-        retryWorkItem = nil
+        retryTask?.cancel()
+        retryTask = nil
         state = .idle
         start()
     }
 
     func stop() async {
-        retryWorkItem?.cancel()
-        retryWorkItem = nil
+        retryTask?.cancel()
+        retryTask = nil
         guard state == .listening || state == .idle else { return }
         state = .stopping
         if let textView {
@@ -52,8 +53,8 @@ final class DictationEngine: VoiceInputEngine {
     }
 
     func cancel() {
-        retryWorkItem?.cancel()
-        retryWorkItem = nil
+        retryTask?.cancel()
+        retryTask = nil
         if let textView {
             textView.inputContext?.discardMarkedText()
         }
@@ -62,7 +63,7 @@ final class DictationEngine: VoiceInputEngine {
     }
 
     private func sendStartDictation() {
-        retryWorkItem = nil
+        retryTask = nil
         guard let panel else { return }
         guard state == .idle else { return }
 

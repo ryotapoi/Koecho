@@ -189,8 +189,8 @@ private struct MenuBarContent: View {
 
         Button("Settings...") {
             openWindow(id: "settings")
-            DispatchQueue.main.async {
-                NSApplication.shared.activate(ignoringOtherApps: true)
+            Task {
+                NSApplication.shared.activate()
             }
         }
         .keyboardShortcut(",")

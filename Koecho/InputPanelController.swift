@@ -391,7 +391,7 @@ final class InputPanelController {
                 voiceCoordinator.startEngine()
             }
         } else {
-            DispatchQueue.main.async { [weak self] in
+            Task { [weak self] in
                 guard let self, let textView = self.textView else { return }
                 textView.setString(self.appState.inputText, suppressingCallbacks: true)
                 if textView.window != nil {

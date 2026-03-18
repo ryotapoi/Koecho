@@ -3,8 +3,8 @@
 ## v1.2 — リファクタリング + UI 改善
 
 ### 1. Swift Concurrency 移行
-- [ ] DispatchQueue.main.async → Task { @MainActor in } に移行（KoechoApp, InputPanelController, HistoryView）
-- [ ] DictationEngine の DispatchWorkItem → Task.sleep(for:) + cancellation に移行
+- [x] DispatchQueue.main.async → Task { @MainActor in } に移行（KoechoApp, InputPanelController, HistoryView）
+- [x] DictationEngine の DispatchWorkItem → Task.sleep(for:) + cancellation に移行
 
 ### 2. View 構造の整理
 - [ ] View body 内の computed property（some View を返すもの）を別 View struct に抽出

@@ -39,7 +39,7 @@
 - `didChangeText()` は `insertText` から内部的に呼ばれるので、`onTextChanged` は `didChangeText` のみで発火させる。`insertText` では `onTextCommitted`（Dictation 確定シグナル）のみ発火
 - フィードバックループ防止: `VoiceInputTextView.isSuppressingCallbacks` フラグ。コントローラから `textView.string` を直接変更する箇所（clearTextView, stopDictation, applyReplacementRulesNow）すべてで true/false をセットする
 - `updateNSView` でも `isSuppressingCallbacks` をチェックし、`hasMarkedText()` ガードと合わせて Dictation 中の上書きを防止
-- 初回表示では `makeNSView` → `onViewCreated` で textView 参照を取得するが、`makeKeyAndOrderFront` 直後はまだ SwiftUI レイアウトが完了しておらず textView が nil の場合がある。nil なら `DispatchQueue.main.async` で 1 サイクル遅延
+- 初回表示では `makeNSView` → `onViewCreated` で textView 参照を取得するが、`makeKeyAndOrderFront` 直後はまだ SwiftUI レイアウトが完了しておらず textView が nil の場合がある。nil なら `Task { }` で 1 サイクル遅延
 - `@FocusState` は prompt TextField のみに使用。TextEditor 側のフォーカスは `panel.makeFirstResponder(textView)` で直接管理
 
 ## SwiftUI / .frame の .infinity 型推論
@@ -70,7 +70,7 @@
 
 - `startDictation:` セレクタを `NSApp.sendAction` で送ると responder chain 的には成功する（`true` を返す）が、パネル表示直後だと Dictation が実際には開始されない（サイレント失敗）
 - 原因: ウィンドウの表示・first responder 設定が完了した直後はまだ Dictation の受付準備ができていない模様
-- 対策: `makeFirstResponder` 完了後に `DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` で遅延させてから送る。`makeFirstResponder` → 0.3秒 → `startDictation:` の順序が重要。`becomeKey()` トリガーなど `makeFirstResponder` と独立したタイミングで送ると失敗率が上がる
+- 対策: `makeFirstResponder` 完了後に `Task.sleep(for: .milliseconds(300))` で遅延させてから送る。`makeFirstResponder` → 0.3秒 → `startDictation:` の順序が重要。`becomeKey()` トリガーなど `makeFirstResponder` と独立したタイミングで送ると失敗率が上がる
 - `startDictation:` はトグル動作。Dictation がアクティブ中に再送信すると停止してしまうため、リトライは行わない
 - `NSApp.sendAction` が失敗した場合は `textView.perform(startDictation:)` にフォールバック（`.nonactivatingPanel` で responder chain が届かないケース対策）
 
@@ -108,7 +108,7 @@
 
 - SwiftUI の `@FocusState` でフォーカスを TextEditor から TextField に移動すると、macOS が Dictation セッションを停止する
 - 例: Prompt ありスクリプト起動時に `focusedField = .prompt` をセットすると、TextEditor で実行中の Dictation が終了する
-- 対策: フォーカス遷移後に `startDictation()` を再送信する。`DispatchQueue.main.asyncAfter(deadline: .now() + 0.3)` で遅延が必要（「macOS / Dictation (startDictation:)」セクション参照）
+- 対策: フォーカス遷移後に `startDictation()` を再送信する。`Task.sleep(for: .milliseconds(300))` で遅延が必要（「macOS / Dictation (startDictation:)」セクション参照）
 - `InputPanelContent.onPromptFocused` コールバックで `InputPanelController` に通知し、controller 側で Dictation を再起動する構成
 
 ## SwiftUI / contextMenu preview on macOS
@@ -222,4 +222,4 @@
 
 - VoiceInputCoordinator は `init` で `makeEngine()` を呼んだ後、必ず `engine.delegate = self` を設定すること。`regenerateEngine()` 経由なら自動で設定されるが、`init` では手動設定が必要
 - `textView` は coordinator + 3 サービスに配布される。`onTextViewCreated` callback 内で全サービスに設定し、voiceCoordinator には `configureEngineWithTextView()` も追加で呼ぶ
-- `clearTextView()` の `DispatchQueue.main.async` フォールバック: `makeKeyAndOrderFront` 直後は SwiftUI レイアウト未完了で textView.window が nil の場合がある。1 サイクル遅延で回避
+- `clearTextView()` の `Task { }` フォールバック: `makeKeyAndOrderFront` 直後は SwiftUI レイアウト未完了で textView.window が nil の場合がある。1 サイクル遅延で回避
