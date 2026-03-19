@@ -18,13 +18,16 @@
 - [x] GeometryReader → containerRelativeFrame — 見送り: macOS 15+ API でデプロイメントターゲット（14.0+）と不整合
 
 ### 4. アクセシビリティ改善
-- [ ] HistoryRow の onTapGesture → Button に変更
-- [ ] アイコンのみボタンにテキストラベル追加（ScriptManagementView, ReplacementRuleManagementView, InputPanelContent）
+- [x] HistoryRow の onTapGesture → Button に変更
+- [x] アイコンのみボタンにテキストラベル追加（ScriptManagementView, ReplacementRuleManagementView, PromptInputView）
 
 ### 5. InputPanelController の責務分割
 - [ ] init の巨大コールバック配線を整理
 
-### 6. UI 改善（InputPanel）
+### 6. UI 改善（History）
+- [ ] Show Full Text popover のサイズを大きくする（現状スクロールしないと全文が見えない）
+
+### 7. UI 改善（InputPanel）
 - [ ] スクリプトボタンと Replace ボタンを統合ツールバーにまとめる
 - [ ] ボタンサイズの統一（名前の長さで幅がガタつく問題の解消）
 - [ ] 情報の階層を整理（テキストエリア主役、コントロール群はコンパクトに）

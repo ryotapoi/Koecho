@@ -34,7 +34,8 @@ struct PromptInputView: View {
             Button {
                 onCancelPrompt()
             } label: {
-                Image(systemName: "xmark")
+                Label("Cancel", systemImage: "xmark")
+                    .labelStyle(.iconOnly)
                     .font(.caption)
             }
             .disabled(isRunningScript)

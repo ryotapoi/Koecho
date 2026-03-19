@@ -45,16 +45,17 @@ struct ReplacementRuleManagementView: View {
         .safeAreaInset(edge: .bottom) {
             HStack {
                 Button(action: addRule) {
-                    Image(systemName: "plus")
+                    Label("Add Rule", systemImage: "plus")
                         .frame(width: 16, height: 16)
                 }
                 Button(action: deleteSelectedRule) {
-                    Image(systemName: "minus")
+                    Label("Delete Rule", systemImage: "minus")
                         .frame(width: 16, height: 16)
                 }
                 .disabled(selection == nil)
                 Spacer()
             }
+            .labelStyle(.iconOnly)
             .padding(8)
         }
     }

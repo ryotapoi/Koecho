@@ -85,24 +85,26 @@ private struct HistoryRow: View {
     let onCopy: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(entry.text)
-                .lineLimit(2)
-                .font(.body)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        Button(action: onCopy) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(entry.text)
+                    .lineLimit(2)
+                    .font(.body)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-            if isCopied {
-                Text("Copied!")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-            } else {
-                Text(entry.timestamp, format: .dateTime)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if isCopied {
+                    Text("Copied!")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                } else {
+                    Text(entry.timestamp, format: .dateTime)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .onTapGesture { onCopy() }
+        .buttonStyle(.plain)
     }
 }

@@ -28,16 +28,17 @@ struct ScriptManagementView: View {
         .safeAreaInset(edge: .bottom) {
             HStack {
                 Button(action: addScript) {
-                    Image(systemName: "plus")
+                    Label("Add Script", systemImage: "plus")
                         .frame(width: 16, height: 16)
                 }
                 Button(action: deleteSelectedScript) {
-                    Image(systemName: "minus")
+                    Label("Delete Script", systemImage: "minus")
                         .frame(width: 16, height: 16)
                 }
                 .disabled(selection == nil)
                 Spacer()
             }
+            .labelStyle(.iconOnly)
             .padding(8)
         }
     }
