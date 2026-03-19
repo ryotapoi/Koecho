@@ -7,13 +7,8 @@
 - [x] DictationEngine の DispatchWorkItem → Task.sleep(for:) + cancellation に移行
 
 ### 2. View 構造の整理
-- [ ] View body 内の computed property（some View を返すもの）を別 View struct に抽出
-  - InputPanelContent: scriptButtonBar, promptInputView, autoRunPicker
-  - GeneralSettingsView: volumeDuckingSection, voiceInputSection
-  - ScriptManagementView: scriptList, scriptDetail
-  - ReplacementRuleManagementView: ruleList, ruleDetail
-  - KoechoApp/MenuBarContent: recognitionLanguageMenu
-- [ ] 1ファイル複数型の分割（GeneralSettingsView.swift が5型、HotkeySettingsView.swift が4型 etc.）
+- [x] View body 内の computed property を別 View struct に抽出（InputPanelContent, GeneralSettingsView）
+- [x] 1ファイル複数型の分割（GeneralSettingsView.swift, KoechoApp.swift, HotkeySettingsView.swift）
 
 ### 3. データフロー改善
 - [ ] Binding(get:set:) を削減（InputPanelContent, GeneralSettingsView, HistoryView）
