@@ -88,7 +88,7 @@ public final class VoiceInputSettings {
         guard let preferred = preferredLanguage, !preferred.isEmpty else {
             return "en-US"
         }
-        return preferred.replacingOccurrences(of: "_", with: "-")
+        return preferred.replacing("_", with: "-")
     }
 
     private func save() {

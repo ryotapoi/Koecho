@@ -14,7 +14,7 @@ struct HistoryView: View {
             return historyStore.entries
         }
         return historyStore.entries.filter {
-            $0.text.localizedCaseInsensitiveContains(searchText)
+            $0.text.localizedStandardContains(searchText)
         }
     }
 

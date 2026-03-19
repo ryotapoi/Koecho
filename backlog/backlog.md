@@ -11,11 +11,11 @@
 - [x] 1ファイル複数型の分割（GeneralSettingsView.swift, KoechoApp.swift, HotkeySettingsView.swift）
 
 ### 3. データフロー改善
-- [ ] Binding(get:set:) を削減（InputPanelContent, GeneralSettingsView, HistoryView）
-- [ ] showsIndicators: false → .scrollIndicators(.hidden)
-- [ ] localizedCaseInsensitiveContains → localizedStandardContains
-- [ ] replacingOccurrences(of:with:) → replacing(_:with:)
-- [ ] GeometryReader → containerRelativeFrame（InputLevelMeter）
+- [x] Binding(get:set:) を削減 — 見送り: 4箇所すべて代替策が複雑度を増すため現状が最適
+- [x] showsIndicators: false → .scrollIndicators(.hidden)
+- [x] localizedCaseInsensitiveContains → localizedStandardContains
+- [x] replacingOccurrences(of:with:) → replacing(_:with:)
+- [x] GeometryReader → containerRelativeFrame — 見送り: macOS 15+ API でデプロイメントターゲット（14.0+）と不整合
 
 ### 4. アクセシビリティ改善
 - [ ] HistoryRow の onTapGesture → Button に変更

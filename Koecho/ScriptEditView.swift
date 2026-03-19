@@ -40,7 +40,7 @@ struct ScriptEditView: View {
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         if panel.runModal() == .OK, let url = panel.url {
-            script.scriptPath = "'\(url.path.replacingOccurrences(of: "'", with: "'\\''"))'"
+            script.scriptPath = "'\(url.path.replacing("'", with: "'\\''"))'"
         }
     }
 }

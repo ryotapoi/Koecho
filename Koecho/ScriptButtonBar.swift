@@ -7,7 +7,7 @@ struct ScriptButtonBar: View {
     var onExecuteScript: (Script) async -> Void
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
             HStack(spacing: 4) {
                 ForEach(scripts) { script in
                     Button {
@@ -22,6 +22,7 @@ struct ScriptButtonBar: View {
             }
             .padding(.horizontal, 8)
         }
+        .scrollIndicators(.hidden)
     }
 
     private func shortcutHelpText(for script: Script) -> String {
