@@ -1,38 +1,18 @@
 # Backlog
 
-## v1.2 — リファクタリング + UI 改善
+## v1.3 — ローカライズ + UI 修正
 
-### 1. Swift Concurrency 移行
-- [x] DispatchQueue.main.async → Task { @MainActor in } に移行（KoechoApp, InputPanelController, HistoryView）
-- [x] DictationEngine の DispatchWorkItem → Task.sleep(for:) + cancellation に移行
+### 1. ローカライズ・文字列調整
+- [ ] 日本語ローカライズ
+- [ ] Settings ウィンドウの最小サイズ制限（Engine「Off」やサイドバーラベルが切れない幅を確保）
+- [ ] サイドバー「Replacement Rules」の名前 — ローカライズ後にサイドバー幅を見て短縮要否を判断
+- [ ] locale 表示ロジックの重複解消（KoechoApp.refreshDownloadedLocales と SpeechAnalyzerLocaleManager.loadLocales の統合、MenuLocaleItem / LocaleItem の統合）
 
-### 2. View 構造の整理
-- [x] View body 内の computed property を別 View struct に抽出（InputPanelContent, GeneralSettingsView）
-- [x] 1ファイル複数型の分割（GeneralSettingsView.swift, KoechoApp.swift, HotkeySettingsView.swift）
+### 2. メニューバー ⌘, / ⌘Q ショートカット表示の修正
+- [ ] LSUIElement アプリで動作しない ⌘, ⌘Q がグレーアウト表示されている。動作しないなら表示しないのが Mac 慣習
 
-### 3. データフロー改善
-- [x] Binding(get:set:) を削減 — 見送り: 4箇所すべて代替策が複雑度を増すため現状が最適
-- [x] showsIndicators: false → .scrollIndicators(.hidden)
-- [x] localizedCaseInsensitiveContains → localizedStandardContains
-- [x] replacingOccurrences(of:with:) → replacing(_:with:)
-- [x] GeometryReader → containerRelativeFrame — 見送り: macOS 15+ API でデプロイメントターゲット（14.0+）と不整合
-
-### 4. アクセシビリティ改善
-- [x] HistoryRow の onTapGesture → Button に変更
-- [x] アイコンのみボタンにテキストラベル追加（ScriptManagementView, ReplacementRuleManagementView, PromptInputView）
-
-### 5. InputPanelController の責務分割
-- [x] init の巨大コールバック配線を整理
-
-### 6. UI 改善（History）
-- [x] Show Full Text popover のサイズを大きくする（現状スクロールしないと全文が見えない）
-
-### 7. UI 改善（InputPanel）
-- [x] スクリプトボタンと Replace ボタンを統合ツールバーにまとめる
-- [x] ボタンサイズの統一（名前の長さで幅がガタつく問題の解消）
-- [x] 情報の階層を整理（テキストエリア主役、コントロール群はコンパクトに）
-- [x] On confirm 行の扱い再検討（常時表示の必要性）
-- [x] 余白・spacing のリズム改善
+### 3. Settings ウィンドウが最前面に出てこないバグ
+- [ ] 設定を開いたとき最前面に出てこないことがある。一度最前面にして閉じてまた開くと最前面になる。条件不明、要調査
 
 ## Later
 
