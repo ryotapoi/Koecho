@@ -17,7 +17,7 @@ struct InputPanelContent: View {
     @FocusState private var isPromptFocused: Bool
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 0) {
             VoiceInputTextEditor(
                 text: appState.inputText,
                 isDisabled: appState.isRunningScript,
@@ -49,31 +49,20 @@ struct InputPanelContent: View {
                 }
             }
 
-            if !appState.settings.replacement.replacementRules.isEmpty {
-                HStack {
-                    Button {
-                        onApplyReplacementRules()
-                    } label: {
-                        Label("Replace", systemImage: "arrow.2.squarepath")
-                            .font(.caption)
-                    }
-                    .help(replacementShortcutHelpText)
-                    .disabled(appState.isRunningScript)
-                    Spacer()
-                }
-                .padding(.horizontal, 8)
-            }
-
-            if !appState.settings.script.scripts.isEmpty {
-                ScriptButtonBar(
+            if !appState.settings.replacement.replacementRules.isEmpty
+                || !appState.settings.script.scripts.isEmpty
+                || !appState.settings.script.eligibleAutoRunScripts.isEmpty {
+                InputPanelToolbar(
+                    replacementRules: appState.settings.replacement.replacementRules,
                     scripts: appState.settings.script.scripts,
-                    isDisabled: appState.isRunningScript || appState.promptScript != nil,
-                    onExecuteScript: onExecuteScript
+                    scriptSettings: appState.settings.script,
+                    isRunningScript: appState.isRunningScript,
+                    hasPromptScript: appState.promptScript != nil,
+                    onApplyReplacementRules: onApplyReplacementRules,
+                    onExecuteScript: onExecuteScript,
+                    replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
                 )
-            }
-
-            if !appState.settings.script.eligibleAutoRunScripts.isEmpty {
-                AutoRunPicker(scriptSettings: appState.settings.script)
+                .padding(.top, 6)
             }
 
             if appState.promptScript != nil {
@@ -85,6 +74,7 @@ struct InputPanelContent: View {
                     onCancelPrompt: onCancelPrompt,
                     isFocused: $isPromptFocused
                 )
+                .padding(.top, 4)
             }
 
             if let status = appState.voiceEngineStatus {
@@ -97,6 +87,7 @@ struct InputPanelContent: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 8)
+                .padding(.top, 4)
             }
 
             if appState.settings.voiceInput.effectiveVoiceInputMode == .off {
@@ -110,6 +101,7 @@ struct InputPanelContent: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 8)
+                .padding(.top, 4)
             }
 
             if let errorMessage = appState.errorMessage {
@@ -118,7 +110,11 @@ struct InputPanelContent: View {
                     .foregroundStyle(.red)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 8)
+                    .padding(.top, 4)
             }
+
+            Spacer()
+                .frame(height: 4)
         }
         .frame(minWidth: 200, maxWidth: .infinity)
         .background(.ultraThinMaterial)
@@ -130,14 +126,6 @@ struct InputPanelContent: View {
                 isPromptFocused = false
                 onFocusTextEditor()
             }
-        }
-    }
-
-    private var replacementShortcutHelpText: String {
-        if let shortcut = appState.settings.replacement.replacementShortcutKey {
-            "Apply replacement rules (\(shortcut.displayName))"
-        } else {
-            "Apply replacement rules"
         }
     }
 
