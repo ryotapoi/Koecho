@@ -25,7 +25,7 @@
 - [x] init の巨大コールバック配線を整理
 
 ### 6. UI 改善（History）
-- [ ] Show Full Text popover のサイズを大きくする（現状スクロールしないと全文が見えない）
+- [x] Show Full Text popover のサイズを大きくする（現状スクロールしないと全文が見えない）
 
 ### 7. UI 改善（InputPanel）
 - [ ] スクリプトボタンと Replace ボタンを統合ツールバーにまとめる

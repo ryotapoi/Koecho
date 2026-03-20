@@ -37,13 +37,7 @@ struct HistoryView: View {
                         get: { popoverEntryID == entry.id },
                         set: { if !$0 { popoverEntryID = nil } }
                     )) {
-                        ScrollView {
-                            Text(entry.text)
-                                .textSelection(.enabled)
-                                .padding()
-                                .frame(minWidth: 300, maxWidth: 500, alignment: .leading)
-                        }
-                        .frame(maxHeight: 400)
+                        FullTextPopoverContent(text: entry.text)
                     }
                 }
             }
@@ -106,5 +100,27 @@ private struct HistoryRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct FullTextPopoverContent: View {
+    let text: String
+    private let maxPopoverHeight: CGFloat = 600
+    @State private var contentHeight: CGFloat = 0
+
+    var body: some View {
+        ScrollView {
+            Text(text)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(minWidth: 300, maxWidth: 500, alignment: .leading)
+                .padding()
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.size.height
+                } action: { height in
+                    contentHeight = height
+                }
+        }
+        .frame(height: contentHeight > 0 ? min(contentHeight, maxPopoverHeight) : nil)
     }
 }
