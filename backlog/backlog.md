@@ -22,7 +22,7 @@
 - [x] アイコンのみボタンにテキストラベル追加（ScriptManagementView, ReplacementRuleManagementView, PromptInputView）
 
 ### 5. InputPanelController の責務分割
-- [ ] init の巨大コールバック配線を整理
+- [x] init の巨大コールバック配線を整理
 
 ### 6. UI 改善（History）
 - [ ] Show Full Text popover のサイズを大きくする（現状スクロールしないと全文が見えない）

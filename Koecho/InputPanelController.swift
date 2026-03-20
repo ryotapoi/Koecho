@@ -79,84 +79,8 @@ final class InputPanelController {
             self.replacementService.applyOrPreview()
         }
 
-        let hostingView = NSHostingView(rootView: InputPanelContent(
-            appState: appState,
-            onExecuteScript: { [weak self] script in
-                await self?.scriptService.execute(script)
-            },
-            onCancelPrompt: { [weak self] in
-                self?.cancelPrompt()
-            },
-            onApplyReplacementRules: { [weak self] in
-                self?.replacementService.applyOrPreview()
-            },
-            onPromptFocused: { [weak self] in
-                guard let self else { return }
-                self.voiceCoordinator.currentVoiceTarget = .prompt
-                self.voiceCoordinator.restartDictationIfNeeded()
-            },
-            onAddReplacementRule: { [weak self] rule in
-                self?.replacementService.addRule(rule)
-            },
-            onTextChanged: { [weak self] text in
-                self?.handleTextChanged(text)
-            },
-            onTextCommitted: { [weak self] in
-                self?.handleTextCommitted()
-            },
-            onTextViewCreated: { [weak self] view in
-                guard let self else { return }
-                self.textView = view
-                self.voiceCoordinator.textView = view
-                self.replacementService.textView = view
-                self.scriptService.textView = view
-                view.onCursorMoved = { [weak self] position in
-                    self?.voiceCoordinator.handleCursorMoved(position)
-                }
-                view.onVolatileFinalized = { [weak self] volatileText in
-                    guard let self else { return }
-                    self.voiceCoordinator.isLocallyFinalized = true
-                    self.voiceCoordinator.localFinalizedText = volatileText
-                }
-                self.voiceCoordinator.configureEngineWithTextView()
-            },
-            onFocusTextEditor: { [weak self] in
-                self?.voiceCoordinator.currentVoiceTarget = .textEditor
-                self?.focusTextView()
-            }
-        ))
-        panel.contentView = hostingView
-        hostingView.layoutSubtreeIfNeeded()
-
-        panel.onEscape = { [weak self] in
-            guard let self else { return }
-            if self.appState.promptScript != nil && !self.appState.isRunningScript {
-                self.cancelPrompt()
-            } else {
-                self.cancel()
-            }
-        }
-
-        panel.onShortcutKey = { [weak self] shortcut in
-            guard let self else { return false }
-            if let aShortcut = self.appState.settings.script.autoRunShortcutKey,
-               shortcut == aShortcut {
-                self.scriptService.cycleAutoRunScript()
-                return true
-            }
-            if let rShortcut = self.appState.settings.replacement.replacementShortcutKey,
-               shortcut == rShortcut,
-               !self.appState.settings.replacement.replacementRules.isEmpty {
-                self.replacementService.applyOrPreview()
-                return true
-            }
-            guard let script = self.appState.settings.script.scripts.first(where: { $0.shortcutKey == shortcut })
-            else { return false }
-            Task { @MainActor in
-                await self.scriptService.execute(script)
-            }
-            return true
-        }
+        configureContentView()
+        configurePanelCallbacks()
 
         panel.setFrameAutosaveName("InputPanel")
         if UserDefaults.standard.string(forKey: "NSWindow Frame InputPanel") == nil {
@@ -365,6 +289,93 @@ final class InputPanelController {
     }
 
     // MARK: - Private
+
+    private func configureContentView() {
+        let hostingView = NSHostingView(rootView: InputPanelContent(
+            appState: appState,
+            onExecuteScript: { [weak self] script in
+                await self?.scriptService.execute(script)
+            },
+            onCancelPrompt: { [weak self] in
+                self?.cancelPrompt()
+            },
+            onApplyReplacementRules: { [weak self] in
+                self?.replacementService.applyOrPreview()
+            },
+            onPromptFocused: { [weak self] in
+                guard let self else { return }
+                self.voiceCoordinator.currentVoiceTarget = .prompt
+                self.voiceCoordinator.restartDictationIfNeeded()
+            },
+            onAddReplacementRule: { [weak self] rule in
+                self?.replacementService.addRule(rule)
+            },
+            onTextChanged: { [weak self] text in
+                self?.handleTextChanged(text)
+            },
+            onTextCommitted: { [weak self] in
+                self?.handleTextCommitted()
+            },
+            onTextViewCreated: { [weak self] view in
+                guard let self else { return }
+                self.handleTextViewCreated(view)
+            },
+            onFocusTextEditor: { [weak self] in
+                self?.voiceCoordinator.currentVoiceTarget = .textEditor
+                self?.focusTextView()
+            }
+        ))
+        panel.contentView = hostingView
+        hostingView.layoutSubtreeIfNeeded()
+    }
+
+    private func configurePanelCallbacks() {
+        panel.onEscape = { [weak self] in
+            guard let self else { return }
+            if self.appState.promptScript != nil && !self.appState.isRunningScript {
+                self.cancelPrompt()
+            } else {
+                self.cancel()
+            }
+        }
+
+        panel.onShortcutKey = { [weak self] shortcut in
+            guard let self else { return false }
+            if let aShortcut = self.appState.settings.script.autoRunShortcutKey,
+               shortcut == aShortcut {
+                self.scriptService.cycleAutoRunScript()
+                return true
+            }
+            if let rShortcut = self.appState.settings.replacement.replacementShortcutKey,
+               shortcut == rShortcut,
+               !self.appState.settings.replacement.replacementRules.isEmpty {
+                self.replacementService.applyOrPreview()
+                return true
+            }
+            guard let script = self.appState.settings.script.scripts.first(where: { $0.shortcutKey == shortcut })
+            else { return false }
+            Task { @MainActor in
+                await self.scriptService.execute(script)
+            }
+            return true
+        }
+    }
+
+    private func handleTextViewCreated(_ view: VoiceInputTextView) {
+        textView = view
+        voiceCoordinator.textView = view
+        replacementService.textView = view
+        scriptService.textView = view
+        view.onCursorMoved = { [weak self] position in
+            self?.voiceCoordinator.handleCursorMoved(position)
+        }
+        view.onVolatileFinalized = { [weak self] volatileText in
+            guard let self else { return }
+            self.voiceCoordinator.isLocallyFinalized = true
+            self.voiceCoordinator.localFinalizedText = volatileText
+        }
+        voiceCoordinator.configureEngineWithTextView()
+    }
 
     private func handleTextCommitted() {
         if let textView {
