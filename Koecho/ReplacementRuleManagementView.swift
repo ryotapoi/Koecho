@@ -28,7 +28,7 @@ struct ReplacementRuleManagementView: View {
             let duplicates = duplicatePatterns
             ForEach(settings.replacementRules) { rule in
                 HStack {
-                    Text(rule.displayName)
+                    Text(localizedDisplayName(for: rule))
                     if duplicates.contains(rule.pattern) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.yellow)
@@ -86,5 +86,10 @@ struct ReplacementRuleManagementView: View {
         guard let id = selection else { return }
         selection = nil
         settings.deleteReplacementRule(id: id)
+    }
+
+    private func localizedDisplayName(for rule: ReplacementRule) -> String {
+        if rule.pattern.isEmpty { return String(localized: "New Rule") }
+        return rule.displayName
     }
 }

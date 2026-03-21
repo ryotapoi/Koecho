@@ -26,7 +26,7 @@ struct InputPanelToolbar: View {
                             Label("Replace", systemImage: "arrow.2.squarepath")
                                 .font(.caption)
                         }
-                        .help(helpText("Apply replacement rules", shortcut: replacementShortcutKey))
+                        .help(helpText(String(localized: "Apply replacement rules"), shortcut: replacementShortcutKey))
                         .disabled(isRunningScript)
                     }
 
@@ -62,7 +62,7 @@ struct InputPanelToolbar: View {
                     HStack(spacing: 2) {
                         Image(systemName: "bolt.fill")
                             .font(.caption)
-                        Text(scriptSettings.autoRunScript?.name ?? "None")
+                        Text(scriptSettings.autoRunScript?.name ?? String(localized: "None"))
                             .font(.caption)
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 9))
@@ -71,7 +71,7 @@ struct InputPanelToolbar: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
-                .help(helpText("Cycle auto-run script selection", shortcut: scriptSettings.autoRunShortcutKey))
+                .help(helpText(String(localized: "Cycle auto-run script selection"), shortcut: scriptSettings.autoRunShortcutKey))
                 .padding(.trailing, 8)
             }
         }

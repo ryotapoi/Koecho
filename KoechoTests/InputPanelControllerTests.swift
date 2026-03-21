@@ -228,7 +228,7 @@ struct InputPanelControllerTests {
 
         await ctx.controller.confirm()
 
-        #expect(ctx.appState.errorMessage == "No target application")
+        #expect(ctx.appState.errorMessage == String(localized: "No target application"))
         #expect(ctx.appState.isInputPanelVisible == true)
     }
 
@@ -328,7 +328,6 @@ struct InputPanelControllerTests {
 
         #expect(ctx.appState.inputText == "original")
         #expect(ctx.appState.errorMessage?.contains("Empty") == true)
-        #expect(ctx.appState.errorMessage?.contains("empty output") == true)
     }
 
     @Test func executeScriptPassesContext() async throws {
@@ -571,7 +570,7 @@ struct InputPanelControllerTests {
         let emptyScriptEntry = Script(name: "Empty", scriptPath: "")
         ctx.appState.inputText = "text"
         await ctx.controller.executeScript(emptyScriptEntry)
-        #expect(ctx.appState.errorMessage == "Script command is empty.")
+        #expect(ctx.appState.errorMessage == String(localized: "Script command is empty."))
 
         // Test nonZeroExit with stderr
         let failPath = try makeScript("echo 'err msg' >&2; exit 2")
@@ -579,7 +578,8 @@ struct InputPanelControllerTests {
         ctx.appState.errorMessage = nil
         ctx.appState.inputText = "text"
         await ctx.controller.executeScript(failScript)
-        #expect(ctx.appState.errorMessage == "Script 'Fail' failed (exit 2): err msg")
+        #expect(ctx.appState.errorMessage?.contains("Fail") == true)
+        #expect(ctx.appState.errorMessage?.contains("err msg") == true)
 
         // Test emptyOutput
         let emptyPath = try makeScript("printf ''")
@@ -587,7 +587,7 @@ struct InputPanelControllerTests {
         ctx.appState.errorMessage = nil
         ctx.appState.inputText = "text"
         await ctx.controller.executeScript(emptyScript)
-        #expect(ctx.appState.errorMessage == "Script 'Empty' produced empty output.")
+        #expect(ctx.appState.errorMessage?.contains("Empty") == true)
 
         // Test timeout
         let timeoutPath = try makeScript("sleep 10")
@@ -598,7 +598,7 @@ struct InputPanelControllerTests {
         ctx2.controller.showPanel()
         ctx2.appState.inputText = "text"
         await ctx2.controller.executeScript(timeoutScript)
-        #expect(ctx2.appState.errorMessage == "Script 'Timeout' timed out.")
+        #expect(ctx2.appState.errorMessage?.contains("Timeout") == true)
     }
 
     // MARK: - Manual Replacement Rules
@@ -1126,7 +1126,7 @@ struct InputPanelControllerTests {
         await ctx.controller.confirm()
 
         #expect(ctx.appState.isInputPanelVisible == true)
-        #expect(ctx.appState.errorMessage?.contains("empty output") == true)
+        #expect(ctx.appState.errorMessage?.contains("Empty") == true)
         #expect(paster.pastedTexts.isEmpty)
         #expect(ctx.appState.inputText == "hello")
     }

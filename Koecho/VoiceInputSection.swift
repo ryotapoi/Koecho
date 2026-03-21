@@ -157,7 +157,7 @@ private struct LanguageManagementSheet: View {
         do {
             try await manager.downloadLocale(item)
         } catch {
-            errors[item.identifier] = "Download failed: \(error.localizedDescription)"
+            errors[item.identifier] = String(localized: "Download failed: \(error.localizedDescription)")
         }
         downloadingIdentifiers.remove(item.identifier)
     }

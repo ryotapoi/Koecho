@@ -60,7 +60,7 @@ struct ScriptManagementView: View {
     }
 
     private func addScript() {
-        let script = Script(name: "New Script", scriptPath: "")
+        let script = Script(name: String(localized: "New Script"), scriptPath: "")
         settings.addScript(script)
         selection = script.id
     }

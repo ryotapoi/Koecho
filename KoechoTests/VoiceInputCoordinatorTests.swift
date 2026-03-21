@@ -269,7 +269,7 @@ import Testing
 
         coordinator.voiceInput(didEncounterError: .microphoneAccessDenied)
 
-        #expect(appState.errorMessage == "Microphone access denied. Open System Settings > Privacy & Security > Microphone.")
+        #expect(appState.errorMessage == String(localized: "Microphone access denied. Open System Settings > Privacy & Security > Microphone."))
     }
 
     @Test func didUpdateStatusSetsVoiceEngineStatus() {
@@ -277,7 +277,7 @@ import Testing
 
         coordinator.voiceInput(didUpdateStatus: .downloadingModel)
 
-        #expect(appState.voiceEngineStatus == "Downloading speech model...")
+        #expect(appState.voiceEngineStatus == String(localized: "Downloading speech model..."))
     }
 
     @Test func didUpdateStatusNilClearsVoiceEngineStatus() {

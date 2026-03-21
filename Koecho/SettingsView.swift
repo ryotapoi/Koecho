@@ -36,6 +36,7 @@ struct SettingsView: View {
                 HistoryView(historyStore: historyStore)
             }
         }
+        .frame(minWidth: 600, minHeight: 400)
     }
 }
 
@@ -50,11 +51,11 @@ enum SettingsPage: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: "General"
-        case .hotkey: "Hotkey"
-        case .replacementRules: "Replacement Rules"
-        case .scripts: "Scripts"
-        case .history: "History"
+        case .general: String(localized: "General")
+        case .hotkey: String(localized: "Hotkey")
+        case .replacementRules: String(localized: "Replacement Rules")
+        case .scripts: String(localized: "Scripts")
+        case .history: String(localized: "History")
         }
     }
 

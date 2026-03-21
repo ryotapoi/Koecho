@@ -1,3 +1,4 @@
+import Foundation
 import KoechoCore
 
 struct HotkeyKeyChoice: Hashable {
@@ -6,7 +7,7 @@ struct HotkeyKeyChoice: Hashable {
 
     var displayName: String {
         switch modifierKey {
-        case .fn: "Fn (Globe)"
+        case .fn: modifierKey.displayName
         default: "\(modifierKey.displayName) (\(side.displayName))"
         }
     }
@@ -28,11 +29,11 @@ struct HotkeyKeyChoice: Hashable {
 extension ModifierKey {
     var displayName: String {
         switch self {
-        case .command: "Command"
-        case .shift: "Shift"
-        case .option: "Option"
-        case .control: "Control"
-        case .fn: "Fn (Globe)"
+        case .command: String(localized: "Command")
+        case .shift: String(localized: "Shift")
+        case .option: String(localized: "Option")
+        case .control: String(localized: "Control")
+        case .fn: String(localized: "Fn (Globe)")
         }
     }
 }
@@ -40,8 +41,8 @@ extension ModifierKey {
 extension ModifierSide {
     var displayName: String {
         switch self {
-        case .left: "Left"
-        case .right: "Right"
+        case .left: String(localized: "Left")
+        case .right: String(localized: "Right")
         }
     }
 }
@@ -49,8 +50,8 @@ extension ModifierSide {
 extension TapMode {
     var displayName: String {
         switch self {
-        case .singleToggle: "Single Tap (toggle show/confirm)"
-        case .doubleTapToShow: "Double Tap to show, Single Tap to confirm"
+        case .singleToggle: String(localized: "Single Tap (toggle show/confirm)")
+        case .doubleTapToShow: String(localized: "Double Tap to show, Single Tap to confirm")
         }
     }
 }

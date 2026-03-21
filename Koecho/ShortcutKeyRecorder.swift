@@ -80,13 +80,13 @@ final class ShortcutKeyRecorderView: NSView {
         let text: String
         let color: NSColor
         if isRecording {
-            text = "Press shortcut..."
+            text = String(localized: "Press shortcut...")
             color = .secondaryLabelColor
         } else if let key = shortcutKey {
             text = key.displayName
             color = .labelColor
         } else {
-            text = "None"
+            text = String(localized: "None")
             color = .tertiaryLabelColor
         }
 

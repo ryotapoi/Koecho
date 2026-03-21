@@ -178,7 +178,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
             let original = nsString.substring(with: match.range)
             let tipText = match.replacement.isEmpty
-                ? "\(original) → (delete)"
+                ? "\(original) → \(String(localized: "(delete)"))"
                 : "\(original) → \(match.replacement)"
 
             let area = NSTrackingArea(
@@ -362,7 +362,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
         guard selectedRange().length > 0 else { return menu }
         menu?.addItem(.separator())
         let item = NSMenuItem(
-            title: "Add Replacement Rule\u{2026}",
+            title: String(localized: "Add Replacement Rule\u{2026}"),
             action: #selector(addReplacementRuleFromMenu(_:)),
             keyEquivalent: ""
         )

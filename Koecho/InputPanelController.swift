@@ -173,7 +173,7 @@ final class InputPanelController {
         }
 
         guard let targetApp = appState.frontmostApplication else {
-            appState.errorMessage = "No target application"
+            appState.errorMessage = String(localized: "No target application")
             return
         }
 
@@ -420,11 +420,11 @@ final class InputPanelController {
     private func errorMessage(for error: any Error) -> String {
         switch error {
         case ClipboardPasterError.accessibilityNotTrusted:
-            "Accessibility permission required. Open System Settings > Privacy & Security > Accessibility."
+            String(localized: "Accessibility permission required. Open System Settings > Privacy & Security > Accessibility.")
         case ClipboardPasterError.targetAppTerminated:
-            "Target application has been terminated."
+            String(localized: "Target application has been terminated.")
         case ClipboardPasterError.failedToCreateCGEvent:
-            "Failed to simulate paste keystroke."
+            String(localized: "Failed to simulate paste keystroke.")
         default:
             String(describing: error)
         }

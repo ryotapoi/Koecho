@@ -231,28 +231,28 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     private func displayMessage(for error: VoiceInputEngineError) -> String {
         switch error {
         case .microphoneAccessDenied:
-            "Microphone access denied. Open System Settings > Privacy & Security > Microphone."
+            String(localized: "Microphone access denied. Open System Settings > Privacy & Security > Microphone.")
         case .modelDownloadFailed(let description):
-            "Failed to download speech model: \(description)"
+            String(localized: "Failed to download speech model: \(description)")
         case .noAudioInputDevice:
-            "No audio input device available."
+            String(localized: "No audio input device available.")
         case .noCompatibleAudioFormat:
-            "No compatible audio format available."
+            String(localized: "No compatible audio format available.")
         case .audioFormatConversionNotSupported:
-            "Audio format conversion not supported."
+            String(localized: "Audio format conversion not supported.")
         case .audioEngineStartFailed(let description):
-            "Failed to start audio engine: \(description)"
+            String(localized: "Failed to start audio engine: \(description)")
         case .recognitionError(let description):
-            "Speech recognition error: \(description)"
+            String(localized: "Speech recognition error: \(description)")
         }
     }
 
     private func displayMessage(for status: VoiceInputEngineStatus) -> String {
         switch status {
         case .requestingMicrophoneAccess:
-            "Requesting microphone access..."
+            String(localized: "Requesting microphone access...")
         case .downloadingModel:
-            "Downloading speech model..."
+            String(localized: "Downloading speech model...")
         }
     }
 

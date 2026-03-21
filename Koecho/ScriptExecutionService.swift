@@ -124,13 +124,13 @@ final class ScriptExecutionService {
     func scriptErrorMessage(for error: any Error, script: Script) -> String {
         switch error {
         case ScriptRunnerError.emptyScript:
-            "Script command is empty."
+            String(localized: "Script command is empty.")
         case ScriptRunnerError.timeout:
-            "Script '\(script.name)' timed out."
+            String(localized: "Script '\(script.name)' timed out.")
         case ScriptRunnerError.nonZeroExit(let code, let stderr):
-            "Script '\(script.name)' failed (exit \(code))\(stderr.isEmpty ? "" : ": \(stderr)")"
+            String(localized: "Script '\(script.name)' failed (exit \(code))\(stderr.isEmpty ? "" : ": \(stderr)")")
         case ScriptRunnerError.emptyOutput:
-            "Script '\(script.name)' produced empty output."
+            String(localized: "Script '\(script.name)' produced empty output.")
         default:
             String(describing: error)
         }
