@@ -25,6 +25,14 @@
 - `LSUIElement = YES`（Info.plist）だけで Dock 非表示になるので、`setActivationPolicy(.accessory)` は不要
 - `App.init()` 内での `NSApplication.shared` アクセスは SwiftUI のライフサイクル初期化と競合するリスクがある
 
+## macOS / LSUIElement + ウィンドウ前面化
+
+- LSUIElement アプリでは `NSApplication.shared.activate()` が一度フォーカスを失うと再 activate が効かない（`isActive=false` のまま）。MenuBarExtra のメニューアクションから呼んでも、メニュー dismiss 処理と競合して activate が無視される
+- `NSRunningApplication.current.activate(options: .activateIgnoringOtherApps)` は macOS 14 で deprecated、効果なし
+- 対策: ウィンドウの `level` を一時的に `.floating` に昇格 → `makeKeyAndOrderFront(nil)` → `activate()` → `.normal` に戻す。`Task.sleep(for: .milliseconds(100))` でメニュー dismiss 完了を待ってから実行
+- `NSApplication.shared.windows` から Settings ウィンドウを特定するには `identifier?.rawValue.contains("settings")` を使う（SwiftUI `Window(id:)` が identifier に id 文字列を含むフォーマットで設定する。undocumented だが graceful degradation つき）
+- `SettingsWindowAccessor`（NSViewRepresentable）で NSWindow 参照を保持する方式は、MenuBarExtra の `.menu` スタイルでは `let` プロパティが値渡しになり State の更新が反映されないため不採用
+
 ## Swift / @Observable
 
 - `@Observable` マクロはストアドプロパティのアクセスを変換する。通常の Swift では `init` 内の直接代入で `didSet` は呼ばれないが、`@Observable` がプロパティアクセスを書き換えるため、`init` 内でも `didSet` が発火する可能性がある

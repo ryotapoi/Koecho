@@ -32,8 +32,14 @@ struct MenuBarContent: View {
 
         Button("Settings...") {
             openWindow(id: "settings")
-            Task {
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(100))
+                let settingsWindow = NSApplication.shared.windows
+                    .first { $0.identifier?.rawValue.contains("settings") == true }
+                settingsWindow?.level = .floating
+                settingsWindow?.makeKeyAndOrderFront(nil)
                 NSApplication.shared.activate()
+                settingsWindow?.level = .normal
             }
         }
 
