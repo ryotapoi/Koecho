@@ -5,7 +5,7 @@
 ### 1. ローカライズ・文字列調整
 - [x] 日本語ローカライズ
 - [x] Settings ウィンドウの最小サイズ制限（Engine「Off」やサイドバーラベルが切れない幅を確保）
-- [ ] サイドバー「Replacement Rules」の名前 — ローカライズ後にサイドバー幅を見て短縮要否を判断（目視確認では英語「Replacement Rules」も日本語「置換ルール」も180ptサイドバーに収まる。変更不要の可能性が高い）
+- [x] サイドバー「Replacement Rules」の名前 — 「Replacement」/「置換」に短縮、サイドバー幅を200ptに変更
 - [x] locale 表示ロジックの重複解消（MenuLocaleItem を LocaleItem に統合、refreshMenuLocales() に集約）
 
 ### 2. メニューバー ⌘, / ⌘Q ショートカット表示の修正

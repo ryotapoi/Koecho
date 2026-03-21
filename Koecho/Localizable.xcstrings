@@ -1,6 +1,87 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "  %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "  %@"
+          }
+        }
+      }
+    },
+    "  None" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "  なし"
+          }
+        }
+      }
+    },
+    "(delete)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（削除）"
+          }
+        }
+      }
+    },
+    "%@ (not connected)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@（未接続）"
+          }
+        }
+      }
+    },
+    "%lld entries" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件"
+          }
+        }
+      }
+    },
+    "%lld%%" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%%"
+          }
+        }
+      }
+    },
+    "✓ %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "✓ %@"
+          }
+        }
+      }
+    },
+    "✓ None" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "✓ なし"
+          }
+        }
+      }
+    },
     "Accessibility permission required. Open System Settings > Privacy & Security > Accessibility." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -32,13 +113,13 @@
         }
       }
     },
-    "Add Replacement Rule\u2026" : {
+    "Add Replacement Rule…" : {
       "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "置換ルールを追加\u2026"
+            "value" : "置換ルールを追加…"
           }
         }
       }
@@ -320,12 +401,12 @@
         }
       }
     },
-    "Downloading model\u2026" : {
+    "Downloading model…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "モデルをダウンロード中\u2026"
+            "value" : "モデルをダウンロード中…"
           }
         }
       }
@@ -337,17 +418,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "音声モデルをダウンロード中..."
-          }
-        }
-      }
-    },
-    "(delete)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（削除）"
           }
         }
       }
@@ -479,6 +549,9 @@
         }
       }
     },
+    "Koecho" : {
+
+    },
     "Language" : {
       "localizations" : {
         "ja" : {
@@ -500,12 +573,12 @@
         }
       }
     },
-    "Loading languages\u2026" : {
+    "Loading languages…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "言語を読み込み中\u2026"
+            "value" : "言語を読み込み中…"
           }
         }
       }
@@ -530,12 +603,12 @@
         }
       }
     },
-    "Manage Languages\u2026" : {
+    "Manage Languages…" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "言語を管理\u2026"
+            "value" : "言語を管理…"
           }
         }
       }
@@ -799,6 +872,23 @@
         }
       }
     },
+    "Replacement.sidebar" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replacement"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換"
+          }
+        }
+      }
+    },
     "Replacement Rules" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -862,34 +952,12 @@
         }
       }
     },
-    "Script Command" : {
+    "Script '%@' failed (exit %d)%@" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スクリプトコマンド"
-          }
-        }
-      }
-    },
-    "Script command is empty." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スクリプトコマンドが空です。"
-          }
-        }
-      }
-    },
-    "Script '%@' failed (exit %lld)%@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スクリプト '%1$@' が失敗しました（終了コード %2$lld）%3$@"
+            "value" : "スクリプト '%1$@' が失敗しました（終了コード %2$d）%3$@"
           }
         }
       }
@@ -912,6 +980,27 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "スクリプト '%@' がタイムアウトしました。"
+          }
+        }
+      }
+    },
+    "Script Command" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリプトコマンド"
+          }
+        }
+      }
+    },
+    "Script command is empty." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリプトコマンドが空です。"
           }
         }
       }
@@ -963,6 +1052,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選択したデバイスが利用できません。システムデフォルトを使用します。"
+          }
+        }
+      }
+    },
+    "Settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
           }
         }
       }
@@ -1187,66 +1286,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "音量ダッキング"
-          }
-        }
-      }
-    },
-    "%lld entries" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 件"
-          }
-        }
-      }
-    },
-    "%lld%%" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld%%"
-          }
-        }
-      }
-    },
-    "\u2713 %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "\u2713 %@"
-          }
-        }
-      }
-    },
-    "  %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "  %@"
-          }
-        }
-      }
-    },
-    "\u2713 None" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "\u2713 なし"
-          }
-        }
-      }
-    },
-    "  None" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "  なし"
           }
         }
       }

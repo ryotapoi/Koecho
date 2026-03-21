@@ -13,7 +13,7 @@ struct SettingsView: View {
                 Label(page.title, systemImage: page.icon)
                     .tag(page)
             }
-            .navigationSplitViewColumnWidth(180)
+            .navigationSplitViewColumnWidth(200)
             .toolbar(removing: .sidebarToggle)
         } detail: {
             switch selection {
@@ -53,7 +53,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .general: String(localized: "General")
         case .hotkey: String(localized: "Hotkey")
-        case .replacementRules: String(localized: "Replacement Rules")
+        case .replacementRules: String(localized: "Replacement.sidebar", defaultValue: "Replacement")
         case .scripts: String(localized: "Scripts")
         case .history: String(localized: "History")
         }
