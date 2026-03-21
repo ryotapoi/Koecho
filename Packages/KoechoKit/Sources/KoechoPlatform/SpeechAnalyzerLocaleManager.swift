@@ -3,10 +3,11 @@ import Observation
 import Speech
 import os
 
-public struct LocaleItem: Identifiable, Sendable {
+public struct LocaleItem: Identifiable, Sendable, Equatable {
     public let identifier: String
     public let displayName: String
     public let sortKey: String
+    public let normalizedKey: String
     public var isReserved: Bool
     public var id: String { identifier }
 
@@ -14,10 +15,11 @@ public struct LocaleItem: Identifiable, Sendable {
         "\(displayName) (\(identifier))"
     }
 
-    public init(identifier: String, displayName: String, sortKey: String, isReserved: Bool) {
+    public init(identifier: String, displayName: String, sortKey: String, normalizedKey: String, isReserved: Bool) {
         self.identifier = identifier
         self.displayName = displayName
         self.sortKey = sortKey
+        self.normalizedKey = normalizedKey
         self.isReserved = isReserved
     }
 }
@@ -46,15 +48,8 @@ public final class SpeechAnalyzerLocaleManager {
         let reservedKeys = Set(reserved.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
 
         var items = supported.map { locale -> LocaleItem in
-            let identifier = locale.identifier
-            let displayName = Locale.current.localizedString(forIdentifier: identifier) ?? identifier
             let key = SpeechAnalyzerEngine.localeNormalizationKey(locale)
-            return LocaleItem(
-                identifier: identifier,
-                displayName: displayName,
-                sortKey: displayName,
-                isReserved: reservedKeys.contains(key)
-            )
+            return makeLocaleItem(from: locale, normalizedKey: key, isReserved: reservedKeys.contains(key))
         }
         items.sort { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
 
@@ -75,12 +70,12 @@ public final class SpeechAnalyzerLocaleManager {
         let reservedKeys = Set(reserved.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
 
         for i in allLocales.indices {
-            let key = SpeechAnalyzerEngine.localeNormalizationKey(allLocales[i].identifier)
-            allLocales[i].isReserved = reservedKeys.contains(key)
+            allLocales[i].isReserved = reservedKeys.contains(allLocales[i].normalizedKey)
         }
 
-        let reservedIdentifiers = Set(reservedLocales.map(\.identifier))
-        if !reservedIdentifiers.contains(currentSelection) {
+        let currentKey = SpeechAnalyzerEngine.localeNormalizationKey(currentSelection)
+        let hasMatch = reservedLocales.contains { $0.normalizedKey == currentKey }
+        if !hasMatch {
             if let first = reservedLocales.first {
                 return first.identifier
             } else {
@@ -148,6 +143,14 @@ public final class SpeechAnalyzerLocaleManager {
         downloadError = nil
     }
 
+    public func refreshMenuLocales() async -> [LocaleItem] {
+        let reserved = await AssetInventory.reservedLocales
+        return reserved.map { locale in
+            let key = SpeechAnalyzerEngine.localeNormalizationKey(locale)
+            return makeLocaleItem(from: locale, normalizedKey: key, isReserved: true)
+        }.sorted { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
+    }
+
     func correctSelection(currentSelection: String, items: [LocaleItem]) -> String? {
         guard !items.isEmpty else { return nil }
         let allIdentifiers = Set(items.map(\.identifier))
@@ -165,9 +168,19 @@ public final class SpeechAnalyzerLocaleManager {
 
     public func findNormalizedMatch(for identifier: String, in items: [LocaleItem]) -> LocaleItem? {
         let sourceKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
-        return items.first { item in
-            SpeechAnalyzerEngine.localeNormalizationKey(item.identifier) == sourceKey
-        }
+        return items.first { $0.normalizedKey == sourceKey }
+    }
+
+    private func makeLocaleItem(from locale: Locale, normalizedKey: String, isReserved: Bool) -> LocaleItem {
+        let identifier = locale.identifier
+        let displayName = Locale.current.localizedString(forIdentifier: identifier) ?? identifier
+        return LocaleItem(
+            identifier: identifier,
+            displayName: displayName,
+            sortKey: displayName,
+            normalizedKey: normalizedKey,
+            isReserved: isReserved
+        )
     }
 
     private func performModelDownload(for identifier: String) async throws -> Bool {

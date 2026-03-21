@@ -6,7 +6,7 @@ import KoechoPlatform
 struct MenuBarContent: View {
     let appState: AppState
     let historyStore: HistoryStore
-    let downloadedLocales: [MenuLocaleItem]
+    let downloadedLocales: [LocaleItem]
     let onTogglePanel: () -> Void
     let onSwitchLanguage: (String) -> Void
     @Environment(\.openWindow) private var openWindow

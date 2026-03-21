@@ -6,7 +6,7 @@
 - [ ] 日本語ローカライズ
 - [ ] Settings ウィンドウの最小サイズ制限（Engine「Off」やサイドバーラベルが切れない幅を確保）
 - [ ] サイドバー「Replacement Rules」の名前 — ローカライズ後にサイドバー幅を見て短縮要否を判断
-- [ ] locale 表示ロジックの重複解消（KoechoApp.refreshDownloadedLocales と SpeechAnalyzerLocaleManager.loadLocales の統合、MenuLocaleItem / LocaleItem の統合）
+- [x] locale 表示ロジックの重複解消（MenuLocaleItem を LocaleItem に統合、refreshMenuLocales() に集約）
 
 ### 2. メニューバー ⌘, / ⌘Q ショートカット表示の修正
 - [ ] LSUIElement アプリで動作しない ⌘, ⌘Q がグレーアウト表示されている。動作しないなら表示しないのが Mac 慣習

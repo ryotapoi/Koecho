@@ -26,8 +26,8 @@ struct SpeechAnalyzerLocaleManagerTests {
         guard #available(macOS 26, *) else { return }
         let manager = SpeechAnalyzerLocaleManager()
         let items = [
-            LocaleItem(identifier: "en-US", displayName: "English (US)", sortKey: "English (US)", isReserved: true),
-            LocaleItem(identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese", isReserved: true),
+            LocaleItem(identifier: "en-US", displayName: "English (US)", sortKey: "English (US)", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("en-US"), isReserved: true),
+            LocaleItem(identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("ja-JP"), isReserved: true),
         ]
         let match = manager.findNormalizedMatch(for: "en-US", in: items)
         #expect(match?.identifier == "en-US")
@@ -37,7 +37,7 @@ struct SpeechAnalyzerLocaleManagerTests {
         guard #available(macOS 26, *) else { return }
         let manager = SpeechAnalyzerLocaleManager()
         let items = [
-            LocaleItem(identifier: "en_US", displayName: "English (US)", sortKey: "English (US)", isReserved: true),
+            LocaleItem(identifier: "en_US", displayName: "English (US)", sortKey: "English (US)", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("en_US"), isReserved: true),
         ]
         let match = manager.findNormalizedMatch(for: "en-US", in: items)
         #expect(match?.identifier == "en_US")
@@ -47,7 +47,7 @@ struct SpeechAnalyzerLocaleManagerTests {
         guard #available(macOS 26, *) else { return }
         let manager = SpeechAnalyzerLocaleManager()
         let items = [
-            LocaleItem(identifier: "en-US", displayName: "English (US)", sortKey: "English (US)", isReserved: true),
+            LocaleItem(identifier: "en-US", displayName: "English (US)", sortKey: "English (US)", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("en-US"), isReserved: true),
         ]
         let match = manager.findNormalizedMatch(for: "fr-FR", in: items)
         #expect(match == nil)
@@ -65,7 +65,7 @@ struct SpeechAnalyzerLocaleManagerTests {
         guard #available(macOS 26, *) else { return }
         let manager = SpeechAnalyzerLocaleManager()
         let items = [
-            LocaleItem(identifier: "en-US", displayName: "English (US)", sortKey: "English (US)", isReserved: true),
+            LocaleItem(identifier: "en-US", displayName: "English (US)", sortKey: "English (US)", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("en-US"), isReserved: true),
         ]
         let result = manager.correctSelection(currentSelection: "en-US", items: items)
         #expect(result == nil)
@@ -75,7 +75,7 @@ struct SpeechAnalyzerLocaleManagerTests {
         guard #available(macOS 26, *) else { return }
         let manager = SpeechAnalyzerLocaleManager()
         let items = [
-            LocaleItem(identifier: "en-US", displayName: "English (US)", sortKey: "English (US)", isReserved: false),
+            LocaleItem(identifier: "en-US", displayName: "English (US)", sortKey: "English (US)", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("en-US"), isReserved: false),
         ]
         let result = manager.correctSelection(currentSelection: "en-US", items: items)
         #expect(result == nil)
@@ -85,7 +85,7 @@ struct SpeechAnalyzerLocaleManagerTests {
         guard #available(macOS 26, *) else { return }
         let manager = SpeechAnalyzerLocaleManager()
         let items = [
-            LocaleItem(identifier: "en_US", displayName: "English (US)", sortKey: "English (US)", isReserved: true),
+            LocaleItem(identifier: "en_US", displayName: "English (US)", sortKey: "English (US)", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("en_US"), isReserved: true),
         ]
         let result = manager.correctSelection(currentSelection: "en-US", items: items)
         #expect(result == "en_US")
@@ -95,8 +95,8 @@ struct SpeechAnalyzerLocaleManagerTests {
         guard #available(macOS 26, *) else { return }
         let manager = SpeechAnalyzerLocaleManager()
         let items = [
-            LocaleItem(identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese", isReserved: true),
-            LocaleItem(identifier: "fr-FR", displayName: "French", sortKey: "French", isReserved: true),
+            LocaleItem(identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("ja-JP"), isReserved: true),
+            LocaleItem(identifier: "fr-FR", displayName: "French", sortKey: "French", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("fr-FR"), isReserved: true),
         ]
         let result = manager.correctSelection(currentSelection: "de-DE", items: items)
         #expect(result == "ja-JP")
@@ -106,8 +106,8 @@ struct SpeechAnalyzerLocaleManagerTests {
         guard #available(macOS 26, *) else { return }
         let manager = SpeechAnalyzerLocaleManager()
         let items = [
-            LocaleItem(identifier: "fr-FR", displayName: "French", sortKey: "French", isReserved: true),
-            LocaleItem(identifier: "de-DE", displayName: "German", sortKey: "German", isReserved: true),
+            LocaleItem(identifier: "fr-FR", displayName: "French", sortKey: "French", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("fr-FR"), isReserved: true),
+            LocaleItem(identifier: "de-DE", displayName: "German", sortKey: "German", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("de-DE"), isReserved: true),
         ]
         let result = manager.correctSelection(currentSelection: "zh-CN", items: items)
         #expect(result == "fr-FR")
@@ -124,8 +124,8 @@ struct SpeechAnalyzerLocaleManagerTests {
         guard #available(macOS 26, *) else { return }
         let manager = SpeechAnalyzerLocaleManager()
         let items = [
-            LocaleItem(identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese", isReserved: true),
-            LocaleItem(identifier: "en_US", displayName: "English (US)", sortKey: "English (US)", isReserved: true),
+            LocaleItem(identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("ja-JP"), isReserved: true),
+            LocaleItem(identifier: "en_US", displayName: "English (US)", sortKey: "English (US)", normalizedKey: SpeechAnalyzerEngine.localeNormalizationKey("en_US"), isReserved: true),
         ]
         let result = manager.correctSelection(currentSelection: "en-US", items: items)
         #expect(result == "en_US")

@@ -1,5 +1,4 @@
 import AppKit
-import Speech
 import SwiftUI
 import os
 import KoechoCore
@@ -14,7 +13,7 @@ struct KoechoApp: App {
     @State private var panelController: InputPanelController?
     @State private var hotkeyService: HotkeyService?
     @State private var didPurge = false
-    @State private var downloadedLocales: [MenuLocaleItem] = []
+    @State private var downloadedLocales: [LocaleItem] = []
 
     init() {
         guard !Self.isTesting else { return }
@@ -125,14 +124,8 @@ struct KoechoApp: App {
             return
         }
 
-        let reserved = await AssetInventory.reservedLocales
-        let items = reserved.map { locale -> MenuLocaleItem in
-            let identifier = locale.identifier
-            let displayName = Locale.current.localizedString(forIdentifier: identifier) ?? identifier
-            let key = SpeechAnalyzerEngine.localeNormalizationKey(locale)
-            return MenuLocaleItem(identifier: identifier, displayName: displayName, normalizedKey: key)
-        }.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-
+        let manager = SpeechAnalyzerLocaleManager()
+        let items = await manager.refreshMenuLocales()
         downloadedLocales = items
 
         // Stale selection correction
