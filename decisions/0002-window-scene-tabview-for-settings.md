@@ -21,12 +21,12 @@ The layout should follow the macOS System Settings / Xcode Settings pattern: a f
 
 ## Decision
 
-We will use a `Window` scene with a `NavigationSplitView` (fixed sidebar + detail) to host all settings pages. The sidebar has a fixed width with the toggle button removed. The menu bar item includes `.keyboardShortcut(",")` which works when the MenuBarExtra menu is open.
+We will use a `Window` scene with a `NavigationSplitView` (fixed sidebar + detail) to host all settings pages. The sidebar has a fixed width with the toggle button removed.
 
 ## Consequences
 
 - Settings pages (General, Scripts, future additions) are unified in a single window with a sidebar consistent with macOS conventions
 - Adding new pages requires adding a case to `SettingsPage` enum and a corresponding view
-- Cmd+, only works while the MenuBarExtra menu is open, not as a global shortcut. This is acceptable for a menu-bar-only app
+- Cmd+, is not available as a shortcut. LSUIElement apps lack a main menu bar, so non-functional shortcuts are not displayed per macOS conventions
 - No dependency on `Settings` scene behavior, which may vary across macOS versions for MenuBarExtra-only apps
 - Pages that need their own list+detail layout (e.g., Scripts) use `HStack` + `Divider` within the detail area instead of nested `NavigationSplitView`

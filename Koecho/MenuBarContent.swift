@@ -36,14 +36,12 @@ struct MenuBarContent: View {
                 NSApplication.shared.activate()
             }
         }
-        .keyboardShortcut(",")
 
         Divider()
 
         Button("Quit Koecho") {
             NSApplication.shared.terminate(nil)
         }
-        .keyboardShortcut("q")
     }
 
     @ViewBuilder
