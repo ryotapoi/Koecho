@@ -140,15 +140,15 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
         switch status {
         case .notDetermined:
-            delegate?.voiceInput(didUpdateStatus: "Requesting microphone access...")
+            delegate?.voiceInput(didUpdateStatus: .requestingMicrophoneAccess)
             let granted = await AVCaptureDevice.requestAccess(for: .audio)
             delegate?.voiceInput(didUpdateStatus: nil)
             if !granted {
-                reportError("Microphone access denied. Open System Settings > Privacy & Security > Microphone.")
+                reportError(.microphoneAccessDenied)
                 return
             }
         case .denied, .restricted:
-            reportError("Microphone access denied. Open System Settings > Privacy & Security > Microphone.")
+            reportError(.microphoneAccessDenied)
             return
         case .authorized:
             break
@@ -171,7 +171,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
                     supporting: [transcriber]
                 ) {
                     logger.info("Downloading speech model...")
-                    delegate?.voiceInput(didUpdateStatus: "Downloading speech model...")
+                    delegate?.voiceInput(didUpdateStatus: .downloadingModel)
                     try await request.downloadAndInstall()
                     logger.info("Speech model downloaded")
                     delegate?.voiceInput(didUpdateStatus: nil)
@@ -179,7 +179,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
                 Self.markModelVerified(localeKey: localeKey)
             } catch {
                 delegate?.voiceInput(didUpdateStatus: nil)
-                reportError("Failed to download speech model: \(error.localizedDescription)")
+                reportError(.modelDownloadFailed(description: error.localizedDescription))
                 return
             }
         }
@@ -210,7 +210,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         let inputFormat = inputNode.outputFormat(forBus: 0)
 
         guard inputFormat.channelCount > 0 else {
-            reportError("No audio input device available.")
+            reportError(.noAudioInputDevice)
             return
         }
 
@@ -219,7 +219,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
             compatibleWith: [transcriber],
             considering: inputFormat
         ) else {
-            reportError("No compatible audio format available.")
+            reportError(.noCompatibleAudioFormat)
             return
         }
         self.analyzerFormat = bestFormat
@@ -228,7 +228,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         let needsConversion = inputFormat != bestFormat
         if needsConversion {
             guard let conv = AVAudioConverter(from: inputFormat, to: bestFormat) else {
-                reportError("Audio format conversion not supported.")
+                reportError(.audioFormatConversionNotSupported)
                 return
             }
             self.converter = conv
@@ -260,7 +260,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
             try audioEngine.start()
             logger.info("Audio engine started, listening...")
         } catch {
-            reportError("Failed to start audio engine: \(error.localizedDescription)")
+            reportError(.audioEngineStartFailed(description: error.localizedDescription))
             tearDown()
         }
     }
@@ -282,7 +282,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
                 // Normal during stop/cancel
             } catch {
                 guard let self, self.state != .stopping, self.state != .idle else { return }
-                self.delegate?.voiceInput(didEncounterError: "Speech recognition error: \(error.localizedDescription)")
+                self.reportError(.recognitionError(description: error.localizedDescription))
             }
         }
         self.resultTask = resultsTask
@@ -299,7 +299,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         if needsConversion {
             if converter == nil || converter?.inputFormat != inputFormat {
                 guard let conv = AVAudioConverter(from: inputFormat, to: analyzerFormat) else {
-                    reportError("Audio format conversion not supported.")
+                    reportError(.audioFormatConversionNotSupported)
                     return
                 }
                 converter = conv
@@ -378,11 +378,12 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         return true
     }
 
-    private func reportError(_ message: String) {
-        logger.error("\(message, privacy: .public)")
+    private func reportError(_ error: VoiceInputEngineError) {
+        let description = String(describing: error)
+        logger.error("\(description, privacy: .public)")
         tearDown()
-        state = .error(message)
-        delegate?.voiceInput(didEncounterError: message)
+        state = .error(description)
+        delegate?.voiceInput(didEncounterError: error)
     }
 
     /// Race a task against a timeout. Returns `true` if the timeout fires first.

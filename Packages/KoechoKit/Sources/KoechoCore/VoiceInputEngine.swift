@@ -7,6 +7,21 @@ public enum VoiceInputState: Equatable, Sendable {
     case error(String)
 }
 
+public enum VoiceInputEngineStatus: Sendable, Equatable {
+    case requestingMicrophoneAccess
+    case downloadingModel
+}
+
+public enum VoiceInputEngineError: Error, Sendable, Equatable {
+    case microphoneAccessDenied
+    case modelDownloadFailed(description: String)
+    case noAudioInputDevice
+    case noCompatibleAudioFormat
+    case audioFormatConversionNotSupported
+    case audioEngineStartFailed(description: String)
+    case recognitionError(description: String)
+}
+
 @MainActor
 public protocol VoiceInputEngine: AnyObject {
     var state: VoiceInputState { get }
@@ -20,6 +35,6 @@ public protocol VoiceInputEngine: AnyObject {
 public protocol VoiceInputDelegate: AnyObject {
     func voiceInput(didFinalize text: String)
     func voiceInput(didUpdateVolatile text: String)
-    func voiceInput(didEncounterError message: String)
-    func voiceInput(didUpdateStatus status: String?)
+    func voiceInput(didEncounterError error: VoiceInputEngineError)
+    func voiceInput(didUpdateStatus status: VoiceInputEngineStatus?)
 }

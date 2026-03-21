@@ -263,11 +263,11 @@ final class InputPanelController {
         voiceCoordinator.voiceInput(didUpdateVolatile: text)
     }
 
-    func voiceInput(didEncounterError message: String) {
-        voiceCoordinator.voiceInput(didEncounterError: message)
+    func voiceInput(didEncounterError error: VoiceInputEngineError) {
+        voiceCoordinator.voiceInput(didEncounterError: error)
     }
 
-    func voiceInput(didUpdateStatus status: String?) {
+    func voiceInput(didUpdateStatus status: VoiceInputEngineStatus?) {
         voiceCoordinator.voiceInput(didUpdateStatus: status)
     }
 

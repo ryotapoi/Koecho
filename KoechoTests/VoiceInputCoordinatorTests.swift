@@ -267,16 +267,25 @@ import Testing
     @Test func didEncounterErrorSetsErrorMessage() {
         let (coordinator, appState, _, _) = makeCoordinator()
 
-        coordinator.voiceInput(didEncounterError: "mic error")
+        coordinator.voiceInput(didEncounterError: .microphoneAccessDenied)
 
-        #expect(appState.errorMessage == "mic error")
+        #expect(appState.errorMessage == "Microphone access denied. Open System Settings > Privacy & Security > Microphone.")
     }
 
     @Test func didUpdateStatusSetsVoiceEngineStatus() {
         let (coordinator, appState, _, _) = makeCoordinator()
 
-        coordinator.voiceInput(didUpdateStatus: "Listening...")
+        coordinator.voiceInput(didUpdateStatus: .downloadingModel)
 
-        #expect(appState.voiceEngineStatus == "Listening...")
+        #expect(appState.voiceEngineStatus == "Downloading speech model...")
+    }
+
+    @Test func didUpdateStatusNilClearsVoiceEngineStatus() {
+        let (coordinator, appState, _, _) = makeCoordinator()
+        appState.voiceEngineStatus = "something"
+
+        coordinator.voiceInput(didUpdateStatus: nil)
+
+        #expect(appState.voiceEngineStatus == nil)
     }
 }

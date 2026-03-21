@@ -59,11 +59,11 @@ struct SpeechAnalyzerEngineTests {
 private final class MockVoiceInputDelegate: VoiceInputDelegate {
     var finalizedTexts: [String] = []
     var volatileTexts: [String] = []
-    var errors: [String] = []
-    var statuses: [String?] = []
+    var errors: [VoiceInputEngineError] = []
+    var statuses: [VoiceInputEngineStatus?] = []
 
     func voiceInput(didFinalize text: String) { finalizedTexts.append(text) }
     func voiceInput(didUpdateVolatile text: String) { volatileTexts.append(text) }
-    func voiceInput(didEncounterError message: String) { errors.append(message) }
-    func voiceInput(didUpdateStatus status: String?) { statuses.append(status) }
+    func voiceInput(didEncounterError error: VoiceInputEngineError) { errors.append(error) }
+    func voiceInput(didUpdateStatus status: VoiceInputEngineStatus?) { statuses.append(status) }
 }
