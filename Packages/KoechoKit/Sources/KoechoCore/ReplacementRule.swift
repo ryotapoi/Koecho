@@ -1,13 +1,28 @@
 import Foundation
 import os
 
-public struct ReplacementRule: Codable, Identifiable, Equatable, Sendable {
+public struct ReplacementRule: Identifiable, Equatable, Sendable {
     public var id: UUID
-    public var pattern: String
+    public var patterns: [String]
     public var replacement: String
     public var usesRegularExpression: Bool
     public var matchesWholeWord: Bool
 
+    public init(
+        id: UUID = UUID(),
+        patterns: [String],
+        replacement: String = "",
+        usesRegularExpression: Bool = false,
+        matchesWholeWord: Bool = false
+    ) {
+        self.id = id
+        self.patterns = patterns.isEmpty ? [""] : patterns
+        self.replacement = replacement
+        self.usesRegularExpression = usesRegularExpression
+        self.matchesWholeWord = matchesWholeWord
+    }
+
+    /// Convenience initializer for single-pattern rules.
     public init(
         id: UUID = UUID(),
         pattern: String,
@@ -15,17 +30,38 @@ public struct ReplacementRule: Codable, Identifiable, Equatable, Sendable {
         usesRegularExpression: Bool = false,
         matchesWholeWord: Bool = false
     ) {
-        self.id = id
-        self.pattern = pattern
-        self.replacement = replacement
-        self.usesRegularExpression = usesRegularExpression
-        self.matchesWholeWord = matchesWholeWord
+        self.init(
+            id: id,
+            patterns: [pattern],
+            replacement: replacement,
+            usesRegularExpression: usesRegularExpression,
+            matchesWholeWord: matchesWholeWord
+        )
     }
 
-    public var displayName: String {
-        if pattern.isEmpty { return "New Rule" }
-        if replacement.isEmpty { return pattern }
-        return "\(pattern) → \(replacement)"
+    /// First pattern, used by regex mode which always operates on a single pattern.
+    public var pattern: String {
+        get { patterns.first ?? "" }
+        set {
+            if patterns.isEmpty {
+                patterns = [newValue]
+            } else {
+                patterns[0] = newValue
+            }
+        }
+    }
+
+    public var displayName: String? {
+        let nonEmpty: [String]
+        if usesRegularExpression {
+            nonEmpty = pattern.isEmpty ? [] : [pattern]
+        } else {
+            nonEmpty = patterns.filter { !$0.isEmpty }
+        }
+        guard !nonEmpty.isEmpty else { return nil }
+        let patternText = nonEmpty.joined(separator: ", ")
+        if replacement.isEmpty { return patternText }
+        return "\(patternText) → \(replacement)"
     }
 
     public func validate() -> String? {
@@ -39,6 +75,45 @@ public struct ReplacementRule: Codable, Identifiable, Equatable, Sendable {
     }
 }
 
+// MARK: - Codable
+
+extension ReplacementRule: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, patterns, replacement, usesRegularExpression, matchesWholeWord
+    }
+
+    // Legacy key for migration from single-pattern format
+    private enum LegacyCodingKeys: String, CodingKey {
+        case pattern
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        replacement = try container.decode(String.self, forKey: .replacement)
+        usesRegularExpression = try container.decode(Bool.self, forKey: .usesRegularExpression)
+        matchesWholeWord = try container.decode(Bool.self, forKey: .matchesWholeWord)
+
+        if container.contains(.patterns) {
+            let decoded = try container.decode([String].self, forKey: .patterns)
+            patterns = decoded.isEmpty ? [""] : decoded
+        } else {
+            let legacyContainer = try decoder.container(keyedBy: LegacyCodingKeys.self)
+            let single = try legacyContainer.decode(String.self, forKey: .pattern)
+            patterns = [single]
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(patterns, forKey: .patterns)
+        try container.encode(replacement, forKey: .replacement)
+        try container.encode(usesRegularExpression, forKey: .usesRegularExpression)
+        try container.encode(matchesWholeWord, forKey: .matchesWholeWord)
+    }
+}
+
 public struct ReplacementMatch: Equatable {
     public let range: NSRange       // Match range in the original text
     public let replacement: String  // Replacement string for this match
@@ -49,22 +124,30 @@ public struct ReplacementMatch: Equatable {
     }
 }
 
-/// Build an NSRegularExpression for the given rule. Returns nil for invalid patterns.
+/// Build an NSRegularExpression for the given rule. Returns nil for invalid or empty patterns.
 private func buildRegex(for rule: ReplacementRule) -> NSRegularExpression? {
     let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ReplacementRule")
 
     let regexPattern: String
     if rule.usesRegularExpression {
+        guard !rule.pattern.isEmpty else { return nil }
         regexPattern = rule.pattern
     } else {
-        let escaped = NSRegularExpression.escapedPattern(for: rule.pattern)
-        regexPattern = rule.matchesWholeWord ? "\\b\(escaped)\\b" : escaped
+        // Filter non-empty, sort longest first to prevent shorter patterns from
+        // consuming parts of longer ones (regex alternation is left-to-right).
+        let nonEmpty = rule.patterns.filter { !$0.isEmpty }.sorted { $0.count > $1.count }
+        guard !nonEmpty.isEmpty else { return nil }
+        let alternatives = nonEmpty.map { p in
+            let escaped = NSRegularExpression.escapedPattern(for: p)
+            return rule.matchesWholeWord ? "\\b\(escaped)\\b" : escaped
+        }
+        regexPattern = alternatives.joined(separator: "|")
     }
 
     do {
         return try NSRegularExpression(pattern: regexPattern)
     } catch {
-        logger.warning("Invalid regex pattern '\(rule.pattern)': \(error.localizedDescription)")
+        logger.warning("Invalid regex pattern '\(regexPattern)': \(error.localizedDescription)")
         return nil
     }
 }
@@ -79,8 +162,7 @@ private func buildTemplate(for rule: ReplacementRule) -> String {
 public func applyReplacementRules(_ rules: [ReplacementRule], to text: String) -> String {
     var result = text
     for rule in rules {
-        guard !rule.pattern.isEmpty,
-              let regex = buildRegex(for: rule) else { continue }
+        guard let regex = buildRegex(for: rule) else { continue }
         let template = buildTemplate(for: rule)
         let range = NSRange(result.startIndex..., in: result)
         result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: template)
@@ -108,8 +190,7 @@ public func findReplacementMatches(_ rules: [ReplacementRule], in text: String) 
     var intermediateText = text
 
     for rule in rules {
-        guard !rule.pattern.isEmpty,
-              let regex = buildRegex(for: rule) else { continue }
+        guard let regex = buildRegex(for: rule) else { continue }
         let template = buildTemplate(for: rule)
 
         let nsString = intermediateText as NSString

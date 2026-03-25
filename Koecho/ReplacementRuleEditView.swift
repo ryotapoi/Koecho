@@ -8,11 +8,10 @@ struct ReplacementRuleEditView: View {
 
     var body: some View {
         Form {
-            TextField("Pattern", text: $rule.pattern)
-            if let error = patternValidationError {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
+            if rule.usesRegularExpression {
+                regexPatternSection
+            } else {
+                plainPatternSection
             }
 
             TextField("Replacement", text: $rule.replacement)
@@ -30,5 +29,51 @@ struct ReplacementRuleEditView: View {
         }
         .formStyle(.grouped)
         .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    // MARK: - Regex mode: single pattern
+
+    private var regexPatternSection: some View {
+        Group {
+            TextField("Pattern", text: $rule.pattern)
+            if let error = patternValidationError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    // MARK: - Plain text mode: multiple patterns
+
+    @ViewBuilder
+    private var plainPatternSection: some View {
+        Section("Patterns") {
+            ForEach(rule.patterns.indices, id: \.self) { index in
+                HStack {
+                    TextField(
+                        "Pattern",
+                        text: Binding(
+                            get: { rule.patterns[index] },
+                            set: { rule.patterns[index] = $0 }
+                        )
+                    )
+                    Button {
+                        rule.patterns.remove(at: index)
+                    } label: {
+                        Image(systemName: "minus.circle")
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(rule.patterns.count <= 1)
+                    .accessibilityLabel("Remove pattern")
+                }
+            }
+            Button {
+                rule.patterns.append("")
+            } label: {
+                Label("Add Pattern", systemImage: "plus")
+            }
+            .buttonStyle(.borderless)
+        }
     }
 }

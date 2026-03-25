@@ -17,8 +17,16 @@ struct ReplacementRuleManagementView: View {
 
     private var duplicatePatterns: Set<String> {
         var seen: [String: Int] = [:]
-        for rule in settings.replacementRules where !rule.pattern.isEmpty {
-            seen[rule.pattern, default: 0] += 1
+        for rule in settings.replacementRules {
+            let unique: Set<String>
+            if rule.usesRegularExpression {
+                unique = rule.pattern.isEmpty ? [] : [rule.pattern]
+            } else {
+                unique = Set(rule.patterns.filter { !$0.isEmpty })
+            }
+            for p in unique {
+                seen[p, default: 0] += 1
+            }
         }
         return Set(seen.filter { $0.value > 1 }.keys)
     }
@@ -29,7 +37,9 @@ struct ReplacementRuleManagementView: View {
             ForEach(settings.replacementRules) { rule in
                 HStack {
                     Text(localizedDisplayName(for: rule))
-                    if duplicates.contains(rule.pattern) {
+                    if rule.usesRegularExpression
+                        ? duplicates.contains(rule.pattern)
+                        : rule.patterns.contains(where: { duplicates.contains($0) }) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundStyle(.yellow)
                             .font(.caption)
@@ -89,7 +99,6 @@ struct ReplacementRuleManagementView: View {
     }
 
     private func localizedDisplayName(for rule: ReplacementRule) -> String {
-        if rule.pattern.isEmpty { return String(localized: "New Rule") }
-        return rule.displayName
+        rule.displayName ?? String(localized: "New Rule")
     }
 }

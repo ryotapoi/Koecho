@@ -251,7 +251,7 @@ struct ReplacementRuleTests {
 
     @Test func displayNameEmptyPattern() {
         let rule = ReplacementRule(pattern: "")
-        #expect(rule.displayName == "New Rule")
+        #expect(rule.displayName == nil)
     }
 
     @Test func displayNamePatternOnly() {
@@ -262,5 +262,211 @@ struct ReplacementRuleTests {
     @Test func displayNamePatternAndReplacement() {
         let rule = ReplacementRule(pattern: "hello", replacement: "bye")
         #expect(rule.displayName == "hello → bye")
+    }
+
+    // MARK: - Codable migration (pattern → patterns)
+
+    @Test func decodeLegacySinglePatternFormat() throws {
+        let json = """
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "pattern": "えーと",
+            "replacement": "",
+            "usesRegularExpression": false,
+            "matchesWholeWord": false
+        }
+        """.data(using: .utf8)!
+        let rule = try JSONDecoder().decode(ReplacementRule.self, from: json)
+        #expect(rule.patterns == ["えーと"])
+        #expect(rule.pattern == "えーと")
+        #expect(rule.replacement == "")
+    }
+
+    @Test func decodeNewPatternsFormat() throws {
+        let json = """
+        {
+            "id": "00000000-0000-0000-0000-000000000002",
+            "patterns": ["GitHブ", "ギットHub"],
+            "replacement": "GitHub",
+            "usesRegularExpression": false,
+            "matchesWholeWord": false
+        }
+        """.data(using: .utf8)!
+        let rule = try JSONDecoder().decode(ReplacementRule.self, from: json)
+        #expect(rule.patterns == ["GitHブ", "ギットHub"])
+        #expect(rule.pattern == "GitHブ")
+        #expect(rule.replacement == "GitHub")
+    }
+
+    @Test func encodeUsesPatternsKey() throws {
+        let rule = ReplacementRule(pattern: "test", replacement: "replaced")
+        let data = try JSONEncoder().encode(rule)
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        #expect(dict["patterns"] as? [String] == ["test"])
+        #expect(dict["pattern"] == nil)
+    }
+
+    @Test func codableRoundTrip() throws {
+        let rule = ReplacementRule(
+            patterns: ["a", "b"],
+            replacement: "c",
+            usesRegularExpression: false,
+            matchesWholeWord: true
+        )
+        let data = try JSONEncoder().encode(rule)
+        let decoded = try JSONDecoder().decode(ReplacementRule.self, from: data)
+        #expect(decoded.patterns == ["a", "b"])
+        #expect(decoded.replacement == "c")
+        #expect(decoded.matchesWholeWord == true)
+        #expect(decoded.id == rule.id)
+    }
+
+    @Test func decodeLegacyEmptyPatternFormat() throws {
+        let json = """
+        {
+            "id": "00000000-0000-0000-0000-000000000003",
+            "pattern": "",
+            "replacement": "",
+            "usesRegularExpression": false,
+            "matchesWholeWord": false
+        }
+        """.data(using: .utf8)!
+        let rule = try JSONDecoder().decode(ReplacementRule.self, from: json)
+        #expect(rule.patterns == [""])
+        #expect(rule.pattern == "")
+    }
+
+    @Test func decodeEmptyPatternsArrayFallsBack() throws {
+        let json = """
+        {
+            "id": "00000000-0000-0000-0000-000000000004",
+            "patterns": [],
+            "replacement": "",
+            "usesRegularExpression": false,
+            "matchesWholeWord": false
+        }
+        """.data(using: .utf8)!
+        let rule = try JSONDecoder().decode(ReplacementRule.self, from: json)
+        #expect(rule.patterns == [""])
+    }
+
+    // MARK: - pattern computed property
+
+    @Test func patternComputedPropertyGetReturnsFirst() {
+        let rule = ReplacementRule(patterns: ["a", "b"], replacement: "c")
+        #expect(rule.pattern == "a")
+    }
+
+    @Test func patternComputedPropertySetUpdatesFirst() {
+        var rule = ReplacementRule(patterns: ["a", "b"], replacement: "c")
+        rule.pattern = "x"
+        #expect(rule.patterns == ["x", "b"])
+    }
+
+    // MARK: - empty array prevention
+
+    @Test func initWithEmptyPatternsArrayFallsBack() {
+        let rule = ReplacementRule(patterns: [], replacement: "x")
+        #expect(rule.patterns == [""])
+    }
+
+    // MARK: - displayName with all-empty patterns
+
+    @Test func displayNameAllEmptyPatterns() {
+        let rule = ReplacementRule(patterns: ["", ""], replacement: "x")
+        #expect(rule.displayName == nil)
+    }
+
+    // MARK: - Multiple patterns (plain text mode)
+
+    @Test func multiplePatternsBasicReplacement() {
+        let rules = [
+            ReplacementRule(patterns: ["GitHブ", "ギットHub"], replacement: "GitHub"),
+        ]
+        let result = applyReplacementRules(rules, to: "GitHブとギットHubを使う")
+        #expect(result == "GitHubとGitHubを使う")
+    }
+
+    @Test func multiplePatternsLongestMatchFirst() {
+        // "GitHub" should match before "Git" due to longest-first sorting
+        let rules = [
+            ReplacementRule(patterns: ["Git", "GitHub"], replacement: "X"),
+        ]
+        let result = applyReplacementRules(rules, to: "GitHub is great")
+        #expect(result == "X is great")
+    }
+
+    @Test func multiplePatternsWithEmptyElement() {
+        // Empty patterns should be filtered out
+        let rules = [
+            ReplacementRule(patterns: ["", "foo", ""], replacement: "bar"),
+        ]
+        let result = applyReplacementRules(rules, to: "foo and foo")
+        #expect(result == "bar and bar")
+    }
+
+    @Test func multiplePatternsAllEmpty() {
+        let rules = [
+            ReplacementRule(patterns: ["", ""], replacement: "x"),
+        ]
+        let result = applyReplacementRules(rules, to: "hello")
+        #expect(result == "hello")
+    }
+
+    @Test func multiplePatternsWithWholeWord() {
+        let rules = [
+            ReplacementRule(
+                patterns: ["the", "a"],
+                replacement: "X",
+                matchesWholeWord: true
+            ),
+        ]
+        let result = applyReplacementRules(rules, to: "the cat ate a thing")
+        #expect(result == "X cat ate X thing")
+    }
+
+    @Test func multiplePatternsRegexStillSingle() {
+        // Regex mode uses only patterns.first
+        let rules = [
+            ReplacementRule(
+                patterns: ["\\d+", "ignored"],
+                replacement: "N",
+                usesRegularExpression: true
+            ),
+        ]
+        let result = applyReplacementRules(rules, to: "abc 123 ignored")
+        #expect(result == "abc N ignored")
+    }
+
+    // MARK: - findReplacementMatches with multiple patterns
+
+    @Test func findMatchesMultiplePatterns() {
+        let rules = [
+            ReplacementRule(patterns: ["GitHブ", "ギットHub"], replacement: "GitHub"),
+        ]
+        let matches = findReplacementMatches(rules, in: "GitHブとギットHub")
+        #expect(matches.count == 2)
+        #expect(matches[0].replacement == "GitHub")
+        #expect(matches[1].replacement == "GitHub")
+    }
+
+    // MARK: - displayName with multiple non-empty patterns
+
+    @Test func displayNameMultiplePatterns() {
+        let rule = ReplacementRule(
+            patterns: ["GitHブ", "ギットHub"],
+            replacement: "GitHub"
+        )
+        #expect(rule.displayName == "GitHブ, ギットHub → GitHub")
+    }
+
+    @Test func displayNameMultiplePatternsNoReplacement() {
+        let rule = ReplacementRule(patterns: ["foo", "bar"], replacement: "")
+        #expect(rule.displayName == "foo, bar")
+    }
+
+    @Test func displayNameMultiplePatternsWithSomeEmpty() {
+        let rule = ReplacementRule(patterns: ["", "foo", ""], replacement: "bar")
+        #expect(rule.displayName == "foo → bar")
     }
 }

@@ -148,4 +148,49 @@ struct ReplacementSettingsTests {
         let reloaded = ReplacementSettings(defaults: defaults)
         #expect(reloaded.isAutoReplacementEnabled == false)
     }
+
+    // MARK: - Legacy format migration
+
+    @Test func migratesLegacySinglePatternFormat() throws {
+        let defaults = makeDefaults()
+        // Simulate old format data with "pattern" key
+        let legacyJSON = """
+        [{
+            "id": "00000000-0000-0000-0000-000000000001",
+            "pattern": "えーと",
+            "replacement": "",
+            "usesRegularExpression": false,
+            "matchesWholeWord": false
+        }]
+        """.data(using: .utf8)!
+        defaults.set(legacyJSON, forKey: "replacementRules")
+
+        let settings = ReplacementSettings(defaults: defaults)
+        #expect(settings.replacementRules.count == 1)
+        #expect(settings.replacementRules[0].patterns == ["えーと"])
+        #expect(settings.replacementRules[0].pattern == "えーと")
+    }
+
+    @Test func reEncodesLegacyFormatToNewFormat() throws {
+        let defaults = makeDefaults()
+        let legacyJSON = """
+        [{
+            "id": "00000000-0000-0000-0000-000000000001",
+            "pattern": "test",
+            "replacement": "replaced",
+            "usesRegularExpression": false,
+            "matchesWholeWord": false
+        }]
+        """.data(using: .utf8)!
+        defaults.set(legacyJSON, forKey: "replacementRules")
+
+        // Load triggers re-encode on init
+        _ = ReplacementSettings(defaults: defaults)
+
+        // Verify re-encoded data uses new format
+        let data = defaults.data(forKey: "replacementRules")!
+        let array = try JSONSerialization.jsonObject(with: data) as! [[String: Any]]
+        #expect(array[0]["patterns"] as? [String] == ["test"])
+        #expect(array[0]["pattern"] == nil)
+    }
 }
