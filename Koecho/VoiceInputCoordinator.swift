@@ -124,6 +124,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
             }
             appState.inputText = textView.finalizedString
             onCursorAutoReplacement?()
+            restartTranscriberIfNeeded()
         }
         voiceInsertionPoint = position
     }
@@ -196,15 +197,20 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     func voiceInput(didUpdateVolatile text: String) {
         guard appState.isInputPanelVisible else { return }
 
-        if let deadline = replaySuppressionDeadline, Date.now < deadline {
-            if currentVoiceTarget == .textEditor,
-               let localText = localFinalizedText,
-               localText.hasPrefix(text) || text.hasPrefix(localText) {
+        // isLocallyFinalized + deadline nil = restart in progress (handleCursorMoved / onVolatileFinalized
+        // path where restartTranscriberIfNeeded is async). Suppress all volatile until restart completes.
+        if isLocallyFinalized {
+            if let deadline = replaySuppressionDeadline {
+                if Date.now < deadline,
+                   currentVoiceTarget == .textEditor,
+                   let localText = localFinalizedText,
+                   localText.hasPrefix(text) || text.hasPrefix(localText) {
+                    return
+                }
+                clearReplayState()
+            } else {
                 return
             }
-            if isLocallyFinalized { clearReplayState() }
-        } else if isLocallyFinalized {
-            clearReplayState()
         }
 
         switch currentVoiceTarget {
@@ -276,13 +282,19 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
             guard !transcriberAlreadyRestarted,
                   let saEngine = engine as? SpeechAnalyzerEngine else { return }
             let shouldSuppressReplay = isLocallyFinalized
+            // Set synchronously to prevent duplicate Task creation from handleCursorMoved + handleTextChanged
+            transcriberAlreadyRestarted = true
             Task { @MainActor in
                 let didRestart = await saEngine.restartTranscriber()
                 if didRestart {
-                    self.transcriberAlreadyRestarted = true
                     if shouldSuppressReplay {
                         self.replaySuppressionDeadline = Date.now + Self.replaySuppressionDuration
                     }
+                } else {
+                    // Restart failed (e.g. not listening): reset flag so next attempt can retry.
+                    // Don't clearReplayState() here — a concurrent restart may be in flight.
+                    // isLocallyFinalized will be cleared by didFinalize or clearReplayState elsewhere.
+                    self.transcriberAlreadyRestarted = false
                 }
             }
         }
