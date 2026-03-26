@@ -229,3 +229,27 @@ private struct AudioInputDeviceSection: View {
             .onDisappear { deviceManager.stopMonitoring() }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Dictation") {
+    let defaults = UserDefaults(suiteName: "preview-voiceInput-dictation")!
+    let settings = VoiceInputSettings(defaults: defaults)
+    settings.voiceInputMode = .dictation
+    return Form {
+        VoiceInputSection(voiceInput: settings)
+    }
+    .formStyle(.grouped)
+    .frame(width: 450, height: 200)
+}
+
+#Preview("Off") {
+    let defaults = UserDefaults(suiteName: "preview-voiceInput-off")!
+    let settings = VoiceInputSettings(defaults: defaults)
+    settings.voiceInputMode = .off
+    return Form {
+        VoiceInputSection(voiceInput: settings)
+    }
+    .formStyle(.grouped)
+    .frame(width: 450, height: 200)
+}

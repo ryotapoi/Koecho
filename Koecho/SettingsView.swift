@@ -69,3 +69,17 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Default") {
+    let defaults = UserDefaults(suiteName: "preview-settings-default")!
+    let settings = KoechoCore.Settings(defaults: defaults)
+    settings.voiceInput.voiceInputMode = .dictation
+    let dir = FileManager.default.temporaryDirectory
+        .appendingPathComponent("preview-settings")
+    try? FileManager.default.removeItem(at: dir)
+    let store = HistoryStore(directoryURL: dir)
+    return SettingsView(settings: settings, historyStore: store)
+        .frame(width: 700, height: 500)
+}

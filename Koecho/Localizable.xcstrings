@@ -103,6 +103,9 @@
         }
       }
     },
+    "Add Pattern" : {
+
+    },
     "Add Replacement Rule" : {
       "localizations" : {
         "ja" : {
@@ -801,6 +804,9 @@
         }
       }
     },
+    "Patterns" : {
+
+    },
     "Press shortcut..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -852,6 +858,9 @@
         }
       }
     },
+    "Remove pattern" : {
+
+    },
     "Replace" : {
       "localizations" : {
         "ja" : {
@@ -872,6 +881,17 @@
         }
       }
     },
+    "Replacement Rules" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換ルール"
+          }
+        }
+      }
+    },
     "Replacement.sidebar" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -885,17 +905,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "置換"
-          }
-        }
-      }
-    },
-    "Replacement Rules" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "置換ルール"
           }
         }
       }

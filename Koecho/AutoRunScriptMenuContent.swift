@@ -28,3 +28,18 @@ struct AutoRunScriptMenuContent: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("With Scripts") {
+    let defaults = UserDefaults(suiteName: "preview-autoRun-withScripts")!
+    let settings = ScriptSettings(defaults: defaults)
+    settings.scripts = [
+        Script(name: "Format", scriptPath: "format.sh"),
+        Script(name: "Summarize", scriptPath: "sum.sh"),
+    ]
+    return Menu("Auto-run") {
+        AutoRunScriptMenuContent(scriptSettings: settings)
+    }
+    .frame(width: 200, height: 100)
+}

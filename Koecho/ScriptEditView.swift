@@ -44,3 +44,31 @@ struct ScriptEditView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Filled") {
+    @Previewable @State var script = Script(
+        name: "Format Text",
+        scriptPath: "'/usr/local/bin/format.sh' --mode=markdown",
+        shortcutKey: ShortcutKey(modifiers: [.control], character: "f")
+    )
+    ScriptEditView(script: $script)
+        .frame(width: 400, height: 300)
+}
+
+#Preview("Empty") {
+    @Previewable @State var script = Script(name: "", scriptPath: "")
+    ScriptEditView(script: $script)
+        .frame(width: 400, height: 300)
+}
+
+#Preview("Requires Prompt") {
+    @Previewable @State var script = Script(
+        name: "AI Rewrite",
+        scriptPath: "ai-rewrite.sh",
+        requiresPrompt: true
+    )
+    ScriptEditView(script: $script)
+        .frame(width: 400, height: 300)
+}

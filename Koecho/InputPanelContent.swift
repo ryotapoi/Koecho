@@ -128,5 +128,33 @@ struct InputPanelContent: View {
             }
         }
     }
+}
 
+// MARK: - Previews
+
+#Preview("With Text") {
+    let defaults = UserDefaults(suiteName: "preview-panel-withText")!
+    let settings = KoechoCore.Settings(defaults: defaults)
+    settings.voiceInput.voiceInputMode = .dictation
+    let appState = AppState(settings: settings)
+    appState.inputText = "Hello, this is a voice transcription."
+    return InputPanelContent(
+        appState: appState,
+        onExecuteScript: { _ in },
+        onCancelPrompt: {}
+    )
+    .frame(width: 300, height: 200)
+}
+
+#Preview("Empty") {
+    let defaults = UserDefaults(suiteName: "preview-panel-empty")!
+    let settings = KoechoCore.Settings(defaults: defaults)
+    settings.voiceInput.voiceInputMode = .dictation
+    let appState = AppState(settings: settings)
+    return InputPanelContent(
+        appState: appState,
+        onExecuteScript: { _ in },
+        onCancelPrompt: {}
+    )
+    .frame(width: 300, height: 200)
 }

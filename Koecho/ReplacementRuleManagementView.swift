@@ -102,3 +102,24 @@ struct ReplacementRuleManagementView: View {
         rule.displayName ?? String(localized: "New Rule")
     }
 }
+
+// MARK: - Previews
+
+#Preview("With Rules") {
+    let defaults = UserDefaults(suiteName: "preview-replacementMgmt-withRules")!
+    let settings = ReplacementSettings(defaults: defaults)
+    settings.replacementRules = [
+        ReplacementRule(patterns: ["GitHブ", "ギットHub"], replacement: "GitHub"),
+        ReplacementRule(pattern: "えーと", replacement: ""),
+    ]
+    return ReplacementRuleManagementView(settings: settings)
+        .frame(width: 600, height: 400)
+}
+
+#Preview("Empty") {
+    let defaults = UserDefaults(suiteName: "preview-replacementMgmt-empty")!
+    let settings = ReplacementSettings(defaults: defaults)
+    settings.replacementRules = []
+    return ReplacementRuleManagementView(settings: settings)
+        .frame(width: 600, height: 400)
+}

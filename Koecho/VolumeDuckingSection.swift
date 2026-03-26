@@ -25,3 +25,26 @@ struct VolumeDuckingSection: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Enabled") {
+    let defaults = UserDefaults(suiteName: "preview-ducking-enabled")!
+    let settings = VolumeDuckingSettings(defaults: defaults)
+    settings.isVolumeDuckingEnabled = true
+    return Form {
+        VolumeDuckingSection(volumeDucking: settings)
+    }
+    .formStyle(.grouped)
+    .frame(width: 450, height: 200)
+}
+
+#Preview("Disabled") {
+    let defaults = UserDefaults(suiteName: "preview-ducking-disabled")!
+    let settings = VolumeDuckingSettings(defaults: defaults)
+    return Form {
+        VolumeDuckingSection(volumeDucking: settings)
+    }
+    .formStyle(.grouped)
+    .frame(width: 450, height: 150)
+}

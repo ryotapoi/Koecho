@@ -43,3 +43,41 @@ struct PromptInputView: View {
         .padding(.horizontal, 8)
     }
 }
+
+// MARK: - Previews
+
+#Preview("Empty") {
+    struct Wrapper: View {
+        @FocusState var isFocused: Bool
+        var body: some View {
+            PromptInputView(
+                promptText: .constant(""),
+                promptScript: Script(name: "AI Rewrite", scriptPath: "ai.sh"),
+                isRunningScript: false,
+                onExecuteScript: { _ in },
+                onCancelPrompt: {},
+                isFocused: $isFocused
+            )
+        }
+    }
+    return Wrapper()
+        .frame(width: 300)
+}
+
+#Preview("Running") {
+    struct Wrapper: View {
+        @FocusState var isFocused: Bool
+        var body: some View {
+            PromptInputView(
+                promptText: .constant("箇条書きにして"),
+                promptScript: Script(name: "AI Rewrite", scriptPath: "ai.sh"),
+                isRunningScript: true,
+                onExecuteScript: { _ in },
+                onCancelPrompt: {},
+                isFocused: $isFocused
+            )
+        }
+    }
+    return Wrapper()
+        .frame(width: 300)
+}

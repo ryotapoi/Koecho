@@ -69,3 +69,13 @@ struct AddReplacementRuleView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Default") {
+    AddReplacementRuleView(
+        pattern: "えーと",
+        onAdd: { _ in },
+        onCancel: {}
+    )
+}

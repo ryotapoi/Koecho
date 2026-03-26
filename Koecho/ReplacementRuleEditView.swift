@@ -77,3 +77,30 @@ struct ReplacementRuleEditView: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Plain Text") {
+    @Previewable @State var rule = ReplacementRule(
+        patterns: ["GitHブ", "ギットHub"],
+        replacement: "GitHub"
+    )
+    ReplacementRuleEditView(rule: $rule)
+        .frame(width: 400, height: 300)
+}
+
+#Preview("Regex") {
+    @Previewable @State var rule = ReplacementRule(
+        pattern: "\\b(\\d{4})-(\\d{2})-(\\d{2})\\b",
+        replacement: "$2/$3/$1",
+        usesRegularExpression: true
+    )
+    ReplacementRuleEditView(rule: $rule)
+        .frame(width: 400, height: 300)
+}
+
+#Preview("Empty") {
+    @Previewable @State var rule = ReplacementRule(pattern: "")
+    ReplacementRuleEditView(rule: $rule)
+        .frame(width: 400, height: 300)
+}

@@ -28,3 +28,15 @@ struct InputLevelMeter: View {
         else { .green }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Active") {
+    InputLevelMeter(level: 0.6)
+        .frame(width: 200, height: 20)
+}
+
+#Preview("Silent") {
+    InputLevelMeter(level: 0.0)
+        .frame(width: 200, height: 20)
+}

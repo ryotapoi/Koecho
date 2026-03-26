@@ -85,3 +85,41 @@ struct InputPanelToolbar: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Full") {
+    let defaults = UserDefaults(suiteName: "preview-toolbar-full")!
+    let scriptSettings = ScriptSettings(defaults: defaults)
+    scriptSettings.scripts = [
+        Script(name: "Format", scriptPath: "format.sh"),
+        Script(name: "AI", scriptPath: "ai.sh"),
+    ]
+    return InputPanelToolbar(
+        replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
+        scripts: scriptSettings.scripts,
+        scriptSettings: scriptSettings,
+        isRunningScript: false,
+        hasPromptScript: false,
+        onApplyReplacementRules: {},
+        onExecuteScript: { _ in },
+        replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
+    )
+    .frame(width: 350, height: 40)
+}
+
+#Preview("Running Script") {
+    let defaults = UserDefaults(suiteName: "preview-toolbar-running")!
+    let scriptSettings = ScriptSettings(defaults: defaults)
+    return InputPanelToolbar(
+        replacementRules: [],
+        scripts: [Script(name: "Format", scriptPath: "format.sh")],
+        scriptSettings: scriptSettings,
+        isRunningScript: true,
+        hasPromptScript: false,
+        onApplyReplacementRules: {},
+        onExecuteScript: { _ in },
+        replacementShortcutKey: nil
+    )
+    .frame(width: 350, height: 40)
+}

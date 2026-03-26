@@ -55,3 +55,20 @@ struct GeneralSettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
+
+// MARK: - Previews
+
+#Preview("Default") {
+    let defaults = UserDefaults(suiteName: "preview-general-default")!
+    let voiceInput = VoiceInputSettings(defaults: defaults)
+    voiceInput.voiceInputMode = .dictation
+    return GeneralSettingsView(
+        voiceInput: voiceInput,
+        script: ScriptSettings(defaults: defaults),
+        replacement: ReplacementSettings(defaults: defaults),
+        history: HistorySettings(defaults: defaults),
+        paste: PasteSettings(defaults: defaults),
+        volumeDucking: VolumeDuckingSettings(defaults: defaults)
+    )
+    .frame(width: 500, height: 600)
+}

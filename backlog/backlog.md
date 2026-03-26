@@ -15,6 +15,56 @@
   - 正規表現: Pattern（単一）+ Replacement（キャプチャグループヒント）
   - Match Whole Word は単純置換専用（現状通り、正規表現時は非表示）
 
+## RenderPreview 対応 — 全画面 #Preview 追加 + ワークフロー統合
+
+UI 変更時に Xcode MCP の `RenderPreview` で視覚確認するための基盤整備。
+UnitTest ほどの厳密さではないが「規定の確認手段」として維持する。
+
+### Phase 1: 全 View に #Preview を追加
+
+既存の全 SwiftUI View に `#Preview` マクロを追加し、`RenderPreview` で確認可能にする。
+
+**KoechoCore のみ依存（Preview 容易）:**
+- [ ] ReplacementRuleEditView — 単純置換 / 正規表現の各状態
+- [ ] AddReplacementRuleView — 空状態 / 入力済み
+- [ ] ReplacementRuleManagementView — ルール0件 / 複数件
+- [ ] ScriptEditView — 空 / 入力済み / requiresPrompt on/off
+- [ ] ScriptManagementView — スクリプト0件 / 複数件
+- [ ] PromptInputView — 空 / 入力済み
+- [ ] AutoRunScriptMenuContent — スクリプトあり / なし
+- [ ] VolumeDuckingSection — 各設定状態
+- [ ] GeneralSettingsView — 各設定状態
+
+**KoechoPlatform 依存（Preview に工夫が必要）:**
+- [ ] HotkeySettingsView — 各修飾キー / タップモード
+- [ ] HistoryView — 履歴0件 / 複数件
+- [ ] SettingsView — 各タブ
+- [ ] InputPanelContent — テキストあり / なし / スクリプト実行中
+- [ ] InputPanelToolbar — 各状態
+- [ ] VoiceInputSection — macOS 26 依存のため要検討
+- [ ] MenuBarContent — AppState + closures のため要検討
+
+### Phase 2: ワークフロー・スキルへの組み込み
+
+- [ ] `rules/workflow.md` Step 3（実装）: View 変更・追加時に `#Preview` を書く/更新し、RenderPreview で確認する手順を追加（UnitTest の RED→GREEN と同じ流れ）
+- [ ] `rules/workflow.md` Step 4（実装レビュー）: 変更 View の `#Preview` を RenderPreview で再確認する手順を追加（レビュアーによる視覚チェック）
+- [ ] `/review-code-all` スキル: 変更された View に `#Preview` があれば RenderPreview でレンダリングし視覚確認するステップを追加
+- [ ] レビュー観点:
+  - レイアウト崩れ: テキスト切れ、要素の重なり、意図しない余白
+  - 状態の網羅: 空状態 / 通常 / エッジケースの Preview が揃っているか
+  - 変更の影響: 今回変更した View 以外の Preview が壊れていないか
+  - フレームサイズ: Preview の `.frame()` が適切か（巨大/空にならないか）
+- [ ] Step 1（計画）: UI 調査目的での RenderPreview 利用を明記
+
+### 技術ノート
+
+- App target に全 View があるため `public` 化不要
+- `@Previewable @State` で Binding を作る。`.frame()` でサイズ指定必須
+- KoechoPlatform 依存の View は Preview 用のモックやサンプルデータの工夫が必要
+- SPM パッケージモジュール使用ファイルは事前 `BuildProject` が必要
+
+---
+
 ## Bug — restartTranscriber クラッシュ（CoreAudio IO スレッド）
 
 - 発生: 2026-03-23 23:34, v1.3.0 リリース版, 約12時間使用後

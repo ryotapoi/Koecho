@@ -38,3 +38,11 @@ struct HotkeySettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
+
+// MARK: - Previews
+
+#Preview("Default") {
+    let defaults = UserDefaults(suiteName: "preview-hotkey-default")!
+    HotkeySettingsView(settings: HotkeySettings(defaults: defaults))
+        .frame(width: 450, height: 300)
+}

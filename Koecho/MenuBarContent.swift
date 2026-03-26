@@ -74,3 +74,24 @@ struct MenuBarContent: View {
         }
     }
 }
+
+// MARK: - Previews
+
+#Preview("Default") {
+    let defaults = UserDefaults(suiteName: "preview-menuBar-default")!
+    let settings = KoechoCore.Settings(defaults: defaults)
+    settings.voiceInput.voiceInputMode = .dictation
+    let appState = AppState(settings: settings)
+    let dir = FileManager.default.temporaryDirectory
+        .appendingPathComponent("preview-menuBar")
+    try? FileManager.default.removeItem(at: dir)
+    let store = HistoryStore(directoryURL: dir)
+    return MenuBarContent(
+        appState: appState,
+        historyStore: store,
+        downloadedLocales: [],
+        onTogglePanel: {},
+        onSwitchLanguage: { _ in }
+    )
+    .frame(width: 250, height: 300)
+}

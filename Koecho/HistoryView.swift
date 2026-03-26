@@ -124,3 +124,32 @@ private struct FullTextPopoverContent: View {
         .frame(height: contentHeight > 0 ? min(contentHeight, maxPopoverHeight) : nil)
     }
 }
+
+// MARK: - Previews
+
+#Preview("With Entries") {
+    let dir = FileManager.default.temporaryDirectory
+        .appendingPathComponent("preview-history-withEntries")
+    try? FileManager.default.removeItem(at: dir)
+    let store = HistoryStore(directoryURL: dir)
+    let historySettings = HistorySettings(
+        defaults: UserDefaults(suiteName: "preview-history-withEntries")!
+    )
+    store.add(text: "Hello, this is a test transcription.", settings: historySettings)
+    store.add(text: "もう一つのテスト入力。日本語のテキストです。", settings: historySettings)
+    store.add(
+        text: "A longer entry that might wrap to multiple lines. This tests the line limit behavior of the history row.",
+        settings: historySettings
+    )
+    return HistoryView(historyStore: store)
+        .frame(width: 400, height: 400)
+}
+
+#Preview("Empty") {
+    let dir = FileManager.default.temporaryDirectory
+        .appendingPathComponent("preview-history-empty")
+    try? FileManager.default.removeItem(at: dir)
+    let store = HistoryStore(directoryURL: dir)
+    return HistoryView(historyStore: store)
+        .frame(width: 400, height: 400)
+}

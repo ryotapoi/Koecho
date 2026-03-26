@@ -71,3 +71,24 @@ struct ScriptManagementView: View {
         settings.deleteScript(id: id)
     }
 }
+
+// MARK: - Previews
+
+#Preview("With Scripts") {
+    let defaults = UserDefaults(suiteName: "preview-scriptMgmt-withScripts")!
+    let settings = ScriptSettings(defaults: defaults)
+    settings.scripts = [
+        Script(name: "Format", scriptPath: "format.sh"),
+        Script(name: "AI Rewrite", scriptPath: "ai.sh", requiresPrompt: true),
+    ]
+    return ScriptManagementView(settings: settings)
+        .frame(width: 600, height: 400)
+}
+
+#Preview("Empty") {
+    let defaults = UserDefaults(suiteName: "preview-scriptMgmt-empty")!
+    let settings = ScriptSettings(defaults: defaults)
+    settings.scripts = []
+    return ScriptManagementView(settings: settings)
+        .frame(width: 600, height: 400)
+}
