@@ -72,6 +72,7 @@ Task ツールで `subagent_type: Plan, model: "sonnet"` を使う。
 11. **モジュール配置と依存方向の遵守**: 新しい import が `Koecho → KoechoPlatform → KoechoCore` の方向に従っているか。KoechoCore に macOS 固有 API (Carbon, CoreAudio, AppKit 等) の import が漏れていないか（rules/architecture.md 参照）
 12. **共通化の妥当性**: KoechoPlatform と Koecho (App) 間で共有するコードが KoechoCore に正しく配置されているか。ローカルなヘルパーが本来 KoechoCore に属する概念を扱っていないか
 13. **リファクタリングと機能実装のコミット分離**: diff にリファクタリング（rename、ファイル移動、構造変更）と機能実装（新しいビジネスロジック）が混在していないか
+14. **Preview の同期**: View を新規追加・変更した場合、同ファイル末尾の `#Preview` も追加・更新されているか
 
 上記に該当しないが Koecho 固有の設計判断に関わる問題も自由に指摘してよい。
 
