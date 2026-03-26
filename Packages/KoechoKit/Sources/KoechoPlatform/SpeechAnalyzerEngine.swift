@@ -344,8 +344,9 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         defer { isRestarting = false }
         logger.info("Restarting transcriber to clear segment buffer")
 
-        // 1. Stop old: remove tap, finish stream, cancel analyzer
+        // 1. Stop old: remove tap, stop audio engine, finish stream, cancel analyzer
         audioEngine.inputNode.removeTap(onBus: 0)
+        audioEngine.stop()
         inputContinuation?.finish()
         if let analyzer {
             await analyzer.cancelAndFinishNow()
@@ -371,9 +372,18 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         self.analyzer = SpeechAnalyzer(inputSequence: stream, modules: [newTranscriber])
         startResultTask(transcriber: newTranscriber)
 
-        // 4. Re-install audio tap with new continuation
+        // 4. Re-install audio tap and restart audio engine
         installAudioTap()
         guard state == .listening else { return false }
+
+        do {
+            try audioEngine.start()
+        } catch {
+            resultTask?.cancel()
+            reportError(.audioEngineStartFailed(description: error.localizedDescription))
+            return false
+        }
+
         logger.info("Transcriber restarted")
         return true
     }
