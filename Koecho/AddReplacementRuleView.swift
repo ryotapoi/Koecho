@@ -1,81 +1,81 @@
-import SwiftUI
 import KoechoCore
+import SwiftUI
 
 struct AddReplacementRuleView: View {
-    let pattern: String
-    var onAdd: (ReplacementRule) -> Void
-    var onCancel: () -> Void
+  let pattern: String
+  var onAdd: (ReplacementRule) -> Void
+  var onCancel: () -> Void
 
-    @State private var replacement = ""
-    @State private var usesRegularExpression = false
-    @State private var matchesWholeWord = false
-    @FocusState private var isReplacementFocused: Bool
+  @State private var replacement = ""
+  @State private var usesRegularExpression = false
+  @State private var matchesWholeWord = false
+  @FocusState private var isReplacementFocused: Bool
 
-    private var patternValidationError: String? {
-        ReplacementRule(pattern: pattern, usesRegularExpression: usesRegularExpression).validate()
-    }
+  private var patternValidationError: String? {
+    ReplacementRule(pattern: pattern, usesRegularExpression: usesRegularExpression).validate()
+  }
 
-    private var isValid: Bool {
-        patternValidationError == nil
-    }
+  private var isValid: Bool {
+    patternValidationError == nil
+  }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Add Replacement Rule")
-                .font(.headline)
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Add Replacement Rule")
+        .font(.headline)
 
-            TextField("Pattern", text: .constant(pattern))
-                .disabled(true)
+      TextField("Pattern", text: .constant(pattern))
+        .disabled(true)
 
-            TextField("Replacement", text: $replacement)
-                .focused($isReplacementFocused)
+      TextField("Replacement", text: $replacement)
+        .focused($isReplacementFocused)
 
-            if let error = patternValidationError {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
+      if let error = patternValidationError {
+        Text(error)
+          .font(.caption)
+          .foregroundStyle(.red)
+      }
 
-            Toggle("Use Regular Expression", isOn: $usesRegularExpression)
+      Toggle("Use Regular Expression", isOn: $usesRegularExpression)
 
-            if !usesRegularExpression {
-                Toggle("Match Whole Word", isOn: $matchesWholeWord)
-            }
+      if !usesRegularExpression {
+        Toggle("Match Whole Word", isOn: $matchesWholeWord)
+      }
 
-            HStack {
-                Spacer()
-                Button("Cancel") {
-                    onCancel()
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Button("Add") {
-                    let rule = ReplacementRule(
-                        pattern: pattern,
-                        replacement: replacement,
-                        usesRegularExpression: usesRegularExpression,
-                        matchesWholeWord: matchesWholeWord
-                    )
-                    onAdd(rule)
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!isValid)
-            }
+      HStack {
+        Spacer()
+        Button("Cancel") {
+          onCancel()
         }
-        .padding()
-        .frame(width: 260)
-        .onAppear {
-            isReplacementFocused = true
+        .keyboardShortcut(.cancelAction)
+
+        Button("Add") {
+          let rule = ReplacementRule(
+            pattern: pattern,
+            replacement: replacement,
+            usesRegularExpression: usesRegularExpression,
+            matchesWholeWord: matchesWholeWord
+          )
+          onAdd(rule)
         }
+        .keyboardShortcut(.defaultAction)
+        .disabled(!isValid)
+      }
     }
+    .padding()
+    .frame(width: 260)
+    .onAppear {
+      isReplacementFocused = true
+    }
+  }
 }
 
 // MARK: - Previews
 
 #Preview("Default") {
-    AddReplacementRuleView(
-        pattern: "えーと",
-        onAdd: { _ in },
-        onCancel: {}
-    )
+  AddReplacementRuleView(
+    pattern: "えーと",
+    onAdd: { _ in },
+    onCancel: {}
+  )
 }

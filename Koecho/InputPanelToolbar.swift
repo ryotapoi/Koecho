@@ -1,125 +1,132 @@
-import SwiftUI
 import KoechoCore
+import SwiftUI
 
 struct InputPanelToolbar: View {
-    let replacementRules: [ReplacementRule]
-    let scripts: [Script]
-    @Bindable var scriptSettings: ScriptSettings
-    let isRunningScript: Bool
-    let hasPromptScript: Bool
-    var onApplyReplacementRules: () -> Void
-    var onExecuteScript: (Script) async -> Void
-    let replacementShortcutKey: ShortcutKey?
+  let replacementRules: [ReplacementRule]
+  let scripts: [Script]
+  @Bindable var scriptSettings: ScriptSettings
+  let isRunningScript: Bool
+  let hasPromptScript: Bool
+  var onApplyReplacementRules: () -> Void
+  var onExecuteScript: (Script) async -> Void
+  let replacementShortcutKey: ShortcutKey?
 
-    private var hasAutoRunScripts: Bool {
-        !scriptSettings.eligibleAutoRunScripts.isEmpty
-    }
+  private var hasAutoRunScripts: Bool {
+    !scriptSettings.eligibleAutoRunScripts.isEmpty
+  }
 
-    var body: some View {
+  var body: some View {
+    HStack(spacing: 4) {
+      ScrollView(.horizontal) {
         HStack(spacing: 4) {
-            ScrollView(.horizontal) {
-                HStack(spacing: 4) {
-                    if !replacementRules.isEmpty {
-                        Button {
-                            onApplyReplacementRules()
-                        } label: {
-                            Label("Replace", systemImage: "arrow.2.squarepath")
-                                .font(.caption)
-                        }
-                        .help(helpText(String(localized: "Apply replacement rules"), shortcut: replacementShortcutKey))
-                        .disabled(isRunningScript)
-                    }
-
-                    if !replacementRules.isEmpty && !scripts.isEmpty {
-                        Divider()
-                            .frame(height: 14)
-                    }
-
-                    ForEach(scripts) { script in
-                        Button {
-                            Task { await onExecuteScript(script) }
-                        } label: {
-                            Text(script.name)
-                                .font(.caption)
-                        }
-                        .frame(minWidth: 32)
-                        .help(helpText(script.name, shortcut: script.shortcutKey))
-                        .disabled(isRunningScript || hasPromptScript)
-                    }
-                }
-                .padding(.leading, 8)
-                .padding(.trailing, hasAutoRunScripts ? 0 : 8)
+          if !replacementRules.isEmpty {
+            Button {
+              onApplyReplacementRules()
+            } label: {
+              Label("Replace", systemImage: "arrow.2.squarepath")
+                .font(.caption)
             }
-            .scrollIndicators(.hidden)
+            .help(
+              helpText(
+                String(localized: "Apply replacement rules"), shortcut: replacementShortcutKey)
+            )
+            .disabled(isRunningScript)
+          }
 
-            if hasAutoRunScripts {
-                Divider()
-                    .frame(height: 14)
+          if !replacementRules.isEmpty && !scripts.isEmpty {
+            Divider()
+              .frame(height: 14)
+          }
 
-                Menu {
-                    AutoRunScriptMenuContent(scriptSettings: scriptSettings)
-                } label: {
-                    HStack(spacing: 2) {
-                        Image(systemName: "bolt.fill")
-                            .font(.caption)
-                        Text(scriptSettings.autoRunScript?.name ?? String(localized: "None"))
-                            .font(.caption)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 9))
-                    }
-                    .foregroundStyle(.secondary)
-                }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
-                .help(helpText(String(localized: "Cycle auto-run script selection"), shortcut: scriptSettings.autoRunShortcutKey))
-                .padding(.trailing, 8)
+          ForEach(scripts) { script in
+            Button {
+              Task { await onExecuteScript(script) }
+            } label: {
+              Text(script.name)
+                .font(.caption)
             }
+            .frame(minWidth: 32)
+            .help(helpText(script.name, shortcut: script.shortcutKey))
+            .disabled(isRunningScript || hasPromptScript)
+          }
         }
-    }
+        .padding(.leading, 8)
+        .padding(.trailing, hasAutoRunScripts ? 0 : 8)
+      }
+      .scrollIndicators(.hidden)
 
-    private func helpText(_ label: String, shortcut: ShortcutKey?) -> String {
-        if let shortcut {
-            "\(label) (\(shortcut.displayName))"
-        } else {
-            label
+      if hasAutoRunScripts {
+        Divider()
+          .frame(height: 14)
+
+        Menu {
+          AutoRunScriptMenuContent(scriptSettings: scriptSettings)
+        } label: {
+          HStack(spacing: 2) {
+            Image(systemName: "bolt.fill")
+              .font(.caption)
+            Text(scriptSettings.autoRunScript?.name ?? String(localized: "None"))
+              .font(.caption)
+            Image(systemName: "chevron.up.chevron.down")
+              .font(.system(size: 9))
+          }
+          .foregroundStyle(.secondary)
         }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(
+          helpText(
+            String(localized: "Cycle auto-run script selection"),
+            shortcut: scriptSettings.autoRunShortcutKey)
+        )
+        .padding(.trailing, 8)
+      }
     }
+  }
+
+  private func helpText(_ label: String, shortcut: ShortcutKey?) -> String {
+    if let shortcut {
+      "\(label) (\(shortcut.displayName))"
+    } else {
+      label
+    }
+  }
 }
 
 // MARK: - Previews
 
 #Preview("Full") {
-    let defaults = UserDefaults(suiteName: "preview-toolbar-full")!
-    let scriptSettings = ScriptSettings(defaults: defaults)
-    scriptSettings.scripts = [
-        Script(name: "Format", scriptPath: "format.sh"),
-        Script(name: "AI", scriptPath: "ai.sh"),
-    ]
-    return InputPanelToolbar(
-        replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
-        scripts: scriptSettings.scripts,
-        scriptSettings: scriptSettings,
-        isRunningScript: false,
-        hasPromptScript: false,
-        onApplyReplacementRules: {},
-        onExecuteScript: { _ in },
-        replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
-    )
-    .frame(width: 350, height: 40)
+  let defaults = UserDefaults(suiteName: "preview-toolbar-full")!
+  let scriptSettings = ScriptSettings(defaults: defaults)
+  scriptSettings.scripts = [
+    Script(name: "Format", scriptPath: "format.sh"),
+    Script(name: "AI", scriptPath: "ai.sh"),
+  ]
+  return InputPanelToolbar(
+    replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
+    scripts: scriptSettings.scripts,
+    scriptSettings: scriptSettings,
+    isRunningScript: false,
+    hasPromptScript: false,
+    onApplyReplacementRules: {},
+    onExecuteScript: { _ in },
+    replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
+  )
+  .frame(width: 350, height: 40)
 }
 
 #Preview("Running Script") {
-    let defaults = UserDefaults(suiteName: "preview-toolbar-running")!
-    let scriptSettings = ScriptSettings(defaults: defaults)
-    return InputPanelToolbar(
-        replacementRules: [],
-        scripts: [Script(name: "Format", scriptPath: "format.sh")],
-        scriptSettings: scriptSettings,
-        isRunningScript: true,
-        hasPromptScript: false,
-        onApplyReplacementRules: {},
-        onExecuteScript: { _ in },
-        replacementShortcutKey: nil
-    )
-    .frame(width: 350, height: 40)
+  let defaults = UserDefaults(suiteName: "preview-toolbar-running")!
+  let scriptSettings = ScriptSettings(defaults: defaults)
+  return InputPanelToolbar(
+    replacementRules: [],
+    scripts: [Script(name: "Format", scriptPath: "format.sh")],
+    scriptSettings: scriptSettings,
+    isRunningScript: true,
+    hasPromptScript: false,
+    onApplyReplacementRules: {},
+    onExecuteScript: { _ in },
+    replacementShortcutKey: nil
+  )
+  .frame(width: 350, height: 40)
 }

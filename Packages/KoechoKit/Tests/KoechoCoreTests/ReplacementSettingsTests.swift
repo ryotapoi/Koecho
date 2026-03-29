@@ -1,196 +1,197 @@
 import Foundation
 import Testing
+
 @testable import KoechoCore
 
 @MainActor
 struct ReplacementSettingsTests {
-    private func makeDefaults() -> UserDefaults {
-        let suiteName = "test-\(UUID().uuidString)"
-        return UserDefaults(suiteName: suiteName)!
-    }
+  private func makeDefaults() -> UserDefaults {
+    let suiteName = "test-\(UUID().uuidString)"
+    return UserDefaults(suiteName: suiteName)!
+  }
 
-    @Test func defaultReplacementRulesEmpty() {
-        let settings = ReplacementSettings(defaults: makeDefaults())
-        #expect(settings.replacementRules.isEmpty)
-    }
+  @Test func defaultReplacementRulesEmpty() {
+    let settings = ReplacementSettings(defaults: makeDefaults())
+    #expect(settings.replacementRules.isEmpty)
+  }
 
-    @Test func addReplacementRule() {
-        let settings = ReplacementSettings(defaults: makeDefaults())
-        let rule = ReplacementRule(pattern: "えーと", replacement: "")
+  @Test func addReplacementRule() {
+    let settings = ReplacementSettings(defaults: makeDefaults())
+    let rule = ReplacementRule(pattern: "えーと", replacement: "")
 
-        settings.addReplacementRule(rule)
+    settings.addReplacementRule(rule)
 
-        #expect(settings.replacementRules.count == 1)
-        #expect(settings.replacementRules[0].id == rule.id)
-    }
+    #expect(settings.replacementRules.count == 1)
+    #expect(settings.replacementRules[0].id == rule.id)
+  }
 
-    @Test func updateReplacementRule() {
-        let settings = ReplacementSettings(defaults: makeDefaults())
-        var rule = ReplacementRule(pattern: "a", replacement: "b")
-        settings.addReplacementRule(rule)
+  @Test func updateReplacementRule() {
+    let settings = ReplacementSettings(defaults: makeDefaults())
+    var rule = ReplacementRule(pattern: "a", replacement: "b")
+    settings.addReplacementRule(rule)
 
-        rule.pattern = "c"
-        settings.updateReplacementRule(rule)
+    rule.pattern = "c"
+    settings.updateReplacementRule(rule)
 
-        #expect(settings.replacementRules.count == 1)
-        #expect(settings.replacementRules[0].pattern == "c")
-    }
+    #expect(settings.replacementRules.count == 1)
+    #expect(settings.replacementRules[0].pattern == "c")
+  }
 
-    @Test func updateNonexistentReplacementRule() {
-        let settings = ReplacementSettings(defaults: makeDefaults())
-        settings.addReplacementRule(ReplacementRule(pattern: "a"))
+  @Test func updateNonexistentReplacementRule() {
+    let settings = ReplacementSettings(defaults: makeDefaults())
+    settings.addReplacementRule(ReplacementRule(pattern: "a"))
 
-        let nonexistent = ReplacementRule(pattern: "b")
-        settings.updateReplacementRule(nonexistent)
+    let nonexistent = ReplacementRule(pattern: "b")
+    settings.updateReplacementRule(nonexistent)
 
-        #expect(settings.replacementRules.count == 1)
-    }
+    #expect(settings.replacementRules.count == 1)
+  }
 
-    @Test func deleteReplacementRule() {
-        let settings = ReplacementSettings(defaults: makeDefaults())
-        let rule = ReplacementRule(pattern: "a")
-        settings.addReplacementRule(rule)
+  @Test func deleteReplacementRule() {
+    let settings = ReplacementSettings(defaults: makeDefaults())
+    let rule = ReplacementRule(pattern: "a")
+    settings.addReplacementRule(rule)
 
-        settings.deleteReplacementRule(id: rule.id)
+    settings.deleteReplacementRule(id: rule.id)
 
-        #expect(settings.replacementRules.isEmpty)
-    }
+    #expect(settings.replacementRules.isEmpty)
+  }
 
-    @Test func deleteNonexistentReplacementRule() {
-        let settings = ReplacementSettings(defaults: makeDefaults())
-        settings.addReplacementRule(ReplacementRule(pattern: "a"))
+  @Test func deleteNonexistentReplacementRule() {
+    let settings = ReplacementSettings(defaults: makeDefaults())
+    settings.addReplacementRule(ReplacementRule(pattern: "a"))
 
-        settings.deleteReplacementRule(id: UUID())
+    settings.deleteReplacementRule(id: UUID())
 
-        #expect(settings.replacementRules.count == 1)
-    }
+    #expect(settings.replacementRules.count == 1)
+  }
 
-    @Test func moveReplacementRules() {
-        let settings = ReplacementSettings(defaults: makeDefaults())
-        let a = ReplacementRule(pattern: "a")
-        let b = ReplacementRule(pattern: "b")
-        let c = ReplacementRule(pattern: "c")
-        settings.replacementRules = [a, b, c]
+  @Test func moveReplacementRules() {
+    let settings = ReplacementSettings(defaults: makeDefaults())
+    let a = ReplacementRule(pattern: "a")
+    let b = ReplacementRule(pattern: "b")
+    let c = ReplacementRule(pattern: "c")
+    settings.replacementRules = [a, b, c]
 
-        settings.moveReplacementRules(from: IndexSet(integer: 2), to: 0)
+    settings.moveReplacementRules(from: IndexSet(integer: 2), to: 0)
 
-        #expect(settings.replacementRules[0].pattern == "c")
-        #expect(settings.replacementRules[1].pattern == "a")
-        #expect(settings.replacementRules[2].pattern == "b")
-    }
+    #expect(settings.replacementRules[0].pattern == "c")
+    #expect(settings.replacementRules[1].pattern == "a")
+    #expect(settings.replacementRules[2].pattern == "b")
+  }
 
-    @Test func persistsReplacementRules() {
-        let defaults = makeDefaults()
-        let rule = ReplacementRule(
-            pattern: "foo",
-            replacement: "bar",
-            usesRegularExpression: true,
-            matchesWholeWord: false
-        )
+  @Test func persistsReplacementRules() {
+    let defaults = makeDefaults()
+    let rule = ReplacementRule(
+      pattern: "foo",
+      replacement: "bar",
+      usesRegularExpression: true,
+      matchesWholeWord: false
+    )
 
-        let settings = ReplacementSettings(defaults: defaults)
-        settings.addReplacementRule(rule)
+    let settings = ReplacementSettings(defaults: defaults)
+    settings.addReplacementRule(rule)
 
-        let reloaded = ReplacementSettings(defaults: defaults)
-        #expect(reloaded.replacementRules.count == 1)
-        let loaded = reloaded.replacementRules[0]
-        #expect(loaded.id == rule.id)
-        #expect(loaded.pattern == "foo")
-        #expect(loaded.replacement == "bar")
-        #expect(loaded.usesRegularExpression == true)
-        #expect(loaded.matchesWholeWord == false)
-    }
+    let reloaded = ReplacementSettings(defaults: defaults)
+    #expect(reloaded.replacementRules.count == 1)
+    let loaded = reloaded.replacementRules[0]
+    #expect(loaded.id == rule.id)
+    #expect(loaded.pattern == "foo")
+    #expect(loaded.replacement == "bar")
+    #expect(loaded.usesRegularExpression == true)
+    #expect(loaded.matchesWholeWord == false)
+  }
 
-    @Test func corruptedReplacementRulesFallsBack() {
-        let defaults = makeDefaults()
-        defaults.set(Data("invalid json".utf8), forKey: "replacementRules")
+  @Test func corruptedReplacementRulesFallsBack() {
+    let defaults = makeDefaults()
+    defaults.set(Data("invalid json".utf8), forKey: "replacementRules")
 
-        let settings = ReplacementSettings(defaults: defaults)
-        #expect(settings.replacementRules.isEmpty)
-    }
+    let settings = ReplacementSettings(defaults: defaults)
+    #expect(settings.replacementRules.isEmpty)
+  }
 
-    @Test func defaultReplacementShortcutKey() {
-        let settings = ReplacementSettings(defaults: makeDefaults())
-        #expect(settings.replacementShortcutKey == ShortcutKey(modifiers: [.control], character: "r"))
-    }
+  @Test func defaultReplacementShortcutKey() {
+    let settings = ReplacementSettings(defaults: makeDefaults())
+    #expect(settings.replacementShortcutKey == ShortcutKey(modifiers: [.control], character: "r"))
+  }
 
-    @Test func defaultAutoReplacementEnabled() {
-        let settings = ReplacementSettings(defaults: makeDefaults())
-        #expect(settings.isAutoReplacementEnabled == true)
-    }
+  @Test func defaultAutoReplacementEnabled() {
+    let settings = ReplacementSettings(defaults: makeDefaults())
+    #expect(settings.isAutoReplacementEnabled == true)
+  }
 
-    @Test func persistsReplacementShortcutKey() {
-        let defaults = makeDefaults()
+  @Test func persistsReplacementShortcutKey() {
+    let defaults = makeDefaults()
 
-        let settings = ReplacementSettings(defaults: defaults)
-        settings.replacementShortcutKey = ShortcutKey(modifiers: [.command], character: "x")
+    let settings = ReplacementSettings(defaults: defaults)
+    settings.replacementShortcutKey = ShortcutKey(modifiers: [.command], character: "x")
 
-        let reloaded = ReplacementSettings(defaults: defaults)
-        #expect(reloaded.replacementShortcutKey == ShortcutKey(modifiers: [.command], character: "x"))
-    }
+    let reloaded = ReplacementSettings(defaults: defaults)
+    #expect(reloaded.replacementShortcutKey == ShortcutKey(modifiers: [.command], character: "x"))
+  }
 
-    @Test func persistsNilReplacementShortcutKey() {
-        let defaults = makeDefaults()
+  @Test func persistsNilReplacementShortcutKey() {
+    let defaults = makeDefaults()
 
-        let settings = ReplacementSettings(defaults: defaults)
-        settings.replacementShortcutKey = nil
+    let settings = ReplacementSettings(defaults: defaults)
+    settings.replacementShortcutKey = nil
 
-        let reloaded = ReplacementSettings(defaults: defaults)
-        #expect(reloaded.replacementShortcutKey == nil)
-    }
+    let reloaded = ReplacementSettings(defaults: defaults)
+    #expect(reloaded.replacementShortcutKey == nil)
+  }
 
-    @Test func persistsAutoReplacementEnabled() {
-        let defaults = makeDefaults()
+  @Test func persistsAutoReplacementEnabled() {
+    let defaults = makeDefaults()
 
-        let settings = ReplacementSettings(defaults: defaults)
-        settings.isAutoReplacementEnabled = false
+    let settings = ReplacementSettings(defaults: defaults)
+    settings.isAutoReplacementEnabled = false
 
-        let reloaded = ReplacementSettings(defaults: defaults)
-        #expect(reloaded.isAutoReplacementEnabled == false)
-    }
+    let reloaded = ReplacementSettings(defaults: defaults)
+    #expect(reloaded.isAutoReplacementEnabled == false)
+  }
 
-    // MARK: - Legacy format migration
+  // MARK: - Legacy format migration
 
-    @Test func migratesLegacySinglePatternFormat() throws {
-        let defaults = makeDefaults()
-        // Simulate old format data with "pattern" key
-        let legacyJSON = """
-        [{
-            "id": "00000000-0000-0000-0000-000000000001",
-            "pattern": "えーと",
-            "replacement": "",
-            "usesRegularExpression": false,
-            "matchesWholeWord": false
-        }]
-        """.data(using: .utf8)!
-        defaults.set(legacyJSON, forKey: "replacementRules")
+  @Test func migratesLegacySinglePatternFormat() throws {
+    let defaults = makeDefaults()
+    // Simulate old format data with "pattern" key
+    let legacyJSON = """
+      [{
+          "id": "00000000-0000-0000-0000-000000000001",
+          "pattern": "えーと",
+          "replacement": "",
+          "usesRegularExpression": false,
+          "matchesWholeWord": false
+      }]
+      """.data(using: .utf8)!
+    defaults.set(legacyJSON, forKey: "replacementRules")
 
-        let settings = ReplacementSettings(defaults: defaults)
-        #expect(settings.replacementRules.count == 1)
-        #expect(settings.replacementRules[0].patterns == ["えーと"])
-        #expect(settings.replacementRules[0].pattern == "えーと")
-    }
+    let settings = ReplacementSettings(defaults: defaults)
+    #expect(settings.replacementRules.count == 1)
+    #expect(settings.replacementRules[0].patterns == ["えーと"])
+    #expect(settings.replacementRules[0].pattern == "えーと")
+  }
 
-    @Test func reEncodesLegacyFormatToNewFormat() throws {
-        let defaults = makeDefaults()
-        let legacyJSON = """
-        [{
-            "id": "00000000-0000-0000-0000-000000000001",
-            "pattern": "test",
-            "replacement": "replaced",
-            "usesRegularExpression": false,
-            "matchesWholeWord": false
-        }]
-        """.data(using: .utf8)!
-        defaults.set(legacyJSON, forKey: "replacementRules")
+  @Test func reEncodesLegacyFormatToNewFormat() throws {
+    let defaults = makeDefaults()
+    let legacyJSON = """
+      [{
+          "id": "00000000-0000-0000-0000-000000000001",
+          "pattern": "test",
+          "replacement": "replaced",
+          "usesRegularExpression": false,
+          "matchesWholeWord": false
+      }]
+      """.data(using: .utf8)!
+    defaults.set(legacyJSON, forKey: "replacementRules")
 
-        // Load triggers re-encode on init
-        _ = ReplacementSettings(defaults: defaults)
+    // Load triggers re-encode on init
+    _ = ReplacementSettings(defaults: defaults)
 
-        // Verify re-encoded data uses new format
-        let data = defaults.data(forKey: "replacementRules")!
-        let array = try JSONSerialization.jsonObject(with: data) as! [[String: Any]]
-        #expect(array[0]["patterns"] as? [String] == ["test"])
-        #expect(array[0]["pattern"] == nil)
-    }
+    // Verify re-encoded data uses new format
+    let data = defaults.data(forKey: "replacementRules")!
+    let array = try JSONSerialization.jsonObject(with: data) as! [[String: Any]]
+    #expect(array[0]["patterns"] as? [String] == ["test"])
+    #expect(array[0]["pattern"] == nil)
+  }
 }
