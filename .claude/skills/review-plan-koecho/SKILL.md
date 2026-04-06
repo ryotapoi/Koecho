@@ -59,18 +59,10 @@ Task ツールで `subagent_type: Plan, model: "sonnet"` を使う。
 
 以下はこのプロジェクトで繰り返し発見された設計上の落とし穴です。プランがこれらに抵触していないか検証してください。
 
-1. **volatile テキストと他機能の整合性を確認する**: volatile テキストが textView.string に実挿入される設計のため、スクリプト実行・置換ルールプレビュー・UI 表示で NSRange 座標不整合が起きやすい。volatile 中の操作は finalizedString ベースか textView.string ベースかを明確にすること
-2. **プログラム由来のテキスト変更では `isSuppressingCallbacks` で囲む**: textStorage 直接編集や setString() でも didChangeText → onTextChanged/onTextCommitted が発火する。意図しない状態変更を防ぐため isSuppressingCallbacks ガードが必要
-3. **UserDefaults の nil 永続化パターンを既存方式に統一する**: `removeObject` 方式と `Data()` センチネル方式が混在すると事故りやすい。同種データは既存パターン（`Data()` センチネル）に合わせること
-4. **ADR・設計文書との整合性を維持する**: 新機能で既存 ADR を置き換える場合、supersede の明記・Status 更新・scope.md やスクリプト例コメントの更新を忘れないこと
-5. **テスト計画が実設計パターンと合っているか確認する**: Mock/Fake の前提が実装と乖離していないか、テスト対象スコープ（KoechoTests だけでなく KoechoPlatformTests, KoechoCoreTests も）が網羅されているか
-6. **stopDictation() のテキストクリアと後続処理の干渉を考慮する**: stopDictation() はリーク防止のため textView をクリアする。auto-run 等で後続処理がある場合、テキスト復元が必要
-7. **SPM モジュール分離時の import / dependency / public 漏れ**: ファイル移動時に import 追加（`import Observation` 等）、Package.swift の dependency 追加、型の `public` 化を全件確認すること
-8. **プラン内のファイルパスと検証コマンドのスコープを正確にする**: ファイルパスはリポジトリルートからの正確なパスを使う。検証コマンド（test_macos 等）が全パッケージテストをカバーしているか確認する
-9. **モジュール配置は依存方向 `Koecho → KoechoPlatform → KoechoCore` に従う**: 新しいコードの配置先が rules/architecture.md の責務定義と合っているか。定義された方向に違反する依存がないか
-10. **共通化は依存方向に沿って配置する**: KoechoPlatform と Koecho (App) 間で共有するコードは KoechoCore に置く。片方だけ変更したくなったとき分離できるか検討されているか
-11. **リファクタリングと機能実装を同一ステップに混ぜない**: 既存コードの構造改善が必要なら、機能実装の前ステップとして分離されているか
-12. **エラーパスのリソース後始末を確認する**: async 処理で Task を生成した後にエラーが発生した場合、その Task が cancel されるか。catch 節や defer でのクリーンアップ漏れがないか
+1. **プログラム由来のテキスト変更では `isSuppressingCallbacks` で囲む**: textStorage 直接編集や setString() でも didChangeText → onTextChanged/onTextCommitted が発火する。意図しない状態変更を防ぐため isSuppressingCallbacks ガードが必要
+2. **volatile テキストと他機能（ディクテーション停止時のクリア等）の整合性**: volatile テキストが textView.string に実挿入される設計のため、スクリプト実行・置換ルールプレビュー・UI 表示で NSRange 座標不整合が起きやすい。volatile 中の操作は finalizedString ベースか textView.string ベースかを明確にすること
+3. **Off モードでのエンジン init は設計判断として許容**: Off モードでエンジンが init されることは意図的な設計判断であり、過剰指摘しないこと
+4. **UserDefaults の nil 永続化パターンを既存方式に統一する**: `removeObject` 方式と `Data()` センチネル方式が混在すると事故りやすい。同種データは既存パターン（`Data()` センチネル）に合わせること
 
 上記に該当しないが Koecho 固有の設計判断に関わる問題も自由に指摘してよい。
 

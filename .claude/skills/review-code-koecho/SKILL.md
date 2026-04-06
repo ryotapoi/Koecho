@@ -57,25 +57,10 @@ Task ツールで `subagent_type: Plan, model: "sonnet"` を使う。
 
 以下はこのプロジェクトで繰り返し発見された設計上の落とし穴です。実装がこれらに抵触していないか検証してください。
 
-1. **volatile テキストと他機能の整合性を確認する**: volatile テキストが textView.string に実挿入される設計のため、スクリプト実行・置換ルールプレビュー・UI 表示で NSRange 座標不整合が起きやすい。volatile 中の操作は finalizedString ベースか textView.string ベースかを明確にすること
-2. **プログラム由来のテキスト変更では `isSuppressingCallbacks` で囲む**: textStorage 直接編集や setString() でも didChangeText → onTextChanged/onTextCommitted が発火する。意図しない状態変更を防ぐため isSuppressingCallbacks ガードが必要
-3. **UserDefaults の nil 永続化パターンを既存方式に統一する**: `removeObject` 方式と `Data()` センチネル方式が混在すると事故りやすい。同種データは既存パターン（`Data()` センチネル）に合わせること
-4. **ADR・設計文書との整合性を維持する**: 新機能で既存 ADR を置き換える場合、supersede の明記・Status 更新・scope.md やスクリプト例コメントの更新を忘れないこと
-5. **テストが実設計パターンと合っているか確認する**: Mock/Fake の前提が実装と乖離していないか、テスト対象スコープ（KoechoTests だけでなく KoechoPlatformTests, KoechoCoreTests も）が網羅されているか
-6. **stopDictation() のテキストクリアと後続処理の干渉を考慮する**: stopDictation() はリーク防止のため textView をクリアする。auto-run 等で後続処理がある場合、テキスト復元が必要
-7. **SPM モジュール分離時の import / dependency / public 漏れ**: ファイル移動時に import 追加（`import Observation` 等）、Package.swift の dependency 追加、型の `public` 化を全件確認すること
-8. **プラン内のファイルパスと検証コマンドのスコープを正確にする**: ファイルパスはリポジトリルートからの正確なパスを使う。検証コマンド（test_macos 等）が全パッケージテストをカバーしているか確認する
-
-### 実装レビュー追加観点
-9. **旧 UserDefaults キーの削除処理を忘れない**: 設定キーをリネーム・統合した場合、Settings.init() / save() に旧キーの removeObject(forKey:) を入れること
-10. **startDictation: の冪等性を保つ**: start() は state != .idle のとき no-op にする。listening 中の再呼び出しでトグル停止しないこと
-11. **モジュール配置と依存方向の遵守**: 新しい import が `Koecho → KoechoPlatform → KoechoCore` の方向に従っているか。KoechoCore に macOS 固有 API (Carbon, CoreAudio, AppKit 等) の import が漏れていないか（rules/architecture.md 参照）
-12. **共通化の妥当性**: KoechoPlatform と Koecho (App) 間で共有するコードが KoechoCore に正しく配置されているか。ローカルなヘルパーが本来 KoechoCore に属する概念を扱っていないか
-13. **リファクタリングと機能実装のコミット分離**: diff にリファクタリング（rename、ファイル移動、構造変更）と機能実装（新しいビジネスロジック）が混在していないか
-14. **Preview の同期**: View を新規追加・変更した場合、同ファイル末尾の `#Preview` も追加・更新されているか
-15. **エラーパスのリソース後始末**: async 処理で Task を生成した後にエラーが発生した場合、その Task が cancel されているか。catch 節や defer でのクリーンアップ漏れがないか
-16. **同一データの比較で正規化方式が一貫しているか**: identifier/key の比較で、同じ正規化（normalizedKey 等）が全箇所で使われているか。一部だけ生の identifier で比較すると表記ゆれで誤判定する
-17. **プラン仕様との粒度レベルの突合**: プランで「ルール間のみ検出」等のスコープ制約が定義されている場合、実装がその粒度を正確に実現しているか（例: ルール内重複 vs ルール間重複の区別）
+1. **プログラム由来のテキスト変更では `isSuppressingCallbacks` で囲む**: textStorage 直接編集や setString() でも didChangeText → onTextChanged/onTextCommitted が発火する。意図しない状態変更を防ぐため isSuppressingCallbacks ガードが必要
+2. **volatile テキストと他機能（ディクテーション停止時のクリア等）の整合性**: volatile テキストが textView.string に実挿入される設計のため、スクリプト実行・置換ルールプレビュー・UI 表示で NSRange 座標不整合が起きやすい。volatile 中の操作は finalizedString ベースか textView.string ベースかを明確にすること
+3. **Off モードでのエンジン init は設計判断として許容**: Off モードでエンジンが init されることは意図的な設計判断であり、過剰指摘しないこと
+4. **UserDefaults の nil 永続化パターンを既存方式に統一する**: `removeObject` 方式と `Data()` センチネル方式が混在すると事故りやすい。同種データは既存パターン（`Data()` センチネル）に合わせること
 
 上記に該当しないが Koecho 固有の設計判断に関わる問題も自由に指摘してよい。
 
