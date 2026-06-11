@@ -23,8 +23,9 @@
   - InputPanelController.swift:403-427。setString → makeFirstResponder → setSelectedRange → scrollRangeToVisible → startEngine の同一シーケンスが if（即時）/ else（Task で 1 サイクル遅延、textView.window が nil 対策）に重複。共通 helper に畳む
 - [x] InputPanelController.confirm()（76 行）をフェーズごとの private メソッドに分割する
   - テキスト確定 / 置換適用 / auto-run script / ペースト / 履歴追加 / エラー復帰が直列に混在し、`guard appState.isInputPanelVisible` の再チェックが 4 回散在。途中キャンセルの扱いを各フェーズの戻り値で明示する
-- [ ] レガシー migration コードを撤去する（要ユーザー判断）
-  - ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー）と VoiceInputSettings.swift の `isVoiceInputEnabled` → `.off` migration。rules/mission.md の非目標「旧フォーマットへのフォールバック分岐は入れない」と矛盾。移行済みと判断できれば消す、残すなら撤去バージョンをここに明記する
+- [x] レガシー migration コードを撤去する（要ユーザー判断）
+  - 2026-06-11 ユーザー判断: VoiceInputSettings.swift の `isVoiceInputEnabled` → `.off` migration（v1.1.0 導入、影響は v1.0.x からの直接更新で off 設定が初期値に戻るだけ）のみ撤去
+  - ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー）は v1.4.0 導入直後のため残す。今消すと v1.3.0 以前からの直接更新で置換ルールが decode 失敗し全損する。**撤去予定: v1.6 以降**（v1.4.x / v1.5.x を経由した移行期間を確保してから）→ 下の v1.6 項目参照
 - [x] InputPanelControllerTests（1557 行・92 テスト・14 セクション）を分割する
   - MARK 境界に沿ってファイル分割し、TestContext / makeController helper は共有ファイルへ。Replay / Overlap 系は coordinator 単体テストへの移管も検討（forwarding 撤去タスクと連動）
 - [x] voiceInsertionPoint の closure 渡しをやめ、所有者（VoiceInputCoordinator）の名前付きメソッドに集約する
@@ -38,3 +39,9 @@
   - 現状: Settings で言語をダウンロード/リリースしても、Settings ウィンドウを閉じるまでメニューバーの Recognition Language サブメニューに反映されない
   - 方針案: NotificationCenter か AppState にプロパティを追加し、LanguageManagementSheet のダウンロード完了を KoechoApp に通知する
   - 以前の挑戦（Opus）では解決できなかった。なぜ前回の方法で更新されなかったかの原因調査から再着手する
+
+## v1.6 以降
+
+- [ ] ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー decode フォールバック）を撤去する
+  - v1.4.0 で patterns 複数化と同時に導入。v1.3.0 以前からの直接更新で置換ルールが decode 失敗→全損するのを防ぐための移行コード
+  - 2026-06-11 ユーザー判断: v1.4.x / v1.5.x の移行期間を確保し、v1.6 以降で撤去する

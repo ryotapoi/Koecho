@@ -127,25 +127,6 @@ struct VoiceInputSettingsTests {
     #expect(reloaded.voiceInputMode == .dictation)
   }
 
-  @Test func migratesLegacyVoiceInputDisabled() {
-    let defaults = makeDefaults()
-    defaults.set(false, forKey: "isVoiceInputEnabled")
-    defaults.set("speechAnalyzer", forKey: "voiceInputMode")
-
-    let settings = VoiceInputSettings(defaults: defaults)
-    #expect(settings.voiceInputMode == .off)
-    #expect(defaults.object(forKey: "isVoiceInputEnabled") == nil)
-  }
-
-  @Test func legacyVoiceInputEnabledTrueDoesNotMigrate() {
-    let defaults = makeDefaults()
-    defaults.set(true, forKey: "isVoiceInputEnabled")
-    defaults.set("speechAnalyzer", forKey: "voiceInputMode")
-
-    let settings = VoiceInputSettings(defaults: defaults)
-    #expect(settings.voiceInputMode == .speechAnalyzer)
-  }
-
   @Test func effectiveVoiceInputModeOffPreserved() {
     let settings = VoiceInputSettings(defaults: makeDefaults())
     settings.voiceInputMode = .off

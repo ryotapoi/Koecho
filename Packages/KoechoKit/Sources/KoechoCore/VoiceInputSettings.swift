@@ -68,14 +68,6 @@ public final class VoiceInputSettings {
       }
     }
 
-    // Migrate legacy isVoiceInputEnabled=false to .off mode
-    if defaults.object(forKey: "isVoiceInputEnabled") != nil,
-      !defaults.bool(forKey: "isVoiceInputEnabled")
-    {
-      _voiceInputMode = .off
-      defaults.removeObject(forKey: "isVoiceInputEnabled")
-    }
-
     _speechAnalyzerLocale =
       defaults.string(forKey: "speechAnalyzerLocale")
       ?? Self.systemSpeechAnalyzerLocale()
