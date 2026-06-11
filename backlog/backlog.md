@@ -4,8 +4,8 @@
 
 2026-06-11 のメンテナンス監査（thermo-nuclear-code-quality-review）より。変更容易性・メンテナンス性重視。
 
-- [ ] rules/workflow.md の存在しない `/refactor-guard` スキル参照を解消する
-  - 「省略してはならない」と記載されているがスキル実体が `~/.claude/skills/` にも `.claude/skills/` にもない。スキルを作るか、リファクタリングガードのセクションを削除する
+- [x] rules/workflow.md の存在しない `/refactor-guard` スキル参照を解消する
+  - 2026-06-11 のワークフロー刷新で rules/workflow.md ごと廃止（`.claude/workflow/` へ移行）。先行リファクタ判定は `.claude/workflow/plan.md` の「先行リファクタ判定」（design-decision / module-boundary）に置き換え
 - [ ] ドキュメントの古い記述を現状に同期する
   - references/knowledge.md「CoreAudio」: `AudioDeviceManager.isAudioInputInUse` static フラグの記述 → 実装は `AudioInputExclusiveAccess` enum に移行済み
   - references/knowledge.md「Swift / @Observable」: scripts の「init 内代入 + didSet { save() }」の記述 → 現在は全 *Settings が backing store + save() パターン
