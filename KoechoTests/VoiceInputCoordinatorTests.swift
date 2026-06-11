@@ -12,18 +12,14 @@ import Testing
     inputText: String = "",
     isInputPanelVisible: Bool = true
   ) -> (VoiceInputCoordinator, AppState, MockTextViewOperating, MockVoiceInputEngine) {
-    let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-    let settings = Settings(defaults: defaults)
-    let appState = AppState(settings: settings)
+    let appState = makeTestAppState()
     appState.isInputPanelVisible = isInputPanelVisible
     appState.inputText = inputText
 
     let mockEngine = MockVoiceInputEngine()
-    let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200))
-    let coordinator = VoiceInputCoordinator(
+    let coordinator = makeTestVoiceCoordinator(
       appState: appState,
-      makeEngine: { mockEngine },
-      panel: panel
+      makeEngine: { mockEngine }
     )
 
     let mockTV = MockTextViewOperating()

@@ -25,7 +25,7 @@
   - テキスト確定 / 置換適用 / auto-run script / ペースト / 履歴追加 / エラー復帰が直列に混在し、`guard appState.isInputPanelVisible` の再チェックが 4 回散在。途中キャンセルの扱いを各フェーズの戻り値で明示する
 - [ ] レガシー migration コードを撤去する（要ユーザー判断）
   - ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー）と VoiceInputSettings.swift の `isVoiceInputEnabled` → `.off` migration。rules/mission.md の非目標「旧フォーマットへのフォールバック分岐は入れない」と矛盾。移行済みと判断できれば消す、残すなら撤去バージョンをここに明記する
-- [ ] InputPanelControllerTests（1557 行・92 テスト・14 セクション）を分割する
+- [x] InputPanelControllerTests（1557 行・92 テスト・14 セクション）を分割する
   - MARK 境界に沿ってファイル分割し、TestContext / makeController helper は共有ファイルへ。Replay / Overlap 系は coordinator 単体テストへの移管も検討（forwarding 撤去タスクと連動）
 - [x] voiceInsertionPoint の closure 渡しをやめ、所有者（VoiceInputCoordinator）の名前付きメソッドに集約する
   - ReplacementService が get/set closure、ScriptExecutionService が set closure で書き換えており、挿入位置の不変条件（テキスト長以下等）がどこにも集約されていない。replay 状態 enum 化と同時に着手すると効率的

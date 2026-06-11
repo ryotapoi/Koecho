@@ -11,9 +11,7 @@ import Testing
   private func makeManager(
     selectedTextResult: SelectedTextResult? = nil
   ) -> (PanelLifecycleManager, AppState, MockSelectedTextReader, MockVolumeDucker, InputPanel) {
-    let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-    let settings = Settings(defaults: defaults)
-    let appState = AppState(settings: settings)
+    let appState = makeTestAppState()
 
     let reader = MockSelectedTextReader()
     reader.resultToReturn = selectedTextResult
@@ -126,7 +124,7 @@ import Testing
   // MARK: - hide
 
   @Test func hideCallsPanelOrderOut() {
-    let (manager, _, _, _, panel) = makeManager()
+    let (manager, _, _, _, _) = makeManager()
     // Panel is not visible in tests, but we verify the method doesn't crash
     manager.hide()
     // No assertion needed beyond no crash; panel.orderOut is an AppKit call

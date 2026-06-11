@@ -98,6 +98,13 @@
 - `UserDefaults.standard` を使うテストは前回のテスト実行データが残留し、次回のテストに干渉する
 - 対策: テストでは `UserDefaults(suiteName: "test-\(UUID().uuidString)")!` で毎回新しいインスタンスを作る
 - `AppState()` のデフォルト init は `Settings(defaults: .standard)` を使うため、テストでは `AppState(settings: Settings(defaults: isolatedDefaults))` のように明示的に渡す
+- 隔離済み AppState の構築は `KoechoTests/TestSupport.swift` の `makeTestAppState()` に共通化済み（coordinator 構築は `makeTestVoiceCoordinator(appState:)`）
+
+## テスト / DictationEngine 実アクション送信による稀な segv
+
+- `DictationEngineTests.stopFromListeningTransitions` は `engine.start()` 経由で `NSApp.sendAction(Selector("startDictation:"))` を実際に OS へ送る。CLI テスト実行環境では HIToolbox の TSM/Ironwood（`TSMProcessIronwoodSessionAction`）が稀に NULL 参照で SIGSEGV する
+- プロセスごと落ちるため、同時実行中だった無関係のテストも「Test crashed with signal segv」として巻き添えで fail 扱いになる。クラッシュレポート（`~/Library/Logs/DiagnosticReports/Koecho-*.ips`）の faulting thread を見ると真犯人が分かる
+- 再実行で解消するフレーク。頻発するようなら start() の実送信をテストから分離する検討対象
 
 ## macOS / Dictation + SwiftUI TextEditor のテキスト変更検知
 

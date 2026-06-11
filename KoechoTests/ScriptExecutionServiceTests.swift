@@ -13,22 +13,15 @@ import Testing
     isInputPanelVisible: Bool = true,
     scriptTimeout: TimeInterval = 30.0
   ) -> (ScriptExecutionService, AppState, MockTextViewOperating, VoiceInputCoordinator) {
-    let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
-    let settings = Settings(defaults: defaults)
-    settings.script.scriptTimeout = scriptTimeout
-    let appState = AppState(settings: settings)
+    let appState = makeTestAppState()
+    appState.settings.script.scriptTimeout = scriptTimeout
     appState.isInputPanelVisible = isInputPanelVisible
     appState.inputText = inputText
 
-    let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200))
-    let coordinator = VoiceInputCoordinator(
-      appState: appState,
-      makeEngine: { MockVoiceInputEngine() },
-      panel: panel
-    )
+    let coordinator = makeTestVoiceCoordinator(appState: appState)
     let service = ScriptExecutionService(
       appState: appState,
-      makeScriptRunner: { ScriptRunner(timeout: settings.script.scriptTimeout) },
+      makeScriptRunner: { ScriptRunner(timeout: appState.settings.script.scriptTimeout) },
       voiceCoordinator: coordinator,
       isConfirming: { false }
     )
@@ -172,14 +165,6 @@ import Testing
   }
 
   // MARK: - Panel selection context
-
-  private func makeScript(_ content: String) throws -> String {
-    let dir = FileManager.default.temporaryDirectory
-    let path = dir.appendingPathComponent("koecho-test-\(UUID().uuidString).sh").path
-    try ("#!/bin/sh\n" + content).write(toFile: path, atomically: true, encoding: .utf8)
-    try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path)
-    return path
-  }
 
   @Test func executePassesPanelSelection() async throws {
     let scriptPath = try makeScript(
