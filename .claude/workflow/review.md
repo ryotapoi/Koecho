@@ -15,7 +15,7 @@
 
 - L0 で十分なケース: typo、docs、テスト追加だけ、1 ファイルの明確なバグ修正。
 - **Small 以外の実装差分は原則 `/code-review xhigh` を通す**（Standard）。避ける余地を減らす。`/code-review` は current diff / current branch を対象にする。`ultra` はクラウド・billed・ユーザー手動起動なので自動進行では使わない。
-- 構造劣化リスク（巨大化、分岐増加、責務境界の濁り、薄い抽象化、型境界の曖昧さ）があれば `thermo-nuclear-code-quality-review` を使う。
+- 構造劣化リスク（巨大化、分岐増加、責務境界の濁り、薄い抽象化、型境界の曖昧さ）があれば `thermo-nuclear-code-quality-review` を**必須**で使う。
 - 領域固有 supplement の対象:
   - SwiftUI View 層 → `swiftui-pro`
   - ディクテーション制御・テキストライフサイクル（volatile テキスト、`isSuppressingCallbacks`）、NSTextView / textStorage 操作、UserDefaults 永続化パターン、権限依存機能（Accessibility / Input Monitoring）、ホットキー・ペースト・選択テキスト取得、外部スクリプト実行、`Koecho → KoechoPlatform → KoechoCore` の依存方向 → `koecho-risk-check`

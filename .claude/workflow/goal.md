@@ -20,14 +20,14 @@
 - Goal 完了報告では、設計判断がない場合も `設計判断: なし` と明示する。
 - 進捗・完了の報告は、このセッションのツール結果で裏取りできる事実だけを書く。テストが失敗していれば出力ごと報告し、未検証の項目は未検証と明示する。
 - 後から制約になる判断、仕様変更、未着手作業は、画面出力だけで終わらせず `rules/` / `specs/`（あれば） / `decisions/` / `backlog/backlog.md` の適切な情報源へ同期する。
-- 各 commit 内のレビューとは別に、Goal の commit range に対する Codex レビュー（`codex-review`）と `/code-review` を Goal 完了条件に含める（Goal Review 参照）。
+- 各 commit 内のレビューとは別に、Goal の commit range に対する `/code-review` と Codex レビュー（`codex-review`）を Goal 完了条件に含める（Goal Review 参照）。別モデルの Codex を最後に実行する。
 
 ## Acceptance
 
 - Goal の目的が満たされている。
 - 必要な commit がすべて作成されている。
 - 各 commit が `default.md` の workflow を満たしている。
-- Goal の commit range が Codex レビューと `/code-review` を通過し、対応必須の指摘が残っていない（打ち切った場合は残った指摘が `レビュー上限超過` として報告されている）。
+- Goal の commit range が `/code-review` と Codex レビューを通過し、対応必須の指摘が残っていない（打ち切った場合は残った指摘が `レビュー上限超過` として報告されている）。
 - 必要な仕様・backlog・判断記録が同期されている。
 - Goal 中の設計判断が完了時にまとめて提示され、該当する判断がない場合もその旨が明示されている。
 - レビュー通過後、ブランチが `--ff-only` で main にマージされている。
@@ -49,7 +49,7 @@
 3. 次に扱う 1 commit 分を選び、`default.md` の workflow を実行する。
 4. commit 後、Goal の残りと Goal Review の実施タイミングを確認する。
 5. 残りがあれば次の 1 commit 分に戻る。
-6. 必要な Goal Review（Codex + `/code-review`）と対応が済んでいなければ実施する。
+6. 必要な Goal Review（`/code-review` + Codex）と対応が済んでいなければ実施する。
 7. 完了していれば `--ff-only` で main にマージし、Goal 全体の結果、残リスク、設計判断をまとめる。設計判断がない場合も `設計判断: なし` と書く。
 
 ## Branch
