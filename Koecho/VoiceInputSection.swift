@@ -5,6 +5,7 @@ import SwiftUI
 
 struct VoiceInputSection: View {
   @Bindable var voiceInput: VoiceInputSettings
+  let onSpeechLocalesChanged: @MainActor () async -> Void
 
   var body: some View {
     Section("Voice Input") {
@@ -16,7 +17,10 @@ struct VoiceInputSection: View {
         }
         .pickerStyle(.segmented)
         if voiceInput.voiceInputMode == .speechAnalyzer {
-          SpeechAnalyzerLanguageSection(selection: $voiceInput.speechAnalyzerLocale)
+          SpeechAnalyzerLanguageSection(
+            selection: $voiceInput.speechAnalyzerLocale,
+            onSpeechLocalesChanged: onSpeechLocalesChanged
+          )
           AudioInputDeviceSection(
             deviceUID: $voiceInput.audioInputDeviceUID,
             deviceName: $voiceInput.audioInputDeviceName
@@ -39,6 +43,7 @@ struct VoiceInputSection: View {
 @available(macOS 26, *)
 private struct SpeechAnalyzerLanguageSection: View {
   @Binding var selection: String
+  let onSpeechLocalesChanged: @MainActor () async -> Void
 
   @State private var manager = SpeechAnalyzerLocaleManager()
   @State private var isManageSheetPresented = false
@@ -89,6 +94,8 @@ private struct SpeechAnalyzerLanguageSection: View {
       guard !manager.isLoading else { return }
       manager.clearDownloadError()
       await manager.downloadAsset(for: selection, currentSelection: selection)
+      guard !Task.isCancelled else { return }
+      await onSpeechLocalesChanged()
     }
     .sheet(
       isPresented: $isManageSheetPresented,
@@ -100,7 +107,10 @@ private struct SpeechAnalyzerLanguageSection: View {
         }
       }
     ) {
-      LanguageManagementSheet(manager: manager)
+      LanguageManagementSheet(
+        manager: manager,
+        onSpeechLocalesChanged: onSpeechLocalesChanged
+      )
     }
   }
 }
@@ -110,6 +120,7 @@ private struct SpeechAnalyzerLanguageSection: View {
 @available(macOS 26, *)
 private struct LanguageManagementSheet: View {
   let manager: SpeechAnalyzerLocaleManager
+  let onSpeechLocalesChanged: @MainActor () async -> Void
 
   @Environment(\.dismiss) private var dismiss
   @State private var downloadingIdentifiers: Set<String> = []
@@ -161,6 +172,7 @@ private struct LanguageManagementSheet: View {
     errors[item.identifier] = nil
     do {
       try await manager.downloadLocale(item)
+      await onSpeechLocalesChanged()
     } catch {
       errors[item.identifier] = String(localized: "Download failed: \(error.localizedDescription)")
     }
@@ -169,6 +181,7 @@ private struct LanguageManagementSheet: View {
 
   private func releaseLocale(_ item: LocaleItem) async {
     await manager.releaseLocale(item)
+    await onSpeechLocalesChanged()
   }
 }
 
@@ -243,7 +256,7 @@ private struct AudioInputDeviceSection: View {
   let settings = VoiceInputSettings(defaults: defaults)
   settings.voiceInputMode = .dictation
   return Form {
-    VoiceInputSection(voiceInput: settings)
+    VoiceInputSection(voiceInput: settings, onSpeechLocalesChanged: {})
   }
   .formStyle(.grouped)
   .frame(width: 450, height: 200)
@@ -254,7 +267,7 @@ private struct AudioInputDeviceSection: View {
   let settings = VoiceInputSettings(defaults: defaults)
   settings.voiceInputMode = .off
   return Form {
-    VoiceInputSection(voiceInput: settings)
+    VoiceInputSection(voiceInput: settings, onSpeechLocalesChanged: {})
   }
   .formStyle(.grouped)
   .frame(width: 450, height: 200)

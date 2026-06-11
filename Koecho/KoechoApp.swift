@@ -72,7 +72,11 @@ struct KoechoApp: App {
     }
 
     Window("Settings", id: "settings") {
-      SettingsView(settings: appState.settings, historyStore: historyStore)
+      SettingsView(
+        settings: appState.settings,
+        historyStore: historyStore,
+        onSpeechLocalesChanged: { await refreshDownloadedLocales() }
+      )
         .onDisappear { Task { await refreshDownloadedLocales() } }
     }
     .defaultSize(width: 780, height: 460)

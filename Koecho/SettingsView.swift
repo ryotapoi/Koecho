@@ -5,7 +5,18 @@ import SwiftUI
 struct SettingsView: View {
   @Bindable var settings: KoechoCore.Settings
   let historyStore: HistoryStore
+  let onSpeechLocalesChanged: @MainActor () async -> Void
   @State private var selection: SettingsPage = .general
+
+  init(
+    settings: KoechoCore.Settings,
+    historyStore: HistoryStore,
+    onSpeechLocalesChanged: @escaping @MainActor () async -> Void = {}
+  ) {
+    self.settings = settings
+    self.historyStore = historyStore
+    self.onSpeechLocalesChanged = onSpeechLocalesChanged
+  }
 
   var body: some View {
     NavigationSplitView(columnVisibility: .constant(.all)) {
@@ -24,7 +35,8 @@ struct SettingsView: View {
           replacement: settings.replacement,
           history: settings.history,
           paste: settings.paste,
-          volumeDucking: settings.volumeDucking
+          volumeDucking: settings.volumeDucking,
+          onSpeechLocalesChanged: onSpeechLocalesChanged
         )
       case .hotkey:
         HotkeySettingsView(settings: settings.hotkey)

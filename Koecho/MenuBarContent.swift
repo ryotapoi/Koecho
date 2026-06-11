@@ -59,10 +59,10 @@ struct MenuBarContent: View {
 
   @ViewBuilder
   private var recognitionLanguageMenu: some View {
-    if #available(macOS 26, *),
-      appState.settings.voiceInput.effectiveVoiceInputMode == .speechAnalyzer,
-      downloadedLocales.count >= 2
-    {
+    if Self.shouldShowRecognitionLanguageMenu(
+      appState: appState,
+      downloadedLocales: downloadedLocales
+    ) {
       let currentKey = SpeechLocale.normalizationKey(
         appState.settings.voiceInput.speechAnalyzerLocale
       )
@@ -80,6 +80,15 @@ struct MenuBarContent: View {
         }
       }
     }
+  }
+
+  static func shouldShowRecognitionLanguageMenu(
+    appState: AppState,
+    downloadedLocales: [LocaleItem]
+  ) -> Bool {
+    guard #available(macOS 26, *) else { return false }
+    return appState.settings.voiceInput.effectiveVoiceInputMode == .speechAnalyzer
+      && downloadedLocales.count >= 2
   }
 }
 

@@ -8,10 +8,14 @@ struct GeneralSettingsView: View {
   @Bindable var history: HistorySettings
   @Bindable var paste: PasteSettings
   @Bindable var volumeDucking: VolumeDuckingSettings
+  let onSpeechLocalesChanged: @MainActor () async -> Void
 
   var body: some View {
     Form {
-      VoiceInputSection(voiceInput: voiceInput)
+      VoiceInputSection(
+        voiceInput: voiceInput,
+        onSpeechLocalesChanged: onSpeechLocalesChanged
+      )
       VolumeDuckingSection(volumeDucking: volumeDucking)
         .disabled(voiceInput.effectiveVoiceInputMode == .off)
       Section("Clipboard") {
@@ -68,7 +72,8 @@ struct GeneralSettingsView: View {
     replacement: ReplacementSettings(defaults: defaults),
     history: HistorySettings(defaults: defaults),
     paste: PasteSettings(defaults: defaults),
-    volumeDucking: VolumeDuckingSettings(defaults: defaults)
+    volumeDucking: VolumeDuckingSettings(defaults: defaults),
+    onSpeechLocalesChanged: {}
   )
   .frame(width: 500, height: 600)
 }
