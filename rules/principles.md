@@ -11,9 +11,12 @@
 
 ## テスト方針
 
-- ScriptRunner: タイムアウト / 空出力 / 非ゼロ終了のフォールバック
-- ClipboardPaster: ペースト後のクリップボード復元
-- SelectedTextReader: 権限なし・選択なし時の失敗ハンドリング
+- Swift Testing（`@Test` / `#expect`）を使用。テストは 3 ターゲットに分かれる
+  - `Packages/KoechoKit/Tests/KoechoCoreTests`: 設定（*Settings）・モデル・ルール等の純ロジック
+  - `Packages/KoechoKit/Tests/KoechoPlatformTests`: AppState・オーディオ・ペースト・ホットキー・選択テキスト取得等のプラットフォーム層
+  - `KoechoTests`（TEST_HOST = Koecho.app）: InputPanelController・VoiceInputCoordinator・VoiceInputTextView 等の UI 近傍
+- 外部依存（マイク・権限・子プロセス・クリップボード）は、モック注入（`MockVoiceInputEngine` 等）またはフォールバック挙動の検証で扱う
+- テストランナー固有の罠（TEST_HOST のライフサイクル隔離、UserDefaults 分離）は references/knowledge.md の該当セクションに従う
 
 ## 言語
 

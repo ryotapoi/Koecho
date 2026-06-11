@@ -36,9 +36,7 @@
 ## Swift / @Observable
 
 - `@Observable` マクロはストアドプロパティのアクセスを変換する。通常の Swift では `init` 内の直接代入で `didSet` は呼ばれないが、`@Observable` がプロパティアクセスを書き換えるため、`init` 内でも `didSet` が発火する可能性がある
-- Settings.swift の `scripts` プロパティは `init` 内代入 + `didSet { save() }` パターンでこの挙動に依存している。`persistsChanges` テストで検証済み
-- `pasteDelay` / `scriptTimeout` は computed property + backing store パターンに移行済み（値クランプのため）。`init` では backing store に直接代入し `didSet` 問題を回避している
-- Swift バージョンアップ時に `@Observable` マクロの挙動が変わると壊れうるので、テストが通ることを確認する
+- この挙動への依存を避けるため、全 *Settings クラス（ScriptSettings / PasteSettings 等）は backing store（`_x` private var）+ computed property の setter で `save()` を呼ぶパターンに統一済み。`init` では backing store に直接代入する
 
 ## macOS / VoiceInputTextView + NSViewRepresentable
 
@@ -207,7 +205,7 @@
 - デフォルト入力デバイス: `kAudioHardwarePropertyDefaultInputDevice` で取得。変更監視も同プロパティで。`deviceUID == nil` で monitoring 中にデフォルトデバイスが変わった場合は `startMonitoring(deviceUID: nil)` を再呼び出し（engine 再起動 + 音量リスナー付け替え）
 - 入力音量: `kAudioDevicePropertyVolumeScalar`（scope: input）。element: main が非対応なら element: 1 にフォールバック。Slider 連動時はフィードバックループ防止フラグ（`isUpdatingVolume`）が必要
 - レベル計測: CoreAudio にはリアルタイム入力レベル取得 API がない。AUHAL の input callback 内で `AudioUnitRender` → RMS 計算で取得。コールバックは audio I/O スレッドで実行されるため、メモリ確保・ロック取得・ObjC メッセージ送信は禁止
-- 設定画面のレベルメーター用 AUHAL と SpeechAnalyzerEngine の AVAudioEngine は同時に動くとクラッシュする（同一デバイスの inputNode に tap は 1 つ）。`AudioDeviceManager.isAudioInputInUse` static フラグ + `activeMonitoringInstance` weak 参照で双方向の排他制御
+- 設定画面のレベルメーター用 AUHAL と SpeechAnalyzerEngine の AVAudioEngine は同時に動くとクラッシュする（同一デバイスの inputNode に tap は 1 つ）。`AudioInputExclusiveAccess`（@MainActor enum）で双方向に排他。SpeechAnalyzerEngine 側は `acquire()` / `release()`、AudioInputLevelMonitor 側は `markAsActive(onAcquire:)` / `clearActive()` を使い、acquire 時に登録済みハンドラ経由でアクティブなモニターを停止する
 - `@MainActor` クラスの `deinit` は nonisolated。CoreAudio のリスナー除去は `deinit` 内で直接 C API を呼ぶ（インスタンスメソッドは呼べない）
 - 入力デバイス判定: `kAudioDevicePropertyStreamConfiguration`（scope: input）でチャンネル数 > 0 をフィルタ
 - `AudioBufferList` の解析: `rawPointer.advanced(by: MemoryLayout<UInt32>.size)` で `AudioBuffer` 配列にアクセスするとアラインメントパディングでずれる。`UnsafeMutableAudioBufferListPointer` を使うのが正しい方法
