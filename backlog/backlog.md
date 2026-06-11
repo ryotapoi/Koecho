@@ -21,7 +21,7 @@
   - `localeNormalizationKey` は純粋な Locale ユーティリティなのに、KoechoApp / MenuBarContent / LocaleManager が UI 層からエンジン型を参照する結合を生んでいる。正規化キーは独立ユーティリティへ、`verifiedLocales`（global mutable static）は SpeechAnalyzerLocaleManager か専用キャッシュ型へ。配置は module-boundary で判断
 - [x] InputPanelController.clearTextView の sync/async 二重実装を統合する
   - InputPanelController.swift:403-427。setString → makeFirstResponder → setSelectedRange → scrollRangeToVisible → startEngine の同一シーケンスが if（即時）/ else（Task で 1 サイクル遅延、textView.window が nil 対策）に重複。共通 helper に畳む
-- [ ] InputPanelController.confirm()（76 行）をフェーズごとの private メソッドに分割する
+- [x] InputPanelController.confirm()（76 行）をフェーズごとの private メソッドに分割する
   - テキスト確定 / 置換適用 / auto-run script / ペースト / 履歴追加 / エラー復帰が直列に混在し、`guard appState.isInputPanelVisible` の再チェックが 4 回散在。途中キャンセルの扱いを各フェーズの戻り値で明示する
 - [ ] レガシー migration コードを撤去する（要ユーザー判断）
   - ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー）と VoiceInputSettings.swift の `isVoiceInputEnabled` → `.off` migration。rules/mission.md の非目標「旧フォーマットへのフォールバック分岐は入れない」と矛盾。移行済みと判断できれば消す、残すなら撤去バージョンをここに明記する

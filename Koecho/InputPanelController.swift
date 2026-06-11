@@ -126,54 +126,75 @@ final class InputPanelController {
   func confirm() async {
     guard appState.isInputPanelVisible, !isConfirming, !appState.isRunningScript else { return }
 
+    let rawText = await finalizeDictation()
+    let text = replacementService.applyRules(to: rawText)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !text.isEmpty else {
+      dismissAsEmptyConfirm()
+      return
+    }
+
+    guard let preparedText = await applyAutoRunScript(to: text) else { return }
+    await pasteAndRecord(preparedText)
+  }
+
+  /// Confirm phase 1: stop dictation and collect the finalized text,
+  /// clearing the text view.
+  private func finalizeDictation() async -> String {
     replacementService.clearPreviews()
-
     await voiceCoordinator.stopEngine()
-
     voiceCoordinator.finalizeRemainingVolatile()
 
-    var rawText: String
+    let rawText: String
     if let textView {
       let tvString = textView.finalizedString
       rawText = tvString.isEmpty ? appState.inputText : tvString
     } else {
       rawText = appState.inputText
     }
-
     textView?.setString("", suppressingCallbacks: true)
+    return rawText
+  }
 
-    rawText = replacementService.applyRules(to: rawText)
-    var text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !text.isEmpty else {
-      paster.restoreClipboard()
-      voiceCoordinator.resetState()
-      lifecycleManager.clearState()
-      lifecycleManager.hide()
-      logger.info("confirm() with empty text, treated as cancel")
-      return
-    }
+  /// Confirm phase 2 (empty result): treat the confirm as a cancel.
+  private func dismissAsEmptyConfirm() {
+    paster.restoreClipboard()
+    voiceCoordinator.resetState()
+    lifecycleManager.clearState()
+    lifecycleManager.hide()
+    logger.info("confirm() with empty text, treated as cancel")
+  }
 
-    if let autoScript = appState.settings.script.autoRunScript {
-      guard appState.isInputPanelVisible else { return }
+  /// Confirm phase 3: run the configured auto-run script on `text`.
+  /// Returns the text to paste, or nil when the confirm was cancelled
+  /// mid-flight or the script failed (the error is surfaced here).
+  private func applyAutoRunScript(to text: String) async -> String? {
+    guard let autoScript = appState.settings.script.autoRunScript else { return text }
+    guard appState.isInputPanelVisible else { return nil }
 
+    appState.inputText = text
+    textView?.setString(text, suppressingCallbacks: true)
+
+    appState.isRunningScript = true
+    defer { appState.isRunningScript = false }
+
+    do {
+      let transformed = try await scriptService.runAutoScript(autoScript, on: text)
+      guard appState.isInputPanelVisible else { return nil }
+      return transformed
+    } catch {
+      guard appState.isInputPanelVisible else { return nil }
       appState.inputText = text
       textView?.setString(text, suppressingCallbacks: true)
-
-      appState.isRunningScript = true
-      defer { appState.isRunningScript = false }
-
-      do {
-        text = try await scriptService.runAutoScript(autoScript, on: text)
-        guard appState.isInputPanelVisible else { return }
-      } catch {
-        guard appState.isInputPanelVisible else { return }
-        appState.inputText = text
-        textView?.setString(text, suppressingCallbacks: true)
-        appState.errorMessage = scriptService.scriptErrorMessage(for: error, script: autoScript)
-        return
-      }
+      appState.errorMessage = scriptService.scriptErrorMessage(for: error, script: autoScript)
+      return nil
     }
+  }
 
+  /// Confirm phase 4: hide the panel, paste into the target app, and
+  /// record history. On paste failure the panel is restored with the
+  /// text and an error message.
+  private func pasteAndRecord(_ text: String) async {
     guard let targetApp = appState.frontmostApplication else {
       appState.errorMessage = String(localized: "No target application")
       return
