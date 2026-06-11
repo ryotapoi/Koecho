@@ -78,18 +78,13 @@ public final class SpeechAnalyzerLocaleManager {
       allLocales[i].isReserved = reservedKeys.contains(allLocales[i].normalizedKey)
     }
 
-    let currentKey = SpeechAnalyzerEngine.localeNormalizationKey(currentSelection)
-    let hasMatch = reservedLocales.contains { $0.normalizedKey == currentKey }
-    if !hasMatch {
-      if let first = reservedLocales.first {
-        return first.identifier
-      } else {
-        // No reserved locales — trigger auto-download for current selection
-        await downloadAsset(for: currentSelection, currentSelection: currentSelection)
-        return nil
-      }
+    let reservedItems = reservedLocales
+    guard !reservedItems.isEmpty else {
+      // No reserved locales — trigger auto-download for current selection
+      await downloadAsset(for: currentSelection, currentSelection: currentSelection)
+      return nil
     }
-    return nil
+    return correctSelection(currentSelection: currentSelection, items: reservedItems)
   }
 
   public func downloadAsset(for identifier: String, currentSelection: String) async {
@@ -158,7 +153,10 @@ public final class SpeechAnalyzerLocaleManager {
     }.sorted { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
   }
 
-  func correctSelection(currentSelection: String, items: [LocaleItem]) -> String? {
+  /// Canonical stale-selection correction: returns a replacement identifier
+  /// when `currentSelection` matches no item (normalized match wins, then
+  /// ja-JP, then the first item), or nil when the selection is already valid.
+  public func correctSelection(currentSelection: String, items: [LocaleItem]) -> String? {
     guard !items.isEmpty else { return nil }
     let allIdentifiers = Set(items.map(\.identifier))
     if allIdentifiers.contains(currentSelection) {

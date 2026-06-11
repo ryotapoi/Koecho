@@ -129,15 +129,15 @@ struct KoechoApp: App {
     let items = await manager.refreshMenuLocales()
     downloadedLocales = items
 
-    // Stale selection correction
-    if !items.isEmpty {
-      let currentKey = SpeechAnalyzerEngine.localeNormalizationKey(
-        appState.settings.voiceInput.speechAnalyzerLocale
-      )
-      let hasMatch = items.contains { $0.normalizedKey == currentKey }
-      if !hasMatch, let first = items.first {
-        appState.settings.voiceInput.speechAnalyzerLocale = first.identifier
-      }
+    // Menu items carry AssetInventory-form identifiers, which can differ in
+    // string form from the supportedLocales-form identifiers the Settings
+    // Picker uses as tags. Only correct when no normalized match exists, so
+    // a valid selection is never rewritten into the other identifier form.
+    let current = appState.settings.voiceInput.speechAnalyzerLocale
+    if manager.findNormalizedMatch(for: current, in: items) == nil,
+      let corrected = manager.correctSelection(currentSelection: current, items: items)
+    {
+      appState.settings.voiceInput.speechAnalyzerLocale = corrected
     }
   }
 

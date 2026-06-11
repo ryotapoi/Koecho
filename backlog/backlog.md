@@ -15,7 +15,7 @@
 - [ ] VoiceInputCoordinator の replay 抑制状態（フラグ 6 個の暗黙の組み合わせ）を enum に集約する
   - `isLocallyFinalized` / `localFinalizedText` / `replaySuppressionDeadline` / `transcriberAlreadyRestarted` / `accumulatedFinalizedText` / `isStoppingEngine`。「isLocallyFinalized + deadline nil = restart 進行中」のような暗黙状態を `enum ReplayState`（idle / restartInProgress / suppressing）で型に起こし、不正な組み合わせを排除する
   - 既存テスト（VoiceInputCoordinatorTests + InputPanelControllerTests の Replay セクション）が動作を固定している。着手時に design-decision 推奨
-- [ ] 言語選択の補正ロジック（同型処理が 3 箇所）を SpeechAnalyzerLocaleManager に一本化する
+- [x] 言語選択の補正ロジック（同型処理が 3 箇所）を SpeechAnalyzerLocaleManager に一本化する
   - KoechoApp.refreshDownloadedLocales の stale selection correction / SpeechAnalyzerLocaleManager.correctSelection / 同 refreshReservedList 内の補正。canonical メソッドを 1 つにして KoechoApp はそれを呼ぶだけにする
 - [ ] locale 正規化キーと verifiedLocales キャッシュを SpeechAnalyzerEngine の static から分離する
   - `localeNormalizationKey` は純粋な Locale ユーティリティなのに、KoechoApp / MenuBarContent / LocaleManager が UI 層からエンジン型を参照する結合を生んでいる。正規化キーは独立ユーティリティへ、`verifiedLocales`（global mutable static）は SpeechAnalyzerLocaleManager か専用キャッシュ型へ。配置は module-boundary で判断
