@@ -10,7 +10,7 @@
   - references/knowledge.md「CoreAudio」: `AudioDeviceManager.isAudioInputInUse` static フラグの記述 → 実装は `AudioInputExclusiveAccess` enum に移行済み
   - references/knowledge.md「Swift / @Observable」: scripts の「init 内代入 + didSet { save() }」の記述 → 現在は全 *Settings が backing store + save() パターン
   - rules/principles.md「テスト方針」: 3 クラスのみ記載 → 実態（20+ スイート）に合わせて書き直す
-- [ ] InputPanelController のテスト専用 forwarding プロパティを撤去する
+- [x] InputPanelController のテスト専用 forwarding プロパティを撤去する
   - `isLocallyFinalized` / `localFinalizedText` / `replaySuppressionDeadline`（InputPanelController.swift:278-291）はプロダクション未使用で InputPanelControllerTests のみが使用。テストを VoiceInputCoordinator 直アクセスに変えて削除する
 - [ ] VoiceInputCoordinator の replay 抑制状態（フラグ 6 個の暗黙の組み合わせ）を enum に集約する
   - `isLocallyFinalized` / `localFinalizedText` / `replaySuppressionDeadline` / `transcriberAlreadyRestarted` / `accumulatedFinalizedText` / `isStoppingEngine`。「isLocallyFinalized + deadline nil = restart 進行中」のような暗黙状態を `enum ReplayState`（idle / restartInProgress / suppressing）で型に起こし、不正な組み合わせを排除する

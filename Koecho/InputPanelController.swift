@@ -15,7 +15,9 @@ final class InputPanelController {
   private(set) var panel: InputPanel
   private var replacementService: ReplacementService!
   private var scriptService: ScriptExecutionService!
-  private var voiceCoordinator: VoiceInputCoordinator!
+  // Internal getter so tests can reach replay state directly instead of
+  // production-unused forwarding properties on the controller.
+  private(set) var voiceCoordinator: VoiceInputCoordinator!
   private var lifecycleManager: PanelLifecycleManager!
 
   init(
@@ -292,23 +294,6 @@ final class InputPanelController {
 
   func voiceInput(didUpdateStatus status: VoiceInputEngineStatus?) {
     voiceCoordinator.voiceInput(didUpdateStatus: status)
-  }
-
-  // MARK: - Computed property forwarding
-
-  var isLocallyFinalized: Bool {
-    get { voiceCoordinator.isLocallyFinalized }
-    set { voiceCoordinator.isLocallyFinalized = newValue }
-  }
-
-  var localFinalizedText: String? {
-    get { voiceCoordinator.localFinalizedText }
-    set { voiceCoordinator.localFinalizedText = newValue }
-  }
-
-  var replaySuppressionDeadline: Date? {
-    get { voiceCoordinator.replaySuppressionDeadline }
-    set { voiceCoordinator.replaySuppressionDeadline = newValue }
   }
 
   // MARK: - Private

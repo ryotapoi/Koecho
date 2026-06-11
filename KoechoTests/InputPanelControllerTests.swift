@@ -1357,7 +1357,7 @@ struct InputPanelControllerTests {
     }
 
     simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
-    ctx.controller.replaySuppressionDeadline = Date.now + 10
+    ctx.controller.voiceCoordinator.replaySuppressionDeadline = Date.now + 10
     let textAfterFinalize = ctx.appState.inputText
 
     // Replay volatile "こん" — should be suppressed during time window
@@ -1376,13 +1376,13 @@ struct InputPanelControllerTests {
 
     simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
     // Set deadline in the past — expired
-    ctx.controller.replaySuppressionDeadline = Date.now - 1
+    ctx.controller.voiceCoordinator.replaySuppressionDeadline = Date.now - 1
 
     // New volatile after deadline expired — should be displayed
     ctx.controller.voiceInput(didUpdateVolatile: "あ")
     #expect(textView.volatileRange != nil)
     // Flags should be cleared
-    #expect(ctx.controller.isLocallyFinalized == false)
+    #expect(ctx.controller.voiceCoordinator.isLocallyFinalized == false)
   }
 
   @Test func replayFinalizeSkippedByExactMatch() {
@@ -1398,13 +1398,13 @@ struct InputPanelControllerTests {
     let textAfterFirstFinalize = ctx.appState.inputText
 
     simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
-    ctx.controller.replaySuppressionDeadline = Date.now + 10
+    ctx.controller.voiceCoordinator.replaySuppressionDeadline = Date.now + 10
 
     // Replay finalize — exact match with localFinalizedText → skipped
     ctx.controller.voiceInput(didFinalize: "こんにちは")
     #expect(ctx.appState.inputText == textAfterFirstFinalize)
-    #expect(ctx.controller.isLocallyFinalized == false)
-    #expect(ctx.controller.replaySuppressionDeadline == nil)
+    #expect(ctx.controller.voiceCoordinator.isLocallyFinalized == false)
+    #expect(ctx.controller.voiceCoordinator.replaySuppressionDeadline == nil)
   }
 
   @Test func replayFinalizeClearsDeadline() {
@@ -1419,11 +1419,11 @@ struct InputPanelControllerTests {
     ctx.controller.voiceInput(didFinalize: "こんにちは")
 
     simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
-    ctx.controller.replaySuppressionDeadline = Date.now + 10
+    ctx.controller.voiceCoordinator.replaySuppressionDeadline = Date.now + 10
 
     // Replay finalize — clears deadline
     ctx.controller.voiceInput(didFinalize: "こんにちは")
-    #expect(ctx.controller.replaySuppressionDeadline == nil)
+    #expect(ctx.controller.voiceCoordinator.replaySuppressionDeadline == nil)
 
     // Next volatile should be displayed (deadline cleared)
     ctx.controller.voiceInput(didUpdateVolatile: "あ")
@@ -1442,12 +1442,12 @@ struct InputPanelControllerTests {
     ctx.controller.voiceInput(didFinalize: "こんにちは")
 
     simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
-    ctx.controller.replaySuppressionDeadline = Date.now + 10
+    ctx.controller.voiceCoordinator.replaySuppressionDeadline = Date.now + 10
 
     // New speech finalize with no overlap — should be inserted
     ctx.controller.voiceInput(didFinalize: "ありがとう")
     #expect(ctx.appState.inputText.contains("ありがとう"))
-    #expect(ctx.controller.isLocallyFinalized == false)
+    #expect(ctx.controller.voiceCoordinator.isLocallyFinalized == false)
   }
 
   @Test func newInputAfterReplay() {
@@ -1463,7 +1463,7 @@ struct InputPanelControllerTests {
 
     // Local finalize (e.g. user presses Enter)
     simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
-    ctx.controller.replaySuppressionDeadline = Date.now + 10
+    ctx.controller.voiceCoordinator.replaySuppressionDeadline = Date.now + 10
 
     // Replay finalize — clears flags
     ctx.controller.voiceInput(didFinalize: "こんにちは")
@@ -1493,7 +1493,7 @@ struct InputPanelControllerTests {
 
     // Now simulate local finalize (as if user typed Enter to restart transcriber)
     simulateLocalFinalize(controller: ctx.controller, textView: textView, text: "こんにちは")
-    ctx.controller.replaySuppressionDeadline = Date.now + 10
+    ctx.controller.voiceCoordinator.replaySuppressionDeadline = Date.now + 10
 
     // Replay finalize — clears flags
     ctx.controller.voiceInput(didFinalize: "こんにちは")
