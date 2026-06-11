@@ -400,29 +400,29 @@ final class InputPanelController {
     textView.makeFirstResponder(in: panel)
   }
 
-  private func clearTextView(startEngine: Bool = true) {
-    if let textView, textView.window != nil {
-      textView.setString(appState.inputText, suppressingCallbacks: true)
-      textView.makeFirstResponder(in: panel)
-      textView.setSelectedRange(NSRange(location: (textView.string as NSString).length, length: 0))
-      textView.scrollRangeToVisible(textView.selectedRange())
-      if startEngine {
-        voiceCoordinator.startEngine()
-      }
+  private func clearTextView(startEngine: Bool) {
+    if textView?.window != nil {
+      resetTextViewContent(startEngine: startEngine)
     } else {
+      // Right after makeKeyAndOrderFront the SwiftUI layout may not be done
+      // and textView.window is nil; retry one runloop cycle later.
       Task { [weak self] in
-        guard let self, let textView = self.textView else { return }
-        textView.setString(self.appState.inputText, suppressingCallbacks: true)
-        if textView.window != nil {
-          textView.makeFirstResponder(in: self.panel)
-          textView.setSelectedRange(
-            NSRange(location: (textView.string as NSString).length, length: 0))
-          textView.scrollRangeToVisible(textView.selectedRange())
-        }
-        if startEngine {
-          self.voiceCoordinator.startEngine()
-        }
+        self?.resetTextViewContent(startEngine: startEngine)
       }
+    }
+  }
+
+  private func resetTextViewContent(startEngine: Bool) {
+    guard let textView else { return }
+    textView.setString(appState.inputText, suppressingCallbacks: true)
+    if textView.window != nil {
+      textView.makeFirstResponder(in: panel)
+      let endOfText = NSRange(location: (textView.string as NSString).length, length: 0)
+      textView.setSelectedRange(endOfText)
+      textView.scrollRangeToVisible(endOfText)
+    }
+    if startEngine {
+      voiceCoordinator.startEngine()
     }
   }
 

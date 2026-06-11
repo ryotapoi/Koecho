@@ -19,7 +19,7 @@
   - KoechoApp.refreshDownloadedLocales の stale selection correction / SpeechAnalyzerLocaleManager.correctSelection / 同 refreshReservedList 内の補正。canonical メソッドを 1 つにして KoechoApp はそれを呼ぶだけにする
 - [ ] locale 正規化キーと verifiedLocales キャッシュを SpeechAnalyzerEngine の static から分離する
   - `localeNormalizationKey` は純粋な Locale ユーティリティなのに、KoechoApp / MenuBarContent / LocaleManager が UI 層からエンジン型を参照する結合を生んでいる。正規化キーは独立ユーティリティへ、`verifiedLocales`（global mutable static）は SpeechAnalyzerLocaleManager か専用キャッシュ型へ。配置は module-boundary で判断
-- [ ] InputPanelController.clearTextView の sync/async 二重実装を統合する
+- [x] InputPanelController.clearTextView の sync/async 二重実装を統合する
   - InputPanelController.swift:403-427。setString → makeFirstResponder → setSelectedRange → scrollRangeToVisible → startEngine の同一シーケンスが if（即時）/ else（Task で 1 サイクル遅延、textView.window が nil 対策）に重複。共通 helper に畳む
 - [ ] InputPanelController.confirm()（76 行）をフェーズごとの private メソッドに分割する
   - テキスト確定 / 置換適用 / auto-run script / ペースト / 履歴追加 / エラー復帰が直列に混在し、`guard appState.isInputPanelVisible` の再チェックが 4 回散在。途中キャンセルの扱いを各フェーズの戻り値で明示する
