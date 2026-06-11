@@ -36,8 +36,8 @@ struct KoechoApp: App {
         onTogglePanel: { togglePanel() },
         onSwitchLanguage: { newLocale in
           if #available(macOS 26, *) {
-            let newKey = SpeechAnalyzerEngine.localeNormalizationKey(newLocale)
-            let currentKey = SpeechAnalyzerEngine.localeNormalizationKey(
+            let newKey = SpeechLocale.normalizationKey(newLocale)
+            let currentKey = SpeechLocale.normalizationKey(
               appState.settings.voiceInput.speechAnalyzerLocale
             )
             guard newKey != currentKey else { return }

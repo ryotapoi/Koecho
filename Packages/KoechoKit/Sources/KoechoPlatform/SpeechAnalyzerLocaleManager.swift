@@ -49,10 +49,10 @@ public final class SpeechAnalyzerLocaleManager {
     async let reservedTask = AssetInventory.reservedLocales
     let supported = await supportedTask
     let reserved = await reservedTask
-    let reservedKeys = Set(reserved.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
+    let reservedKeys = Set(reserved.map { SpeechLocale.normalizationKey($0) })
 
     var items = supported.map { locale -> LocaleItem in
-      let key = SpeechAnalyzerEngine.localeNormalizationKey(locale)
+      let key = SpeechLocale.normalizationKey(locale)
       return makeLocaleItem(
         from: locale, normalizedKey: key, isReserved: reservedKeys.contains(key))
     }
@@ -72,7 +72,7 @@ public final class SpeechAnalyzerLocaleManager {
 
   public func refreshReservedList(currentSelection: String) async -> String? {
     let reserved = await AssetInventory.reservedLocales
-    let reservedKeys = Set(reserved.map { SpeechAnalyzerEngine.localeNormalizationKey($0) })
+    let reservedKeys = Set(reserved.map { SpeechLocale.normalizationKey($0) })
 
     for i in allLocales.indices {
       allLocales[i].isReserved = reservedKeys.contains(allLocales[i].normalizedKey)
@@ -90,8 +90,8 @@ public final class SpeechAnalyzerLocaleManager {
   public func downloadAsset(for identifier: String, currentSelection: String) async {
     guard !Task.isCancelled, currentSelection == identifier else { return }
 
-    let localeKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
-    if SpeechAnalyzerEngine.isModelVerified(localeKey: localeKey) {
+    let localeKey = SpeechLocale.normalizationKey(identifier)
+    if SpeechModelVerificationCache.isVerified(localeKey: localeKey) {
       return
     }
 
@@ -125,11 +125,11 @@ public final class SpeechAnalyzerLocaleManager {
   }
 
   public func releaseLocale(_ item: LocaleItem) async {
-    let targetKey = SpeechAnalyzerEngine.localeNormalizationKey(item.identifier)
+    let targetKey = SpeechLocale.normalizationKey(item.identifier)
     let reserved = await AssetInventory.reservedLocales
     guard
       let reservedLocale = reserved.first(where: {
-        SpeechAnalyzerEngine.localeNormalizationKey($0) == targetKey
+        SpeechLocale.normalizationKey($0) == targetKey
       })
     else { return }
 
@@ -138,7 +138,7 @@ public final class SpeechAnalyzerLocaleManager {
       allLocales[index].isReserved = false
     }
     await AssetInventory.release(reservedLocale: reservedLocale)
-    SpeechAnalyzerEngine.invalidateModelCache(for: Locale(identifier: item.identifier))
+    SpeechModelVerificationCache.invalidate(for: Locale(identifier: item.identifier))
   }
 
   public func clearDownloadError() {
@@ -148,7 +148,7 @@ public final class SpeechAnalyzerLocaleManager {
   public func refreshMenuLocales() async -> [LocaleItem] {
     let reserved = await AssetInventory.reservedLocales
     return reserved.map { locale in
-      let key = SpeechAnalyzerEngine.localeNormalizationKey(locale)
+      let key = SpeechLocale.normalizationKey(locale)
       return makeLocaleItem(from: locale, normalizedKey: key, isReserved: true)
     }.sorted { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
   }
@@ -172,7 +172,7 @@ public final class SpeechAnalyzerLocaleManager {
   }
 
   public func findNormalizedMatch(for identifier: String, in items: [LocaleItem]) -> LocaleItem? {
-    let sourceKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
+    let sourceKey = SpeechLocale.normalizationKey(identifier)
     return items.first { $0.normalizedKey == sourceKey }
   }
 
@@ -191,7 +191,7 @@ public final class SpeechAnalyzerLocaleManager {
   }
 
   private func performModelDownload(for identifier: String) async throws -> Bool {
-    let localeKey = SpeechAnalyzerEngine.localeNormalizationKey(identifier)
+    let localeKey = SpeechLocale.normalizationKey(identifier)
     let locale = Locale(identifier: identifier)
     let transcriber = DictationTranscriber(
       locale: locale, preset: SpeechAnalyzerEngine.defaultPreset)
@@ -202,12 +202,12 @@ public final class SpeechAnalyzerLocaleManager {
       )
     else {
       // nil = already installed
-      SpeechAnalyzerEngine.markModelVerified(localeKey: localeKey)
+      SpeechModelVerificationCache.markVerified(localeKey: localeKey)
       return false
     }
 
     try await request.downloadAndInstall()
-    SpeechAnalyzerEngine.markModelVerified(localeKey: localeKey)
+    SpeechModelVerificationCache.markVerified(localeKey: localeKey)
     return true
   }
 }

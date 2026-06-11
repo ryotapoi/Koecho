@@ -63,7 +63,7 @@ struct MenuBarContent: View {
       appState.settings.voiceInput.effectiveVoiceInputMode == .speechAnalyzer,
       downloadedLocales.count >= 2
     {
-      let currentKey = SpeechAnalyzerEngine.localeNormalizationKey(
+      let currentKey = SpeechLocale.normalizationKey(
         appState.settings.voiceInput.speechAnalyzerLocale
       )
       Menu("Recognition Language") {

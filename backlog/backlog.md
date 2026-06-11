@@ -17,7 +17,7 @@
   - 既存テスト（VoiceInputCoordinatorTests + InputPanelControllerTests の Replay セクション）が動作を固定している。着手時に design-decision 推奨
 - [x] 言語選択の補正ロジック（同型処理が 3 箇所）を SpeechAnalyzerLocaleManager に一本化する
   - KoechoApp.refreshDownloadedLocales の stale selection correction / SpeechAnalyzerLocaleManager.correctSelection / 同 refreshReservedList 内の補正。canonical メソッドを 1 つにして KoechoApp はそれを呼ぶだけにする
-- [ ] locale 正規化キーと verifiedLocales キャッシュを SpeechAnalyzerEngine の static から分離する
+- [x] locale 正規化キーと verifiedLocales キャッシュを SpeechAnalyzerEngine の static から分離する
   - `localeNormalizationKey` は純粋な Locale ユーティリティなのに、KoechoApp / MenuBarContent / LocaleManager が UI 層からエンジン型を参照する結合を生んでいる。正規化キーは独立ユーティリティへ、`verifiedLocales`（global mutable static）は SpeechAnalyzerLocaleManager か専用キャッシュ型へ。配置は module-boundary で判断
 - [x] InputPanelController.clearTextView の sync/async 二重実装を統合する
   - InputPanelController.swift:403-427。setString → makeFirstResponder → setSelectedRange → scrollRangeToVisible → startEngine の同一シーケンスが if（即時）/ else（Task で 1 サイクル遅延、textView.window が nil 対策）に重複。共通 helper に畳む

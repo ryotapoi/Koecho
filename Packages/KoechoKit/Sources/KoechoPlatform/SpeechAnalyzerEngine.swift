@@ -22,37 +22,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
   private var analyzerFormat: AVAudioFormat?
   private var isRestarting = false
 
-  /// Locales verified as having models installed during this app session.
-  private static var verifiedLocales: Set<String> = []
-
-  /// Normalized key for locale-based cache lookups (languageCode-script-region).
-  public static func localeNormalizationKey(_ locale: Locale) -> String {
-    let lang = locale.language.languageCode?.identifier ?? ""
-    let script = locale.language.script?.identifier ?? ""
-    let region = locale.language.region?.identifier ?? ""
-    return "\(lang)-\(script)-\(region)"
-  }
-
-  /// Convenience overload accepting a locale identifier string.
-  public static func localeNormalizationKey(_ identifier: String) -> String {
-    localeNormalizationKey(Locale(identifier: identifier))
-  }
-
-  /// Check if a locale's model has been verified this session.
-  public static func isModelVerified(localeKey: String) -> Bool {
-    verifiedLocales.contains(localeKey)
-  }
-
-  /// Mark a locale's model as verified for this session.
-  public static func markModelVerified(localeKey: String) {
-    verifiedLocales.insert(localeKey)
-  }
-
-  /// Invalidate the model cache for a locale (e.g. after releasing a model).
-  public static func invalidateModelCache(for locale: Locale) {
-    verifiedLocales.remove(localeNormalizationKey(locale))
-  }
-
   /// Shared preset used for both recognition and model download.
   public static var defaultPreset: DictationTranscriber.Preset {
     var preset = DictationTranscriber.Preset.progressiveLongDictation
@@ -167,8 +136,8 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
     self.transcriber = transcriber
 
     // 3. Check / download model (skip if already verified this session)
-    let localeKey = Self.localeNormalizationKey(locale)
-    if !Self.isModelVerified(localeKey: localeKey) {
+    let localeKey = SpeechLocale.normalizationKey(locale)
+    if !SpeechModelVerificationCache.isVerified(localeKey: localeKey) {
       do {
         if let request = try await AssetInventory.assetInstallationRequest(
           supporting: [transcriber]
@@ -179,7 +148,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
           logger.info("Speech model downloaded")
           delegate?.voiceInput(didUpdateStatus: nil)
         }
-        Self.markModelVerified(localeKey: localeKey)
+        SpeechModelVerificationCache.markVerified(localeKey: localeKey)
       } catch {
         delegate?.voiceInput(didUpdateStatus: nil)
         reportError(.modelDownloadFailed(description: error.localizedDescription))
