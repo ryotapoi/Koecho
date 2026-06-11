@@ -64,14 +64,13 @@ final class InputPanelController {
 
     self.replacementService = ReplacementService(
       appState: appState,
-      getVoiceInsertionPoint: { [weak self] in self?.voiceCoordinator.voiceInsertionPoint ?? 0 },
-      setVoiceInsertionPoint: { [weak self] in self?.voiceCoordinator.voiceInsertionPoint = $0 }
+      voiceCoordinator: voiceCoordinator
     )
 
     self.scriptService = ScriptExecutionService(
       appState: appState,
       makeScriptRunner: makeScriptRunner,
-      setVoiceInsertionPoint: { [weak self] in self?.voiceCoordinator.voiceInsertionPoint = $0 },
+      voiceCoordinator: voiceCoordinator,
       isConfirming: { [weak self] in self?.isConfirming ?? false }
     )
 

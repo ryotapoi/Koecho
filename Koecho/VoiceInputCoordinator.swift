@@ -13,7 +13,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   var textView: (any TextViewOperating)?
 
   private(set) var engine: any VoiceInputEngine
-  var voiceInsertionPoint: Int = 0
+  private(set) var voiceInsertionPoint: Int = 0
   var currentVoiceTarget: VoiceTarget = .textEditor
 
   var replayState: ReplayState = .idle
@@ -121,10 +121,22 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   private func resetShowState() {
-    voiceInsertionPoint = (appState.inputText as NSString).length
+    moveVoiceInsertionPoint(toEndOf: appState.inputText)
     currentVoiceTarget = .textEditor
     clearReplayState()
     accumulatedFinalizedText = ""
+  }
+
+  // MARK: - Voice insertion point
+
+  /// Move the voice insertion point, keeping it within the bounds of `text`.
+  func moveVoiceInsertionPoint(to point: Int, in text: String) {
+    voiceInsertionPoint = max(0, min(point, (text as NSString).length))
+  }
+
+  /// Move the voice insertion point to the end of `text`.
+  func moveVoiceInsertionPoint(toEndOf text: String) {
+    moveVoiceInsertionPoint(to: (text as NSString).length, in: text)
   }
 
   func finalizeRemainingVolatile() {

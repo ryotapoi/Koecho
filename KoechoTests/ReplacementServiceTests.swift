@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import KoechoCore
 import KoechoPlatform
@@ -10,33 +11,35 @@ import Testing
   private func makeService(
     inputText: String = "",
     isInputPanelVisible: Bool = true
-  ) -> (ReplacementService, AppState, MockTextViewOperating, UnsafeMutablePointer<Int>) {
+  ) -> (ReplacementService, AppState, MockTextViewOperating, VoiceInputCoordinator) {
     let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
     let settings = Settings(defaults: defaults)
     let appState = AppState(settings: settings)
     appState.isInputPanelVisible = isInputPanelVisible
     appState.inputText = inputText
 
-    let vipPointer = UnsafeMutablePointer<Int>.allocate(capacity: 1)
-    vipPointer.pointee = 0
+    let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200))
+    let coordinator = VoiceInputCoordinator(
+      appState: appState,
+      makeEngine: { MockVoiceInputEngine() },
+      panel: panel
+    )
 
     let service = ReplacementService(
       appState: appState,
-      getVoiceInsertionPoint: { vipPointer.pointee },
-      setVoiceInsertionPoint: { vipPointer.pointee = $0 }
+      voiceCoordinator: coordinator
     )
     let mockTV = MockTextViewOperating()
     mockTV.string = inputText
     mockTV.finalizedString = inputText
     service.textView = mockTV
-    return (service, appState, mockTV, vipPointer)
+    return (service, appState, mockTV, coordinator)
   }
 
   // MARK: - applyNow
 
   @Test func applyNowTransformsText() {
-    let (service, appState, mockTV, vipPointer) = makeService(inputText: "えーと天気")
-    defer { vipPointer.deallocate() }
+    let (service, appState, mockTV, _) = makeService(inputText: "えーと天気")
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "えーと", replacement: "")
     )
@@ -49,9 +52,8 @@ import Testing
   }
 
   @Test func applyNowAdjustsVoiceInsertionPoint() {
-    let (service, appState, _, vipPointer) = makeService(inputText: "えーと天気")
-    defer { vipPointer.deallocate() }
-    vipPointer.pointee = 5  // after "えーと天気" = 5 UTF-16 units
+    let (service, appState, _, coordinator) = makeService(inputText: "えーと天気")
+    coordinator.handleCursorMoved(5)  // after "えーと天気" = 5 UTF-16 units
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "えーと", replacement: "")
     )
@@ -59,15 +61,14 @@ import Testing
     service.applyNow()
 
     // "えーと" (3 chars) removed before insertion point, so 5 - 3 = 2
-    #expect(vipPointer.pointee == 2)
+    #expect(coordinator.voiceInsertionPoint == 2)
   }
 
   @Test func applyNowSkipsWhenNotVisible() {
-    let (service, appState, _, vipPointer) = makeService(
+    let (service, appState, _, _) = makeService(
       inputText: "えーと天気",
       isInputPanelVisible: false
     )
-    defer { vipPointer.deallocate() }
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "えーと", replacement: "")
     )
@@ -78,8 +79,7 @@ import Testing
   }
 
   @Test func applyNowSkipsWhenNoRules() {
-    let (service, appState, _, vipPointer) = makeService(inputText: "hello")
-    defer { vipPointer.deallocate() }
+    let (service, appState, _, _) = makeService(inputText: "hello")
 
     service.applyNow()
 
@@ -87,8 +87,7 @@ import Testing
   }
 
   @Test func applyNowWithEmptyText() {
-    let (service, appState, _, vipPointer) = makeService(inputText: "")
-    defer { vipPointer.deallocate() }
+    let (service, appState, _, _) = makeService(inputText: "")
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "hello", replacement: "bye")
     )
@@ -101,9 +100,8 @@ import Testing
   // MARK: - applyRules(to:)
 
   @Test func applyRulesTransformsWithoutTouchingVoiceInsertionPoint() {
-    let (service, appState, _, vipPointer) = makeService(inputText: "えーと天気")
-    defer { vipPointer.deallocate() }
-    vipPointer.pointee = 5
+    let (service, appState, _, coordinator) = makeService(inputText: "えーと天気")
+    coordinator.handleCursorMoved(5)
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "えーと", replacement: "")
     )
@@ -111,12 +109,11 @@ import Testing
     let result = service.applyRules(to: "えーと天気")
 
     #expect(result == "天気")
-    #expect(vipPointer.pointee == 5)  // unchanged
+    #expect(coordinator.voiceInsertionPoint == 5)  // unchanged
   }
 
   @Test func applyRulesReturnsOriginalWhenNoRules() {
-    let (service, _, _, vipPointer) = makeService()
-    defer { vipPointer.deallocate() }
+    let (service, _, _, _) = makeService()
 
     let result = service.applyRules(to: "hello")
 
@@ -126,8 +123,7 @@ import Testing
   // MARK: - applyOrPreview
 
   @Test func applyOrPreviewSuppressesWhenVolatilePresent() {
-    let (service, appState, mockTV, vipPointer) = makeService(inputText: "hello")
-    defer { vipPointer.deallocate() }
+    let (service, appState, mockTV, _) = makeService(inputText: "hello")
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "hello", replacement: "bye")
     )
@@ -140,8 +136,7 @@ import Testing
   }
 
   @Test func applyOrPreviewShowsPreviewWhenMarkedText() {
-    let (service, appState, mockTV, vipPointer) = makeService(inputText: "hello")
-    defer { vipPointer.deallocate() }
+    let (service, appState, mockTV, _) = makeService(inputText: "hello")
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "hello", replacement: "bye")
     )
@@ -155,8 +150,7 @@ import Testing
   // MARK: - Multiple rules
 
   @Test func multipleRulesChainedApplication() {
-    let (service, appState, _, vipPointer) = makeService(inputText: "えーとあのー天気")
-    defer { vipPointer.deallocate() }
+    let (service, appState, _, _) = makeService(inputText: "えーとあのー天気")
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "えーと", replacement: "")
     )
@@ -172,8 +166,7 @@ import Testing
   // MARK: - addRule
 
   @Test func addRuleAddsAndApplies() {
-    let (service, appState, _, vipPointer) = makeService(inputText: "hello world")
-    defer { vipPointer.deallocate() }
+    let (service, appState, _, _) = makeService(inputText: "hello world")
     appState.pendingReplacementPattern = "hello"
 
     service.addRule(ReplacementRule(pattern: "hello", replacement: "bye"))
@@ -186,8 +179,7 @@ import Testing
   // MARK: - clearPreviews
 
   @Test func clearPreviewsDelegatesToTextView() {
-    let (service, _, mockTV, vipPointer) = makeService()
-    defer { vipPointer.deallocate() }
+    let (service, _, mockTV, _) = makeService()
 
     service.clearPreviews()
 

@@ -8,18 +8,18 @@ final class ScriptExecutionService {
 
   private let appState: AppState
   private let makeScriptRunner: () -> ScriptRunner
-  private let setVoiceInsertionPoint: (Int) -> Void
+  private let voiceCoordinator: VoiceInputCoordinator
   private let isConfirming: () -> Bool
 
   init(
     appState: AppState,
     makeScriptRunner: @escaping () -> ScriptRunner,
-    setVoiceInsertionPoint: @escaping (Int) -> Void,
+    voiceCoordinator: VoiceInputCoordinator,
     isConfirming: @escaping () -> Bool
   ) {
     self.appState = appState
     self.makeScriptRunner = makeScriptRunner
-    self.setVoiceInsertionPoint = setVoiceInsertionPoint
+    self.voiceCoordinator = voiceCoordinator
     self.isConfirming = isConfirming
   }
 
@@ -65,7 +65,7 @@ final class ScriptExecutionService {
       )
       guard appState.isInputPanelVisible else { return }
       appState.inputText = result.output
-      setVoiceInsertionPoint((result.output as NSString).length)
+      voiceCoordinator.moveVoiceInsertionPoint(toEndOf: result.output)
     } catch {
       guard appState.isInputPanelVisible else { return }
       appState.inputText = originalText

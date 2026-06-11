@@ -7,17 +7,14 @@ final class ReplacementService {
   var textView: (any TextViewOperating)?
 
   private let appState: AppState
-  private let getVoiceInsertionPoint: () -> Int
-  private let setVoiceInsertionPoint: (Int) -> Void
+  private let voiceCoordinator: VoiceInputCoordinator
 
   init(
     appState: AppState,
-    getVoiceInsertionPoint: @escaping () -> Int,
-    setVoiceInsertionPoint: @escaping (Int) -> Void
+    voiceCoordinator: VoiceInputCoordinator
   ) {
     self.appState = appState
-    self.getVoiceInsertionPoint = getVoiceInsertionPoint
-    self.setVoiceInsertionPoint = setVoiceInsertionPoint
+    self.voiceCoordinator = voiceCoordinator
   }
 
   func applyOrPreview() {
@@ -50,7 +47,7 @@ final class ReplacementService {
       let matches = findReplacementMatches(rules, in: currentText)
         .filter { $0.range.location >= 0 && $0.range.location + $0.range.length <= currentNSLength }
         .sorted { $0.range.location < $1.range.location }
-      var voiceInsertionPoint = getVoiceInsertionPoint()
+      var voiceInsertionPoint = voiceCoordinator.voiceInsertionPoint
       var offset = 0
       for match in matches {
         let adjustedLocation = match.range.location + offset
@@ -60,8 +57,7 @@ final class ReplacementService {
           offset += delta
         }
       }
-      voiceInsertionPoint = max(0, min(voiceInsertionPoint, (result as NSString).length))
-      setVoiceInsertionPoint(voiceInsertionPoint)
+      voiceCoordinator.moveVoiceInsertionPoint(to: voiceInsertionPoint, in: result)
 
       appState.inputText = result
       appState.errorMessage = nil

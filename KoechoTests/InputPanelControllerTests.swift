@@ -45,7 +45,9 @@ private func makeController(
   let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
   let settings = Settings(defaults: defaults)
   let appState = AppState(settings: settings)
-  let reader: any SelectedTextReading = selectedTextReader ?? SelectedTextReader()
+  // Default to a mock returning nil so tests don't pick up whatever text is
+  // actually selected on the machine running them.
+  let reader: any SelectedTextReading = selectedTextReader ?? MockSelectedTextReader()
   let dir = FileManager.default.temporaryDirectory
     .appendingPathComponent("koecho-test-\(UUID().uuidString)")
   let historyStore = HistoryStore(directoryURL: dir)

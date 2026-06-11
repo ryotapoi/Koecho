@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import KoechoCore
 import KoechoPlatform
@@ -11,7 +12,7 @@ import Testing
     inputText: String = "",
     isInputPanelVisible: Bool = true,
     scriptTimeout: TimeInterval = 30.0
-  ) -> (ScriptExecutionService, AppState, MockTextViewOperating) {
+  ) -> (ScriptExecutionService, AppState, MockTextViewOperating, VoiceInputCoordinator) {
     let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
     let settings = Settings(defaults: defaults)
     settings.script.scriptTimeout = scriptTimeout
@@ -19,23 +20,29 @@ import Testing
     appState.isInputPanelVisible = isInputPanelVisible
     appState.inputText = inputText
 
+    let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200))
+    let coordinator = VoiceInputCoordinator(
+      appState: appState,
+      makeEngine: { MockVoiceInputEngine() },
+      panel: panel
+    )
     let service = ScriptExecutionService(
       appState: appState,
       makeScriptRunner: { ScriptRunner(timeout: settings.script.scriptTimeout) },
-      setVoiceInsertionPoint: { _ in },
+      voiceCoordinator: coordinator,
       isConfirming: { false }
     )
     let mockTV = MockTextViewOperating()
     mockTV.string = inputText
     mockTV.finalizedString = inputText
     service.textView = mockTV
-    return (service, appState, mockTV)
+    return (service, appState, mockTV, coordinator)
   }
 
   // MARK: - Prompt flow
 
   @Test func executeWithPromptSetsPromptScript() async {
-    let (service, appState, _) = makeService(inputText: "hello")
+    let (service, appState, _, _) = makeService(inputText: "hello")
     let script = Script(name: "Test", scriptPath: "cat", requiresPrompt: true)
 
     await service.execute(script)
@@ -45,7 +52,7 @@ import Testing
   }
 
   @Test func executeWithPromptAlreadySetRunsScript() async {
-    let (service, appState, _) = makeService(inputText: "hello")
+    let (service, appState, _, _) = makeService(inputText: "hello")
     let script = Script(name: "Test", scriptPath: "cat", requiresPrompt: true)
     appState.promptScript = script
 
@@ -56,10 +63,22 @@ import Testing
     #expect(appState.promptText == "")
   }
 
+  // MARK: - Voice insertion point
+
+  @Test func executeMovesVoiceInsertionPointToEndOfOutput() async {
+    let (service, appState, _, coordinator) = makeService(inputText: "hello")
+    let script = Script(name: "Test", scriptPath: "cat")
+
+    await service.execute(script)
+
+    #expect(appState.inputText == "hello")
+    #expect(coordinator.voiceInsertionPoint == 5)
+  }
+
   // MARK: - Concurrent execution guard
 
   @Test func executeSkipsWhenAlreadyRunning() async {
-    let (service, appState, _) = makeService(inputText: "hello")
+    let (service, appState, _, _) = makeService(inputText: "hello")
     appState.isRunningScript = true
     let script = Script(name: "Test", scriptPath: "cat")
 
@@ -72,7 +91,7 @@ import Testing
   // MARK: - Panel visibility guard
 
   @Test func executeSkipsWhenNotVisible() async {
-    let (service, appState, _) = makeService(
+    let (service, appState, _, _) = makeService(
       inputText: "hello",
       isInputPanelVisible: false
     )
@@ -86,7 +105,7 @@ import Testing
   // MARK: - runAutoScript
 
   @Test func runAutoScriptSuccess() async throws {
-    let (service, _, _) = makeService(inputText: "hello")
+    let (service, _, _, _) = makeService(inputText: "hello")
     let script = Script(name: "Test", scriptPath: "cat")
 
     let result = try await service.runAutoScript(script, on: "hello world")
@@ -100,7 +119,7 @@ import Testing
     )
     defer { try? FileManager.default.removeItem(atPath: scriptPath) }
 
-    let (service, _, mockTV) = makeService(inputText: "hello")
+    let (service, _, mockTV, _) = makeService(inputText: "hello")
     mockTV.selectedRangeValue = NSRange(location: 3, length: 2)
     let script = Script(name: "Test", scriptPath: scriptPath)
 
@@ -110,7 +129,7 @@ import Testing
   }
 
   @Test func runAutoScriptErrorThrows() async {
-    let (service, _, _) = makeService(inputText: "hello")
+    let (service, _, _, _) = makeService(inputText: "hello")
     let script = Script(name: "Test", scriptPath: "exit 1")
 
     do {
@@ -124,7 +143,7 @@ import Testing
   // MARK: - cycleAutoRunScript
 
   @Test func cycleAutoRunScriptCycles() {
-    let (service, appState, _) = makeService()
+    let (service, appState, _, _) = makeService()
     let script1 = Script(name: "S1", scriptPath: "cat")
     let script2 = Script(name: "S2", scriptPath: "cat")
     appState.settings.script.scripts = [script1, script2]
@@ -143,7 +162,7 @@ import Testing
   }
 
   @Test func cycleAutoRunScriptSkipsPromptScripts() {
-    let (service, appState, _) = makeService()
+    let (service, appState, _, _) = makeService()
     let script1 = Script(name: "S1", scriptPath: "cat", requiresPrompt: true)
     let script2 = Script(name: "S2", scriptPath: "cat")
     appState.settings.script.scripts = [script1, script2]
@@ -168,7 +187,7 @@ import Testing
     )
     defer { try? FileManager.default.removeItem(atPath: scriptPath) }
 
-    let (service, appState, mockTV) = makeService(inputText: "hello world")
+    let (service, appState, mockTV, _) = makeService(inputText: "hello world")
     mockTV.string = "hello world"
     mockTV.selectedRangeValue = NSRange(location: 6, length: 5)
     let script = Script(name: "Test", scriptPath: scriptPath)
@@ -184,7 +203,7 @@ import Testing
     )
     defer { try? FileManager.default.removeItem(atPath: scriptPath) }
 
-    let (service, appState, mockTV) = makeService(inputText: "hello")
+    let (service, appState, mockTV, _) = makeService(inputText: "hello")
     mockTV.string = "hello"
     mockTV.selectedRangeValue = NSRange(location: 3, length: 0)
     let script = Script(name: "Test", scriptPath: scriptPath)
@@ -200,7 +219,7 @@ import Testing
     )
     defer { try? FileManager.default.removeItem(atPath: scriptPath) }
 
-    let (service, appState, _) = makeService(inputText: "hello")
+    let (service, appState, _, _) = makeService(inputText: "hello")
     service.textView = nil
     let script = Script(name: "Test", scriptPath: scriptPath)
 
@@ -212,7 +231,7 @@ import Testing
   // MARK: - cancelPrompt
 
   @Test func cancelPromptResetsState() {
-    let (service, appState, _) = makeService()
+    let (service, appState, _, _) = makeService()
     let script = Script(name: "Test", scriptPath: "cat", requiresPrompt: true)
     appState.promptScript = script
     appState.promptText = "some prompt"

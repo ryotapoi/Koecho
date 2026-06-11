@@ -64,7 +64,7 @@ import Testing
 
   @Test func prepareForShowResetsState() {
     let (coordinator, appState, _, _) = makeCoordinator(inputText: "hello")
-    coordinator.voiceInsertionPoint = 999
+    coordinator.handleCursorMoved(3)
     coordinator.currentVoiceTarget = .prompt
     coordinator.replayState = .restartInProgress(localText: "some text")
 
@@ -171,7 +171,7 @@ import Testing
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
     mockTV.typingAttributes = [:]
-    coordinator.voiceInsertionPoint = 5
+    coordinator.handleCursorMoved(5)
 
     // Simulate locally finalized state with replay context
     coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
@@ -189,7 +189,7 @@ import Testing
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
-    coordinator.voiceInsertionPoint = 5
+    coordinator.handleCursorMoved(5)
 
     coordinator.voiceInput(didUpdateVolatile: " world")
 
@@ -201,7 +201,7 @@ import Testing
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
-    coordinator.voiceInsertionPoint = 5
+    coordinator.handleCursorMoved(5)
     coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
 
     coordinator.voiceInput(didUpdateVolatile: "hel")
@@ -216,7 +216,7 @@ import Testing
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
     mockTV.typingAttributes = [:]
-    coordinator.voiceInsertionPoint = 5
+    coordinator.handleCursorMoved(5)
 
     // First finalize
     coordinator.voiceInput(didFinalize: "hello")
@@ -257,7 +257,7 @@ import Testing
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
-    coordinator.voiceInsertionPoint = 5
+    coordinator.handleCursorMoved(5)
     coordinator.replayState = .restartInProgress(localText: "world")
 
     coordinator.voiceInput(didUpdateVolatile: "wor")
@@ -269,7 +269,7 @@ import Testing
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
-    coordinator.voiceInsertionPoint = 5
+    coordinator.handleCursorMoved(5)
     coordinator.replayState = .suppressing(localText: "world", deadline: Date.distantPast)
 
     coordinator.voiceInput(didUpdateVolatile: "new text")
@@ -298,7 +298,7 @@ import Testing
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
-    coordinator.voiceInsertionPoint = 5
+    coordinator.handleCursorMoved(5)
     coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
 
     coordinator.voiceInput(didUpdateVolatile: "completely different")
