@@ -17,7 +17,6 @@
 - 振る舞い変更や bug fix では、同じ commit に unit test / regression test を追加または更新する。テストできない場合は理由を明記する
 - TDD でやる場合は `tdd` スキルに従う（Normal / High-risk の振る舞い変更は基本 TDD。Small は省略可）
 - SwiftUI View 層を触るなら `swiftui-pro` スキルに従う
-- View を追加・変更したら、該当 View の `#Preview` も追加・更新する（確認は `verify.md`）
 - 振る舞いが変わるなら `specs/`（あれば）の該当箇所を同期する
 - backlog に積んでいた項目を実装完了したら `backlog/backlog.md` の該当行を `[x]` 等で更新する
 - 実装中に見つかった別タスクは、今やる理由がなければ `backlog/backlog.md` に逃がす
@@ -29,13 +28,6 @@
 - Xcode のビルド・テストは XcodeBuildMCP を優先する。Bash で `xcodebuild` を直接叩かない（使い分けの詳細は `rules/xcode-mcp.md`）
 - KoechoKit（KoechoCore / KoechoPlatform）の SPM テストは `swift test --package-path Packages/KoechoKit`
 - Apple API の仕様確認は Apple Xcode MCP の `DocumentationSearch` を Web 検索より優先する
-
-## Worktree Check
-
-Primary working directory が `.claude/worktrees/` 配下のときだけ:
-
-- 環境変数や git status から実際の作業先を確認する
-- 不一致なら作業を中断してユーザーに報告し、`claude -w` で再起動を依頼する
 
 ## Acceptance
 

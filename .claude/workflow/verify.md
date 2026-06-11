@@ -18,21 +18,13 @@
 - それでもユーザーの観察・操作なしに確定できない挙動が残るなら、Stop Condition または残存リスクとして報告する
 - 検証不能な High-risk 変更は完了扱いにしない
 
-## Worktree Check
-
-Primary working directory が `.claude/worktrees/` 配下のときだけ:
-
-- 環境変数や git status から実際の作業先（CWD）を確認する
-- Primary working directory と CWD が一致していなければ、作業を中断してユーザーに「Primary working directory と CWD が乖離しています（primary: <パス>, cwd: <パス>）。`claude -w` で再起動してください」と報告する
-- チェック結果をユーザーに出力する: 「primary_working_directory: <パス>, cwd: <パス>, check: ok/ng/skip」
-
 ## Koecho Verification
 
 - ビルド: `build_macos`（XcodeBuildMCP）
 - テスト（アプリ）: `test_macos`（`-only-testing:KoechoTests` で UITests を除外）
 - テスト（KoechoKit）: `swift test --package-path Packages/KoechoKit`
-- Preview 確認: Apple Xcode MCP の `RenderPreview`（使い方は `rules/xcode-mcp.md`）。View 層に変更がある場合は、表示に影響しない変更でも該当 View の `#Preview` をレンダリングして確認する。確認観点: レイアウト崩れ（テキスト切れ・要素の重なり・意図しない余白）、状態バリエーションの網羅（空状態・通常・エッジケース）、フレームサイズの適切さ
-- アプリ起動確認: 新しい操作フローや UI 挙動は `build_run_macos` で起動して確認する。ユーザーの観察・操作なしに確定できない場合（権限ダイアログ、実際のディクテーション操作等）は、起動した状態でユーザーに動作確認を依頼するか、残存リスクとして報告する
+- Preview 確認: Apple Xcode MCP の `RenderPreview`（使い方は `rules/xcode-mcp.md`）
+- 実画面確認: `build_run_macos` でアプリを起動する
 
 ## Acceptance
 

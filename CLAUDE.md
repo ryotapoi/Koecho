@@ -60,7 +60,6 @@ plan mode（`EnterPlanMode` / `ExitPlanMode`）は使わない。計画は内部
 
 - 回数ではなく「結果の量」「全体像把握が要るか」「main コンテキストを汚すか」で判断する
 - 1 サブエージェント = 1 タスクに絞り、焦点を明確にする
-- Agent ツールの prompt には、worktree で作業中の場合「git worktree で作業している。作業ディレクトリは <Primary working directory のフルパス> であり、このパス配下のファイルを参照すること」と明記する
 
 ## Constraints / ユーザー観察
 
