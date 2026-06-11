@@ -160,10 +160,16 @@ final class InputPanelController {
   /// Confirm phase 2 (empty result): treat the confirm as a cancel.
   private func dismissAsEmptyConfirm() {
     paster.restoreClipboard()
+    resetStateAndHidePanel()
+    logger.info("confirm() with empty text, treated as cancel")
+  }
+
+  /// Shared teardown: resets dictation state, clears panel app state,
+  /// and hides the panel.
+  private func resetStateAndHidePanel() {
     voiceCoordinator.resetState()
     lifecycleManager.clearState()
     lifecycleManager.hide()
-    logger.info("confirm() with empty text, treated as cancel")
   }
 
   /// Confirm phase 3: run the configured auto-run script on `text`.
@@ -204,9 +210,7 @@ final class InputPanelController {
     isConfirming = true
     defer { isConfirming = false }
 
-    voiceCoordinator.resetState()
-    lifecycleManager.clearState()
-    lifecycleManager.hide()
+    resetStateAndHidePanel()
 
     do {
       try await paster.paste(text: text, to: targetApp, using: .general)
@@ -230,10 +234,8 @@ final class InputPanelController {
 
     voiceCoordinator.cancelEngine()
     paster.restoreClipboard()
-    voiceCoordinator.resetState()
     replacementService.clearPreviews()
-    lifecycleManager.clearState()
-    lifecycleManager.hide()
+    resetStateAndHidePanel()
 
     logger.info("Panel cancelled and hidden")
   }
