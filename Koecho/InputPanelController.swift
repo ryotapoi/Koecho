@@ -384,9 +384,7 @@ final class InputPanelController {
       self?.voiceCoordinator.handleCursorMoved(position)
     }
     view.onVolatileFinalized = { [weak self] volatileText in
-      guard let self else { return }
-      self.voiceCoordinator.isLocallyFinalized = true
-      self.voiceCoordinator.localFinalizedText = volatileText
+      self?.voiceCoordinator.recordLocalFinalization(volatileText)
     }
     voiceCoordinator.configureEngineWithTextView()
   }

@@ -12,7 +12,7 @@
   - rules/principles.md「テスト方針」: 3 クラスのみ記載 → 実態（20+ スイート）に合わせて書き直す
 - [x] InputPanelController のテスト専用 forwarding プロパティを撤去する
   - `isLocallyFinalized` / `localFinalizedText` / `replaySuppressionDeadline`（InputPanelController.swift:278-291）はプロダクション未使用で InputPanelControllerTests のみが使用。テストを VoiceInputCoordinator 直アクセスに変えて削除する
-- [ ] VoiceInputCoordinator の replay 抑制状態（フラグ 6 個の暗黙の組み合わせ）を enum に集約する
+- [x] VoiceInputCoordinator の replay 抑制状態（フラグ 6 個の暗黙の組み合わせ）を enum に集約する
   - `isLocallyFinalized` / `localFinalizedText` / `replaySuppressionDeadline` / `transcriberAlreadyRestarted` / `accumulatedFinalizedText` / `isStoppingEngine`。「isLocallyFinalized + deadline nil = restart 進行中」のような暗黙状態を `enum ReplayState`（idle / restartInProgress / suppressing）で型に起こし、不正な組み合わせを排除する
   - 既存テスト（VoiceInputCoordinatorTests + InputPanelControllerTests の Replay セクション）が動作を固定している。着手時に design-decision 推奨
 - [x] 言語選択の補正ロジック（同型処理が 3 箇所）を SpeechAnalyzerLocaleManager に一本化する

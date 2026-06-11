@@ -66,16 +66,13 @@ import Testing
     let (coordinator, appState, _, _) = makeCoordinator(inputText: "hello")
     coordinator.voiceInsertionPoint = 999
     coordinator.currentVoiceTarget = .prompt
-    coordinator.isLocallyFinalized = true
-    coordinator.localFinalizedText = "some text"
+    coordinator.replayState = .restartInProgress(localText: "some text")
 
     coordinator.prepareForShow()
 
     #expect(coordinator.voiceInsertionPoint == (appState.inputText as NSString).length)
     #expect(coordinator.currentVoiceTarget == .textEditor)
-    #expect(coordinator.isLocallyFinalized == false)
-    #expect(coordinator.localFinalizedText == nil)
-    #expect(coordinator.replaySuppressionDeadline == nil)
+    #expect(coordinator.replayState == .idle)
   }
 
   // MARK: - switchEngine
@@ -96,21 +93,17 @@ import Testing
 
   @Test func resetStateClearsReplayFlags() {
     let (coordinator, _, _, _) = makeCoordinator()
-    coordinator.isLocallyFinalized = true
-    coordinator.localFinalizedText = "text"
-    coordinator.replaySuppressionDeadline = Date.now
+    coordinator.replayState = .suppressing(localText: "text", deadline: Date.now)
 
     coordinator.resetState()
 
-    #expect(coordinator.isLocallyFinalized == false)
-    #expect(coordinator.localFinalizedText == nil)
-    #expect(coordinator.replaySuppressionDeadline == nil)
+    #expect(coordinator.replayState == .idle)
   }
 
   // MARK: - VoiceInputDelegate: didFinalize
 
   @Test func didFinalizeInsertsText() {
-    let (coordinator, appState, mockTV, _) = makeCoordinator(inputText: "")
+    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "")
     let storage = NSTextStorage(string: "")
     mockTV.textStorage = storage
     mockTV.typingAttributes = [:]
@@ -181,9 +174,7 @@ import Testing
     coordinator.voiceInsertionPoint = 5
 
     // Simulate locally finalized state with replay context
-    coordinator.isLocallyFinalized = true
-    coordinator.localFinalizedText = "hello"
-    coordinator.replaySuppressionDeadline = Date.now + 10
+    coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
 
     // This should be treated as replay and skipped
     coordinator.voiceInput(didFinalize: "hello")
@@ -211,9 +202,7 @@ import Testing
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
     coordinator.voiceInsertionPoint = 5
-    coordinator.isLocallyFinalized = true
-    coordinator.localFinalizedText = "hello"
-    coordinator.replaySuppressionDeadline = Date.now + 10
+    coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
 
     coordinator.voiceInput(didUpdateVolatile: "hel")
 
@@ -250,7 +239,7 @@ import Testing
   }
 
   @Test func handleCursorMovedFinalizesVolatile() {
-    let (coordinator, appState, mockTV, _) = makeCoordinator(inputText: "hello")
+    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
     mockTV.volatileRange = NSRange(location: 5, length: 6)
     mockTV.string = "hello world"
     mockTV.finalizedString = "hello"
@@ -259,8 +248,7 @@ import Testing
     coordinator.handleCursorMoved(3)
 
     #expect(mockTV.finalizeVolatileTextCallCount == 1)
-    #expect(coordinator.isLocallyFinalized == true)
-    #expect(coordinator.localFinalizedText == " world")
+    #expect(coordinator.replayState == .restartInProgress(localText: " world"))
   }
 
   // MARK: - Volatile suppression during cursor move (replay state without deadline)
@@ -270,9 +258,7 @@ import Testing
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
     coordinator.voiceInsertionPoint = 5
-    coordinator.isLocallyFinalized = true
-    coordinator.localFinalizedText = "world"
-    // replaySuppressionDeadline is nil (restart in progress)
+    coordinator.replayState = .restartInProgress(localText: "world")
 
     coordinator.voiceInput(didUpdateVolatile: "wor")
 
@@ -284,14 +270,11 @@ import Testing
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
     coordinator.voiceInsertionPoint = 5
-    coordinator.isLocallyFinalized = true
-    coordinator.localFinalizedText = "world"
-    coordinator.replaySuppressionDeadline = Date.distantPast
+    coordinator.replayState = .suppressing(localText: "world", deadline: Date.distantPast)
 
     coordinator.voiceInput(didUpdateVolatile: "new text")
 
-    #expect(coordinator.isLocallyFinalized == false)
-    #expect(coordinator.replaySuppressionDeadline == nil)
+    #expect(coordinator.replayState == .idle)
     #expect(mockTV.setVolatileTextCalls.count == 1)
   }
 
@@ -305,7 +288,7 @@ import Testing
 
     coordinator.handleCursorMoved(3)
     // MockEngine is not SpeechAnalyzerEngine, so restartTranscriberIfNeeded() is a no-op.
-    // This tests the deadline-nil + isLocallyFinalized suppression path (change 2).
+    // This tests the restartInProgress suppression path (all volatile suppressed).
     coordinator.voiceInput(didUpdateVolatile: "replay")
 
     #expect(mockTV.setVolatileTextCalls.isEmpty)
@@ -316,14 +299,11 @@ import Testing
     let storage = NSTextStorage(string: "hello")
     mockTV.textStorage = storage
     coordinator.voiceInsertionPoint = 5
-    coordinator.isLocallyFinalized = true
-    coordinator.localFinalizedText = "hello"
-    coordinator.replaySuppressionDeadline = Date.now + 10
+    coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
 
     coordinator.voiceInput(didUpdateVolatile: "completely different")
 
-    #expect(coordinator.isLocallyFinalized == false)
-    #expect(coordinator.replaySuppressionDeadline == nil)
+    #expect(coordinator.replayState == .idle)
     #expect(mockTV.setVolatileTextCalls.count == 1)
   }
 

@@ -186,9 +186,9 @@
 - 対策（Secondary）: `accumulatedFinalizedText` で finalized テキストを蓄積し、`stripOverlappingPrefix` で重複除去
 - restart 時はオーディオ tap を再インストールする。tap クロージャが `localContinuation` をローカルキャプチャする既存パターン（ADR 0012）を維持
 - `isRestarting` フラグで多重実行防止。`transcriberAlreadyRestarted` フラグで「voice input 到着までの冗長 restart 防止」
-- restart 後にバッファ残存音声のリプレイが発生する。volatile は時間窓（restart 完了後 2 秒、`replaySuppressionDeadline`）+ `localFinalizedText` との prefix マッチングで抑制し、新規音声は時間窓内でも表示する。finalize は `localFinalizedText` との exact match で replay を判定（`replaySuppressionDeadline` がセットされている replay context でのみ）。replay finalize 到着時に `clearReplayState()` で全フラグクリア。万一スキップ漏れがあっても `stripOverlappingPrefix` がフォールバックとして機能する
+- restart 後にバッファ残存音声のリプレイが発生する。抑制状態は `VoiceInputCoordinator.ReplayState` enum で管理する: `restartInProgress`（restart 完了待ち）は全 volatile を抑制、`suppressing`（restart 完了後 2 秒の時間窓）はローカル確定テキストとの prefix マッチングで volatile を抑制し、新規音声は時間窓内でも表示する。finalize はローカル確定テキストとの exact match で replay を判定（`suppressing` 中のみ）。replay finalize 到着時に `idle` へ戻す。万一スキップ漏れがあっても `stripOverlappingPrefix` がフォールバックとして機能する
 - restart 時はモデルダウンロード済みを前提。同一セッション中にモデルがアンロードされることは想定しない
-- ADR 0016 に詳細
+- ADR 0016（重複除去）/ ADR 0021（ReplayState enum）に詳細
 
 ## SpeechAnalyzer 既知の問題（未確定・要調査）
 
