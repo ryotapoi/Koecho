@@ -29,7 +29,7 @@
   - MARK 境界に沿ってファイル分割し、TestContext / makeController helper は共有ファイルへ。Replay / Overlap 系は coordinator 単体テストへの移管も検討（forwarding 撤去タスクと連動）
 - [ ] voiceInsertionPoint の closure 渡しをやめ、所有者（VoiceInputCoordinator）の名前付きメソッドに集約する
   - ReplacementService が get/set closure、ScriptExecutionService が set closure で書き換えており、挿入位置の不変条件（テキスト長以下等）がどこにも集約されていない。replay 状態 enum 化と同時に着手すると効率的
-- [ ] MenuBarContent の Settings ウィンドウ前面化ハックを名前付き helper に抽出する
+- [x] MenuBarContent の Settings ウィンドウ前面化ハックを名前付き helper に抽出する
   - MenuBarContent.swift:33-44 の「100ms sleep + `identifier?.rawValue.contains("settings")` + window level 昇降」が View body にインライン。`bringSettingsWindowToFront()` 等に抽出し、knowledge.md「LSUIElement + ウィンドウ前面化」への参照を 1 行付ける
 
 ## v1.4.2（バグ修正）

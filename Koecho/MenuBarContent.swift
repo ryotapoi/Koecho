@@ -33,13 +33,7 @@ struct MenuBarContent: View {
     Button("Settings...") {
       openWindow(id: "settings")
       Task { @MainActor in
-        try? await Task.sleep(for: .milliseconds(100))
-        let settingsWindow = NSApplication.shared.windows
-          .first { $0.identifier?.rawValue.contains("settings") == true }
-        settingsWindow?.level = .floating
-        settingsWindow?.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate()
-        settingsWindow?.level = .normal
+        await bringSettingsWindowToFront()
       }
     }
 
@@ -48,6 +42,19 @@ struct MenuBarContent: View {
     Button("Quit Koecho") {
       NSApplication.shared.terminate(nil)
     }
+  }
+
+  /// LSUIElement app needs the level-bump dance to surface the Settings
+  /// window; see references/knowledge.md "LSUIElement + ウィンドウ前面化".
+  @MainActor
+  private func bringSettingsWindowToFront() async {
+    try? await Task.sleep(for: .milliseconds(100))
+    let settingsWindow = NSApplication.shared.windows
+      .first { $0.identifier?.rawValue.contains("settings") == true }
+    settingsWindow?.level = .floating
+    settingsWindow?.makeKeyAndOrderFront(nil)
+    NSApplication.shared.activate()
+    settingsWindow?.level = .normal
   }
 
   @ViewBuilder
