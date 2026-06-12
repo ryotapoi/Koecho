@@ -21,6 +21,7 @@
 - 進捗・完了の報告は、このセッションのツール結果で裏取りできる事実だけを書く。テストが失敗していれば出力ごと報告し、未検証の項目は未検証と明示する。
 - 後から制約になる判断、仕様変更、未着手作業は、画面出力だけで終わらせず `rules/` / `specs/`（あれば） / `decisions/` / `backlog/backlog.md` の適切な情報源へ同期する。
 - 各 commit 内のレビューとは別に、Goal の commit range に対する `/code-review` と Codex レビュー（`codex-review`）を Goal 完了条件に含める（Goal Review 参照）。別モデルの Codex を最後に実行する。
+- `/code-review`（high/xhigh）は main で直接実行しない。Agent ツールで Opus subagent（レビュー監督）に隔離し、監督は採否候補と却下理由だけを返す。最終採否・修正・テスト・コミットはすべて main で行う（Goal Review 参照）。
 
 ## Acceptance
 
@@ -39,7 +40,8 @@
 - `.claude/workflow/default.md`
 - `design-decision` skill
 - `codex-review` skill
-- `/code-review`（built-in、effort 引数あり）
+- `/code-review`（built-in、effort 引数あり。レビュー監督 subagent 内で実行する）
+- `Agent` ツール（レビュー監督 subagent の起動）
 - `backlog/backlog.md`
 
 ## Flow
@@ -70,15 +72,33 @@
 
 各 commit 内の `review.md` とは別に、Goal の commit range（`main..HEAD`）を対象に以下を Goal 完了条件として実施する。
 
-実行順序は `/code-review xhigh` → 指摘対応 → Codex レビュー。Codex は最後に置き、Claude 系レビューが見つけられなかったものを別視点で拾う役にする（指摘対応後の最終 diff を見せる）。
+実行順序は `/code-review`（レビュー監督 subagent 経由）→ 指摘対応 → Codex レビュー。Codex は最後に置き、Claude 系レビューが見つけられなかったものを別視点で拾う役にする（指摘対応後の最終 diff を見せる）。
 
-- **`/code-review`（必須・先に実行）**: `/code-review xhigh` をローカル実行する。effort は `xhigh`（最深ローカル。`ultra` はクラウド・billed・ユーザー手動起動なので Goal 自動進行では使わない）。`--fix` は付けず結果を受け取り、採否判断して直す。
+- **`/code-review`（必須・先に実行・subagent に隔離）**: main で直接 `/code-review` を実行しない。`Agent` ツールでレビュー監督 subagent を 1 体起動して隔離する（Review Supervision 参照）。effort は下記 Review Effort で選ぶ。`ultra` はクラウド・billed・ユーザー手動起動なので Goal 自動進行では使わない。
 - **Codex レビュー（必須・最後に実行）**: `codex-review` skill を commit range 対象で実行する。別系統モデル（Codex）に Goal 差分全体を見せる。`/code-review` の指摘対応 commit がある場合はそれを含む range を渡す。
-- **二重実行の省略**: Goal が 1 commit で完結し、その commit の `review.md` で既に `/code-review xhigh` を Goal 差分全体に対して通している場合、Goal Review の `/code-review` は省略してよい（Codex レビューは別系統なので省略しない）。複数 commit の Goal では各 commit の review.md は局所差分、Goal Review は commit range 全体を対象とするため両方実施する。
+- **二重実行の省略**: Goal が 1 commit で完結し、その commit の `review.md` で既に `/code-review`（同 effort 以上）を Goal 差分全体に対して通している場合、Goal Review の `/code-review` は省略してよい（Codex レビューは別系統なので省略しない）。複数 commit の Goal では各 commit の review.md は局所差分、Goal Review は commit range 全体を対象とするため両方実施する。
 - 1 commit ごとではなく、関連する数 commit をまとめてレビューする。
 - 差分が大きい、またはディクテーション制御 / NSTextView 操作 / UserDefaults 永続化 / 権限依存機能 / 外部スクリプト実行 / 広い UI 挙動に触れる場合は、数 commit を待たずにその時点までの commit range で早めにレビューする。
-- 指摘対応は別 commit として作成し、対応 commit を含む range で再レビューする。
+- 指摘対応は別 commit として作成し、対応 commit を含む range で再レビューする（再レビューはレビュー監督をもう一周起動する）。
 - 各レビュー単位につき再レビュー実行（`/code-review`・Codex とも）は最大 3 回。3 回で収束しなければそれ以上回さず打ち切り、残った指摘と実行回数を記録して Goal 完了報告の `レビュー上限超過` で通知する。
+
+### Review Effort
+
+- **xhigh**: 永続化 / 同期 / 選択モデル / keyboard / 広い UI 挙動に触れる、または差分が大きい Goal。
+- **high**: docs 中心、または上記に触れない小さな差分の Goal。
+
+### Review Supervision
+
+`/code-review`（high/xhigh）を main で直接実行せず、レビュー用 subagent に隔離する。
+
+1. main は `Agent` ツールで Opus subagent（レビュー監督）を 1 体起動する。prompt には次を渡す: 対象 commit range または diff ファイルのパス、レビュー effort（high/xhigh）、直前の実装意図メモ（3 行以内、あれば）。
+   - レビュー監督に Fable ではなく Opus を使うのは、main の context 隔離が目的で最終採否は main に残すため（重い diff を読む作業を main から切り離しつつ、判断は main が握る）。
+2. 監督は `/code-review` の手順を自分で実行する。finder を起動する際は `model` を必ず明示する（基本 sonnet。判断の重い観点のみ opus 可）。
+3. 監督は修正を一切行わない。返すのは次の 2 リストのみ:
+   - 採用候補リスト: `file:line` / 問題 / failure scenario / 推奨対応一行。
+   - 却下リスト: 指摘と却下理由。
+4. main が最終採否を行い、修正・テスト・コミットはすべて main で行う。
+5. 再レビューはレビュー監督をもう一周起動する（上記の最大 3 回ルールは維持）。
 
 ## Design Decisions
 

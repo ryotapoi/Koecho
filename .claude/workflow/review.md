@@ -7,14 +7,14 @@
 ## Review Depth
 
 - **L0 self-check**: Small 変更（`default.md` の Intake 分類）。main で `git diff` を読み、要求と検証結果を照合する。skill は呼ばない。
-- **Standard**: Small 以外の実装差分。`/code-review xhigh` をローカル実行し、結果を見て直す（`--fix` は付けず指摘を受け取り、採否判断して反映）。
+- **Standard**: Small 以外の実装差分。`/code-review`（high/xhigh）をレビュー監督 subagent に隔離して実行する。main は直接 `/code-review` を実行せず、監督が返す採用候補・却下リストを受け取って採否判断・修正する（Review Supervision 参照）。
 - **Targeted supplement**: 領域固有リスクがある変更。Standard に加えて該当観点の skill を使う。
 - **External supplement**: 大きい、曖昧、High-risk、または設計判断が重い変更。Standard に加えて別系統レビュー（`codex-review`）を入れる。
 
 ## Decision Criteria
 
 - L0 で十分なケース: typo、docs、テスト追加だけ、1 ファイルの明確なバグ修正。
-- **Small 以外の実装差分は原則 `/code-review xhigh` を通す**（Standard）。避ける余地を減らす。`/code-review` は current diff / current branch を対象にする。`ultra` はクラウド・billed・ユーザー手動起動なので自動進行では使わない。
+- **Small 以外の実装差分は原則 `/code-review`（high/xhigh）を通す**（Standard）。避ける余地を減らす。`/code-review` は current diff / current branch を対象にし、レビュー監督 subagent 内で実行する（main では直接実行しない）。effort は xhigh が基本、docs 中心や小さな差分は high。`ultra` はクラウド・billed・ユーザー手動起動なので自動進行では使わない。
 - 構造劣化リスク（巨大化、分岐増加、責務境界の濁り、薄い抽象化、型境界の曖昧さ）があれば `thermo-nuclear-code-quality-review` を**必須**で使う。
 - 領域固有 supplement の対象:
   - SwiftUI View 層 → `swiftui-pro`
@@ -28,9 +28,22 @@
 ## How To Run
 
 - L0: main で `git diff` を読み、acceptance と照合する。
-- Standard: `/code-review xhigh` を実行し、戻ってきた指摘を採否判断して反映する。
+- Standard: レビュー監督 subagent を起動し（Review Supervision 参照）、戻ってきた採用候補・却下リストを採否判断して反映する。
 - Targeted / External supplement: 該当 skill（`koecho-risk-check`, `swiftui-pro`, `thermo-nuclear-code-quality-review`, `codex-review`）を呼ぶ。複数該当するものは 1 メッセージで並列起動してよい。
 - 戻りを全部受け取ってから main で統合し、採用分をまとめて反映する。実行中に 1 件ずつ反映しない。
+
+### Review Supervision
+
+`/code-review`（high/xhigh）を main で直接実行せず、レビュー用 subagent に隔離する。
+
+1. main は `Agent` ツールで Opus subagent（レビュー監督）を 1 体起動する。prompt には次を渡す: 対象 commit range または diff ファイルのパス、レビュー effort（high/xhigh）、直前の実装意図メモ（3 行以内、あれば）。
+   - レビュー監督に Fable ではなく Opus を使うのは、main の context 隔離が目的で最終採否は main に残すため。
+2. 監督は `/code-review` の手順を自分で実行する。finder を起動する際は `model` を必ず明示する（基本 sonnet。判断の重い観点のみ opus 可）。
+3. 監督は修正を一切行わない。返すのは次の 2 リストのみ:
+   - 採用候補リスト: `file:line` / 問題 / failure scenario / 推奨対応一行。
+   - 却下リスト: 指摘と却下理由。
+4. main が最終採否を行い、修正・テスト・コミットはすべて main で行う。
+5. 再レビューはレビュー監督をもう一周起動する（レビュー周回の最大 3 周ルールは維持）。
 
 Goal 全体の commit range に対する `codex-review` と `/code-review` は、各 commit のここでの review とは別に Goal 完了条件として `goal.md` の Goal Review で実施する。
 
