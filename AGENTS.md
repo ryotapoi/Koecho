@@ -39,7 +39,7 @@ Claude Code 由来の `.claude/` は参考資料として扱ってよいが、Co
 ## Core Policies
 
 - workflow / skill は ICAR（Intent / Constraints / Acceptance / Relevant）を基本形にする。細かい手順や長い観点は、必要に応じて workflow 内の phase ICAR、別 md、`references/knowledge.md` へ逃がす。
-- `.claude/`・`CLAUDE.md`（Claude 側）と `.agents/`・`AGENTS.md`（Codex 側）は、方針・ルールの内容を一致させる。形式は各側の流儀（`.agents/` は ICAR）に合わせてよい。`skills/koecho-risk-check/SKILL.md` は **チェック観点（Intent / Constraints / Acceptance / Checkpoints の中身）を両側一致させる**。ただし実行構造は各側の流儀でよく、Claude 側は Opus 監督 + sonnet subagent の fork 構造を持つ（Codex 側にはこの subagent 構造はない）。片方の観点を変更したら、同じコミットで他方にも反映する。
+- `.claude/`・`CLAUDE.md`（Claude 側）と `.agents/`・`AGENTS.md`（Codex 側）は、目的・制約・判断基準の方向性を揃える。文言や構成の完全一致は求めず、subagent、review delegation、tool 呼び出し、skill / workflow の実行手順は各エージェントの仕組みに合わせてよい。`skills/koecho-risk-check/SKILL.md` は **チェック観点（Intent / Constraints / Acceptance / Checkpoints の方向性）を両側で揃える**。片方の観点を変更したら、同じコミットで他方にも反映する。
 - 小さい変更に重い手続きを載せない。作業の大きさとリスクで plan / verify / review の深さを選ぶ。
 - 原則 1 plan = 1 commit。独立した成果が混ざるなら plan を分ける。
 - 理想は全体が綺麗な状態だが、各 plan では今回の変更範囲と直接の依存先/依存元を中心に見る。広い構造改善は必要に応じて `backlog/backlog.md` または `maintenance.md` へ切り出す。
