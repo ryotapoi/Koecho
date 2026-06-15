@@ -15,6 +15,7 @@ public final class AppState {
   public var errorMessage: String?
   public var isRunningScript: Bool = false
   public var promptText: String = ""
+  public var volatilePromptText: String = ""
   public var promptScript: Script? = nil
   public var pendingReplacementPattern: String?
   public var voiceEngineStatus: String?

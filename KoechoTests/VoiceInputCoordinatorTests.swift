@@ -160,6 +160,27 @@ import Testing
     #expect(appState.promptText == "hello")
   }
 
+  @Test func didFinalizeClearsPromptVolatileTextWhenTargetIsPrompt() {
+    let (coordinator, appState, _, _) = makeCoordinator(inputText: "")
+    coordinator.currentVoiceTarget = .prompt
+    appState.volatilePromptText = "hel"
+
+    coordinator.voiceInput(didFinalize: "hello")
+
+    #expect(appState.promptText == "hello")
+    #expect(appState.volatilePromptText == "")
+  }
+
+  @Test func didUpdateVolatileSetsPromptVolatileTextWhenTargetIsPrompt() {
+    let (coordinator, appState, mockTV, _) = makeCoordinator(inputText: "")
+    coordinator.currentVoiceTarget = .prompt
+
+    coordinator.voiceInput(didUpdateVolatile: "hel")
+
+    #expect(appState.volatilePromptText == "hel")
+    #expect(mockTV.setVolatileTextCalls.isEmpty)
+  }
+
   // MARK: - Replay suppression
 
   @Test func replayFinalizeIsSkippedInReplayContext() {

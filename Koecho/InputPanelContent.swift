@@ -102,6 +102,7 @@ struct InputPanelContent: View {
     if appState.promptScript != nil {
       PromptInputView(
         promptText: $appState.promptText,
+        volatilePromptText: $appState.volatilePromptText,
         promptScript: appState.promptScript,
         isRunningScript: appState.isRunningScript,
         onExecuteScript: onExecuteScript,

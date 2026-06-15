@@ -200,7 +200,8 @@
 ## SpeechAnalyzer 既知の問題（未確定・要調査）
 
 - 音声入力の先頭に「。」が挿入されることがある（再現条件不明）
-- volatile テキスト（未確定表示）がある状態でスクリプトを実行すると、volatile 部分がスクリプトに渡されない可能性がある
+- Prompt ありスクリプトでは `volatilePromptText` を `promptText` と別管理し、表示と `KOECHO_PROMPT` 生成時に合成する。これにより確定前に実行しても画面に見えている prompt が渡る
+- 本文側の volatile テキストは `VoiceInputTextView.finalizedString` を使う経路では除外される。確定前にスクリプト実行する挙動を変える場合は、本文側の volatile をスクリプト入力へ含めるか、実行前に明示 finalize するかを別途判断する
 
 ## CoreAudio / オーディオデバイス管理
 

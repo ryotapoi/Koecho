@@ -3,11 +3,22 @@ import SwiftUI
 
 struct PromptInputView: View {
   @Binding var promptText: String
+  @Binding var volatilePromptText: String
   let promptScript: Script?
   let isRunningScript: Bool
   var onExecuteScript: (Script) async -> Void
   var onCancelPrompt: () -> Void
   var isFocused: FocusState<Bool>.Binding
+
+  private var displayedPromptText: Binding<String> {
+    Binding(
+      get: { promptText + volatilePromptText },
+      set: {
+        promptText = $0
+        volatilePromptText = ""
+      }
+    )
+  }
 
   var body: some View {
     HStack(spacing: 10) {
@@ -24,7 +35,7 @@ struct PromptInputView: View {
         .background(Color.primary.opacity(0.88), in: RoundedRectangle(cornerRadius: 8))
       }
 
-      TextField("Prompt", text: $promptText)
+      TextField("Prompt", text: displayedPromptText)
         .focused(isFocused)
         .textFieldStyle(.plain)
         .font(.body)
@@ -60,6 +71,7 @@ struct PromptInputView: View {
     var body: some View {
       PromptInputView(
         promptText: .constant(""),
+        volatilePromptText: .constant(""),
         promptScript: Script(name: "AI Rewrite", scriptPath: "ai.sh"),
         isRunningScript: false,
         onExecuteScript: { _ in },
@@ -78,6 +90,7 @@ struct PromptInputView: View {
     var body: some View {
       PromptInputView(
         promptText: .constant("箇条書きにして"),
+        volatilePromptText: .constant(""),
         promptScript: Script(name: "AI Rewrite", scriptPath: "ai.sh"),
         isRunningScript: true,
         onExecuteScript: { _ in },

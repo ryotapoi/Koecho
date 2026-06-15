@@ -50,11 +50,12 @@ final class ScriptExecutionService {
       appState.isRunningScript = false
       appState.promptScript = nil
       appState.promptText = ""
+      appState.volatilePromptText = ""
     }
 
     appState.errorMessage = nil
 
-    let context = makeScriptContext(prompt: appState.promptText)
+    let context = makeScriptContext(prompt: appState.promptText + appState.volatilePromptText)
 
     let runner = makeScriptRunner()
     do {
@@ -76,6 +77,7 @@ final class ScriptExecutionService {
   func cancelPrompt() {
     appState.promptScript = nil
     appState.promptText = ""
+    appState.volatilePromptText = ""
   }
 
   func cycleAutoRunScript() {

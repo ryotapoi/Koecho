@@ -98,6 +98,7 @@ import Testing
     appState.voiceEngineStatus = "Listening"
     appState.isRunningScript = true
     appState.promptText = "prompt"
+    appState.volatilePromptText = "volatile"
     appState.pendingReplacementPattern = "pattern"
 
     manager.clearState()
@@ -110,6 +111,7 @@ import Testing
     #expect(appState.isRunningScript == false)
     #expect(appState.promptScript == nil)
     #expect(appState.promptText == "")
+    #expect(appState.volatilePromptText == "")
     #expect(appState.pendingReplacementPattern == nil)
   }
 

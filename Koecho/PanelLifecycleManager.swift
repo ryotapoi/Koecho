@@ -50,6 +50,7 @@ final class PanelLifecycleManager {
     appState.isRunningScript = false
     appState.promptScript = nil
     appState.promptText = ""
+    appState.volatilePromptText = ""
     appState.pendingReplacementPattern = nil
   }
 

@@ -215,6 +215,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     switch currentVoiceTarget {
     case .prompt:
       transcriberAlreadyRestarted = false
+      appState.volatilePromptText = ""
       appState.promptText += text
       return
     case .textEditor:
@@ -269,6 +270,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
 
     switch currentVoiceTarget {
     case .prompt:
+      appState.volatilePromptText = text
       return
     case .textEditor:
       transcriberAlreadyRestarted = false

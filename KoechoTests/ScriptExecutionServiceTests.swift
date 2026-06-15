@@ -48,12 +48,30 @@ import Testing
     let (service, appState, _, _) = makeService(inputText: "hello")
     let script = Script(name: "Test", scriptPath: "cat", requiresPrompt: true)
     appState.promptScript = script
+    appState.volatilePromptText = "volatile"
 
     await service.execute(script)
 
     // Script ran and completed, prompt cleared
     #expect(appState.promptScript == nil)
     #expect(appState.promptText == "")
+    #expect(appState.volatilePromptText == "")
+  }
+
+  @Test func executeWithPromptIncludesVolatilePromptText() async throws {
+    let scriptPath = try makeScript("echo \"$KOECHO_PROMPT\"")
+    defer { try? FileManager.default.removeItem(atPath: scriptPath) }
+
+    let (service, appState, _, _) = makeService(inputText: "hello")
+    let script = Script(name: "Test", scriptPath: scriptPath, requiresPrompt: true)
+    appState.promptScript = script
+    appState.promptText = "make "
+    appState.volatilePromptText = "short"
+
+    await service.execute(script)
+
+    #expect(appState.inputText == "make short")
+    #expect(appState.volatilePromptText == "")
   }
 
   // MARK: - Voice insertion point
@@ -220,10 +238,12 @@ import Testing
     let script = Script(name: "Test", scriptPath: "cat", requiresPrompt: true)
     appState.promptScript = script
     appState.promptText = "some prompt"
+    appState.volatilePromptText = "volatile"
 
     service.cancelPrompt()
 
     #expect(appState.promptScript == nil)
     #expect(appState.promptText == "")
+    #expect(appState.volatilePromptText == "")
   }
 }
