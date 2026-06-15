@@ -36,6 +36,7 @@ struct SettingsView: View {
           history: settings.history,
           paste: settings.paste,
           volumeDucking: settings.volumeDucking,
+          appIcon: settings.appIcon,
           onSpeechLocalesChanged: onSpeechLocalesChanged
         )
       case .hotkey:

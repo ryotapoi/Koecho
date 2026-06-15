@@ -158,6 +158,26 @@
         }
       }
     },
+    "App Icon" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリアイコン"
+          }
+        }
+      }
+    },
+    "App icon" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリアイコン"
+          }
+        }
+      }
+    },
     "Audio format conversion not supported." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -276,6 +296,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Command"
+          }
+        }
+      }
+    },
+    "Current" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在"
           }
         }
       }
@@ -561,6 +591,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "言語"
+          }
+        }
+      }
+    },
+    "Legacy (v1.4.2)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旧アイコン（v1.4.2）"
           }
         }
       }

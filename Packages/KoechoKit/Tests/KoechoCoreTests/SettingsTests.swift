@@ -21,6 +21,7 @@ struct SettingsTests {
     _ = settings.history
     _ = settings.paste
     _ = settings.volumeDucking
+    _ = settings.appIcon
   }
 
   @Test func roundTripViaSubSettings() {
@@ -31,12 +32,14 @@ struct SettingsTests {
     settings.script.scriptTimeout = 60.0
     settings.history.isHistoryEnabled = false
     settings.volumeDucking.isVolumeDuckingEnabled = true
+    settings.appIcon.selectedAppIcon = .legacy
 
     let reloaded = Settings(defaults: defaults)
     #expect(reloaded.paste.pasteDelay == 5.0)
     #expect(reloaded.script.scriptTimeout == 60.0)
     #expect(reloaded.history.isHistoryEnabled == false)
     #expect(reloaded.volumeDucking.isVolumeDuckingEnabled == true)
+    #expect(reloaded.appIcon.selectedAppIcon == .legacy)
   }
 
   @Test func subSettingsShareSameDefaults() {
