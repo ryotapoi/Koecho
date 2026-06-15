@@ -34,6 +34,7 @@ struct InputPanelToolbar: View {
         }
       }
       .buttonStyle(.koechoToolbar(isEmphasized: voiceInputMode != .off))
+      .disabled(isRunningScript || voiceInputMode == .off)
       .help(
         voiceInputMode == .off ? String(localized: "Voice input is off") : String(localized: "Voice")
       )
@@ -176,4 +177,28 @@ struct InputPanelToolbar: View {
     replacementShortcutKey: nil
   )
   .frame(width: 350, height: 40)
+}
+
+#Preview("Dark") {
+  let defaults = UserDefaults(suiteName: "preview-toolbar-dark")!
+  let scriptSettings = ScriptSettings(defaults: defaults)
+  scriptSettings.scripts = [
+    Script(name: "Format", scriptPath: "format.sh"),
+    Script(name: "AI", scriptPath: "ai.sh"),
+  ]
+  return InputPanelToolbar(
+    voiceInputMode: .dictation,
+    replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
+    scripts: scriptSettings.scripts,
+    scriptSettings: scriptSettings,
+    isRunningScript: false,
+    hasPromptScript: false,
+    onSwitchEngine: {},
+    onApplyReplacementRules: {},
+    onExecuteScript: { _ in },
+    onConfirm: {},
+    replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
+  )
+  .frame(width: 350, height: 40)
+  .preferredColorScheme(.dark)
 }

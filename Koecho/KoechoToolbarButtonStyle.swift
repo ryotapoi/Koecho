@@ -21,7 +21,7 @@ struct KoechoToolbarButtonStyle: ButtonStyle {
   }
 
   private var foregroundStyle: Color {
-    if isPrimary { return .white }
+    if isPrimary { return Color(nsColor: .windowBackgroundColor) }
     if isEmphasized { return .primary }
     return .secondary
   }
@@ -40,12 +40,12 @@ struct KoechoToolbarButtonStyle: ButtonStyle {
 
   private func backgroundStyle(configuration: Configuration) -> Color {
     if isPrimary {
-      return configuration.isPressed ? Color.primary.opacity(0.82) : Color.primary
+      return configuration.isPressed ? Color.primary.opacity(0.72) : Color.primary.opacity(0.88)
     }
     if isEmphasized {
-      return configuration.isPressed ? Color.white.opacity(0.76) : Color.white.opacity(0.94)
+      return configuration.isPressed ? Color.primary.opacity(0.16) : Color.primary.opacity(0.10)
     }
-    return configuration.isPressed ? Color.primary.opacity(0.08) : Color.white.opacity(0.58)
+    return configuration.isPressed ? Color.primary.opacity(0.12) : Color.primary.opacity(0.06)
   }
 }
 
