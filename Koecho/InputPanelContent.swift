@@ -19,44 +19,36 @@ struct InputPanelContent: View {
   @FocusState private var isPromptFocused: Bool
 
   var body: some View {
-    VStack {
-      Spacer(minLength: 0)
-
-      VStack(spacing: 0) {
-        VStack(spacing: 12) {
-          inputEditor
-          promptInput
-          statusMessage
-          scriptStrip
-        }
-        .padding(.horizontal, 26)
-        .padding(.top, 22)
-        .padding(.bottom, 14)
-
-        InputPanelToolbar(
-          voiceInputMode: appState.settings.voiceInput.effectiveVoiceInputMode,
-          replacementRules: appState.settings.replacement.replacementRules,
-          scriptSettings: appState.settings.script,
-          isRunningScript: appState.isRunningScript,
-          onSwitchEngine: onSwitchEngine,
-          onApplyReplacementRules: onApplyReplacementRules,
-          onConfirm: onConfirm,
-          replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
-        )
+    VStack(spacing: 0) {
+      VStack(spacing: 12) {
+        inputEditor
+        promptInput
+        statusMessage
+        scriptStrip
       }
-      .background(.ultraThinMaterial)
-      .clipShape(RoundedRectangle(cornerRadius: 20))
-      .overlay {
-        RoundedRectangle(cornerRadius: 20)
-          .strokeBorder(.white.opacity(0.35), lineWidth: 1)
-      }
-      .shadow(color: .black.opacity(0.18), radius: 24, y: 14)
-      .frame(maxWidth: 700)
+      .padding(.horizontal, 26)
+      .padding(.top, 26)
+      .padding(.bottom, 14)
 
-      Spacer(minLength: 0)
+      InputPanelToolbar(
+        voiceInputMode: appState.settings.voiceInput.effectiveVoiceInputMode,
+        replacementRules: appState.settings.replacement.replacementRules,
+        scriptSettings: appState.settings.script,
+        isRunningScript: appState.isRunningScript,
+        onSwitchEngine: onSwitchEngine,
+        onApplyReplacementRules: onApplyReplacementRules,
+        onConfirm: onConfirm,
+        replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
+      )
     }
-    .frame(minWidth: 200, maxWidth: .infinity)
-    .background(.regularMaterial)
+    .frame(minWidth: 200, maxWidth: .infinity, maxHeight: .infinity)
+    .background(.ultraThinMaterial)
+    .clipShape(RoundedRectangle(cornerRadius: 20))
+    .overlay {
+      RoundedRectangle(cornerRadius: 20)
+        .strokeBorder(.white.opacity(0.35), lineWidth: 1)
+    }
+    .shadow(color: .black.opacity(0.18), radius: 24, y: 14)
     .onChange(of: appState.promptScript) {
       if appState.promptScript != nil {
         isPromptFocused = true
@@ -81,7 +73,7 @@ struct InputPanelContent: View {
         onViewCreated: onTextViewCreated
       )
       .opacity(appState.voiceEngineStatus != nil ? 0.5 : 1.0)
-      .frame(minHeight: 54, idealHeight: 70, maxHeight: 150)
+      .frame(minHeight: 120, maxHeight: CGFloat.infinity)
       .popover(
         isPresented: Binding(
           get: { appState.pendingReplacementPattern != nil },
@@ -105,8 +97,8 @@ struct InputPanelContent: View {
         Text("入力...")
           .font(.title3)
           .foregroundStyle(.tertiary)
-          .padding(.top, 12)
-          .padding(.leading, 11)
+          .padding(.top, 56)
+          .padding(.leading, 46)
           .allowsHitTesting(false)
       }
     }

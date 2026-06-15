@@ -147,13 +147,12 @@
         }
       }
     },
-    "Apply replacement rules" : {
-      "extractionState" : "manual",
+    "App icon" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "置換ルールを適用"
+            "value" : "アプリアイコン"
           }
         }
       }
@@ -168,12 +167,13 @@
         }
       }
     },
-    "App icon" : {
+    "Apply replacement rules" : {
+      "extractionState" : "manual",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アプリアイコン"
+            "value" : "置換ルールを適用"
           }
         }
       }
@@ -239,16 +239,6 @@
         }
       }
     },
-    "Confirm" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "確定"
-          }
-        }
-      }
-    },
     "Choose..." : {
       "localizations" : {
         "ja" : {
@@ -310,12 +300,12 @@
         }
       }
     },
-    "Current" : {
+    "Confirm" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "現在"
+            "value" : "確定"
           }
         }
       }
@@ -357,6 +347,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最後の履歴をコピー"
+          }
+        }
+      }
+    },
+    "Current" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在"
           }
         }
       }
@@ -605,16 +605,6 @@
         }
       }
     },
-    "Legacy (v1.4.2)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "旧アイコン（v1.4.2）"
-          }
-        }
-      }
-    },
     "Left" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -622,6 +612,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "左"
+          }
+        }
+      }
+    },
+    "Legacy (v1.4.2)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "旧アイコン（v1.4.2）"
           }
         }
       }
@@ -1002,6 +1002,7 @@
       }
     },
     "Run" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1074,6 +1075,9 @@
           }
         }
       }
+    },
+    "SCRIPTS" : {
+
     },
     "Search history" : {
       "localizations" : {
@@ -1358,6 +1362,12 @@
           }
         }
       }
+    },
+    "まだありません — 設定で追加できます" : {
+
+    },
+    "入力..." : {
+
     }
   },
   "version" : "1.0"

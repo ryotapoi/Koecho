@@ -33,7 +33,7 @@ final class InputPanelController {
     self.paster = paster
     self.historyStore = historyStore
 
-    self.panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200))
+    self.panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 840, height: 360))
 
     self.lifecycleManager = PanelLifecycleManager(
       appState: appState,

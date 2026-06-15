@@ -110,7 +110,7 @@ struct InputPanelControllerTests {
 
   @Test func panelHasResizeConstraints() {
     let ctx = makeController()
-    #expect(ctx.controller.panel.contentMinSize == NSSize(width: 200, height: 150))
+    #expect(ctx.controller.panel.contentMinSize == NSSize(width: 520, height: 240))
     #expect(ctx.controller.panel.frameAutosaveName == "InputPanel")
   }
 
