@@ -48,11 +48,12 @@ struct InputPanelContent: View {
     .background {
       RoundedRectangle(cornerRadius: cornerRadius)
         .fill(.ultraThinMaterial)
+        .ignoresSafeArea(.container, edges: .top)
     }
-    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     .overlay {
       RoundedRectangle(cornerRadius: cornerRadius)
         .strokeBorder(.white.opacity(0.35), lineWidth: 1)
+        .ignoresSafeArea(.container, edges: .top)
     }
     .shadow(color: .black.opacity(0.18), radius: 24, y: 14)
     .onChange(of: appState.promptScript) {
