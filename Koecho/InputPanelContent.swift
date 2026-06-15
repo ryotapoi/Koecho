@@ -4,7 +4,6 @@ import SwiftUI
 
 struct InputPanelContent: View {
   private let cornerRadius: CGFloat = 20
-  private let titlebarContentTopPadding: CGFloat = 44
 
   @Bindable var appState: AppState
   var onExecuteScript: (Script) async -> Void
@@ -30,7 +29,7 @@ struct InputPanelContent: View {
         scriptStrip
       }
       .padding(.horizontal, 12)
-      .padding(.top, titlebarContentTopPadding)
+      .padding(.top, 12)
       .padding(.bottom, 8)
 
       InputPanelToolbar(
@@ -49,7 +48,6 @@ struct InputPanelContent: View {
     .background {
       RoundedRectangle(cornerRadius: cornerRadius)
         .fill(.ultraThinMaterial)
-        .ignoresSafeArea()
     }
     .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     .overlay {
