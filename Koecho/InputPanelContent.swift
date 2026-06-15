@@ -93,15 +93,6 @@ struct InputPanelContent: View {
           )
         }
       }
-
-      if appState.inputText.isEmpty {
-        Text("入力...")
-          .font(.body)
-          .foregroundStyle(.tertiary)
-          .padding(.top, 8)
-          .padding(.leading, 5)
-          .allowsHitTesting(false)
-      }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
