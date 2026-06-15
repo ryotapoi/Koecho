@@ -19,6 +19,7 @@ final class InputPanelController {
   // production-unused forwarding properties on the controller.
   private(set) var voiceCoordinator: VoiceInputCoordinator!
   private var lifecycleManager: PanelLifecycleManager!
+  private var lastEnabledVoiceInputMode: VoiceInputMode = defaultEnabledVoiceInputMode()
 
   init(
     appState: AppState,
@@ -245,6 +246,19 @@ final class InputPanelController {
     await voiceCoordinator.switchEngine()
   }
 
+  func toggleVoiceInput() async {
+    guard appState.isInputPanelVisible, !isConfirming else { return }
+
+    if appState.settings.voiceInput.effectiveVoiceInputMode == .off {
+      appState.settings.voiceInput.voiceInputMode = lastEnabledVoiceInputMode
+      await voiceCoordinator.switchEngine()
+    } else {
+      lastEnabledVoiceInputMode = appState.settings.voiceInput.effectiveVoiceInputMode
+      await voiceCoordinator.disableEngine()
+      appState.settings.voiceInput.voiceInputMode = .off
+    }
+  }
+
   // MARK: - Text editing
 
   func handleTextChanged(_ text: String) {
@@ -310,7 +324,7 @@ final class InputPanelController {
           await self?.confirm()
         },
         onSwitchEngine: { [weak self] in
-          await self?.switchEngine()
+          await self?.toggleVoiceInput()
         },
         onCancelPrompt: { [weak self] in
           self?.cancelPrompt()
@@ -409,6 +423,11 @@ final class InputPanelController {
   private func focusTextView() {
     guard let textView else { return }
     textView.makeFirstResponder(in: panel)
+  }
+
+  private static func defaultEnabledVoiceInputMode() -> VoiceInputMode {
+    if #available(macOS 26, *) { return .speechAnalyzer }
+    return .dictation
   }
 
   private func clearTextView(startEngine: Bool) {

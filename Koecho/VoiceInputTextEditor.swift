@@ -20,8 +20,8 @@ struct VoiceInputTextEditor: NSViewRepresentable {
     textView.isAutomaticQuoteSubstitutionEnabled = false
     textView.isAutomaticDashSubstitutionEnabled = false
     textView.drawsBackground = false
-    textView.font = .systemFont(ofSize: 20)
-    textView.textContainerInset = NSSize(width: 10, height: 12)
+    textView.font = .systemFont(ofSize: NSFont.systemFontSize)
+    textView.textContainerInset = NSSize(width: 5, height: 8)
     textView.isVerticallyResizable = true
     textView.isHorizontallyResizable = false
     textView.textContainer?.widthTracksTextView = true
@@ -66,7 +66,7 @@ struct VoiceInputTextEditor: NSViewRepresentable {
     }
 
     textView.isEditable = !isDisabled
-    textView.font = .systemFont(ofSize: 20)
+    textView.font = .systemFont(ofSize: NSFont.systemFontSize)
   }
 
   final class Coordinator {

@@ -20,21 +20,22 @@ struct InputPanelContent: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      VStack(spacing: 12) {
+      VStack(spacing: 8) {
         inputEditor
         promptInput
         statusMessage
         scriptStrip
       }
-      .padding(.horizontal, 26)
-      .padding(.top, 26)
-      .padding(.bottom, 14)
+      .padding(.horizontal, 12)
+      .padding(.top, 12)
+      .padding(.bottom, 8)
 
       InputPanelToolbar(
         voiceInputMode: appState.settings.voiceInput.effectiveVoiceInputMode,
         replacementRules: appState.settings.replacement.replacementRules,
         scriptSettings: appState.settings.script,
         isRunningScript: appState.isRunningScript,
+        hotkeyConfig: appState.settings.hotkey.hotkeyConfig,
         onSwitchEngine: onSwitchEngine,
         onApplyReplacementRules: onApplyReplacementRules,
         onConfirm: onConfirm,
@@ -95,13 +96,14 @@ struct InputPanelContent: View {
 
       if appState.inputText.isEmpty {
         Text("入力...")
-          .font(.title3)
+          .font(.body)
           .foregroundStyle(.tertiary)
-          .padding(.top, 56)
-          .padding(.leading, 46)
+          .padding(.top, 8)
+          .padding(.leading, 5)
           .allowsHitTesting(false)
       }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
 
   @ViewBuilder

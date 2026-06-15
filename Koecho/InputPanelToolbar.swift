@@ -6,6 +6,7 @@ struct InputPanelToolbar: View {
   let replacementRules: [ReplacementRule]
   @Bindable var scriptSettings: ScriptSettings
   let isRunningScript: Bool
+  let hotkeyConfig: HotkeyConfig
   var onSwitchEngine: () async -> Void
   var onApplyReplacementRules: () -> Void
   var onConfirm: () async -> Void
@@ -31,7 +32,7 @@ struct InputPanelToolbar: View {
         }
       }
       .buttonStyle(.koechoToolbar(isEmphasized: voiceInputMode != .off))
-      .disabled(isRunningScript || voiceInputMode == .off)
+      .disabled(isRunningScript)
       .help(
         voiceInputMode == .off ? String(localized: "Voice input is off") : String(localized: "Voice")
       )
@@ -42,7 +43,7 @@ struct InputPanelToolbar: View {
         } label: {
           Label("Replace", systemImage: "arrow.2.squarepath")
         }
-        .buttonStyle(.koechoToolbar())
+        .buttonStyle(.koechoToolbar(isEmphasized: true))
         .help(
           helpText(
             String(localized: "Apply replacement rules"), shortcut: replacementShortcutKey)
@@ -57,8 +58,14 @@ struct InputPanelToolbar: View {
       Button {
         Task { await onConfirm() }
       } label: {
-        Label("Confirm", systemImage: "fn")
+        HStack(spacing: 8) {
+          Text(hotkeyConfig.modifierBadge)
+            .font(.caption.bold())
+          Text("Confirm")
+            .font(.caption.bold())
+        }
       }
+      .accessibilityLabel(Text("Confirm"))
       .buttonStyle(.koechoToolbar(isPrimary: true))
       .keyboardShortcut(.return, modifiers: .command)
       .disabled(isRunningScript)
@@ -115,6 +122,18 @@ struct InputPanelToolbar: View {
   }
 }
 
+private extension HotkeyConfig {
+  var modifierBadge: String {
+    switch modifierKey {
+    case .command: "\u{2318}"
+    case .shift: "\u{21E7}"
+    case .option: "\u{2325}"
+    case .control: "\u{2303}"
+    case .fn: "fn"
+    }
+  }
+}
+
 // MARK: - Previews
 
 #Preview("Full") {
@@ -129,6 +148,7 @@ struct InputPanelToolbar: View {
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     scriptSettings: scriptSettings,
     isRunningScript: false,
+    hotkeyConfig: .default,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
     onConfirm: {},
@@ -145,6 +165,7 @@ struct InputPanelToolbar: View {
     replacementRules: [],
     scriptSettings: scriptSettings,
     isRunningScript: true,
+    hotkeyConfig: .default,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
     onConfirm: {},
@@ -165,6 +186,7 @@ struct InputPanelToolbar: View {
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     scriptSettings: scriptSettings,
     isRunningScript: false,
+    hotkeyConfig: .default,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
     onConfirm: {},

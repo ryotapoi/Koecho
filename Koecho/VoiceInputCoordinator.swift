@@ -111,6 +111,17 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     logger.info("Engine switched while panel visible")
   }
 
+  func disableEngine() async {
+    await engine.stop()
+    textView?.clearVolatileText()
+    if let textView {
+      appState.inputText = textView.finalizedString
+    }
+    clearReplayState()
+    accumulatedFinalizedText = ""
+    logger.info("Engine disabled while panel visible")
+  }
+
   func prepareForShow() {
     regenerateEngine()
     resetShowState()

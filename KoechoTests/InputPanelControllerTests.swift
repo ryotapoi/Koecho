@@ -214,4 +214,35 @@ struct InputPanelControllerTests {
     ctx.controller.cancel()
     #expect(ctx.appState.isInputPanelVisible == false)
   }
+
+  @Test func toggleVoiceInputDisablesEnabledVoice() async {
+    let ctx = makeController()
+    ctx.appState.settings.voiceInput.voiceInputMode = .dictation
+    ctx.controller.showPanel()
+
+    await ctx.controller.toggleVoiceInput()
+
+    #expect(ctx.appState.settings.voiceInput.voiceInputMode == .off)
+  }
+
+  @Test func toggleVoiceInputEnablesVoiceOffMode() async {
+    let ctx = makeController()
+    ctx.appState.settings.voiceInput.voiceInputMode = .off
+    ctx.controller.showPanel()
+
+    await ctx.controller.toggleVoiceInput()
+
+    #expect(ctx.appState.settings.voiceInput.effectiveVoiceInputMode != .off)
+  }
+
+  @Test func toggleVoiceInputRestoresPreviousEnabledMode() async {
+    let ctx = makeController()
+    ctx.appState.settings.voiceInput.voiceInputMode = .dictation
+    ctx.controller.showPanel()
+
+    await ctx.controller.toggleVoiceInput()
+    await ctx.controller.toggleVoiceInput()
+
+    #expect(ctx.appState.settings.voiceInput.effectiveVoiceInputMode == .dictation)
+  }
 }
