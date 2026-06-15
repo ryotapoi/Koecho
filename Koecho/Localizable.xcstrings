@@ -239,6 +239,16 @@
         }
       }
     },
+    "Confirm" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確定"
+          }
+        }
+      }
+    },
     "Choose..." : {
       "localizations" : {
         "ja" : {
@@ -1295,6 +1305,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正規表現を使用"
+          }
+        }
+      }
+    },
+    "Voice" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声"
           }
         }
       }

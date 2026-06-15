@@ -2,13 +2,16 @@ import KoechoCore
 import SwiftUI
 
 struct InputPanelToolbar: View {
+  let voiceInputMode: VoiceInputMode
   let replacementRules: [ReplacementRule]
   let scripts: [Script]
   @Bindable var scriptSettings: ScriptSettings
   let isRunningScript: Bool
   let hasPromptScript: Bool
+  var onSwitchEngine: () async -> Void
   var onApplyReplacementRules: () -> Void
   var onExecuteScript: (Script) async -> Void
+  var onConfirm: () async -> Void
   let replacementShortcutKey: ShortcutKey?
 
   private var hasAutoRunScripts: Bool {
@@ -16,71 +19,75 @@ struct InputPanelToolbar: View {
   }
 
   var body: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: 8) {
+      Button {
+        Task { await onSwitchEngine() }
+      } label: {
+        Label {
+          Text("Voice")
+        } icon: {
+          Image("MenuBarIcon")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 12, height: 12)
+        }
+      }
+      .buttonStyle(.koechoToolbar(isEmphasized: voiceInputMode != .off))
+      .help(
+        voiceInputMode == .off ? String(localized: "Voice input is off") : String(localized: "Voice")
+      )
+
+      if !replacementRules.isEmpty {
+        Button {
+          onApplyReplacementRules()
+        } label: {
+          Label("Replace", systemImage: "arrow.2.squarepath")
+        }
+        .buttonStyle(.koechoToolbar())
+        .help(
+          helpText(
+            String(localized: "Apply replacement rules"), shortcut: replacementShortcutKey)
+        )
+        .disabled(isRunningScript)
+      }
+
       ScrollView(.horizontal) {
-        HStack(spacing: 4) {
-          if !replacementRules.isEmpty {
-            Button {
-              onApplyReplacementRules()
-            } label: {
-              Label("Replace", systemImage: "arrow.2.squarepath")
-                .font(.caption)
-            }
-            .help(
-              helpText(
-                String(localized: "Apply replacement rules"), shortcut: replacementShortcutKey)
-            )
-            .disabled(isRunningScript)
-          }
-
-          if !replacementRules.isEmpty && !scripts.isEmpty {
-            Divider()
-              .frame(height: 14)
-          }
-
+        HStack(spacing: 6) {
           ForEach(scripts) { script in
             Button {
               Task { await onExecuteScript(script) }
             } label: {
               Text(script.name)
-                .font(.caption)
             }
-            .frame(minWidth: 32)
+            .buttonStyle(.koechoToolbar())
             .help(helpText(script.name, shortcut: script.shortcutKey))
             .disabled(isRunningScript || hasPromptScript)
           }
         }
-        .padding(.leading, 8)
-        .padding(.trailing, hasAutoRunScripts ? 0 : 8)
+        .padding(.vertical, 1)
       }
       .scrollIndicators(.hidden)
 
-      if hasAutoRunScripts {
-        Divider()
-          .frame(height: 14)
+      Spacer(minLength: 8)
 
-        Menu {
-          AutoRunScriptMenuContent(scriptSettings: scriptSettings)
-        } label: {
-          HStack(spacing: 2) {
-            Image(systemName: "bolt.fill")
-              .font(.caption)
-            Text(scriptSettings.autoRunScript?.name ?? String(localized: "None"))
-              .font(.caption)
-            Image(systemName: "chevron.up.chevron.down")
-              .font(.system(size: 9))
-          }
-          .foregroundStyle(.secondary)
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .help(
-          helpText(
-            String(localized: "Cycle auto-run script selection"),
-            shortcut: scriptSettings.autoRunShortcutKey)
-        )
-        .padding(.trailing, 8)
+      autoRunMenu
+
+      Button {
+        Task { await onConfirm() }
+      } label: {
+        Label("Confirm", systemImage: "fn")
       }
+      .buttonStyle(.koechoToolbar(isPrimary: true))
+      .keyboardShortcut(.return, modifiers: .command)
+      .disabled(isRunningScript)
+    }
+    .font(.caption)
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+    .background(.bar)
+    .overlay(alignment: .top) {
+      Divider()
     }
   }
 
@@ -89,6 +96,40 @@ struct InputPanelToolbar: View {
       "\(label) (\(shortcut.displayName))"
     } else {
       label
+    }
+  }
+
+  @ViewBuilder
+  private var autoRunMenu: some View {
+    if hasAutoRunScripts {
+      Menu {
+        AutoRunScriptMenuContent(scriptSettings: scriptSettings)
+      } label: {
+        Label {
+          Text(scriptSettings.autoRunScript?.name ?? String(localized: "None"))
+        } icon: {
+          Image(systemName: "bolt.fill")
+        }
+      }
+      .menuStyle(.borderlessButton)
+      .buttonStyle(.koechoToolbar())
+      .fixedSize()
+      .help(
+        helpText(
+          String(localized: "Cycle auto-run script selection"),
+          shortcut: scriptSettings.autoRunShortcutKey)
+      )
+    } else {
+      Button {
+      } label: {
+        Label {
+          Text("None")
+        } icon: {
+          Image(systemName: "bolt.fill")
+        }
+      }
+      .buttonStyle(.koechoToolbar())
+      .disabled(true)
     }
   }
 }
@@ -103,13 +144,16 @@ struct InputPanelToolbar: View {
     Script(name: "AI", scriptPath: "ai.sh"),
   ]
   return InputPanelToolbar(
+    voiceInputMode: .dictation,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     scripts: scriptSettings.scripts,
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: false,
+    onSwitchEngine: {},
     onApplyReplacementRules: {},
     onExecuteScript: { _ in },
+    onConfirm: {},
     replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
   )
   .frame(width: 350, height: 40)
@@ -119,13 +163,16 @@ struct InputPanelToolbar: View {
   let defaults = UserDefaults(suiteName: "preview-toolbar-running")!
   let scriptSettings = ScriptSettings(defaults: defaults)
   return InputPanelToolbar(
+    voiceInputMode: .off,
     replacementRules: [],
     scripts: [Script(name: "Format", scriptPath: "format.sh")],
     scriptSettings: scriptSettings,
     isRunningScript: true,
     hasPromptScript: false,
+    onSwitchEngine: {},
     onApplyReplacementRules: {},
     onExecuteScript: { _ in },
+    onConfirm: {},
     replacementShortcutKey: nil
   )
   .frame(width: 350, height: 40)

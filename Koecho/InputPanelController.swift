@@ -306,6 +306,12 @@ final class InputPanelController {
         onExecuteScript: { [weak self] script in
           await self?.scriptService.execute(script)
         },
+        onConfirm: { [weak self] in
+          await self?.confirm()
+        },
+        onSwitchEngine: { [weak self] in
+          await self?.switchEngine()
+        },
         onCancelPrompt: { [weak self] in
           self?.cancelPrompt()
         },

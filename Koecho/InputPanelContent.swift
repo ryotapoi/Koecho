@@ -5,6 +5,8 @@ import SwiftUI
 struct InputPanelContent: View {
   @Bindable var appState: AppState
   var onExecuteScript: (Script) async -> Void
+  var onConfirm: () async -> Void
+  var onSwitchEngine: () async -> Void
   var onCancelPrompt: () -> Void
   var onApplyReplacementRules: () -> Void = {}
   var onPromptFocused: () -> Void = {}
@@ -47,23 +49,6 @@ struct InputPanelContent: View {
             }
           )
         }
-      }
-
-      if !appState.settings.replacement.replacementRules.isEmpty
-        || !appState.settings.script.scripts.isEmpty
-        || !appState.settings.script.eligibleAutoRunScripts.isEmpty
-      {
-        InputPanelToolbar(
-          replacementRules: appState.settings.replacement.replacementRules,
-          scripts: appState.settings.script.scripts,
-          scriptSettings: appState.settings.script,
-          isRunningScript: appState.isRunningScript,
-          hasPromptScript: appState.promptScript != nil,
-          onApplyReplacementRules: onApplyReplacementRules,
-          onExecuteScript: onExecuteScript,
-          replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
-        )
-        .padding(.top, 6)
       }
 
       if appState.promptScript != nil {
@@ -115,10 +100,24 @@ struct InputPanelContent: View {
       }
 
       Spacer()
-        .frame(height: 4)
+        .frame(height: 10)
+
+      InputPanelToolbar(
+        voiceInputMode: appState.settings.voiceInput.effectiveVoiceInputMode,
+        replacementRules: appState.settings.replacement.replacementRules,
+        scripts: appState.settings.script.scripts,
+        scriptSettings: appState.settings.script,
+        isRunningScript: appState.isRunningScript,
+        hasPromptScript: appState.promptScript != nil,
+        onSwitchEngine: onSwitchEngine,
+        onApplyReplacementRules: onApplyReplacementRules,
+        onExecuteScript: onExecuteScript,
+        onConfirm: onConfirm,
+        replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
+      )
     }
     .frame(minWidth: 200, maxWidth: .infinity)
-    .background(.ultraThinMaterial)
+    .background(.regularMaterial)
     .onChange(of: appState.promptScript) {
       if appState.promptScript != nil {
         isPromptFocused = true
@@ -142,6 +141,8 @@ struct InputPanelContent: View {
   return InputPanelContent(
     appState: appState,
     onExecuteScript: { _ in },
+    onConfirm: {},
+    onSwitchEngine: {},
     onCancelPrompt: {}
   )
   .frame(width: 300, height: 200)
@@ -155,6 +156,8 @@ struct InputPanelContent: View {
   return InputPanelContent(
     appState: appState,
     onExecuteScript: { _ in },
+    onConfirm: {},
+    onSwitchEngine: {},
     onCancelPrompt: {}
   )
   .frame(width: 300, height: 200)
