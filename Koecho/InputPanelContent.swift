@@ -3,6 +3,9 @@ import KoechoPlatform
 import SwiftUI
 
 struct InputPanelContent: View {
+  private let cornerRadius: CGFloat = 20
+  private let titlebarContentTopPadding: CGFloat = 44
+
   @Bindable var appState: AppState
   var onExecuteScript: (Script) async -> Void
   var onConfirm: () async -> Void
@@ -27,7 +30,7 @@ struct InputPanelContent: View {
         scriptStrip
       }
       .padding(.horizontal, 12)
-      .padding(.top, 12)
+      .padding(.top, titlebarContentTopPadding)
       .padding(.bottom, 8)
 
       InputPanelToolbar(
@@ -43,10 +46,14 @@ struct InputPanelContent: View {
       )
     }
     .frame(minWidth: 200, maxWidth: .infinity, maxHeight: .infinity)
-    .background(.ultraThinMaterial)
-    .clipShape(RoundedRectangle(cornerRadius: 20))
+    .background {
+      RoundedRectangle(cornerRadius: cornerRadius)
+        .fill(.ultraThinMaterial)
+        .ignoresSafeArea()
+    }
+    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     .overlay {
-      RoundedRectangle(cornerRadius: 20)
+      RoundedRectangle(cornerRadius: cornerRadius)
         .strokeBorder(.white.opacity(0.35), lineWidth: 1)
     }
     .shadow(color: .black.opacity(0.18), radius: 24, y: 14)

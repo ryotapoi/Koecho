@@ -19,6 +19,9 @@ final class InputPanel: NSPanel {
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     titlebarAppearsTransparent = true
     titleVisibility = .hidden
+    titlebarSeparatorStyle = .none
+    isOpaque = false
+    backgroundColor = .clear
     isMovableByWindowBackground = true
     isReleasedWhenClosed = false
     contentMinSize = NSSize(width: 520, height: 240)
