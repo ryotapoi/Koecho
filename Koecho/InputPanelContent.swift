@@ -19,7 +19,57 @@ struct InputPanelContent: View {
   @FocusState private var isPromptFocused: Bool
 
   var body: some View {
-    VStack(spacing: 0) {
+    VStack {
+      Spacer(minLength: 0)
+
+      VStack(spacing: 0) {
+        VStack(spacing: 12) {
+          inputEditor
+          promptInput
+          statusMessage
+          scriptStrip
+        }
+        .padding(.horizontal, 26)
+        .padding(.top, 22)
+        .padding(.bottom, 14)
+
+        InputPanelToolbar(
+          voiceInputMode: appState.settings.voiceInput.effectiveVoiceInputMode,
+          replacementRules: appState.settings.replacement.replacementRules,
+          scriptSettings: appState.settings.script,
+          isRunningScript: appState.isRunningScript,
+          onSwitchEngine: onSwitchEngine,
+          onApplyReplacementRules: onApplyReplacementRules,
+          onConfirm: onConfirm,
+          replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
+        )
+      }
+      .background(.ultraThinMaterial)
+      .clipShape(RoundedRectangle(cornerRadius: 20))
+      .overlay {
+        RoundedRectangle(cornerRadius: 20)
+          .strokeBorder(.white.opacity(0.35), lineWidth: 1)
+      }
+      .shadow(color: .black.opacity(0.18), radius: 24, y: 14)
+      .frame(maxWidth: 700)
+
+      Spacer(minLength: 0)
+    }
+    .frame(minWidth: 200, maxWidth: .infinity)
+    .background(.regularMaterial)
+    .onChange(of: appState.promptScript) {
+      if appState.promptScript != nil {
+        isPromptFocused = true
+        onPromptFocused()
+      } else {
+        isPromptFocused = false
+        onFocusTextEditor()
+      }
+    }
+  }
+
+  private var inputEditor: some View {
+    ZStack(alignment: .topLeading) {
       VoiceInputTextEditor(
         text: appState.inputText,
         isDisabled: appState.isRunningScript,
@@ -31,7 +81,7 @@ struct InputPanelContent: View {
         onViewCreated: onTextViewCreated
       )
       .opacity(appState.voiceEngineStatus != nil ? 0.5 : 1.0)
-      .frame(minHeight: 60, maxHeight: CGFloat.infinity)
+      .frame(minHeight: 54, idealHeight: 70, maxHeight: 150)
       .popover(
         isPresented: Binding(
           get: { appState.pendingReplacementPattern != nil },
@@ -51,82 +101,72 @@ struct InputPanelContent: View {
         }
       }
 
-      if appState.promptScript != nil {
-        PromptInputView(
-          promptText: $appState.promptText,
-          promptScript: appState.promptScript,
-          isRunningScript: appState.isRunningScript,
-          onExecuteScript: onExecuteScript,
-          onCancelPrompt: onCancelPrompt,
-          isFocused: $isPromptFocused
-        )
-        .padding(.top, 4)
+      if appState.inputText.isEmpty {
+        Text("入力...")
+          .font(.title3)
+          .foregroundStyle(.tertiary)
+          .padding(.top, 12)
+          .padding(.leading, 11)
+          .allowsHitTesting(false)
       }
+    }
+  }
 
-      if let status = appState.voiceEngineStatus {
-        HStack(spacing: 4) {
-          ProgressView()
-            .controlSize(.small)
-          Text(status)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 8)
-        .padding(.top, 4)
-      }
-
-      if appState.settings.voiceInput.effectiveVoiceInputMode == .off {
-        HStack(spacing: 4) {
-          Image(systemName: "mic.slash")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-          Text("Voice input is off")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 8)
-        .padding(.top, 4)
-      }
-
-      if let errorMessage = appState.errorMessage {
-        Text(errorMessage)
-          .font(.caption)
-          .foregroundStyle(.red)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 8)
-          .padding(.top, 4)
-      }
-
-      Spacer()
-        .frame(height: 10)
-
-      InputPanelToolbar(
-        voiceInputMode: appState.settings.voiceInput.effectiveVoiceInputMode,
-        replacementRules: appState.settings.replacement.replacementRules,
-        scripts: appState.settings.script.scripts,
-        scriptSettings: appState.settings.script,
+  @ViewBuilder
+  private var promptInput: some View {
+    if appState.promptScript != nil {
+      PromptInputView(
+        promptText: $appState.promptText,
+        promptScript: appState.promptScript,
         isRunningScript: appState.isRunningScript,
-        hasPromptScript: appState.promptScript != nil,
-        onSwitchEngine: onSwitchEngine,
-        onApplyReplacementRules: onApplyReplacementRules,
         onExecuteScript: onExecuteScript,
-        onConfirm: onConfirm,
-        replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
+        onCancelPrompt: onCancelPrompt,
+        isFocused: $isPromptFocused
       )
     }
-    .frame(minWidth: 200, maxWidth: .infinity)
-    .background(.regularMaterial)
-    .onChange(of: appState.promptScript) {
-      if appState.promptScript != nil {
-        isPromptFocused = true
-        onPromptFocused()
-      } else {
-        isPromptFocused = false
-        onFocusTextEditor()
+  }
+
+  @ViewBuilder
+  private var statusMessage: some View {
+    if let status = appState.voiceEngineStatus {
+      HStack(spacing: 4) {
+        ProgressView()
+          .controlSize(.small)
+        Text(status)
+          .font(.caption)
+          .foregroundStyle(.secondary)
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    if appState.settings.voiceInput.effectiveVoiceInputMode == .off {
+      HStack(spacing: 4) {
+        Image(systemName: "mic.slash")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+        Text("Voice input is off")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    if let errorMessage = appState.errorMessage {
+      Text(errorMessage)
+        .font(.caption)
+        .foregroundStyle(.red)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+
+  private var scriptStrip: some View {
+    InputPanelScriptStrip(
+      scripts: appState.settings.script.scripts,
+      selectedScript: appState.promptScript,
+      isRunningScript: appState.isRunningScript,
+      hasPromptScript: appState.promptScript != nil,
+      onExecuteScript: onExecuteScript
+    )
   }
 }
 

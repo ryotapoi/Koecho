@@ -10,26 +10,29 @@ struct PromptInputView: View {
   var isFocused: FocusState<Bool>.Binding
 
   var body: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: 10) {
+      if let promptScript {
+        Label {
+          Text(promptScript.name)
+        } icon: {
+          Image(systemName: "bolt.fill")
+        }
+        .font(.caption.weight(.bold))
+        .foregroundStyle(Color(nsColor: .windowBackgroundColor))
+        .padding(.horizontal, 10)
+        .frame(height: 30)
+        .background(Color.primary.opacity(0.88), in: RoundedRectangle(cornerRadius: 8))
+      }
+
       TextField("Prompt", text: $promptText)
         .focused(isFocused)
-        .textFieldStyle(.roundedBorder)
-        .font(.caption)
+        .textFieldStyle(.plain)
+        .font(.body)
         .onSubmit {
           if let script = promptScript {
             Task { await onExecuteScript(script) }
           }
         }
-
-      Button {
-        if let script = promptScript {
-          Task { await onExecuteScript(script) }
-        }
-      } label: {
-        Text("Run")
-          .font(.caption)
-      }
-      .disabled(isRunningScript)
 
       Button {
         onCancelPrompt()
@@ -40,7 +43,12 @@ struct PromptInputView: View {
       }
       .disabled(isRunningScript)
     }
-    .padding(.horizontal, 8)
+    .padding(8)
+    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+    .overlay {
+      RoundedRectangle(cornerRadius: 10)
+        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+    }
   }
 }
 

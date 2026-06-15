@@ -4,13 +4,10 @@ import SwiftUI
 struct InputPanelToolbar: View {
   let voiceInputMode: VoiceInputMode
   let replacementRules: [ReplacementRule]
-  let scripts: [Script]
   @Bindable var scriptSettings: ScriptSettings
   let isRunningScript: Bool
-  let hasPromptScript: Bool
   var onSwitchEngine: () async -> Void
   var onApplyReplacementRules: () -> Void
-  var onExecuteScript: (Script) async -> Void
   var onConfirm: () async -> Void
   let replacementShortcutKey: ShortcutKey?
 
@@ -53,23 +50,6 @@ struct InputPanelToolbar: View {
         .disabled(isRunningScript)
       }
 
-      ScrollView(.horizontal) {
-        HStack(spacing: 6) {
-          ForEach(scripts) { script in
-            Button {
-              Task { await onExecuteScript(script) }
-            } label: {
-              Text(script.name)
-            }
-            .buttonStyle(.koechoToolbar())
-            .help(helpText(script.name, shortcut: script.shortcutKey))
-            .disabled(isRunningScript || hasPromptScript)
-          }
-        }
-        .padding(.vertical, 1)
-      }
-      .scrollIndicators(.hidden)
-
       Spacer(minLength: 8)
 
       autoRunMenu
@@ -85,8 +65,8 @@ struct InputPanelToolbar: View {
     }
     .font(.caption)
     .padding(.horizontal, 12)
-    .padding(.vertical, 8)
-    .background(.bar)
+    .padding(.vertical, 9)
+    .background(.regularMaterial)
     .overlay(alignment: .top) {
       Divider()
     }
@@ -147,13 +127,10 @@ struct InputPanelToolbar: View {
   return InputPanelToolbar(
     voiceInputMode: .dictation,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
-    scripts: scriptSettings.scripts,
     scriptSettings: scriptSettings,
     isRunningScript: false,
-    hasPromptScript: false,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
-    onExecuteScript: { _ in },
     onConfirm: {},
     replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
   )
@@ -166,13 +143,10 @@ struct InputPanelToolbar: View {
   return InputPanelToolbar(
     voiceInputMode: .off,
     replacementRules: [],
-    scripts: [Script(name: "Format", scriptPath: "format.sh")],
     scriptSettings: scriptSettings,
     isRunningScript: true,
-    hasPromptScript: false,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
-    onExecuteScript: { _ in },
     onConfirm: {},
     replacementShortcutKey: nil
   )
@@ -189,13 +163,10 @@ struct InputPanelToolbar: View {
   return InputPanelToolbar(
     voiceInputMode: .dictation,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
-    scripts: scriptSettings.scripts,
     scriptSettings: scriptSettings,
     isRunningScript: false,
-    hasPromptScript: false,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
-    onExecuteScript: { _ in },
     onConfirm: {},
     replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
   )
