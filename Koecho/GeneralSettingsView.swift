@@ -13,13 +13,6 @@ struct GeneralSettingsView: View {
 
   var body: some View {
     Form {
-      Section("App Icon") {
-        Picker("App icon", selection: $appIcon.selectedAppIcon) {
-          Text("Current").tag(AppIconVariant.current)
-          Text("Legacy (v1.4.2)").tag(AppIconVariant.legacy)
-        }
-        .pickerStyle(.segmented)
-      }
       VoiceInputSection(
         voiceInput: voiceInput,
         onSpeechLocalesChanged: onSpeechLocalesChanged
@@ -61,6 +54,13 @@ struct GeneralSettingsView: View {
         Toggle("Enable History", isOn: $history.isHistoryEnabled)
         TextField("Max entries", value: $history.historyMaxCount, format: .number)
         TextField("Retention days", value: $history.historyRetentionDays, format: .number)
+      }
+      Section("App Icon") {
+        Picker("App icon", selection: $appIcon.selectedAppIcon) {
+          Text("Current").tag(AppIconVariant.current)
+          Text("Legacy (v1.4.2)").tag(AppIconVariant.legacy)
+        }
+        .pickerStyle(.segmented)
       }
     }
     .formStyle(.grouped)
