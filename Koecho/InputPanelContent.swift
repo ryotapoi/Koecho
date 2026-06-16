@@ -20,6 +20,10 @@ struct InputPanelContent: View {
 
   @FocusState private var isPromptFocused: Bool
 
+  private var hasPromptScript: Bool {
+    appState.promptScript != nil
+  }
+
   var body: some View {
     VStack(spacing: 0) {
       VStack(spacing: 8) {
@@ -38,12 +42,14 @@ struct InputPanelContent: View {
         replacementRules: appState.settings.replacement.replacementRules,
         scriptSettings: appState.settings.script,
         isRunningScript: appState.isRunningScript,
+        hasPromptScript: hasPromptScript,
         hotkeyConfig: appState.settings.hotkey.hotkeyConfig,
         onSwitchEngine: onSwitchEngine,
         onApplyReplacementRules: onApplyReplacementRules,
         onConfirm: onConfirm,
         replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
       )
+      .opacity(hasPromptScript ? 0.45 : 1.0)
     }
     .frame(minWidth: 200, maxWidth: .infinity, maxHeight: .infinity)
     .background {
@@ -80,7 +86,7 @@ struct InputPanelContent: View {
         },
         onViewCreated: onTextViewCreated
       )
-      .opacity(appState.voiceEngineStatus != nil ? 0.5 : 1.0)
+      .opacity(inputEditorOpacity)
       .frame(minHeight: 120, maxHeight: CGFloat.infinity)
       .popover(
         isPresented: Binding(
@@ -145,9 +151,17 @@ struct InputPanelContent: View {
       scripts: appState.settings.script.scripts,
       selectedScript: appState.promptScript,
       isRunningScript: appState.isRunningScript,
-      hasPromptScript: appState.promptScript != nil,
+      hasPromptScript: hasPromptScript,
       onExecuteScript: onExecuteScript
     )
+    .opacity(hasPromptScript ? 0.45 : 1.0)
+  }
+
+  private var inputEditorOpacity: Double {
+    if hasPromptScript {
+      return 0.38
+    }
+    return appState.voiceEngineStatus != nil ? 0.5 : 1.0
   }
 }
 

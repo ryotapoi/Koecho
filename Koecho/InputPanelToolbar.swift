@@ -6,6 +6,7 @@ struct InputPanelToolbar: View {
   let replacementRules: [ReplacementRule]
   @Bindable var scriptSettings: ScriptSettings
   let isRunningScript: Bool
+  let hasPromptScript: Bool
   let hotkeyConfig: HotkeyConfig
   var onSwitchEngine: () async -> Void
   var onApplyReplacementRules: () -> Void
@@ -70,7 +71,7 @@ struct InputPanelToolbar: View {
         }
       }
       .accessibilityLabel(Text("Confirm"))
-      .buttonStyle(.koechoToolbar(isPrimary: true))
+      .buttonStyle(.koechoToolbar(isPrimary: !hasPromptScript))
       .keyboardShortcut(.return, modifiers: .command)
       .disabled(isRunningScript)
     }
@@ -152,6 +153,7 @@ private extension HotkeyConfig {
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     scriptSettings: scriptSettings,
     isRunningScript: false,
+    hasPromptScript: false,
     hotkeyConfig: .default,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
@@ -169,6 +171,7 @@ private extension HotkeyConfig {
     replacementRules: [],
     scriptSettings: scriptSettings,
     isRunningScript: true,
+    hasPromptScript: false,
     hotkeyConfig: .default,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
@@ -190,6 +193,7 @@ private extension HotkeyConfig {
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     scriptSettings: scriptSettings,
     isRunningScript: false,
+    hasPromptScript: false,
     hotkeyConfig: .default,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
@@ -198,4 +202,27 @@ private extension HotkeyConfig {
   )
   .frame(width: 350, height: 40)
   .preferredColorScheme(.dark)
+}
+
+#Preview("Prompting") {
+  let defaults = UserDefaults(suiteName: "preview-toolbar-prompting")!
+  let scriptSettings = ScriptSettings(defaults: defaults)
+  scriptSettings.scripts = [
+    Script(name: "Format", scriptPath: "format.sh"),
+    Script(name: "AI", scriptPath: "ai.sh"),
+  ]
+  return InputPanelToolbar(
+    voiceInputMode: .dictation,
+    replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
+    scriptSettings: scriptSettings,
+    isRunningScript: false,
+    hasPromptScript: true,
+    hotkeyConfig: .default,
+    onSwitchEngine: {},
+    onApplyReplacementRules: {},
+    onConfirm: {},
+    replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
+  )
+  .frame(width: 350, height: 40)
+  .opacity(0.45)
 }

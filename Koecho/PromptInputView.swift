@@ -40,10 +40,14 @@ struct PromptInputView: View {
         .textFieldStyle(.plain)
         .font(.body)
         .onSubmit {
-          if let script = promptScript {
-            Task { await onExecuteScript(script) }
-          }
+          executePrompt()
         }
+
+      Button(action: executePrompt) {
+        Label("Run", systemImage: "play.fill")
+      }
+      .buttonStyle(.koechoToolbar(isPrimary: true))
+      .disabled(isRunningScript || promptScript == nil)
 
       Button {
         onCancelPrompt()
@@ -59,6 +63,12 @@ struct PromptInputView: View {
     .overlay {
       RoundedRectangle(cornerRadius: 10)
         .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+    }
+  }
+
+  private func executePrompt() {
+    if let script = promptScript {
+      Task { await onExecuteScript(script) }
     }
   }
 }
