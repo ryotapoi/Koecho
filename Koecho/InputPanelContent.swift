@@ -28,9 +28,9 @@ struct InputPanelContent: View {
         statusMessage
         scriptStrip
       }
-      .padding(.leading, 8)
-      .padding(.trailing, 12)
-      .padding(.top, 4)
+      .padding(.leading, 4)
+      .padding(.trailing, 4)
+      .padding(.top, 0)
       .padding(.bottom, 8)
 
       InputPanelToolbar(
