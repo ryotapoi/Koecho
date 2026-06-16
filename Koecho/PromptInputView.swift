@@ -26,7 +26,7 @@ struct PromptInputView: View {
         Label {
           Text(promptScript.name)
         } icon: {
-          Image(systemName: "bolt.fill")
+          Image(systemName: "text.bubble.fill")
         }
         .font(.caption.weight(.bold))
         .foregroundStyle(Color(nsColor: .windowBackgroundColor))

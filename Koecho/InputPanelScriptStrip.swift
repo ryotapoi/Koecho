@@ -30,7 +30,7 @@ struct InputPanelScriptStrip: View {
                 Label {
                   Text(script.name)
                 } icon: {
-                  Image(systemName: script.requiresPrompt ? "bolt.fill" : "terminal")
+                  Image(systemName: script.requiresPrompt ? "text.bubble.fill" : "play.fill")
                 }
               }
               .buttonStyle(.koechoToolbar(isSelected: selectedScript?.id == script.id))

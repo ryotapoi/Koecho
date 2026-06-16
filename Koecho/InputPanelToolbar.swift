@@ -16,6 +16,10 @@ struct InputPanelToolbar: View {
     !scriptSettings.eligibleAutoRunScripts.isEmpty
   }
 
+  private var isVoiceEnabled: Bool {
+    voiceInputMode != .off
+  }
+
   var body: some View {
     HStack(spacing: 8) {
       Button {
@@ -24,14 +28,14 @@ struct InputPanelToolbar: View {
         Label {
           Text("Voice")
         } icon: {
-          Image("MenuBarIcon")
-            .renderingMode(.template)
+          Image(isVoiceEnabled ? "KoechoStatusItemColor" : "MenuBarIcon")
+            .renderingMode(isVoiceEnabled ? .original : .template)
             .resizable()
             .scaledToFit()
             .frame(width: 12, height: 12)
         }
       }
-      .buttonStyle(.koechoToolbar(isEmphasized: voiceInputMode != .off))
+      .buttonStyle(.koechoToolbar(isEmphasized: isVoiceEnabled))
       .disabled(isRunningScript)
       .help(
         voiceInputMode == .off ? String(localized: "Voice input is off") : String(localized: "Voice")
@@ -96,7 +100,7 @@ struct InputPanelToolbar: View {
         Label {
           Text(scriptSettings.autoRunScript?.name ?? String(localized: "None"))
         } icon: {
-          Image(systemName: "bolt.fill")
+          Image(systemName: "wand.and.stars")
         }
       }
       .menuStyle(.borderlessButton)
@@ -113,7 +117,7 @@ struct InputPanelToolbar: View {
         Label {
           Text("None")
         } icon: {
-          Image(systemName: "bolt.fill")
+          Image(systemName: "wand.and.stars")
         }
       }
       .buttonStyle(.koechoToolbar())
