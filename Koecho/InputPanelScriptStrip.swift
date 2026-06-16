@@ -46,5 +46,6 @@ struct InputPanelScriptStrip: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.leading, 8)
   }
 }
