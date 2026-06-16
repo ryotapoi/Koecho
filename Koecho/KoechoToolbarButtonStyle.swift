@@ -10,7 +10,7 @@ struct KoechoToolbarButtonStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .labelStyle(.titleAndIcon)
-      .font(.caption.weight(isPrimary || isSelected || isEmphasized ? .bold : .regular))
+      .font(.caption.weight(isPrimary || isSelected ? .bold : .regular))
       .lineLimit(1)
       .padding(.horizontal, isPrimary ? 12 : 10)
       .frame(height: 30)
@@ -46,7 +46,7 @@ struct KoechoToolbarButtonStyle: ButtonStyle {
 
   private var shadowColor: Color {
     if isPrimary { return .black.opacity(0.18) }
-    if isEmphasized && isEnabled { return .black.opacity(0.08) }
+    if isEmphasized && isEnabled { return .clear }
     return .black.opacity(0.04)
   }
 
