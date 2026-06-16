@@ -132,18 +132,6 @@ struct InputPanelContent: View {
       .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    if appState.settings.voiceInput.effectiveVoiceInputMode == .off {
-      HStack(spacing: 4) {
-        Image(systemName: "mic.slash")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-        Text("Voice input is off")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
     if let errorMessage = appState.errorMessage {
       Text(errorMessage)
         .font(.caption)
