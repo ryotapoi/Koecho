@@ -54,8 +54,19 @@ struct PromptInputView: View {
       } label: {
         Label("Cancel", systemImage: "xmark")
           .labelStyle(.iconOnly)
-          .font(.caption)
+          .font(.body.weight(.medium))
+          .frame(width: 44, height: 30)
+          .foregroundStyle(isRunningScript ? .secondary : .primary)
+          .background(
+            Color.primary.opacity(isRunningScript ? 0.05 : 0.08),
+            in: RoundedRectangle(cornerRadius: 8)
+          )
+          .overlay(
+            RoundedRectangle(cornerRadius: 8)
+              .strokeBorder(Color.primary.opacity(isRunningScript ? 0.08 : 0.12), lineWidth: 1)
+          )
       }
+      .buttonStyle(.plain)
       .disabled(isRunningScript)
     }
     .padding(8)
