@@ -6,7 +6,6 @@
 - **Constraints**:
   - タスク内ではなく、節目で呼ぶ。タスク完了の度に呼ぶものではない。
   - 今回の差分ではなく、今後の変更コストを下げる観点で見る。
-  - すぐ直すものと backlog に積むものを分ける。
   - 改善タスクは 1 commit に収まる粒度にする。
   - 仕様や設計方針の変更が必要なら `docs/decisions/` または `docs/rules/` 更新を検討する。
 - **Acceptance**:
@@ -20,13 +19,33 @@
   - `docs/rules/architecture.md`
   - `llm-wiki/`
 
-## Use When
+## Flow ICAR
 
-- 複数コミットやマイルストーン（v1.4, v1.5 など）の区切り
-- 同じ種類の修正が続いている
-- 実装中やレビューでリファクタ候補が複数出た
-- 久々に広い領域を触った
-- review で同種の指摘が繰り返された
+### Scope Selection
+
+- **Intent**: maintenance を呼ぶべき節目かどうかを判定する。
+- **Constraints**:
+  - 複数コミットやマイルストーン（v1.4, v1.5 など）の区切りで使う。
+  - 同じ種類の修正が続いている、または review で同種の指摘が繰り返されたときに使う。
+  - 実装中やレビューでリファクタ候補が複数出た、または久々に広い領域を触ったときに使う。
+- **Acceptance**:
+  - maintenance の深さと対象範囲を説明できる。
+
+### Audit
+
+- **Intent**: 構造・負債・重複・テスト戦略を棚卸しする。
+- **Acceptance**:
+  - 問題、改善候補、先送り理由が混ざらず整理されている。
+
+### Follow-up Handling
+
+- **Intent**: maintenance で見つかった改善を、追跡可能な作業へ落とす。
+- **Constraints**:
+  - すぐ直す改善は、独立した 1 commit workflow として扱う。
+  - 先送りする改善は `backlog/backlog.md` に残す。
+- **Acceptance**:
+  - すぐ着手する改善と先送りする改善が分かれている。
+  - backlog に積む場合は後で拾える粒度になっている。
 
 ## Tools
 
