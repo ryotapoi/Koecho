@@ -181,6 +181,7 @@ public nonisolated final class ScriptRunner: Sendable {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/sh")
     process.arguments = ["-c", scriptPath]
+    // Avoid inheriting the app process cwd and private TCC-related variables.
     process.currentDirectoryURL = FileManager.default.temporaryDirectory
 
     let parentEnv = ProcessInfo.processInfo.environment

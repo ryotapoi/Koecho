@@ -44,8 +44,8 @@ struct MenuBarContent: View {
     }
   }
 
-  /// LSUIElement app needs the level-bump dance to surface the Settings
-  /// window; see references/knowledge.md "LSUIElement + ウィンドウ前面化".
+  /// LSUIElement apps can open Settings behind another app after the menu
+  /// dismisses, so bump the level while activating the new window.
   @MainActor
   private func bringSettingsWindowToFront() async {
     try? await Task.sleep(for: .milliseconds(100))

@@ -16,7 +16,7 @@
   - `Packages/KoechoKit/Tests/KoechoPlatformTests`: AppState・オーディオ・ペースト・ホットキー・選択テキスト取得等のプラットフォーム層
   - `KoechoTests`（TEST_HOST = Koecho.app）: InputPanelController・VoiceInputCoordinator・VoiceInputTextView 等の UI 近傍
 - 外部依存（マイク・権限・子プロセス・クリップボード）は、モック注入（`MockVoiceInputEngine` 等）またはフォールバック挙動の検証で扱う
-- テストランナー固有の罠（TEST_HOST のライフサイクル隔離、UserDefaults 分離）は llm-wiki/ の該当セクションに従う
+- テストランナー固有の罠（TEST_HOST のライフサイクル隔離、UserDefaults 分離）は `llm-wiki/testing.md` に従う
 
 ## 言語
 

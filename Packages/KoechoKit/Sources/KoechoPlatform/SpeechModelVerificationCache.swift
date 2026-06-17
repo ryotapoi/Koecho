@@ -4,7 +4,10 @@ import Foundation
 /// verified as installed. Keys are `SpeechLocale.normalizationKey` values.
 ///
 /// Shared static storage because both `SpeechAnalyzerEngine` and the
-/// throwaway `SpeechAnalyzerLocaleManager` instances consult it.
+/// throwaway `SpeechAnalyzerLocaleManager` instances consult it. The cache
+/// avoids repeated model checks after `assetInstallationRequest` has verified
+/// the locale, because released models can still appear in `installedLocales`
+/// while requiring a fresh reservation/download before use.
 @MainActor
 enum SpeechModelVerificationCache {
   private static var verifiedLocaleKeys: Set<String> = []

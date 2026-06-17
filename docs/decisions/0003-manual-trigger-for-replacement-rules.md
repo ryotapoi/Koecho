@@ -30,6 +30,6 @@ We will use manual trigger + confirm-time application for replacement rules. All
 - Positive: Simpler codebase with no polling/debounce Tasks. Predictable behavior regardless of input method. No risk of interfering with Dictation's marked text state.
 - Positive: `hasMarkedText()` guard on the manual trigger prevents text corruption if the user presses Ctrl+R during active Dictation.
 - Negative: Users must explicitly trigger replacement or wait until confirm. No visual feedback of replacements during typing.
-- Neutral: The NSTextView subclass approach remains a viable future option if real-time replacement is desired (documented in llm-wiki after the knowledge migration).
+- Neutral: The NSTextView subclass approach remains a viable future option if real-time replacement is desired (documented in llm-wiki after the documentation migration).
 - Neutral: Confirm-time application can be toggled off via `appliesReplacementRulesOnConfirm` setting (default: ON).
 - Neutral: The shortcut key is customizable via `replacementShortcutKey` setting (default: "r", nil to disable).
