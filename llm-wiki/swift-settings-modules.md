@@ -23,7 +23,7 @@ sources:
 
 ## Collection / Hotkey
 
-- Swift 6 の `Array.move(fromOffsets:toOffset:)` は SwiftUI 依存の拡張として扱われることがある。Core では `Array+Move.swift` のローカル実装を使う。
+- Swift 6 の `Array.move(fromOffsets:toOffset:)` は SwiftUI 依存の拡張として扱われることがある。Core では `Packages/KoechoKit/Sources/KoechoCore/Array+Move.swift` のローカル実装を使う。
 - hotkey 表現は Core の値型に閉じる。Carbon / AppKit 由来の key code 変換は Platform または App 側で扱う。
 
 ## モジュール境界

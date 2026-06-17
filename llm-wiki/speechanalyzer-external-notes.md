@@ -20,6 +20,7 @@ sources:
 - `AssetInventory.release(reservedLocale:)` は `async -> Bool` で、throws ではない。`false` は元々 reserved ではなかったことを示す。
 - `release()` は reservation を解除するだけで、モデルファイルを即削除しない。`release()` 後も `DictationTranscriber.installedLocales` に locale が残ることがある。
 - `installedLocales` は「ディスク上にモデルファイルがある」ことを示す寄りで、利用可能状態の判定には足りない。`AssetInventory.status(forModules:)` / `assetInstallationRequest` 側の結果を優先する。
+- `AssetInventory.status(forModules:)` の主な状態は `.installed` = 利用可能、`.supported` = download 必要、`.downloading` = download 中、`.unsupported` = 非対応。
 - OS 再起動やディスク逼迫で、残っていたモデルファイルが削除されることがある。
 - `SpeechModelVerificationCache` は、同一セッション中に `assetInstallationRequest` で利用可能確認済みの locale を再確認し続けないための cache。`release()` 後は invalidate する。
 
