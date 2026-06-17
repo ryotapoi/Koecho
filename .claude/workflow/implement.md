@@ -7,7 +7,7 @@
 ## Inputs
 
 - 承認済み plan、または Small 変更（`default.md` の Intake 分類）の明確な要求
-- 関連する `rules/`, `specs/`（あれば）, `references/knowledge.md`
+- 関連する `docs/rules/`, `docs/specs/`（あれば）, `llm-wiki/`
 - 変更対象と周辺コード
 
 ## Decision Criteria
@@ -17,7 +17,8 @@
 - 振る舞い変更や bug fix では、同じ commit に unit test / regression test を追加または更新する。テストできない場合は理由を明記する
 - TDD でやる場合は `tdd` スキルに従う（Normal / High-risk の振る舞い変更は基本 TDD。Small は省略可）
 - SwiftUI View 層を触るなら `swiftui-pro` スキルに従う
-- 振る舞いが変わるなら `specs/`（あれば）の該当箇所を同期する
+- 振る舞いが変わるなら `docs/specs/`（あれば）の該当箇所を同期する
+- 今回の変更で `llm-wiki/` が古くなっていないか確認し、必要なら同じ差分で追従する。特定ソースの罠はコードコメントへ、横断的な挙動・設計理解は `llm-wiki/` の地図へ分配し、単一の集約ファイルは作らない
 - backlog に積んでいた項目を実装完了したら `backlog/backlog.md` の該当行を `[x]` 等で更新する
 - 実装中に見つかった別タスクは、今やる理由がなければ `backlog/backlog.md` に逃がす
 - 構造の悪さが実装を歪める場合は、同じ変更で直すか、別リファクタ plan に切るかを判断する
@@ -25,14 +26,14 @@
 
 ## Apple Tooling
 
-- Xcode のビルド・テストは XcodeBuildMCP を優先する。Bash で `xcodebuild` を直接叩かない（使い分けの詳細は `rules/xcode-mcp.md`）
+- Xcode のビルド・テストは XcodeBuildMCP を優先する。Bash で `xcodebuild` を直接叩かない（使い分けの詳細は `docs/rules/xcode-mcp.md`）
 - KoechoKit（KoechoCore / KoechoPlatform）の SPM テストは `swift test --package-path Packages/KoechoKit`
 - Apple API の仕様確認は Apple Xcode MCP の `DocumentationSearch` を Web 検索より優先する
 
 ## Acceptance
 
 - 要求された振る舞いが実装されている
-- 必要な `specs/`（あれば） / tests / `backlog/backlog.md` の同期が済んでいる
+- 必要な `docs/specs/`（あれば） / tests / `backlog/backlog.md` / `llm-wiki/` の同期が済んでいる
 - 余計なスコープ拡張がない
 
 ## Stop Conditions

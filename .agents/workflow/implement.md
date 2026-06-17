@@ -9,18 +9,19 @@
   - 振る舞い変更や bug fix では、同じ commit に unit test / regression test を追加または更新する。テストできない場合は理由を明記する。
   - TDD でやる場合は `tdd` skill に従う。Normal / High-risk の振る舞い変更は基本 TDD とし、Small は省略可。
   - SwiftUI View 層を触るなら `swiftui-pro` skill に従う。
-  - 振る舞いが変わるなら `specs/`（あれば）の該当箇所を同期する。
+  - 振る舞いが変わるなら `docs/specs/`（あれば）の該当箇所を同期する。
+  - 今回の変更で `llm-wiki/` が古くなっていないか確認し、必要なら同じ差分で追従する。特定ソースの罠はコードコメントへ、横断的な挙動・設計理解は `llm-wiki/` の地図へ分配し、単一の集約ファイルは作らない。
   - backlog に積んでいた項目を実装完了したら `backlog/backlog.md` の該当行を `[x]` 等で更新する。
   - 実装中に見つかった別タスクは、今やる理由がなければ `backlog/backlog.md` に逃がす。
   - 構造の悪さが実装を歪める場合は、同じ変更で直すか、別リファクタ plan に切るかを判断する。
   - ループ内で時刻を扱う場合は各反復で取得する（ループ外で 1 回だけ取得しない）。
 - **Acceptance**:
   - 要求された振る舞いが実装されている。
-  - 必要な `specs/`（あれば） / tests / `backlog/backlog.md` の同期が済んでいる。
+  - 必要な `docs/specs/`（あれば） / tests / `backlog/backlog.md` / `llm-wiki/` の同期が済んでいる。
   - 余計なスコープ拡張がない。
 - **Relevant**:
   - 承認済み plan、または Small 変更（`default.md` の Intake 分類）の明確な要求
-  - 関連する `rules/`, `specs/`（あれば）, `references/knowledge.md`
+  - 関連する `docs/rules/`, `docs/specs/`（あれば）, `llm-wiki/`
   - 変更対象と周辺コード
 
 ## Apple Tooling

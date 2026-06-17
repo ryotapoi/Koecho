@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 
-Koecho は macOS 14.0+ 向けの軽量音声入力アプリ。詳細: rules/mission.md
+Koecho は macOS 14.0+ 向けの軽量音声入力アプリ。詳細: docs/rules/mission.md
 
 ## ワークフロー入口
 
@@ -29,17 +29,17 @@ plan mode（`EnterPlanMode` / `ExitPlanMode`）は使わない。計画は内部
 不明点があれば止まってユーザーに確認。なければ自動進行。
 単発依頼はコミットまで終えたら止まる（次のタスクはユーザー指示待ち）。Goal は完了したら止まる。
 
-## rules/
+## docs/rules/
 
 計画・実装時に必ず Read で参照すること。CLAUDE.md の要約で済ませず、実ファイルを読んで判断する。
 
-- プロダクト目的・非目標: rules/mission.md
-- コード規約・テスト方針・言語: rules/principles.md
-- 技術スタック・前提条件: rules/constraints.md
-- 機能スコープ: rules/scope.md
-- モジュール構成・依存方向: rules/architecture.md
-- Xcode 操作（ビルド・テスト・Preview・ドキュメント検索）: rules/xcode-mcp.md
-- 情報管理の原則（フォルダ構成・情報分類・SSoT）: rules/information-management.md
+- プロダクト目的・非目標: docs/rules/mission.md
+- コード規約・テスト方針・言語: docs/rules/principles.md
+- 技術スタック・前提条件: docs/rules/constraints.md
+- 機能スコープ: docs/rules/scope.md
+- モジュール構成・依存方向: docs/rules/architecture.md
+- Xcode 操作（ビルド・テスト・Preview・ドキュメント検索）: docs/rules/xcode-mcp.md
+- 情報管理の原則（フォルダ構成・情報分類・SSoT）: docs/rules/information-management.md
 
 ## Constraints / サブエージェント活用
 
@@ -72,11 +72,11 @@ plan mode（`EnterPlanMode` / `ExitPlanMode`）は使わない。計画は内部
 
 ## Constraints / MCP ツール使い分け
 
-ビルド・テスト・Preview・ドキュメント検索は MCP ツールを使う。Bash で `xcodebuild` を直接叩かない。使い分けの詳細（XcodeBuildMCP / Apple Xcode MCP、`RenderPreview` のパラメータ等）は `rules/xcode-mcp.md` を参照する。
+ビルド・テスト・Preview・ドキュメント検索は MCP ツールを使う。Bash で `xcodebuild` を直接叩かない。使い分けの詳細（XcodeBuildMCP / Apple Xcode MCP、`RenderPreview` のパラメータ等）は `docs/rules/xcode-mcp.md` を参照する。
 
 ## Constraints / ドキュメント管理
 
-- 同じ情報を複数のドキュメントに書かない。各情報の置き場所は1箇所に限定する（DRY / SSoT は `rules/information-management.md` 参照）
+- 同じ情報を複数のドキュメントに書かない。各情報の置き場所は1箇所に限定する（DRY / SSoT は `docs/rules/information-management.md` 参照）
 - `.claude/`・`CLAUDE.md`（Claude 側）と `.agents/`・`AGENTS.md`（Codex 側）は、目的・制約・判断基準の方向性を揃える。文言や構成の完全一致は求めず、subagent、review delegation、tool 呼び出し、skill / workflow の実行手順は各エージェントの仕組みに合わせてよい。`skills/koecho-risk-check/SKILL.md` は **チェック観点（Intent / Constraints / Acceptance / Checkpoints の方向性）を両側で揃える**。片方の観点を変更したら、同じコミットで他方にも反映する。
 - 新しいスキルやファイルを作成したら、同じステップで `.claude/settings.json` 等への登録も行う
-- 技術的な知見・ハマりどころは `references/knowledge.md` に集約する
+- 技術的知見は「特定ソースの罠 → そのソースのコメント / 横断的な挙動・設計理解 → `llm-wiki/` の地図」へ分配し、単一の集約ファイルは作らない

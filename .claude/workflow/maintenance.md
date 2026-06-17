@@ -19,11 +19,12 @@
 - 最近の git history
 - `backlog/backlog.md`
 - 変更が多かったモジュール（`Koecho/` App target、`Packages/KoechoKit/` 配下）
-- `rules/architecture.md`, `references/knowledge.md`
+- `docs/rules/architecture.md`, `llm-wiki/`
 
 ## Tools
 
 - 棚卸し・健康診断: `maintenance-audit` スキル（軽い整合性・負債・backlog 鮮度の light pass から、テスト・カバレッジ・行数・依存方向・凝集度・分割の deep pass まで、scope で深さを指定）
+- llm-wiki 点検: `wiki-lint` スキル（孤立・リンク切れ・sources 切れと「速い / docs レベルでない / 嘘がない / 拾える」の不変条件を確認）
 - module / 配置 / 依存方向の境界判断: `module-boundary` スキル
 
 ## Decision Criteria
@@ -31,7 +32,7 @@
 - 今回の差分ではなく、今後の変更コストを下げる観点で見る
 - すぐ直すものと backlog に積むものを分ける
 - 改善タスクは 1 commit に収まる粒度にする
-- 仕様や設計方針の変更が必要なら `decisions/` または `rules/` 更新を検討する
+- 仕様や設計方針の変更が必要なら `docs/decisions/` または `docs/rules/` 更新を検討する
 
 ## Acceptance
 

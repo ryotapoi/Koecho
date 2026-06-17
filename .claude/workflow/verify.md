@@ -23,7 +23,7 @@
 - ビルド: `build_macos`（XcodeBuildMCP）
 - テスト（アプリ）: `test_macos`（`-only-testing:KoechoTests` で UITests を除外）
 - テスト（KoechoKit）: `swift test --package-path Packages/KoechoKit`
-- Preview 確認: Apple Xcode MCP の `RenderPreview`（使い方は `rules/xcode-mcp.md`）
+- Preview 確認: Apple Xcode MCP の `RenderPreview`（使い方は `docs/rules/xcode-mcp.md`）
 - 実画面確認: `build_run_macos` でアプリを起動する
 
 ## Acceptance
