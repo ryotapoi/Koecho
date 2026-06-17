@@ -1002,7 +1002,6 @@
       }
     },
     "Run" : {
-      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {

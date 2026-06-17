@@ -44,7 +44,11 @@ struct PromptInputView: View {
         }
 
       Button(action: executePrompt) {
-        Label("Run", systemImage: "play.fill")
+        Label {
+          Text("Run")
+        } icon: {
+          Image(systemName: "play.fill")
+        }
       }
       .buttonStyle(.koechoToolbar(isPrimary: true))
       .disabled(isRunningScript || promptScript == nil)
