@@ -18,8 +18,8 @@
 - 構造劣化リスク（巨大化、分岐増加、責務境界の濁り、薄い抽象化、型境界の曖昧さ）があれば `thermo-nuclear-code-quality-review` を**必須**で使う。
 - 領域固有 supplement の対象:
   - SwiftUI View 層 → `swiftui-pro`
-  - ディクテーション制御・テキストライフサイクル（volatile テキスト、`isSuppressingCallbacks`）、NSTextView / textStorage 操作、UserDefaults 永続化パターン、権限依存機能（Accessibility / Input Monitoring）、ホットキー・ペースト・選択テキスト取得、外部スクリプト実行、`Koecho → KoechoPlatform → KoechoCore` の依存方向 → `koecho-risk-check`
-  - 永続化 / マイグレーション / 削除 / 外部連携 / 並行性 / 公開 API → `koecho-risk-check` に加え、必要なら `codex-review`
+  - ディクテーション制御・テキストライフサイクル（volatile テキスト、`isSuppressingCallbacks`）、NSTextView / textStorage 操作、UserDefaults 永続化パターン、権限依存機能（Accessibility / Input Monitoring）、ホットキー・ペースト・選択テキスト取得、外部スクリプト実行、`Koecho → KoechoPlatform → KoechoCore` の依存方向 → `project-risk-check`
+  - 永続化 / マイグレーション / 削除 / 外部連携 / 並行性 / 公開 API → `project-risk-check` に加え、必要なら `codex-review`
 - **テスト可能な振る舞い変更や bug fix に unit / regression test がない場合は、原則 blocker として扱う**（理由がある例外のみ許容）。
 - review は粗探しではなく、実害・仕様逸脱・テスト不足・設計劣化を探す。
 - 指摘に対応しない場合は、理由を plan / commit body / 該当ドキュメントに記録する。
@@ -29,7 +29,7 @@
 
 - L0: main で `git diff` を読み、acceptance と照合する。
 - Standard: レビュー監督 subagent を起動し（Review Supervision 参照）、戻ってきた採用候補・却下リストを採否判断して反映する。
-- Targeted / External supplement: 該当 skill（`koecho-risk-check`, `swiftui-pro`, `thermo-nuclear-code-quality-review`, `codex-review`）を呼ぶ。複数該当するものは 1 メッセージで並列起動してよい。
+- Targeted / External supplement: 該当 skill（`project-risk-check`, `swiftui-pro`, `thermo-nuclear-code-quality-review`, `codex-review`）を呼ぶ。複数該当するものは 1 メッセージで並列起動してよい。
 - 戻りを全部受け取ってから main で統合し、採用分をまとめて反映する。実行中に 1 件ずつ反映しない。
 
 ### Review Supervision

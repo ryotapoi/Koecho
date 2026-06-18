@@ -78,5 +78,5 @@ Goal を使う作業全体の入口は `goal-workflow` skill とし、この wor
 ## Subagent / Skill
 
 - 複数ファイル横断・キーワードのファンアウト調査は Explore subagent に委譲する（CLAUDE.md の Constraints / サブエージェント活用に従う）
-- skill は判断プロトコル（`design-decision`, `module-boundary`, `tdd`, `swiftui-pro` など）として呼ぶ。Koecho 固有のレビューは `koecho-risk-check` を使う（depth 選択は `review.md`）
+- skill は判断プロトコル（`design-decision`, `module-boundary`, `tdd`, `swiftui-pro` など）として呼ぶ。Koecho 固有のレビューは `project-risk-check` を使う（depth 選択は `review.md`）
 - 詳細は各 phase のファイル参照

@@ -1,9 +1,9 @@
 ---
-name: koecho-risk-check
+name: project-risk-check
 description: Koecho 固有の plan / 実装チェック。ディクテーション制御・テキストライフサイクル（volatile テキスト / isSuppressingCallbacks）、NSTextView / textStorage 操作、UserDefaults 永続化、権限（Accessibility / Input Monitoring）、ホットキー・ペースト・選択テキスト取得、外部スクリプト実行、モジュール依存方向に触れる変更で使う。汎用レビューではなく Koecho 固有の実害に絞って確認する。
 ---
 
-# Koecho Risk Check
+# Project Risk Check
 
 ## Intent
 
