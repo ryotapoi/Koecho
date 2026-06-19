@@ -8,23 +8,25 @@
 
 - 変更差分（`git diff`, `git diff --cached`）
 - plan または要求
-- 関連テスト、ビルド設定、Preview / アプリ起動による確認手段
+- 関連テスト、ビルド設定、Preview / GUI 確認手段
 
 ## Decision Criteria
 
 - 自動検証を優先する。ビルド・テスト・静的チェックで確認できるものは先に通す
 - テスト可能な振る舞い変更や bug fix に unit test / regression test がない場合、検証未完了として扱う。例外は理由を明記する
-- UI / 権限依存 / システム連携（ディクテーション、ホットキー、ペースト）/ 外部スクリプト / 時間・非同期の挙動は、まず自力で取れる証拠（ビルド・テスト・`RenderPreview`・ログ等）で確認する
+- GUI / Preview / 実機依存 / 外部連携 / 時間・非同期の挙動は、まず自力で取れる証拠（ビルド・テスト・スナップショット・ログ等）で確認する
 - それでもユーザーの観察・操作なしに確定できない挙動が残るなら、Stop Condition または残存リスクとして報告する
 - 検証不能な High-risk 変更は完了扱いにしない
 
-## Koecho Verification
+## Verification
 
-- ビルド: `build_macos`（XcodeBuildMCP）
-- テスト（アプリ）: `test_macos`（`-only-testing:KoechoTests` で UITests を除外）
-- テスト（KoechoKit）: `swift test --package-path Packages/KoechoKit`
-- Preview 確認: Apple Xcode MCP の `RenderPreview`（使い方は `docs/rules/xcode-mcp.md`）
-- 実画面確認: `build_run_macos` でアプリを起動する
+<!-- slot: ビルド・テスト・実行・実画面確認の具体手段を書く（例: build_macos / test_macos、go build ./... / go test ./...、./gradlew verifyAll / verifyAllConnected、CLI なら bin/<tool> <args>、Preview 確認手段）。ユーザー確認が必要な領域（実機・権限・外部連携）も書く。 -->
+- ビルド: XcodeBuildMCP の `build_macos`。
+- アプリテスト: XcodeBuildMCP の `test_macos` に `-only-testing:KoechoTests` を付け、UITests を除外する。
+- KoechoKit の SPM テスト: `swift test --package-path Packages/KoechoKit`。
+- 実画面確認: XcodeBuildMCP の `build_run_macos`。Preview が適切なら Apple Xcode MCP の `RenderPreview` を使い、使えない場合はビルド・実アプリ起動・スクリーンショット・局所確認で代替する。
+- 権限ダイアログ、実際のディクテーション操作、外部アプリ連携などユーザー環境依存の挙動は、自力で取れる証拠を先に集め、確定できない場合だけユーザー確認に回す。
+<!-- /slot -->
 
 ## Acceptance
 

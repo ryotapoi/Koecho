@@ -1,7 +1,7 @@
 # Default Workflow
 
-この workflow は、単発依頼、または Goal 内で切り出された 1 commit 分の作業を完了させるための手順。
-Goal を使う作業全体の入口は `goal-workflow` skill とし、この workflow は Goal 内の各 commit で繰り返す。
+この workflow は、単発の実装依頼、または Goal 内で切り出された 1 commit 分の作業を完了させるための手順。
+Goal 経由の場合は `goal-workflow` skill を入口とし、各 commit でこの workflow を繰り返す。単発依頼の場合はこの workflow を直接の入口とする。
 
 ## Intent
 
@@ -10,23 +10,16 @@ Goal を使う作業全体の入口は `goal-workflow` skill とし、この wor
 ## Inputs
 
 - ユーザー依頼
-- 関連する `docs/rules/`, `docs/specs/`（あれば）, `backlog/backlog.md`, `docs/decisions/`, `llm-wiki/`
+- 関連する `docs/rules/`, `docs/specs/`, `backlog/backlog.md`, `docs/decisions/`, `llm-wiki/`（作業地図）
 - 既存コードと git history
 
 ## Intake 分類
 
-最初に作業を分類する。判定が揺れたら High-risk 寄りに倒す。Small / Normal の境界は迷ったら Normal でよい。
+最初に作業を分類する。判定が揺れたら High-risk 寄りに倒す。Small / Normal の境界は迷ったら Normal で進めてよい。
 
-- **Small**: typo、文書修正、テスト期待値の単純な追加、1 ファイルの明確な修正
+- **Small**: typo、文書、テスト期待値、1 ファイルの明確な修正
 - **Normal**: 通常の機能追加・バグ修正・複数ファイル変更
-- **High-risk**: 以下のいずれかに触れる変更
-  - ディクテーション制御・テキストコミットのライフサイクル（volatile テキスト、finalize、`isSuppressingCallbacks`）
-  - NSTextView / textStorage の直接操作
-  - UserDefaults の永続化パターン変更・設定マイグレーション
-  - 権限依存機能（Accessibility / Input Monitoring）、CGEvent ペースト、グローバルホットキー（NSEvent）
-  - 外部スクリプト実行（Process + Pipe）
-  - 並行性（@MainActor 境界、async/await、AVAudioEngine コールバック）
-  - 公開 API の削除、広い UI 挙動、外部連携
+- **High-risk**: データ永続化、マイグレーション、並行性、公開 API、削除、広い UI 挙動、外部連携
 - **Exploratory**: 原因不明、仕様不明、技術検証が先に必要
 
 ## Routing
@@ -41,7 +34,7 @@ Goal を使う作業全体の入口は `goal-workflow` skill とし、この wor
 
 ## Decision Criteria
 
-- workflow は 1 つの commit 単位で回す。実行中に 1 commit を超えると分かったら、作業を広げず（Goal 実行中は）`goal-workflow` skill に戻って commit 単位を切り直す。
+- workflow は 1 つの commit 単位で回す。実行中に 1 commit を超えると分かったら、作業を広げず、Goal 実行中は `goal-workflow` skill に戻って commit 単位を切り直す。
 - Small は plan を省略してよい。作業内容と検証だけ簡潔に示す。
 - 仕様・UX・データモデル・複数ファイル変更・設計判断を伴うなら plan を作る。
 - High-risk は plan・検証・必要なレビューを明示する。
@@ -55,7 +48,7 @@ Goal を使う作業全体の入口は `goal-workflow` skill とし、この wor
 1. 現在のユーザー依頼
 2. `docs/rules/`
 3. `docs/decisions/`
-4. `docs/specs/`（Koecho では現状未配置だが将来用に位置付ける）
+4. `docs/specs/`
 5. tests
 
 仕様・UX に関わる判断は実装で決めず、ユーザー確認に回す。
@@ -63,20 +56,21 @@ Goal を使う作業全体の入口は `goal-workflow` skill とし、この wor
 ## Acceptance
 
 - ユーザーの要求が満たされている
-- 必要な情報源が同期されている（`backlog/backlog.md`, `docs/decisions/`, `llm-wiki/`、必要なら `docs/specs/`）
+- 必要な情報源が同期されている（`docs/specs/`, `backlog/backlog.md`, `docs/decisions/`、知見はソースコメント / `llm-wiki/`）
 - 選んだ検証とレビューの深さを説明できる
 - コミット済み、またはユーザーが明示的にコミット不要とした状態
 - コミット後の進み方は `finish.md` に従う（Goal 実行中は次の 1 commit workflow へ、Goal 外の単発依頼はユーザー指示待ち）
 
 ## Stop Conditions
 
-- 仕様・UX・データ保持・削除方針に複数の妥当な選択肢がある（即停止して確認。ただし `design-decision` で結論が出る範囲なら止まらず採否を決める）
+- 仕様・UX・データ保持・削除方針に**複数の妥当な選択肢が実際にある**（即停止して確認。ただし `design-decision` で結論が出る範囲なら止まらず採否を決める）
 - 要求と `docs/rules/` / `docs/specs/` / `docs/decisions/` が矛盾している
 - High-risk 変更で検証手段が確保できない
 - ユーザーが停止・相談・計画のみを指示している
 
 ## Subagent / Skill
 
-- 複数ファイル横断・キーワードのファンアウト調査は Explore subagent に委譲する（CLAUDE.md の Constraints / サブエージェント活用に従う）
-- skill は判断プロトコル（`design-decision`, `module-boundary`, `tdd`, `swiftui-pro` など）として呼ぶ。Koecho 固有のレビューは `project-risk-check` を使う（depth 選択は `review.md`）
+- 複数ファイル横断・キーワードのファンアウト調査は Explore subagent に委譲する
+- skill は各 phase の workflow の指示に従って使う。
+- `boundary-control` は横断チェックとして全 phase に効く。今回の要求の外へ作業を広げそうな時、隣接作業が見つかった時、scope を変える編集の前に使い、active scope 内か（workflow-required / incidental-required）を判定する。active workflow を止めたり置き換えたりはしない
 - 詳細は各 phase のファイル参照

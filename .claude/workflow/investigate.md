@@ -9,23 +9,27 @@
 - 原因不明のバグ
 - 仕様や期待挙動が曖昧
 - 技術検証が必要
-- UI / 権限 / システム連携（ディクテーション、ホットキー、ペースト）/ 外部スクリプトなど、コードだけでは確定できない挙動がある
+- UI / 実機 / 外部 API など、コードだけでは確定できない挙動がある
 
 ## Inputs
 
 - ユーザー依頼
 - `backlog/backlog.md` の該当項目
-- 関連する `docs/rules/`, `docs/specs/`（あれば）, `docs/decisions/`, `llm-wiki/`
+- 関連する `docs/rules/`, `docs/specs/`, `docs/decisions/`, `llm-wiki/`（作業地図）
 - 既存コード、ログ、再現手順
 
 ## Decision Criteria
 
 - 何が分かれば plan / direct implement / stop に進めるかを先に定義する
-- 机上で分からない挙動はコード読みを続けず、ビルド・テスト・`RenderPreview`（既存 View の `#Preview` で現状把握）・`build_run_macos`・公式ドキュメント（`DocumentationSearch`）へ切り替える
+- 机上で分からない挙動はコード読みを続けず、計測・確認手段へ切り替える
+  <!-- slot: コード確認以外に使いたい確認手段があれば記載する（例: Preview / アプリ起動 / 公式ドキュメント、CLI なら実行して挙動を見る、実機・外部連携はユーザー確認）。 -->
+  - UI / Preview / 実アプリ挙動は XcodeBuildMCP の `build_run_macos`、使える場合は Apple Xcode MCP の `RenderPreview` で確認する。
+  - Apple API 仕様は Apple Xcode MCP の `DocumentationSearch` を優先し、使えない場合は Apple 公式ドキュメントで確認する。
+  - 権限ダイアログ、実際のディクテーション操作、外部アプリ連携などユーザー環境依存の挙動は、自力で取れるビルド・ログ・スクリーンショットを先に集め、確定できない場合だけユーザー確認に回す。
+  <!-- /slot -->
 - 複数ファイル横断や広域 grep は Explore subagent に委譲する。ファイル 1〜2 個で済むなら main で Read する
-- ユーザーに聞いた方が早い領域は遠慮せず聞く（期待する UI 挙動、再現手順、権限・環境設定の状態）
 - ユーザーの観察・判断なしに確定できない UI / 挙動は Stop Conditions として報告する
-- 調査結果が将来も効くなら `llm-wiki/`、要求や粒度が変わるなら `backlog/backlog.md` に記録する
+- 調査結果が将来も効くなら、特定ソースに紐づく罠はそのコードのコメントへ、横断的な挙動・設計理解は `llm-wiki/` の該当地図へ残す。要求や粒度が変わるなら `backlog/backlog.md` に記録する
 - 調査用の一時コードは、残す理由がなければ最終成果に含めない
 
 ## Acceptance

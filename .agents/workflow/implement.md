@@ -4,60 +4,58 @@
 
 - **Intent**: 承認済み plan、または plan を省略できる軽微な変更の明確な要求を、既存設計と情報源に整合する形で実装する。
 - **Constraints**:
-  - 既存の局所パターンに従う。変える場合は理由を説明可能にする。
-  - 型定義・API・依存方向は実物で確認し、推測しない。
-  - 構造の悪さが実装を歪める場合は、同じ変更で直すか、別リファクタ plan に切るかを判断する。
+  - plan を省略する場合でも、workflow は 1 commit に収まる軽微な変更だけにする。
+  - 実装中に 1 commit を超えると分かったら、作業を広げず `plan.md` に戻るか、今回扱う 1 commit 単位へ切り直す。
+  - 既存の局所パターンに従う。変える場合は理由を説明できるようにする。
+  - 新しい型・ファイル・外部依存・責務配置・module/package/target/folder 境界を扱う場合は、実装前に `module-boundary` で配置判断を確認する。
+  - 型定義・API・依存方向は実物で確認する。
+  - 振る舞い変更や bug fix では、同じ commit に unit test / regression test を追加または更新する。テストできない場合は理由を明記する。
+  - 振る舞い変更があるなら、必要に応じて `docs/specs/` とテストを同期する。
+  - 実装中に見つかった別タスクは、今やる理由がなければ `backlog/backlog.md` に逃がす。今回の commit の active scope 内か迷う作業は、`default.md` の横断スコープ制御で分類してから着手する（adjacent なら実行せず capture / report）。
   - ループ内で時刻を扱う場合は各反復で取得する（ループ外で 1 回だけ取得しない）。
 - **Acceptance**:
   - 要求された振る舞いが実装されている。
-  - 必要な tests / `docs/specs/`（あれば） / `backlog/backlog.md` / `llm-wiki/` の同期が済んでいる。
+  - 必要な `docs/specs/` / tests / `backlog/backlog.md` の同期が済んでいる。
   - 余計なスコープ拡張がない。
 - **Relevant**:
-  - 承認済み plan、または Small 変更（`default.md` の Intake 分類）の明確な要求
-  - 関連する `docs/rules/`, `docs/specs/`（あれば）, `llm-wiki/`
+  - 承認済み plan、または Small 変更の明確な要求
+  - 関連する `docs/rules/`, `docs/specs/`, `llm-wiki/`（作業地図）
   - 変更対象と周辺コード
 
 ## Flow ICAR
 
 ### Code Change
 
-- **Intent**: 要求された変更を、既存設計を壊さない最小十分な差分として実装する。
+- **Intent**: 要求された振る舞いを最小十分な差分で実装する。
 - **Constraints**:
-  - 振る舞い変更や bug fix では、同じ commit に unit test / regression test を追加または更新する。テストできない場合は理由を明記する。
-  - TDD でやる場合は `tdd` skill に従う。Normal / High-risk の振る舞い変更は基本 TDD とし、Small は省略可。
-  - SwiftUI View 層を触るなら `swiftui-pro` skill に従う。
-- **Acceptance**:
-  - 要求された振る舞いがコード上で実装されている。
-  - テスト追加・更新の要否を説明できる。
+  - テストファーストで進める場合は `tdd` スキルに従う。
+  - 構造の悪さが実装を歪める場合は、同じ変更で直すか、別リファクタ plan に切るかを判断する。
+- **Acceptance**: plan と実装上の事実が食い違っていない。
+- **Relevant**: 変更対象コード、関連テスト、関連 `docs/specs/`。
 
 ### Documentation Sync
 
-- **Intent**: 実装差分で古くなる情報源を、同じ commit 内で同期する。
+- **Intent**: 実装で変わった仕様・知見・未着手作業を正しい情報源に反映する。
 - **Constraints**:
-  - 振る舞いが変わるなら `docs/specs/`（あれば）の該当箇所を同期する。
-  - 今回の変更で `llm-wiki/` が古くなっていないか確認し、必要なら同じ差分で追従する（commit 待ちにせず、review で差分の一部として見る）。判断基準の正本は `docs/rules/information-management.md` とし、ここでは運用だけを書く。
-  - `regen: full` の索引・地図（例: `llm-wiki/index.md`）は、手で本文を辻褄合わせしない。frontmatter `sources:` を読み直し、古くなった節をソースから再生成する。
-  - `regen: compiled` の概念・ガイド（例: `llm-wiki/voice-input-text-lifecycle.md`）は、読む順序・経路・注意点が古くなっていないか見て、`sources:` を読み直して該当箇所を再編纂する。
-  - `regen: none` の外部知見（例: `llm-wiki/speechanalyzer-external-notes.md`）は手で育ててよい。特定ソースの罠はコードコメントへ、横断的な挙動・設計理解だけを `llm-wiki/` の地図へ分配し、単一の集約ファイルは作らない。仕様や判断を拘束し始めたら docs へ昇格する。
-  - backlog に積んでいた項目を実装完了したら `backlog/backlog.md` の該当行を `[x]` 等で更新する。
-  - 実装中に見つかった別タスクは、今やる理由がなければ `backlog/backlog.md` に逃がす。
-- **Acceptance**:
-  - 必要な情報源が現在の差分に追従している。
-  - 追従不要と判断した情報源について理由を説明できる。
+  - 完了した backlog 項目があれば `backlog/backlog.md` の該当行を `[x]` 等で更新する。
+  - 技術的知見は、特定ソースに紐づく罠はそのコードのコメントへ、横断的な挙動・設計理解は `llm-wiki/` の該当地図へ残す。単一の集約知見ファイルは作らない。
+  - 今回の変更で `llm-wiki/` の地図が古くなっていないか確認し、古くなった場合は同じ差分で追従する。各ページの更新方法（再生成するか手編集するか）は `regen` 区分に従い、その判断基準の正本は `docs/rules/information-management.md`（および `llm-wiki/` の索引）とする。区分ごとの手順はこの workflow に写経しない。
+  - 後から制約になる判断は `docs/decisions/` に残す。
+- **Acceptance**: 実装差分と情報源が矛盾していない。
+- **Relevant**: `docs/specs/`, `backlog/backlog.md`, `docs/decisions/`, `llm-wiki/`（作業地図）。
 
-### Apple Tooling
+## Tooling
 
-- **Intent**: Apple platform 依存の実装や確認を、Koecho の標準 tooling に沿って扱う。
-- **Constraints**:
-  - XcodeBuildMCP が使える場合は Xcode のビルド・テストに `build_macos` / `test_macos` / `build_run_macos` を優先する。
-  - XcodeBuildMCP や Apple Xcode MCP が使えない場合は、素の `xcodebuild` / `swift test` / 公式ドキュメント確認へ読み替える。
-  - KoechoKit（KoechoCore / KoechoPlatform）の SPM テストは `swift test --package-path Packages/KoechoKit`。
-  - Apple API の仕様確認は Apple 公式ドキュメントを優先し、参照した手段を報告する。
-- **Acceptance**:
-  - 選んだ Apple tooling と代替有無を説明できる。
+<!-- slot: ビルド・テスト・実行のコマンドと使うツールを書く（例: XcodeBuildMCP の build_macos / test_macos と「Bash で xcodebuild を直接叩かない」、go build ./... / go test ./...、./gradlew verifyAll、CLI なら bin/<tool>）。API 仕様の一次情報確認手段も書く（外部 API が無ければ「N/A — 外部 API 参照なし」と明記する）。 -->
+- XcodeBuildMCP が使える場合は優先する: ビルドは `build_macos`、アプリテストは `test_macos`（`-only-testing:KoechoTests` で UITests を除外）、実画面確認は `build_run_macos`。
+- KoechoKit の SPM テストは `swift test --package-path Packages/KoechoKit`。
+- XcodeBuildMCP が使えない場合は `xcodebuild -project Koecho.xcodeproj -scheme Koecho -configuration Debug build`、`xcodebuild test -project Koecho.xcodeproj -scheme Koecho -only-testing:KoechoTests` へ読み替える。
+- Apple API 仕様は Apple Xcode MCP の `DocumentationSearch` を優先し、使えない場合は Apple 公式ドキュメントで確認する。
+<!-- /slot -->
 
 ## Stop Conditions
 
 - plan と実装上の事実が食い違う。
 - 実装中に仕様判断が必要になった。
 - リファクタなしでは変更が不自然または危険になる。
+- module / package / target / folder 境界の判断なしに、新しい責務や外部依存を既存構造へ押し込む必要が出た。
