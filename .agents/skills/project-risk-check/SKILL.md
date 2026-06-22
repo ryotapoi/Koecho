@@ -1,44 +1,37 @@
 ---
 name: project-risk-check
-description: Koecho 固有の plan / 実装チェック。ディクテーション制御・テキストライフサイクル（volatile テキスト / isSuppressingCallbacks）、NSTextView / textStorage 操作、UserDefaults 永続化、権限（Accessibility / Input Monitoring）、ホットキー・ペースト・選択テキスト取得、外部スクリプト実行、モジュール依存方向に触れる変更で使う。汎用レビューではなく Koecho 固有の実害に絞って確認する。
+description: Use for Koecho-specific plan or implementation checks when changes touch dictation control, text lifecycle (volatile text / isSuppressingCallbacks), NSTextView / textStorage operations, UserDefaults persistence, permissions (Accessibility / Input Monitoring), hotkeys, paste, selected-text capture, external script execution, or module dependency direction.
 ---
 
-# Project Risk Check
+# Koecho Risk Check
 
-## Intent
+## ICAR
 
-Koecho 固有の mission・アーキテクチャ制約・既知の落とし穴に照らして、計画または実装のリスクを確認する。
-
-## Constraints
-
-- 汎用レビューではなく、Koecho 固有の実害に絞る。一般的なコード品質は `/code-review`、構造劣化は `thermo-nuclear-code-quality-review` 側で見る。
-- 仕様・UX 判断が必要なら、実装判断として決めずユーザー確認に回す。
-- 具体的な過去知見は `llm-wiki/` を参照し、skill 本体には増やしすぎない。
-- plan / 実装どちらのレビューでも使える。対象は plan ファイル、または未コミット差分 / commit range。
-- Checkpoints と対象を照合する際、必要に応じて `docs/rules/` と関連 ADR（`docs/decisions/`）を Read で読む。
-
-## Acceptance
-
-- `LGTM` またはリスク一覧がある。
-- リスクには影響、根拠、推奨対応がある。
-- 必要な場合、更新すべき `docs/rules/`, `backlog/backlog.md`, `docs/decisions/`, `llm-wiki/` が明確。
-
-## Relevant
-
-- ユーザー依頼、plan、または変更差分（未コミット / commit range）
-- `docs/rules/mission.md`
-- `docs/rules/scope.md`
-- `docs/rules/architecture.md`
-- `docs/rules/constraints.md`
-- `docs/rules/principles.md`
-- `docs/decisions/`
-- `llm-wiki/`
+- **Intent**: Koecho 固有の mission・アーキテクチャ制約・既知の落とし穴に照らして、計画または実装のリスクを確認する。
+- **Constraints**:
+  - 汎用レビューではなく、Koecho 固有の実害に絞る。一般的なコード品質は `change-review`、構造劣化は `thermo-nuclear-code-quality-review` 側で見る。
+  - 仕様・UX 判断が必要なら、実装判断として決めずユーザー確認に回す。
+  - 具体的な過去知見はソースコメントや `llm-wiki/` の地図を参照し、skill 本体には増やしすぎない。
+  - plan / 実装どちらのレビューでも使える。対象は plan ファイル、または未コミット差分 / commit range。
+- **Acceptance**:
+  - `LGTM` またはリスク一覧がある。
+  - リスクには影響、根拠、推奨対応がある。
+  - 必要な場合、更新すべき `docs/specs/`, `backlog/backlog.md`, `docs/decisions/`、および知見の記録先（ソースコメント / `llm-wiki/`）が明確。
+- **Relevant**:
+  - ユーザー依頼、plan、または変更差分（未コミット / commit range）
+  - `docs/rules/mission.md`
+  - `docs/rules/scope.md`
+  - `docs/rules/architecture.md`
+  - `docs/rules/constraints.md`
+  - `docs/rules/information-management.md`
+  - 関連する `docs/specs/`
+  - `llm-wiki/`（作業地図）
 
 ## Checkpoints
 
 ### Mission / Scope
 
-- 軽量・即応の音声入力という mission と矛盾しないか（`docs/rules/mission.md`）。
+- 軽量・即応の音声入力という mission と矛盾しないか。
 - 非目標（`docs/rules/scope.md` 外の機能）を混ぜていないか。
 
 ### Architecture / 依存方向

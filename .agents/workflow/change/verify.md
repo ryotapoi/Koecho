@@ -7,7 +7,7 @@
   - 自動検証を優先する。ビルド・テスト・静的チェックで確認できるものは先に通す。
   - テスト可能な振る舞い変更や bug fix に unit test / regression test がない場合、検証未完了として扱う。例外は理由を明記する。
   - 自分で確認できる UI / 操作 / Preview / 実行環境の挙動は先に確認する。
-  - 複雑な GUI、見た目の好み、実機依存、ユーザー観察が必要な挙動はユーザー確認に回す。
+  - 複雑な GUI、見た目の好み、実機依存、ユーザー観察が必要な挙動は、完了判断に必須ならユーザー確認に回す。必須でなければ残存リスクまたは Goal 完了報告のユーザー判断候補に残す。
   - 検証不能な High-risk 変更は完了扱いにしない。
 - **Acceptance**:
   - 実行した検証と結果を説明できる。
@@ -26,8 +26,8 @@
 - アプリテスト: XcodeBuildMCP の `test_macos` に `-only-testing:KoechoTests` を付け、UITests を除外する。
 - KoechoKit の SPM テスト: `swift test --package-path Packages/KoechoKit`。
 - 実画面確認: XcodeBuildMCP の `build_run_macos`。Preview が適切なら Apple Xcode MCP の `RenderPreview` を使い、使えない場合はビルド・実アプリ起動・スクリーンショット・局所確認で代替する。
-- XcodeBuildMCP が使えない場合は `xcodebuild -project Koecho.xcodeproj -scheme Koecho -configuration Debug build`、`xcodebuild test -project Koecho.xcodeproj -scheme Koecho -only-testing:KoechoTests` へ読み替える。
 - Apple API 仕様は Apple Xcode MCP の `DocumentationSearch` を優先し、使えない場合は Apple 公式ドキュメントで確認する。
+- 権限ダイアログ、実際のディクテーション操作、外部アプリ連携などユーザー環境依存の挙動は、自力で取れる証拠を先に集め、確定できない場合だけユーザー確認に回す。
 <!-- /slot -->
 
 ## User Check
@@ -37,6 +37,6 @@
 
 ## Stop Conditions
 
-- 必須の検証が環境要因で実行できない。
-- UI / 挙動確認が必要だがユーザー確認が未完了。
+- 必須の検証が環境要因で実行できず、代替手段でも裏付けられない。
+- 完了判断に必須の UI / 挙動確認を、自力検証・代替証拠・ユーザー確認のいずれでも裏付けられない。
 - 検証結果が要求または仕様と矛盾する。
