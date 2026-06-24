@@ -3,7 +3,7 @@
 macOS 向けの音声入力+キーボード入力アプリ。
 ホットキーで呼び出し、入力したテキストをシェルスクリプトで加工してペーストする。
 
-<img src="derived/screenshot-panel.png" alt="Koecho のフローティングウィンドウ" width="600">
+<img src="derived/screenshot.png" alt="Koecho のフローティングウィンドウ" width="600">
 
 ## 特徴
 

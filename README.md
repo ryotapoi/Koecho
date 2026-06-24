@@ -5,7 +5,7 @@
 A lightweight voice input app for macOS.
 Invoke with a hotkey, edit text by voice and keyboard, process it with shell scripts, and paste it into the foreground app.
 
-<img src="derived/screenshot-panel.png" alt="Koecho floating panel" width="600">
+<img src="derived/screenshot.png" alt="Koecho floating panel" width="600">
 
 ## Features
 
