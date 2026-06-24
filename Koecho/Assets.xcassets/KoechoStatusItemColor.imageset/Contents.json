@@ -1,32 +1,56 @@
 {
   "images" : [
-    { "filename" : "KoechoStatusItemColor.png", "idiom" : "mac", "scale" : "1x" },
-    { "filename" : "KoechoStatusItemColor@2x.png", "idiom" : "mac", "scale" : "2x" },
-    { "filename" : "KoechoStatusItemColor@3x.png", "idiom" : "mac", "scale" : "3x" },
+    {
+      "filename" : "KoechoStatusItemColor.png",
+      "idiom" : "mac",
+      "scale" : "1x"
+    },
     {
       "appearances" : [
-        { "appearance" : "luminosity", "value" : "dark" }
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
       ],
       "filename" : "KoechoStatusItemColorDark.png",
       "idiom" : "mac",
       "scale" : "1x"
     },
     {
+      "filename" : "KoechoStatusItemColor@2x.png",
+      "idiom" : "mac",
+      "scale" : "2x"
+    },
+    {
       "appearances" : [
-        { "appearance" : "luminosity", "value" : "dark" }
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
       ],
       "filename" : "KoechoStatusItemColorDark@2x.png",
       "idiom" : "mac",
       "scale" : "2x"
     },
     {
+      "filename" : "KoechoStatusItemColor@3x.png",
+      "idiom" : "mac",
+      "scale" : "3x"
+    },
+    {
       "appearances" : [
-        { "appearance" : "luminosity", "value" : "dark" }
+        {
+          "appearance" : "luminosity",
+          "value" : "dark"
+        }
       ],
       "filename" : "KoechoStatusItemColorDark@3x.png",
       "idiom" : "mac",
       "scale" : "3x"
     }
   ],
-  "info" : { "author" : "xcode", "version" : 1 }
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
 }
