@@ -19,8 +19,8 @@
 - review 開始前に、commit に含める code / tests / `backlog/backlog.md` / `docs/specs/` / `llm-wiki/` / `docs/decisions/` / ADR の内容変更が完了していることを確認する。未完了なら review せず `change/implement.md` に戻る。
 - 領域固有 supplement の対象:
   - プロジェクト固有制約に触れる差分 → `project-risk-check`（何が固有制約かは skill 側が判定する）
-  <!-- slot: project-risk-check 以外の領域固有レビューのマッピングがあれば追記する（例: 「View 層 → swiftui-pro」）。 -->
-  - SwiftUI View 層 → `swiftui-pro`
+  <!-- slot: project-risk-check 以外の領域固有レビューのマッピングがあれば追記する（例: 「View 層 → swiftui-specialist」）。 -->
+  - SwiftUI View 層 → `swiftui-specialist`
   <!-- /slot -->
 - **テスト可能な振る舞い変更や bug fix に unit test / regression test がない場合は、原則 blocker として扱う**（`change/verify.md` で未完了。理由がある例外のみ許容）。
 - review は粗探しではなく、実害・仕様逸脱・テスト不足・設計劣化を探す。

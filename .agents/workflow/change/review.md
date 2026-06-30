@@ -10,7 +10,7 @@
   - テスト可能な振る舞い変更や bug fix に unit test / regression test がない場合は、原則 blocker として扱う。
   - review 開始前に、commit に含める code / tests / `backlog/backlog.md` / `docs/specs/` / `llm-wiki/` / `docs/decisions/` / ADR の内容変更が完了していることを確認する。未完了なら review せず `change/implement.md` に戻る。
   - 公開 API / 削除 / 並行性 / 永続化 / 広い UI 挙動などは、`change-review` に加えて `project-risk-check` や別視点レビューを使う。<!-- slot: project-risk-check 以外に足す領域固有レビュー観点があれば追記する（例: SwiftUI / TCA boundary なら該当 skill）。 -->
-    SwiftUI View 層を触るなら `swiftui-pro` を使う。
+    SwiftUI View 層を触るなら `swiftui-specialist` を使う。
     <!-- /slot -->
   - 構造劣化リスクがある場合は `thermo-nuclear-code-quality-review` を必ず使う。
   - 指摘に対応しない場合は理由を残す。
