@@ -53,22 +53,9 @@ Claude Code 由来の `.claude/` は参考資料として扱ってよいが、Co
 
 ## Skills
 
-Codex 用のプロジェクトスキルは `.agents/skills/` に置く。グローバルスキルは `~/.agents/skills/` に置く。Koecho ではプロジェクト内に `goal-workflow` skill を作らない。
+`AGENTS.md` ではスキルの場所や一覧を管理しない。入口は Entry Point、phase ごとの skill 選択は `.agents/workflow/change/*.md` を正とする。
 
-主に使うスキル:
-
-- `goal-workflow`: `/goal` または明示指定時だけ使う。Goal を 1 commit 単位へ分割して完了まで進める
-- `design-decision`: 設計判断の価値基準を当てる
-- `module-boundary`: モジュール配置、責務、依存方向を判断する
-- `tdd`: 振る舞い変更や bug fix を test-first で進める
-- `change-review`: 変更差分をリスクに応じてレビューする
-- `thermo-nuclear-code-quality-review`: 構造劣化リスクがある変更では必須で使う
-- `cross-agent-review`: Goal の commit range など、別系統レビューとして Claude review が必要なときに使う
-- `claude-review-request`: `cross-agent-review` の委譲先として Claude Code tmux review を実行する
-- `maintenance-audit`: 複数タスク後の構造・負債を棚卸しする（light / deep を scope で指定）
-- `wiki-lint`: llm-wiki の孤立・リンク切れ・sources 切れと不変条件を点検する
-- `project-risk-check`: Koecho 固有の制約に照らして確認する
-- `commit`: global `commit` skill を使い、review 済み差分を Conventional Commits 形式でコミットする
+Koecho 固有制約のチェック観点は `project-risk-check` を使い、Claude 側の対応観点と方向性を揃える。
 
 独立した調査・レビュー・実装は subagent で並列化してよい。subagent に依頼するときは、作業ディレクトリ `/Users/ryota/Sources/ryotapoi/Koecho` を明記する。
 
