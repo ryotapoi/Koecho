@@ -1,11 +1,5 @@
 # Backlog
 
-## v1.5.0
-
-- [x] AppIcon を変更する
-- [x] AppIcon 切り替え機能を追加する
-- [x] アプリデザインをブラッシュアップする
-
 ## v1.6 以降
 
 - [ ] ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー decode フォールバック）を撤去する
