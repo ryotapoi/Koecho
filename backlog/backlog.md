@@ -39,17 +39,18 @@
 - [ ] ReplacementRuleEditView の patterns ForEach を index 識別から安定 ID 識別に変える
   - `ReplacementRuleEditView.swift:52` の `ForEach(rule.patterns.indices, id: \.self)` が index を identity にしている（Apple ガイドのアンチパターン）
   - 途中のパターンを削除すると以降の行の identity がずれ、編集中 TextField のフォーカス・状態リセットや挿入/削除アニメーションの崩れにつながる
-  - 方式は未確定（ユーザー確認待ち）: A. モデル変更（patterns の要素を ID 付き型にする。decode 時に ID を生成すれば保存フォーマットは不変。推奨） / B. ビュー側で ID 付きラッパー配列を管理（KoechoCore 不変だが双方向同期がバグ源になりやすい）
+  - 方式確定（2026-07-03 design-decision）: モデル変更。patterns の要素を ID 付き型にする（行 identity は編集 UI に既に存在する意味で、型で表す）。encode/decode は `[String]` のまま維持し decode 時に ID 生成（保存フォーマット不変、永続 ID は現在の要求にないため足さない）
+  - 実装時の注意: `ReplacementRule` は `Equatable` のため、ID を比較に含めるか（内容が同じでも ID 違いで不等になる）は実装時に既存テスト・利用箇所を見て決める
 
 ## v1.x.0 以降（時期未定）
 
 - [ ] ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー decode フォールバック）を撤去する
   - v1.4.0 で patterns 複数化と同時に導入。v1.3.0 以前からの直接更新で置換ルールが decode 失敗→全損するのを防ぐための移行コード
   - 2026-06-11 ユーザー判断: v1.4.x / v1.5.x の移行期間を確保し、v1.6 以降で撤去する（条件は v1.6.0 リリース時点で満たされるため前倒し可）
-- [ ] （削除提案中・ユーザー確認待ち）InputPanelScriptStrip にスクリプトの drag-to-reorder を追加する
-  - macOS 27 の `.reorderable()` + `.reorderContainer(for:)` で List 以外（横 ScrollView の HStack）でも並び替えが可能になった。設定画面を開かずに入力パネル上でスクリプト順を変えられる
-  - デプロイターゲットが macOS 14 のため `if #available(macOS 27, *)` ガードが必要
-  - 削除提案の理由: 頻度の低い操作のために macOS 27 限定の分岐を抱える価値が薄く、設定画面の onMove で既に並び替え可能。採用する場合のみ、管理画面 List の `onMove`（`ReplacementRuleManagementView.swift:52` / `ScriptManagementView.swift:24`）を `reorderable` に揃えるかも同時に判断する
+- [ ] InputPanelScriptStrip にスクリプトの drag-to-reorder を追加する
+  - macOS 27 の `.reorderable()` + `.reorderContainer(for:)` で List 以外（横 ScrollView の HStack）でも並び替えが可能になった。機能自体は増えず「どこでできるか」が変わる: 設定画面を開かずに入力パネル上でスクリプト順を変えられる
+  - デプロイターゲット macOS 14 のままなら `if #available(macOS 27, *)` ガードが必要。deployment target を上げた後にやれば分岐なしで書ける
+  - 実装する時に、管理画面 List の `onMove`（`ReplacementRuleManagementView.swift:52` / `ScriptManagementView.swift:24`）を `reorderable` に揃えるかも同時に判断する
 
 ## SDK 更新時（バージョン非依存）
 
