@@ -26,6 +26,8 @@
 
 ## v1.8.0 — OS 依存層の注入点整備
 
+2 タスクとも分離の目標形（注入方式・protocol 境界）が未確定。着手前に新規セッション（Fable）で設計を確定し、確定内容を各タスクに追記してから実装に入る（2026-07-04 ユーザー判断）。
+
 - [ ] AudioDeviceManager のフォールバック規則をテスト可能にする
   - UID 解決失敗 → システムデフォルトへのフォールバック（`AudioDeviceManager.swift:91-121`）、volumeElement の main → element 1 選択（180-187）、volume clamp（134）が CoreAudio 呼び出しと混在
   - `AudioDeviceListing` が static enum 直呼びで注入不可。protocol 化（または関数注入）で分離する（方式は実装時に design-decision で判断）
