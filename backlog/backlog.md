@@ -1,6 +1,6 @@
 # Backlog
 
-## v1.7.0 — 純ロジック抽出（軽量）
+## v1.6.1 — 純ロジック抽出（軽量）
 
 - [ ] View 埋め込みの純ロジックを抽出してテストし、派生コレクションを再計算からキャッシュに変える
   - `ReplacementRuleManagementView.swift:18` `duplicatePatterns`（`[ReplacementRule] → Set<String>` の純関数）、`HistoryView.swift:12` `filteredEntries`、`InputLevelMeter.swift:25` `levelColor` を抽出してテストする
@@ -11,7 +11,7 @@
   - `AudioInputLevelMonitor.swift:297-315` の RMS 累積 → dB 変換 → 0...1 正規化と 50ms throttle 判定が C 関数ポインタ型の `AURenderCallback` 内にハードコードされ、外部から差し替え不可能
   - 数式部分（サンプル列 → level）を static 純関数に切り出せば KoechoPlatformTests で直接検証できる
 
-## v1.8.0 — OS 依存層の注入点整備
+## v1.6.2 — OS 依存層の注入点整備
 
 設計確定済み（2026-07-04 design-decision）。方針: 新設 protocol は capability 境界の `TranscriberRestartable`（KoechoCore）だけ。CoreAudio / Speech 側は決定規則を純関数（データ渡し）または関数注入で KoechoPlatform 内 internal に抽出し、`AudioDeviceListing` や Speech API の protocol 化はしない（抽出後に残る本体は OS グルーだけで、mock を注入しても検証できる規則が増えないため）。抽出分のテストは KoechoPlatformTests（`swift test`）、Coordinator の分岐テストは KoechoTests（`test_macos`）。
 
@@ -35,7 +35,7 @@
   - 既存の `MockVoiceInputEngine`（`KoechoTests/MockVoiceInputEngine.swift`）は準拠させず、TranscriberRestartable に準拠した別 mock（戻り値を設定できる `restartResult: Bool` と呼び出し回数を持つ）を新設する — 既存テストの「restart 分岐に入らない」前提を壊さないため
   - テスト（KoechoTests）: restart 成功かつ replay 中 → suppression 開始 / restart 失敗 → `transcriberAlreadyRestarted` が false に戻り再試行可能 / 連続呼び出しで restart は 1 回だけ
 
-## v1.9.0 — UI モデル変更
+## v1.6.3 — UI モデル変更
 
 - [ ] ReplacementRuleEditView の patterns ForEach を index 識別から安定 ID 識別に変える
   - `ReplacementRuleEditView.swift:52` の `ForEach(rule.patterns.indices, id: \.self)` が index を identity にしている（Apple ガイドのアンチパターン）
