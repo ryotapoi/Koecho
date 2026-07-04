@@ -3,7 +3,7 @@ regen: compiled
 sources:
   - Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift
   - Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerLocaleManager.swift
-  - Packages/KoechoKit/Sources/KoechoPlatform/SpeechLocale.swift
+  - Packages/KoechoKit/Sources/KoechoCore/SpeechLocale.swift
   - Packages/KoechoKit/Sources/KoechoPlatform/AudioInputLevelMonitor.swift
   - Packages/KoechoKit/Sources/KoechoPlatform/AudioDeviceManager.swift
   - Packages/KoechoKit/Sources/KoechoPlatform/AudioDeviceListing.swift

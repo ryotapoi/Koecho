@@ -4,7 +4,7 @@ sources:
   - Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift
   - Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerLocaleManager.swift
   - Packages/KoechoKit/Sources/KoechoPlatform/SpeechModelVerificationCache.swift
-  - Packages/KoechoKit/Sources/KoechoPlatform/SpeechLocale.swift
+  - Packages/KoechoKit/Sources/KoechoCore/SpeechLocale.swift
   - Packages/KoechoKit/Sources/KoechoPlatform/AudioInputLevelMonitor.swift
   - Packages/KoechoKit/Tests/KoechoPlatformTests/SpeechAnalyzerEngineTests.swift
 ---

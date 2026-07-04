@@ -1,4 +1,5 @@
 import Foundation
+import KoechoCore
 
 /// Session-scoped cache of locales whose SpeechAnalyzer model has been
 /// verified as installed. Keys are `SpeechLocale.normalizationKey` values.
