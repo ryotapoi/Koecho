@@ -1,16 +1,5 @@
 # Backlog
 
-## v1.6.1 — 純ロジック抽出（軽量）
-
-- [x] View 埋め込みの純ロジックを抽出してテストし、派生コレクションを再計算からキャッシュに変える
-  - `ReplacementRuleManagementView.swift:18` `duplicatePatterns`（`[ReplacementRule] → Set<String>` の純関数）、`HistoryView.swift:12` `filteredEntries`、`InputLevelMeter.swift:25` `levelColor` を抽出してテストする
-  - `filteredEntries` は検索や履歴と無関係な再描画（コピー表示の 1.5 秒アニメーション等）でも全件 filter が走る。`searchText` / `entries` 変更時のみ再計算する形にする。`duplicatePatterns` も同じパターンなので抽出とキャッシュ化を同時に行う
-- [x] SpeechLocale を KoechoCore へ移動し、SpeechModelVerificationCache と合わせて直接テストする
-  - `SpeechLocale.swift:8-21` は Foundation のみの純関数だが KoechoPlatform に配置。`SpeechModelVerificationCache.swift:12-29` は純粋な Set 状態管理。どちらも直接テストがない
-- [x] AudioInputLevelMonitor のレベル計算を純関数に抽出してテストする
-  - `AudioInputLevelMonitor.swift:297-315` の RMS 累積 → dB 変換 → 0...1 正規化と 50ms throttle 判定が C 関数ポインタ型の `AURenderCallback` 内にハードコードされ、外部から差し替え不可能
-  - 数式部分（サンプル列 → level）を static 純関数に切り出せば KoechoPlatformTests で直接検証できる
-
 ## v1.6.2 — OS 依存層の注入点整備
 
 設計確定済み（2026-07-04 design-decision）。方針: 新設 protocol は capability 境界の `TranscriberRestartable`（KoechoCore）だけ。CoreAudio / Speech 側は決定規則を純関数（データ渡し）または関数注入で KoechoPlatform 内 internal に抽出し、`AudioDeviceListing` や Speech API の protocol 化はしない（抽出後に残る本体は OS グルーだけで、mock を注入しても検証できる規則が増えないため）。抽出分のテストは KoechoPlatformTests（`swift test`）、Coordinator の分岐テストは KoechoTests（`test_macos`）。
