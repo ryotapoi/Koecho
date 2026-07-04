@@ -127,7 +127,7 @@ struct InputPanelToolbar: View {
   }
 }
 
-private extension HotkeyConfig {
+extension HotkeyConfig {
   var modifierBadge: String {
     switch modifierKey {
     case .command: "\u{2318}"
