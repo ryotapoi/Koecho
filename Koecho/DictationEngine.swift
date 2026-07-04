@@ -4,12 +4,23 @@ import os
 
 @MainActor
 final class DictationEngine: VoiceInputEngine {
+  typealias StartDictationActionSender = (Selector) -> Bool
+
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "DictationEngine")
+  private let startDictationActionSender: StartDictationActionSender
   private(set) var state: VoiceInputState = .idle
   weak var delegate: (any VoiceInputDelegate)?
   private weak var panel: InputPanel?
   private weak var textView: VoiceInputTextView?
   private var retryTask: Task<Void, Never>?
+
+  init(
+    startDictationActionSender: @escaping StartDictationActionSender = {
+      NSApp.sendAction($0, to: nil, from: nil)
+    }
+  ) {
+    self.startDictationActionSender = startDictationActionSender
+  }
 
   /// Configure with panel and textView references.
   /// Called when textView is created and when panel is shown.
@@ -72,7 +83,7 @@ final class DictationEngine: VoiceInputEngine {
     }
 
     let selector = Selector(("startDictation:"))
-    if !NSApp.sendAction(selector, to: nil, from: nil) {
+    if !startDictationActionSender(selector) {
       textView?.perform(selector, with: nil)
     }
     state = .listening

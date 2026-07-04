@@ -1,6 +1,7 @@
 ---
 regen: compiled
 sources:
+  - Koecho/DictationEngine.swift
   - Koecho/KoechoApp.swift
   - KoechoTests/TestSupport.swift
   - KoechoTests/DictationEngineTests.swift
@@ -24,6 +25,6 @@ sources:
 
 ## OS 連携テスト
 
-- `DictationEngine` の `startDictation:` 送信は OS action のため、テストで実送信すると segv や環境依存失敗を起こしやすい。テストでは action 送信クロージャを差し替える。
+- `DictationEngine` の `startDictation:` 送信は OS action のため、テストで実送信すると segv や環境依存失敗を起こしやすい。テストでは `DictationEngine` の action 送信クロージャを差し替える。
 - menu や selector 周辺は SwiftUI の見た目ではなく、直接対象メソッドや状態遷移を検証する。
 - JSON や Foundation 型を使うテストファイルでは `import Foundation` を明示する。Swift Testing だけでは型が揃わない。

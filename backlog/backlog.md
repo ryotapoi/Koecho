@@ -2,7 +2,7 @@
 
 ## v1.6.0 — テスト健全性の即効修正
 
-- [ ] DictationEngine の startDictation 実送信をクロージャ注入にして flaky クラッシュを直す
+- [x] DictationEngine の startDictation 実送信をクロージャ注入にして flaky クラッシュを直す
   - 2026-07-03 に全 189 件実行で `applyReplacementRulesNowReplacesText` と `stopFromListeningTransitions` が「Crash: Koecho at \<external symbol\>」で失敗（単独再実行では成功）。クラッシュレポートで原因特定済み: `DictationEngine.sendStartDictation()`（`DictationEngine.swift:75`）が実の `NSApp.sendAction(startDictation:)` を送信し、HIToolbox / TSM 内で SIGSEGV（KERN_INVALID_ADDRESS）
   - `stopFromListeningTransitions` は 400ms 待つため実送信に到達する（`DictationEngineTests.swift:72`）。また `start()` の retryTask はクロージャが engine を強参照し、InputPanel も NSApp が保持するため、テスト終了後の 300ms 遅延発火が別テスト実行中に漏れうる（`applyReplacementRulesNowReplacesText` のクラッシュはこの巻き込みとみられる）
   - 対応: action 送信をクロージャ注入にしてテストで差し替える。`llm-wiki/testing.md` は既にこのパターンを規定しているが、現行コードに差し替え口がなく wiki と乖離している（コード修正後に wiki を再編纂）
