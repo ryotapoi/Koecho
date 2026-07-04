@@ -283,7 +283,7 @@ struct ReplacementRuleTests {
       }
       """.data(using: .utf8)!
     let rule = try JSONDecoder().decode(ReplacementRule.self, from: json)
-    #expect(rule.patterns == ["えーと"])
+    #expect(rule.patternTexts == ["えーと"])
     #expect(rule.pattern == "えーと")
     #expect(rule.replacement == "")
   }
@@ -299,7 +299,7 @@ struct ReplacementRuleTests {
       }
       """.data(using: .utf8)!
     let rule = try JSONDecoder().decode(ReplacementRule.self, from: json)
-    #expect(rule.patterns == ["GitHブ", "ギットHub"])
+    #expect(rule.patternTexts == ["GitHブ", "ギットHub"])
     #expect(rule.pattern == "GitHブ")
     #expect(rule.replacement == "GitHub")
   }
@@ -310,6 +310,7 @@ struct ReplacementRuleTests {
     let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
     #expect(dict["patterns"] as? [String] == ["test"])
     #expect(dict["pattern"] == nil)
+    #expect((dict["patterns"] as? [[String: Any]]) == nil)
   }
 
   @Test func codableRoundTrip() throws {
@@ -321,10 +322,12 @@ struct ReplacementRuleTests {
     )
     let data = try JSONEncoder().encode(rule)
     let decoded = try JSONDecoder().decode(ReplacementRule.self, from: data)
-    #expect(decoded.patterns == ["a", "b"])
+    #expect(decoded.patternTexts == ["a", "b"])
     #expect(decoded.replacement == "c")
     #expect(decoded.matchesWholeWord == true)
     #expect(decoded.id == rule.id)
+    #expect(decoded == rule)
+    #expect(decoded.patterns.map(\.id) != rule.patterns.map(\.id))
   }
 
   @Test func decodeLegacyEmptyPatternFormat() throws {
@@ -338,7 +341,7 @@ struct ReplacementRuleTests {
       }
       """.data(using: .utf8)!
     let rule = try JSONDecoder().decode(ReplacementRule.self, from: json)
-    #expect(rule.patterns == [""])
+    #expect(rule.patternTexts == [""])
     #expect(rule.pattern == "")
   }
 
@@ -353,7 +356,7 @@ struct ReplacementRuleTests {
       }
       """.data(using: .utf8)!
     let rule = try JSONDecoder().decode(ReplacementRule.self, from: json)
-    #expect(rule.patterns == [""])
+    #expect(rule.patternTexts == [""])
   }
 
   // MARK: - pattern computed property
@@ -365,15 +368,32 @@ struct ReplacementRuleTests {
 
   @Test func patternComputedPropertySetUpdatesFirst() {
     var rule = ReplacementRule(patterns: ["a", "b"], replacement: "c")
+    let firstPatternID = rule.patterns[0].id
     rule.pattern = "x"
-    #expect(rule.patterns == ["x", "b"])
+    #expect(rule.patternTexts == ["x", "b"])
+    #expect(rule.patterns[0].id == firstPatternID)
   }
 
   // MARK: - empty array prevention
 
   @Test func initWithEmptyPatternsArrayFallsBack() {
     let rule = ReplacementRule(patterns: [], replacement: "x")
-    #expect(rule.patterns == [""])
+    #expect(rule.patternTexts == [""])
+  }
+
+  // MARK: - stable pattern identity
+
+  @Test func replacementPatternIDsAreUniquePerElement() {
+    let rule = ReplacementRule(patterns: ["same", "same"], replacement: "x")
+    #expect(rule.patterns[0].id != rule.patterns[1].id)
+  }
+
+  @Test func replacementRuleEqualityIgnoresNonPersistentPatternIDs() {
+    let id = UUID()
+    let lhs = ReplacementRule(id: id, patterns: ["a", "b"], replacement: "c")
+    let rhs = ReplacementRule(id: id, patterns: ["a", "b"], replacement: "c")
+    #expect(lhs == rhs)
+    #expect(lhs.patterns.map(\.id) != rhs.patterns.map(\.id))
   }
 
   // MARK: - displayName with all-empty patterns

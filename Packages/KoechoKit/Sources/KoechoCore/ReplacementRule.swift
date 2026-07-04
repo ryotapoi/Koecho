@@ -1,9 +1,19 @@
 import Foundation
 import os
 
+public struct ReplacementRulePattern: Identifiable, Equatable, Sendable {
+  public let id: UUID
+  public var text: String
+
+  public init(id: UUID = UUID(), text: String) {
+    self.id = id
+    self.text = text
+  }
+}
+
 public struct ReplacementRule: Identifiable, Equatable, Sendable {
   public var id: UUID
-  public var patterns: [String]
+  public var patterns: [ReplacementRulePattern]
   public var replacement: String
   public var usesRegularExpression: Bool
   public var matchesWholeWord: Bool
@@ -16,7 +26,7 @@ public struct ReplacementRule: Identifiable, Equatable, Sendable {
     matchesWholeWord: Bool = false
   ) {
     self.id = id
-    self.patterns = patterns.isEmpty ? [""] : patterns
+    self.patterns = Self.makePatterns(from: patterns)
     self.replacement = replacement
     self.usesRegularExpression = usesRegularExpression
     self.matchesWholeWord = matchesWholeWord
@@ -41,14 +51,18 @@ public struct ReplacementRule: Identifiable, Equatable, Sendable {
 
   /// First pattern, used by regex mode which always operates on a single pattern.
   public var pattern: String {
-    get { patterns.first ?? "" }
+    get { patterns.first?.text ?? "" }
     set {
       if patterns.isEmpty {
-        patterns = [newValue]
+        patterns = [ReplacementRulePattern(text: newValue)]
       } else {
-        patterns[0] = newValue
+        patterns[0].text = newValue
       }
     }
+  }
+
+  public var patternTexts: [String] {
+    patterns.map(\.text)
   }
 
   public var displayName: String? {
@@ -56,7 +70,7 @@ public struct ReplacementRule: Identifiable, Equatable, Sendable {
     if usesRegularExpression {
       nonEmpty = pattern.isEmpty ? [] : [pattern]
     } else {
-      nonEmpty = patterns.filter { !$0.isEmpty }
+      nonEmpty = patternTexts.filter { !$0.isEmpty }
     }
     guard !nonEmpty.isEmpty else { return nil }
     let patternText = nonEmpty.joined(separator: ", ")
@@ -72,6 +86,19 @@ public struct ReplacementRule: Identifiable, Equatable, Sendable {
     } catch {
       return error.localizedDescription
     }
+  }
+
+  public static func == (lhs: ReplacementRule, rhs: ReplacementRule) -> Bool {
+    lhs.id == rhs.id
+      && lhs.patternTexts == rhs.patternTexts
+      && lhs.replacement == rhs.replacement
+      && lhs.usesRegularExpression == rhs.usesRegularExpression
+      && lhs.matchesWholeWord == rhs.matchesWholeWord
+  }
+
+  private static func makePatterns(from texts: [String]) -> [ReplacementRulePattern] {
+    let normalized = texts.isEmpty ? [""] : texts
+    return normalized.map { ReplacementRulePattern(text: $0) }
   }
 }
 
@@ -96,18 +123,18 @@ extension ReplacementRule: Codable {
 
     if container.contains(.patterns) {
       let decoded = try container.decode([String].self, forKey: .patterns)
-      patterns = decoded.isEmpty ? [""] : decoded
+      patterns = Self.makePatterns(from: decoded)
     } else {
       let legacyContainer = try decoder.container(keyedBy: LegacyCodingKeys.self)
       let single = try legacyContainer.decode(String.self, forKey: .pattern)
-      patterns = [single]
+      patterns = Self.makePatterns(from: [single])
     }
   }
 
   public func encode(to encoder: Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     try container.encode(id, forKey: .id)
-    try container.encode(patterns, forKey: .patterns)
+    try container.encode(patternTexts, forKey: .patterns)
     try container.encode(replacement, forKey: .replacement)
     try container.encode(usesRegularExpression, forKey: .usesRegularExpression)
     try container.encode(matchesWholeWord, forKey: .matchesWholeWord)
@@ -135,7 +162,7 @@ private func buildRegex(for rule: ReplacementRule) -> NSRegularExpression? {
   } else {
     // Filter non-empty, sort longest first to prevent shorter patterns from
     // consuming parts of longer ones (regex alternation is left-to-right).
-    let nonEmpty = rule.patterns.filter { !$0.isEmpty }.sorted { $0.count > $1.count }
+    let nonEmpty = rule.patternTexts.filter { !$0.isEmpty }.sorted { $0.count > $1.count }
     guard !nonEmpty.isEmpty else { return nil }
     let alternatives = nonEmpty.map { p in
       let escaped = NSRegularExpression.escapedPattern(for: p)

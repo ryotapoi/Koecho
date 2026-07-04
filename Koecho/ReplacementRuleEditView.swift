@@ -49,17 +49,14 @@ struct ReplacementRuleEditView: View {
   @ViewBuilder
   private var plainPatternSection: some View {
     Section("Patterns") {
-      ForEach(rule.patterns.indices, id: \.self) { index in
+      ForEach($rule.patterns) { $pattern in
         HStack {
           TextField(
             "Pattern",
-            text: Binding(
-              get: { rule.patterns[index] },
-              set: { rule.patterns[index] = $0 }
-            )
+            text: $pattern.text
           )
           Button {
-            rule.patterns.remove(at: index)
+            rule.patterns.removeAll { $0.id == pattern.id }
           } label: {
             Image(systemName: "minus.circle")
           }
@@ -69,7 +66,7 @@ struct ReplacementRuleEditView: View {
         }
       }
       Button {
-        rule.patterns.append("")
+        rule.patterns.append(ReplacementRulePattern(text: ""))
       } label: {
         Label("Add Pattern", systemImage: "plus")
       }

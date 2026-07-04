@@ -168,7 +168,7 @@ struct ReplacementSettingsTests {
 
     let settings = ReplacementSettings(defaults: defaults)
     #expect(settings.replacementRules.count == 1)
-    #expect(settings.replacementRules[0].patterns == ["えーと"])
+    #expect(settings.replacementRules[0].patternTexts == ["えーと"])
     #expect(settings.replacementRules[0].pattern == "えーと")
   }
 

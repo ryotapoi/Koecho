@@ -29,5 +29,20 @@ We will use option A: `patterns: [String]` joined with `|` after longest-first s
 - Positive: Longest-first sort prevents prefix-match issues (e.g., "Git" consuming "GitHub")
 - Positive: Legacy data migrates automatically on first load
 - Negative: `pattern` computed property creates a dual interface (`pattern` / `patterns`) that could confuse future contributors
-- Negative: ForEach with index-based identity may cause animation glitches on pattern add/remove (acceptable for v1 given small pattern counts)
+- Superseded negative: ForEach with index-based identity may cause animation glitches on pattern add/remove (acceptable for v1 given small pattern counts)
 - Neutral: Encode always uses `patterns` key; old app versions cannot read new data (per mission.md non-goal)
+
+## 追記 2026-07-05: 編集 UI の行 identity
+
+`ReplacementRuleEditView` の pattern 行は、途中削除時に index identity がずれると TextField の focus / row state / insertion-removal animation が別行へ移るリスクがある。
+
+別案:
+- index identity を維持する: 保存形式もモデルも小さいが、UI の行 identity が位置に紐づく問題は残る。
+- pattern 文字列を identity にする: content-derived ID になり、編集中の文字列変更で identity が変わる。重複 pattern も扱えない。
+- pattern 行を ID 付き値型にする: UI identity を型で表せるが、Codable と文字列処理の boundary を明示する必要がある。
+
+採用:
+pattern 行を `ReplacementRulePattern` として ID 付き値型にする。保存データの `patterns` は引き続き `[String]` として encode/decode し、decode 時に新しい行 ID を生成する。行 ID は UI identity 用で永続 ID ではないため、`ReplacementRule` の等価性には含めない。
+
+影響:
+SwiftUI の `ForEach` は pattern 行の安定 ID を使える。既存の UserDefaults JSON 形式は変わらない。置換ロジックや重複検出は `patternTexts` を通じて保存対象の文字列列を読む。

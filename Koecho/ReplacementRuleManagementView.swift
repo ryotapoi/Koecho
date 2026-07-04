@@ -37,7 +37,7 @@ struct ReplacementRuleManagementView: View {
           Text(localizedDisplayName(for: rule))
           if rule.usesRegularExpression
             ? duplicates.contains(rule.pattern)
-            : rule.patterns.contains(where: { duplicates.contains($0) })
+            : rule.patternTexts.contains(where: { duplicates.contains($0) })
           {
             Image(systemName: "exclamationmark.triangle.fill")
               .foregroundStyle(.yellow)
@@ -118,7 +118,7 @@ enum ReplacementRuleManagementViewLogic {
       if rule.usesRegularExpression {
         unique = rule.pattern.isEmpty ? [] : [rule.pattern]
       } else {
-        unique = Set(rule.patterns.filter { !$0.isEmpty })
+        unique = Set(rule.patternTexts.filter { !$0.isEmpty })
       }
       for p in unique {
         seen[p, default: 0] += 1

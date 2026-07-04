@@ -2,7 +2,7 @@
 
 ## v1.6.3 — UI モデル変更
 
-- [ ] ReplacementRuleEditView の patterns ForEach を index 識別から安定 ID 識別に変える
+- [x] ReplacementRuleEditView の patterns ForEach を index 識別から安定 ID 識別に変える
   - `ReplacementRuleEditView.swift:52` の `ForEach(rule.patterns.indices, id: \.self)` が index を identity にしている（Apple ガイドのアンチパターン）
   - 途中のパターンを削除すると以降の行の identity がずれ、編集中 TextField のフォーカス・状態リセットや挿入/削除アニメーションの崩れにつながる
   - 方式確定（2026-07-03 design-decision）: モデル変更。patterns の要素を ID 付き型にする（行 identity は編集 UI に既に存在する意味で、型で表す）。encode/decode は `[String]` のまま維持し decode 時に ID 生成（保存フォーマット不変、永続 ID は現在の要求にないため足さない）
