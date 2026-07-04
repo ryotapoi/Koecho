@@ -245,6 +245,95 @@ import Testing
     #expect(storage.string.hasSuffix(" world"))
   }
 
+  @Test func stripOverlappingPrefixReturnsOriginalForEmptyInputs() {
+    let (coordinator, _, _, _) = makeCoordinator()
+
+    #expect(coordinator.stripOverlappingPrefix("hello", accumulated: "") == "hello")
+    #expect(coordinator.stripOverlappingPrefix("", accumulated: "hello") == "")
+  }
+
+  @Test func stripOverlappingPrefixRemovesLongestOverlapUpTo512Characters() {
+    let (coordinator, _, _, _) = makeCoordinator()
+    let overlap = "a" + String(repeating: "b", count: 511)
+
+    let result = coordinator.stripOverlappingPrefix(
+      overlap + " tail",
+      accumulated: "prefix " + overlap
+    )
+
+    #expect(result == " tail")
+  }
+
+  @Test func stripOverlappingPrefixDoesNotCheckBeyond512Characters() {
+    let (coordinator, _, _, _) = makeCoordinator()
+    let overlap = "a" + String(repeating: "b", count: 512)
+    let newText = overlap + " tail"
+
+    let result = coordinator.stripOverlappingPrefix(
+      newText,
+      accumulated: "prefix " + overlap
+    )
+
+    #expect(result == newText)
+  }
+
+  @Test func stripOverlappingPrefixKeepsSingleNonPunctuationOverlap() {
+    let (coordinator, _, _, _) = makeCoordinator()
+
+    let result = coordinator.stripOverlappingPrefix(
+      "apple",
+      accumulated: "banana"
+    )
+
+    #expect(result == "apple")
+  }
+
+  @Test func stripOverlappingPrefixRemovesSinglePunctuationOverlap() {
+    let (coordinator, _, _, _) = makeCoordinator()
+
+    let result = coordinator.stripOverlappingPrefix(
+      ". world",
+      accumulated: "hello."
+    )
+
+    #expect(result == " world")
+  }
+
+  @Test func stripLeadingDuplicatePunctuationRemovesDuplicateAtInsertionPoint() {
+    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello.")
+    mockTV.textStorage = NSTextStorage(string: "hello.")
+
+    let result = coordinator.stripLeadingDuplicatePunctuation(". world", at: 6)
+
+    #expect(result == " world")
+  }
+
+  @Test func stripLeadingDuplicatePunctuationKeepsDuplicateNonPunctuation() {
+    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
+    mockTV.textStorage = NSTextStorage(string: "hello")
+
+    let result = coordinator.stripLeadingDuplicatePunctuation("o world", at: 5)
+
+    #expect(result == "o world")
+  }
+
+  @Test func stripLeadingDuplicatePunctuationKeepsNonDuplicatePunctuation() {
+    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello,")
+    mockTV.textStorage = NSTextStorage(string: "hello,")
+
+    let result = coordinator.stripLeadingDuplicatePunctuation(". world", at: 6)
+
+    #expect(result == ". world")
+  }
+
+  @Test func stripLeadingDuplicatePunctuationKeepsTextAtStartAndEmptyText() {
+    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: ".")
+    mockTV.textStorage = NSTextStorage(string: ".")
+
+    #expect(coordinator.stripLeadingDuplicatePunctuation(". world", at: 0) == ". world")
+    #expect(coordinator.stripLeadingDuplicatePunctuation("", at: 1) == "")
+  }
+
   // MARK: - handleCursorMoved
 
   @Test func handleCursorMovedUpdatesVoiceInsertionPoint() {

@@ -358,7 +358,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     }
   }
 
-  private func stripOverlappingPrefix(_ newText: String, accumulated: String) -> String {
+  func stripOverlappingPrefix(_ newText: String, accumulated: String) -> String {
     guard !accumulated.isEmpty, !newText.isEmpty else { return newText }
     let accNS = accumulated as NSString
     let newNS = newText as NSString
@@ -374,7 +374,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     return newText
   }
 
-  private func stripLeadingDuplicatePunctuation(_ text: String, at insertionPoint: Int) -> String {
+  func stripLeadingDuplicatePunctuation(_ text: String, at insertionPoint: Int) -> String {
     guard let storage = textView?.textStorage,
       insertionPoint > 0, !text.isEmpty
     else { return text }

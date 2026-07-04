@@ -9,7 +9,7 @@
   - ClipboardPasterTests の `clipboardPasterCallsSimulatePaste` / `clipboardPasterSimulatePasteErrorPropagates` が CLI（`swift test`）実行で `.targetAppTerminated` になるのは別件の環境依存。同時に整理する
 - [x] enum → 表示文字列変換の全ケーステストを追加する
   - `VoiceInputCoordinator.swift:291-321` `displayMessage`（エラー・ステータスとも 1 ケースのみ検証済み）、`InputPanelController.swift:459-473` `errorMessage`（ClipboardPasterError 残 2 ケース + default 未検証）、`HotkeyKeyChoice.swift:15-57` `allChoices` / `displayName`、`InputPanelToolbar.swift:130-140` `modifierBadge`
-- [ ] VoiceInputCoordinator の重複除去ロジックを直接テストする
+- [x] VoiceInputCoordinator の重複除去ロジックを直接テストする
   - `stripOverlappingPrefix`（`VoiceInputCoordinator.swift:361-375`）と `stripLeadingDuplicatePunctuation`（377-388）は private 純関数で、InputPanelControllerReplayTests 経由の間接カバレッジのみ
   - 境界値（`maxSuffixLen` 512 制限、suffixLen == 1 の句読点判定分岐）が未検証。internal 化または型抽出で直接単体テストする
 
