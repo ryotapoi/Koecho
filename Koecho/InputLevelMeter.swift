@@ -10,7 +10,7 @@ struct InputLevelMeter: View {
         .foregroundStyle(.secondary)
       GeometryReader { geometry in
         RoundedRectangle(cornerRadius: 2)
-          .fill(levelColor)
+          .fill(levelColor.color)
           .frame(width: geometry.size.width * CGFloat(level))
           .animation(.linear(duration: 0.1), value: level)
       }
@@ -22,8 +22,31 @@ struct InputLevelMeter: View {
     }
   }
 
-  private var levelColor: Color {
+  private var levelColor: InputLevelMeterLevelColor {
+    InputLevelMeterLogic.levelColor(for: level)
+  }
+}
+
+enum InputLevelMeterLogic {
+  static func levelColor(for level: Float) -> InputLevelMeterLevelColor {
     if level > 0.9 { .red } else if level > 0.7 { .yellow } else { .green }
+  }
+}
+
+enum InputLevelMeterLevelColor: Equatable {
+  case green
+  case yellow
+  case red
+
+  var color: Color {
+    switch self {
+    case .green:
+      .green
+    case .yellow:
+      .yellow
+    case .red:
+      .red
+    }
   }
 }
 

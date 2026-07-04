@@ -5,17 +5,19 @@ import SwiftUI
 struct HistoryView: View {
   var historyStore: HistoryStore
   @State private var searchText = ""
+  @State private var filteredEntries: [HistoryEntry]
   @State private var copiedEntryID: UUID?
   @State private var resetCopiedTask: Task<Void, Never>?
   @State private var popoverEntryID: UUID?
 
-  private var filteredEntries: [HistoryEntry] {
-    if searchText.isEmpty {
-      return historyStore.entries
-    }
-    return historyStore.entries.filter {
-      $0.text.localizedStandardContains(searchText)
-    }
+  init(historyStore: HistoryStore) {
+    self.historyStore = historyStore
+    _filteredEntries = State(
+      initialValue: HistoryViewLogic.filteredEntries(
+        searchText: "",
+        entries: historyStore.entries
+      )
+    )
   }
 
   var body: some View {
@@ -57,6 +59,13 @@ struct HistoryView: View {
       }
       .padding(8)
     }
+    .onAppear(perform: updateFilteredEntries)
+    .onChange(of: searchText) {
+      updateFilteredEntries()
+    }
+    .onChange(of: historyStore.entries) {
+      updateFilteredEntries()
+    }
   }
 
   private func copyEntry(_ entry: HistoryEntry) {
@@ -71,6 +80,24 @@ struct HistoryView: View {
       withAnimation {
         copiedEntryID = nil
       }
+    }
+  }
+
+  private func updateFilteredEntries() {
+    filteredEntries = HistoryViewLogic.filteredEntries(
+      searchText: searchText,
+      entries: historyStore.entries
+    )
+  }
+}
+
+enum HistoryViewLogic {
+  static func filteredEntries(searchText: String, entries: [HistoryEntry]) -> [HistoryEntry] {
+    if searchText.isEmpty {
+      return entries
+    }
+    return entries.filter {
+      $0.text.localizedStandardContains(searchText)
     }
   }
 }

@@ -2,7 +2,7 @@
 
 ## v1.6.1 — 純ロジック抽出（軽量）
 
-- [ ] View 埋め込みの純ロジックを抽出してテストし、派生コレクションを再計算からキャッシュに変える
+- [x] View 埋め込みの純ロジックを抽出してテストし、派生コレクションを再計算からキャッシュに変える
   - `ReplacementRuleManagementView.swift:18` `duplicatePatterns`（`[ReplacementRule] → Set<String>` の純関数）、`HistoryView.swift:12` `filteredEntries`、`InputLevelMeter.swift:25` `levelColor` を抽出してテストする
   - `filteredEntries` は検索や履歴と無関係な再描画（コピー表示の 1.5 秒アニメーション等）でも全件 filter が走る。`searchText` / `entries` 変更時のみ再計算する形にする。`duplicatePatterns` も同じパターンなので抽出とキャッシュ化を同時に行う
 - [ ] SpeechLocale を KoechoCore へ移動し、SpeechModelVerificationCache と合わせて直接テストする

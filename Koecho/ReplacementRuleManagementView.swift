@@ -4,6 +4,16 @@ import SwiftUI
 struct ReplacementRuleManagementView: View {
   @Bindable var settings: ReplacementSettings
   @State private var selection: UUID?
+  @State private var duplicatePatterns: Set<String>
+
+  init(settings: ReplacementSettings) {
+    self.settings = settings
+    _duplicatePatterns = State(
+      initialValue: ReplacementRuleManagementViewLogic.duplicatePatterns(
+        in: settings.replacementRules
+      )
+    )
+  }
 
   var body: some View {
     HStack(spacing: 0) {
@@ -13,22 +23,10 @@ struct ReplacementRuleManagementView: View {
       ruleDetail
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-  }
-
-  private var duplicatePatterns: Set<String> {
-    var seen: [String: Int] = [:]
-    for rule in settings.replacementRules {
-      let unique: Set<String>
-      if rule.usesRegularExpression {
-        unique = rule.pattern.isEmpty ? [] : [rule.pattern]
-      } else {
-        unique = Set(rule.patterns.filter { !$0.isEmpty })
-      }
-      for p in unique {
-        seen[p, default: 0] += 1
-      }
+    .onAppear(perform: updateDuplicatePatterns)
+    .onChange(of: settings.replacementRules) {
+      updateDuplicatePatterns()
     }
-    return Set(seen.filter { $0.value > 1 }.keys)
   }
 
   private var ruleList: some View {
@@ -71,6 +69,12 @@ struct ReplacementRuleManagementView: View {
     }
   }
 
+  private func updateDuplicatePatterns() {
+    duplicatePatterns = ReplacementRuleManagementViewLogic.duplicatePatterns(
+      in: settings.replacementRules
+    )
+  }
+
   @ViewBuilder
   private var ruleDetail: some View {
     if let id = selection, let binding = ruleBinding(for: id) {
@@ -103,6 +107,24 @@ struct ReplacementRuleManagementView: View {
 
   private func localizedDisplayName(for rule: ReplacementRule) -> String {
     rule.displayName ?? String(localized: "New Rule")
+  }
+}
+
+enum ReplacementRuleManagementViewLogic {
+  static func duplicatePatterns(in rules: [ReplacementRule]) -> Set<String> {
+    var seen: [String: Int] = [:]
+    for rule in rules {
+      let unique: Set<String>
+      if rule.usesRegularExpression {
+        unique = rule.pattern.isEmpty ? [] : [rule.pattern]
+      } else {
+        unique = Set(rule.patterns.filter { !$0.isEmpty })
+      }
+      for p in unique {
+        seen[p, default: 0] += 1
+      }
+    }
+    return Set(seen.filter { $0.value > 1 }.keys)
   }
 }
 
