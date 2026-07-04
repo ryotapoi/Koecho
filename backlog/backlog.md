@@ -4,7 +4,7 @@
 
 設計確定済み（2026-07-04 design-decision）。方針: 新設 protocol は capability 境界の `TranscriberRestartable`（KoechoCore）だけ。CoreAudio / Speech 側は決定規則を純関数（データ渡し）または関数注入で KoechoPlatform 内 internal に抽出し、`AudioDeviceListing` や Speech API の protocol 化はしない（抽出後に残る本体は OS グルーだけで、mock を注入しても検証できる規則が増えないため）。抽出分のテストは KoechoPlatformTests（`swift test`）、Coordinator の分岐テストは KoechoTests（`test_macos`）。
 
-- [ ] AudioDeviceManager の選択規則を `AudioDeviceSelection` に純関数として抽出しテストする
+- [x] AudioDeviceManager の選択規則を `AudioDeviceSelection` に純関数として抽出しテストする
   - 新設: `Packages/KoechoKit/Sources/KoechoPlatform/AudioDeviceSelection.swift` に internal enum `AudioDeviceSelection`
     - `struct MonitoringTarget: Equatable`: `effectiveUID: String?`（nil = システムデフォルト追従）、`deviceID: AudioDeviceID`、computed `explicitDeviceID: AudioDeviceID?`（effectiveUID が nil なら nil。`levelMonitor.start(deviceID:)` に渡す値）
     - `static func monitoringTarget(requestedUID: String?, resolvedID: AudioDeviceID?, systemDefaultID: AudioDeviceID?) -> MonitoringTarget?`。規則: UID 指定かつ解決成功 → (uid, resolvedID) / UID 指定かつ解決失敗 → (nil, systemDefaultID) へフォールバック / UID 未指定 → (nil, systemDefaultID) / 使えるデバイスなし → nil

@@ -91,32 +91,28 @@ public final class AudioDeviceManager {
   public func startMonitoring(deviceUID: String?) {
     stopMonitoring()
 
-    // Resolve effective device ID.
-    // If a specific UID is given but not found, fall back to system default
-    // and clear monitoringDeviceUID so default device changes are tracked.
-    var effectiveUID = deviceUID
-    var deviceID: AudioDeviceID?
-    if let uid = deviceUID {
-      deviceID = AudioDeviceListing.resolveDeviceID(forUID: uid)
-      if deviceID == nil {
-        logger.warning(
-          "Device UID '\(uid, privacy: .public)' not found, falling back to system default")
-        effectiveUID = nil
-      }
-    }
-    if deviceID == nil {
-      deviceID = AudioDeviceListing.defaultInputDeviceID()
+    let resolvedID = deviceUID.flatMap(AudioDeviceListing.resolveDeviceID(forUID:))
+    let systemDefaultID = AudioDeviceListing.defaultInputDeviceID()
+
+    if let uid = deviceUID, resolvedID == nil {
+      logger.warning(
+        "Device UID '\(uid, privacy: .public)' not found, falling back to system default")
     }
 
-    guard let deviceID else {
+    guard
+      let target = AudioDeviceSelection.monitoringTarget(
+        requestedUID: deviceUID,
+        resolvedID: resolvedID,
+        systemDefaultID: systemDefaultID)
+    else {
       logger.warning("No input device available for monitoring")
       return
     }
 
-    monitoringDeviceUID = effectiveUID
-    monitoredDeviceID = deviceID
-    setupVolumeMonitoring(for: deviceID)
-    levelMonitor.start(deviceID: effectiveUID != nil ? deviceID : nil)
+    monitoringDeviceUID = target.effectiveUID
+    monitoredDeviceID = target.deviceID
+    setupVolumeMonitoring(for: target.deviceID)
+    levelMonitor.start(deviceID: target.explicitDeviceID)
     isMonitoring = true
   }
 
@@ -131,14 +127,9 @@ public final class AudioDeviceManager {
 
   public func setInputVolume(_ volume: Float) {
     guard monitoredDeviceID != kAudioObjectUnknown else { return }
-    let clamped = max(0, min(1, volume))
+    let clamped = AudioDeviceSelection.clampedVolume(volume)
 
     let element = volumeElement(for: monitoredDeviceID)
-    guard
-      element != kAudioObjectPropertyElementMain
-        || AudioDeviceListing.supportsVolumeOnElement(
-          monitoredDeviceID, element: kAudioObjectPropertyElementMain)
-    else { return }
 
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioDevicePropertyVolumeScalar,
@@ -178,12 +169,10 @@ public final class AudioDeviceManager {
   }
 
   private func volumeElement(for deviceID: AudioDeviceID) -> AudioObjectPropertyElement {
-    if AudioDeviceListing.supportsVolumeOnElement(
-      deviceID, element: kAudioObjectPropertyElementMain)
-    {
-      return kAudioObjectPropertyElementMain
-    }
-    return 1
+    AudioDeviceSelection.volumeElement(
+      supportsMainElement: AudioDeviceListing.supportsVolumeOnElement(
+        deviceID, element: kAudioObjectPropertyElementMain)
+    )
   }
 
   private func readVolume(deviceID: AudioDeviceID, element: AudioObjectPropertyElement) -> Float {
