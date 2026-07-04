@@ -7,7 +7,7 @@
   - `filteredEntries` は検索や履歴と無関係な再描画（コピー表示の 1.5 秒アニメーション等）でも全件 filter が走る。`searchText` / `entries` 変更時のみ再計算する形にする。`duplicatePatterns` も同じパターンなので抽出とキャッシュ化を同時に行う
 - [x] SpeechLocale を KoechoCore へ移動し、SpeechModelVerificationCache と合わせて直接テストする
   - `SpeechLocale.swift:8-21` は Foundation のみの純関数だが KoechoPlatform に配置。`SpeechModelVerificationCache.swift:12-29` は純粋な Set 状態管理。どちらも直接テストがない
-- [ ] AudioInputLevelMonitor のレベル計算を純関数に抽出してテストする
+- [x] AudioInputLevelMonitor のレベル計算を純関数に抽出してテストする
   - `AudioInputLevelMonitor.swift:297-315` の RMS 累積 → dB 変換 → 0...1 正規化と 50ms throttle 判定が C 関数ポインタ型の `AURenderCallback` 内にハードコードされ、外部から差し替え不可能
   - 数式部分（サンプル列 → level）を static 純関数に切り出せば KoechoPlatformTests で直接検証できる
 

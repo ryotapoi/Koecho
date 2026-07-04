@@ -19,6 +19,34 @@ final class AudioInputLevelMonitor {
   @ObservationIgnored private nonisolated(unsafe) var lastLevelUpdate: ContinuousClock.Instant =
     .now
 
+  nonisolated static func inputLevel(
+    buffers: UnsafeMutableAudioBufferListPointer,
+    frameCount: Int
+  ) -> Float? {
+    guard frameCount > 0, buffers.count > 0 else { return nil }
+
+    var sumOfSquares: Float = 0
+    for ch in 0..<buffers.count {
+      guard let data = buffers[ch].mData else { continue }
+      let samples = data.assumingMemoryBound(to: Float32.self)
+      for frame in 0..<frameCount {
+        let sample = samples[frame]
+        sumOfSquares += sample * sample
+      }
+    }
+
+    let rms = sqrtf(sumOfSquares / Float(frameCount * buffers.count))
+    let db = 20 * log10f(max(rms, 1e-7))
+    return max(0, min(1, (db + 60) / 60))
+  }
+
+  nonisolated static func shouldPublishLevel(
+    now: ContinuousClock.Instant,
+    lastUpdate: ContinuousClock.Instant
+  ) -> Bool {
+    now - lastUpdate >= .milliseconds(50)
+  }
+
   func start(deviceID: AudioDeviceID?) {
     stop()
 
@@ -289,28 +317,21 @@ final class AudioInputLevelMonitor {
     )
     guard status == noErr else { return status }
 
-    // Calculate RMS across all channels
-    let channelCount = abl.count
-    let frameCount = Int(inNumberFrames)
-    guard frameCount > 0, channelCount > 0 else { return noErr }
-
-    var sumOfSquares: Float = 0
-    for ch in 0..<channelCount {
-      guard let data = abl[ch].mData else { continue }
-      let samples = data.assumingMemoryBound(to: Float32.self)
-      for frame in 0..<frameCount {
-        let sample = samples[frame]
-        sumOfSquares += sample * sample
-      }
+    guard
+      let normalized = AudioInputLevelMonitor.inputLevel(
+        buffers: abl,
+        frameCount: Int(inNumberFrames)
+      )
+    else {
+      return noErr
     }
-
-    let rms = sqrtf(sumOfSquares / Float(frameCount * channelCount))
-    let db = 20 * log10f(max(rms, 1e-7))
-    let normalized = max(0, min(1, (db + 60) / 60))
 
     // Throttle: skip if less than 50ms since last update
     let now = ContinuousClock.now
-    guard now - monitor.lastLevelUpdate >= .milliseconds(50) else { return noErr }
+    guard AudioInputLevelMonitor.shouldPublishLevel(now: now, lastUpdate: monitor.lastLevelUpdate)
+    else {
+      return noErr
+    }
     monitor.lastLevelUpdate = now
 
     Task { @MainActor [weak monitor] in
