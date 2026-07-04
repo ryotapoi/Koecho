@@ -32,6 +32,12 @@ public protocol VoiceInputEngine: AnyObject {
 }
 
 @MainActor
+public protocol TranscriberRestartable: AnyObject {
+  @discardableResult
+  func restartTranscriber() async -> Bool
+}
+
+@MainActor
 public protocol VoiceInputDelegate: AnyObject {
   func voiceInput(didFinalize text: String)
   func voiceInput(didUpdateVolatile text: String)

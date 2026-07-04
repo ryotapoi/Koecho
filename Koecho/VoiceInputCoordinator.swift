@@ -334,26 +334,24 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   private func restartTranscriberIfNeeded() {
-    if #available(macOS 26, *) {
-      guard !transcriberAlreadyRestarted,
-        let saEngine = engine as? SpeechAnalyzerEngine
-      else { return }
-      let shouldSuppressReplay = replayState != .idle
-      // Set synchronously to prevent duplicate Task creation from handleCursorMoved + handleTextChanged
-      transcriberAlreadyRestarted = true
-      Task { @MainActor in
-        let didRestart = await saEngine.restartTranscriber()
-        if didRestart {
-          if shouldSuppressReplay {
-            self.replayState.beginSuppression(
-              deadline: Date.now + Self.replaySuppressionDuration)
-          }
-        } else {
-          // Restart failed (e.g. not listening): reset flag so next attempt can retry.
-          // Don't clearReplayState() here — a concurrent restart may be in flight.
-          // replayState will be cleared by didFinalize or clearReplayState elsewhere.
-          self.transcriberAlreadyRestarted = false
+    guard !transcriberAlreadyRestarted,
+      let restartableEngine = engine as? any TranscriberRestartable
+    else { return }
+    let shouldSuppressReplay = replayState != .idle
+    // Set synchronously to prevent duplicate Task creation from handleCursorMoved + handleTextChanged
+    transcriberAlreadyRestarted = true
+    Task { @MainActor in
+      let didRestart = await restartableEngine.restartTranscriber()
+      if didRestart {
+        if shouldSuppressReplay {
+          self.replayState.beginSuppression(
+            deadline: Date.now + Self.replaySuppressionDuration)
         }
+      } else {
+        // Restart failed (e.g. not listening): reset flag so next attempt can retry.
+        // Don't clearReplayState() here — a concurrent restart may be in flight.
+        // replayState will be cleared by didFinalize or clearReplayState elsewhere.
+        self.transcriberAlreadyRestarted = false
       }
     }
   }

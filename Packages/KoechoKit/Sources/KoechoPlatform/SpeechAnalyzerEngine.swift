@@ -5,7 +5,7 @@ import os
 
 @available(macOS 26, *)
 @MainActor
-public final class SpeechAnalyzerEngine: VoiceInputEngine {
+public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartable {
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "SpeechAnalyzerEngine")
   private let locale: Locale
   private let deviceUID: String?
