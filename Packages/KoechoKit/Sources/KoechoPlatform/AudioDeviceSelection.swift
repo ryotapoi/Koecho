@@ -23,6 +23,15 @@ enum AudioDeviceSelection {
     return MonitoringTarget(effectiveUID: nil, deviceID: systemDefaultID)
   }
 
+  static func engineDeviceID(
+    requestedUID: String?,
+    resolvedID: AudioDeviceID?,
+    hasAudioUnit: Bool
+  ) -> AudioDeviceID? {
+    guard requestedUID != nil, hasAudioUnit else { return nil }
+    return resolvedID
+  }
+
   static func volumeElement(
     supportsMainElement: Bool
   ) -> AudioObjectPropertyElement {

@@ -66,7 +66,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
       let finalizeTask = Task {
         try await analyzer.finalizeAndFinishThroughEndOfInput()
       }
-      if await waitWithTimeout(finalizeTask, seconds: 1) {
+      if await TaskTimeout.hasTimedOut(finalizeTask, seconds: 1) {
         logger.warning("finalizeAndFinishThroughEndOfInput timed out")
         finalizeTask.cancel()
       }
@@ -74,7 +74,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
 
     // Wait for result task with timeout
     if let resultTask {
-      if await waitWithTimeout(resultTask, seconds: 1) {
+      if await TaskTimeout.hasTimedOut(resultTask, seconds: 1) {
         logger.warning("Result task timed out during stop, cancelling")
         resultTask.cancel()
       }
@@ -107,8 +107,8 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
   private func startRecognition() async {
     // 1. Check microphone permission
     let status = AVCaptureDevice.authorizationStatus(for: .audio)
-    switch status {
-    case .notDetermined:
+    switch MicrophonePermissionRule.action(for: status) {
+    case .requestAccess:
       delegate?.voiceInput(didUpdateStatus: .requestingMicrophoneAccess)
       let granted = await AVCaptureDevice.requestAccess(for: .audio)
       delegate?.voiceInput(didUpdateStatus: nil)
@@ -116,12 +116,10 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
         reportError(.microphoneAccessDenied)
         return
       }
-    case .denied, .restricted:
+    case .deny:
       reportError(.microphoneAccessDenied)
       return
-    case .authorized:
-      break
-    @unknown default:
+    case .proceed:
       break
     }
 
@@ -137,23 +135,29 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
 
     // 3. Check / download model (skip if already verified this session)
     let localeKey = SpeechLocale.normalizationKey(locale)
-    if !SpeechModelVerificationCache.isVerified(localeKey: localeKey) {
-      do {
+    let modelError = await SpeechModelPreparation.ensureModelAvailable(
+      localeKey: localeKey,
+      isVerified: SpeechModelVerificationCache.isVerified(localeKey:),
+      markVerified: SpeechModelVerificationCache.markVerified(localeKey:),
+      installationRequest: { [transcriber, logger] in
         if let request = try await AssetInventory.assetInstallationRequest(
           supporting: [transcriber]
         ) {
           logger.info("Downloading speech model...")
-          delegate?.voiceInput(didUpdateStatus: .downloadingModel)
-          try await request.downloadAndInstall()
-          logger.info("Speech model downloaded")
-          delegate?.voiceInput(didUpdateStatus: nil)
+          return {
+            try await request.downloadAndInstall()
+            logger.info("Speech model downloaded")
+          }
         }
-        SpeechModelVerificationCache.markVerified(localeKey: localeKey)
-      } catch {
-        delegate?.voiceInput(didUpdateStatus: nil)
-        reportError(.modelDownloadFailed(description: error.localizedDescription))
-        return
+        return nil
+      },
+      updateStatus: { [delegate] status in
+        delegate?.voiceInput(didUpdateStatus: status)
       }
+    )
+    if let modelError {
+      reportError(modelError)
+      return
     }
 
     // 4. Setup audio engine
@@ -161,9 +165,13 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
     self.audioEngine = audioEngine
 
     if let deviceUID {
-      if let deviceID = AudioDeviceListing.resolveDeviceID(forUID: deviceUID),
-        let audioUnit = audioEngine.inputNode.audioUnit
-      {
+      let resolvedID = AudioDeviceListing.resolveDeviceID(forUID: deviceUID)
+      let audioUnit = audioEngine.inputNode.audioUnit
+      if let deviceID = AudioDeviceSelection.engineDeviceID(
+        requestedUID: deviceUID,
+        resolvedID: resolvedID,
+        hasAudioUnit: audioUnit != nil
+      ), let audioUnit {
         var id = deviceID
         let status = AudioUnitSetProperty(
           audioUnit,
@@ -334,7 +342,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
     let oldResultTask = resultTask
     oldResultTask?.cancel()
     if let oldResultTask {
-      if await waitWithTimeout(oldResultTask, seconds: 1) {
+      if await TaskTimeout.hasTimedOut(oldResultTask, seconds: 1) {
         logger.warning("Result task timed out during restart, cancelling")
         oldResultTask.cancel()
       }
@@ -374,26 +382,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine {
     tearDown()
     state = .error(description)
     delegate?.voiceInput(didEncounterError: error)
-  }
-
-  /// Race a task against a timeout. Returns `true` if the timeout fires first.
-  private func waitWithTimeout<Failure>(
-    _ task: Task<Void, Failure>,
-    seconds: Double
-  ) async -> Bool where Failure: Error {
-    await withTaskGroup(of: Bool.self) { group in
-      group.addTask {
-        _ = try? await task.value
-        return false
-      }
-      group.addTask {
-        try? await Task.sleep(for: .seconds(seconds))
-        return true
-      }
-      let first = await group.next()!
-      group.cancelAll()
-      return first
-    }
   }
 
   private func tearDown() {
