@@ -27,6 +27,25 @@ public nonisolated struct PasteboardItem: Sendable {
 }
 
 @MainActor
+protocol ClipboardPasteTarget {
+  var isTerminated: Bool { get }
+  var localizedName: String? { get }
+
+  func activate()
+}
+
+private struct RunningApplicationPasteTarget: ClipboardPasteTarget {
+  let application: NSRunningApplication
+
+  var isTerminated: Bool { application.isTerminated }
+  var localizedName: String? { application.localizedName }
+
+  func activate() {
+    application.activate()
+  }
+}
+
+@MainActor
 public func savePasteboard(_ pasteboard: NSPasteboard) -> [PasteboardItem] {
   guard let items = pasteboard.pasteboardItems else { return [] }
   return items.map { item in
@@ -79,12 +98,23 @@ public final class ClipboardPaster: Pasting {
     to application: NSRunningApplication,
     using pasteboard: NSPasteboard = .general
   ) async throws {
+    try await paste(
+      text: text,
+      to: RunningApplicationPasteTarget(application: application),
+      using: pasteboard)
+  }
+
+  func paste(
+    text: String,
+    to target: some ClipboardPasteTarget,
+    using pasteboard: NSPasteboard = .general
+  ) async throws {
     guard cgEventClient.isProcessTrusted() else {
       logger.error("Accessibility not trusted")
       throw ClipboardPasterError.accessibilityNotTrusted
     }
 
-    guard !application.isTerminated else {
+    guard !target.isTerminated else {
       logger.error("Target application is terminated")
       throw ClipboardPasterError.targetAppTerminated
     }
@@ -101,9 +131,9 @@ public final class ClipboardPaster: Pasting {
     pasteboard.clearContents()
     pasteboard.setString(text, forType: .string)
 
-    application.activate()
+    target.activate()
     logger.debug(
-      "Activated target app: \(application.localizedName ?? "unknown", privacy: .public)")
+      "Activated target app: \(target.localizedName ?? "unknown", privacy: .public)")
 
     // CancellationError here is safe: clipboard is set but paste won't fire,
     // and the caller's catch block will call restoreClipboard().

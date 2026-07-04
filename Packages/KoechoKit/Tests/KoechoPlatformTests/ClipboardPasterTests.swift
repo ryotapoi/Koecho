@@ -19,6 +19,16 @@ private final class MockCGEventClient: CGEventClient, @unchecked Sendable {
   }
 }
 
+private final class MockClipboardPasteTarget: ClipboardPasteTarget {
+  var isTerminated = false
+  var localizedName: String? = "Test Target"
+  var activateCallCount = 0
+
+  func activate() {
+    activateCallCount += 1
+  }
+}
+
 @MainActor
 struct ClipboardPasterTests {
   private func makeTestPasteboard() -> NSPasteboard {
@@ -121,19 +131,35 @@ struct ClipboardPasterTests {
   @Test func clipboardPasterCallsSimulatePaste() async throws {
     let client = MockCGEventClient()
     let paster = ClipboardPaster(pasteDelay: 0.1, cgEventClient: client)
-    let app = NSRunningApplication.current
+    let target = MockClipboardPasteTarget()
     let pb = makeTestPasteboard()
-    try await paster.paste(text: "hello", to: app, using: pb)
+    try await paster.paste(text: "hello", to: target, using: pb)
     #expect(client.simulatePasteCallCount == 1)
+    #expect(target.activateCallCount == 1)
+    #expect(pb.string(forType: .string) == "hello")
   }
 
   @Test func clipboardPasterSimulatePasteErrorPropagates() async {
     let client = MockCGEventClient()
     client.simulatePasteError = ClipboardPasterError.failedToCreateCGEvent
     let paster = ClipboardPaster(pasteDelay: 0.1, cgEventClient: client)
-    let app = NSRunningApplication.current
+    let target = MockClipboardPasteTarget()
     await #expect(throws: ClipboardPasterError.failedToCreateCGEvent) {
-      try await paster.paste(text: "test", to: app, using: makeTestPasteboard())
+      try await paster.paste(text: "test", to: target, using: makeTestPasteboard())
     }
+    #expect(client.simulatePasteCallCount == 1)
+    #expect(target.activateCallCount == 1)
+  }
+
+  @Test func clipboardPasterTargetTerminatedThrows() async {
+    let client = MockCGEventClient()
+    let paster = ClipboardPaster(pasteDelay: 0.1, cgEventClient: client)
+    let target = MockClipboardPasteTarget()
+    target.isTerminated = true
+    await #expect(throws: ClipboardPasterError.targetAppTerminated) {
+      try await paster.paste(text: "test", to: target, using: makeTestPasteboard())
+    }
+    #expect(client.simulatePasteCallCount == 0)
+    #expect(target.activateCallCount == 0)
   }
 }
