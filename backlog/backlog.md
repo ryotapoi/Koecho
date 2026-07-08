@@ -1,22 +1,81 @@
 # Backlog
 
-## v1.6.3 — UI モデル変更
+## v1.6.4 — テスト信頼性（2026-07-08/09 maintenance-audit deep より）
 
-- [x] ReplacementRuleEditView の patterns ForEach を index 識別から安定 ID 識別に変える
-  - `ReplacementRuleEditView.swift:52` の `ForEach(rule.patterns.indices, id: \.self)` が index を identity にしている（Apple ガイドのアンチパターン）
-  - 途中のパターンを削除すると以降の行の identity がずれ、編集中 TextField のフォーカス・状態リセットや挿入/削除アニメーションの崩れにつながる
-  - 方式確定（2026-07-03 design-decision）: モデル変更。patterns の要素を ID 付き型にする（行 identity は編集 UI に既に存在する意味で、型で表す）。encode/decode は `[String]` のまま維持し decode 時に ID 生成（保存フォーマット不変、永続 ID は現在の要求にないため足さない）
-  - 実装時の注意: `ReplacementRule` は `Equatable` のため、ID を比較に含めるか（内容が同じでも ID 違いで不等になる）は実装時に既存テスト・利用箇所を見て決める
+- [ ] DictationEngine の起動遅延 300ms を注入可能にして flaky テストを根治する
+  - `DictationEngine.swift:38` のハードコード 300ms `Task.sleep` に対し、テストが 400ms sleep で賭けている構造（`DictationEngineTests.swift:81,95,109`）。並列実行の負荷次第で `startSendsInjectedStartDictationActionAfterDelay` が再発する（audit でも flaky fail を実測）
+  - 遅延を init 注入（または `start(delay:)`）にしてテストから実時間待ちを消す。製品コードのマジックナンバー解消と両得
+  - 同時に `DictationEngine.swift:40` の `catch {}` を `catch is CancellationError {}` に揃える（コードベース唯一の全捨て catch。`SpeechAnalyzerEngine.swift:266` / ClipboardPaster が canonical パターン）
+  - あわせて `retryTask?.cancel()` → `start()` の再入（restart 経路）にテストを追加する（2026-07-09 audit）
+- [ ] HotkeyService / ScriptRunner ほかテストの実時間依存を除去する
+  - `HotkeyServiceTests.swift:73,110` の 500ms sleep: `processEvent` は同期テスト可能な形になっているので、タイマー発火は `expireDoubleTapWindow()` 相当を直接呼ぶ純ロジックテストに置き換える
+  - `ScriptRunnerTests.normalCompletionDoesNotTimeout` は実プロセス spawn が 5 秒に間に合わないと誤 timeout（audit で flaky fail を実測）。timeout 余裕の見直しか spawn 非依存の検証に変える
+  - 対象を広げる（2026-07-09 Codex audit）: `InputPanelController*Tests` の 500ms sleep、`VoiceInputCoordinatorTests` の固定 `Task.yield()` ヘルパー、`.timeLimit` 欠落も同方針で解消する
+- [ ] SpeechAnalyzer 系テストの `#available` ガードによる空実行 pass を可視化する
+  - `SpeechAnalyzerEngineTests.swift` / `SpeechAnalyzerLocaleManagerTests.swift` / `VoiceInputSettingsTests.swift` / `MenuBarContentTests.swift` が `guard #available(macOS 26, *) else { return }`（または `makeEngine()` の nil 早期 return）で、macOS 26 未満のホストでは本文 0 行のまま pass 扱いになる。SpeechAnalyzer 変更のリグレッションを検知できていないことが結果から見えない
+  - Swift Testing の `.enabled(if:)` 等へ寄せ、skip として計測に現れる形にする（2026-07-09 Codex audit、MUST 判定。ガード形は実コードで確認済み）
+- [ ] static 共有状態に触るテストの独立性を確保する
+  - `AudioInputExclusiveAccessTests` / `SpeechModelVerificationCacheTests` が process-global な static 可変状態を共有し、Swift Testing の並列実行で相互汚染しうる
+  - 最小対処は `.serialized` 付与。`SpeechModelVerificationCache`（`@MainActor enum` + `static var`）はインスタンス化してエンジン/マネージャへ注入する案もあり、方式は実装時に design-decision で確定（2026-07-09 両 audit 一致）
+
+## v1.6.5 — テキスト編集経路の整理
+
+- [ ] volatile テキスト挿入経路を VoiceInputTextView に集約する（実装前に design-decision で方式確定）
+  - `VoiceInputCoordinator.insertFinalizedText`（`VoiceInputCoordinator.swift:388-409`）が textView の `textStorage` を外から直接編集し、`isSuppressingCallbacks` を外部制御している。同フラグの管理者が TextView 内部・Coordinator・`VoiceInputTextEditor.updateNSView` の 3 箇所に分散（結合分析で「深刻」判定）
+  - 確定挿入メソッドを TextView 側に移し、`TextViewOperating` から `textStorage` / `isSuppressingCallbacks` を外せば、textStorage を触る責務が 1 ファイルに閉じる
+  - 放置すると volatile・置換プレビュー・カーソル移動の相互作用を変える時にフラグ立て忘れ→テキスト重複（`VoiceInputTextView.swift:22-24` が警告する既知の壊れ方）が再発しうる
+  - 方式確定には `appState.inputText` の書き込み口集約も含める（現在 6 ファイルが直書きで source-of-truth が textView と二重。2026-07-09 両 audit 一致）
+- [ ] VoiceInputTextView から tooltip ウィンドウ機構を切り出す
+  - `showTip` / `TipContentView` / NSWindow 生成・画面端クランプ（220-279, 396-426 行）は TextView の他責務と状態を共有せず `NSTrackingArea` 経由の疎結合。別ファイル化で volatile 処理・プレビュー描画との同居を解消（構造・肥大化の 2 エージェントが一致して指摘）
+- [ ] InputPanelController の VoiceInputDelegate forwarding 4 メソッドを削除する
+  - `InputPanelController.swift:296-312` の `voiceInput(did...)` 4 メソッドは `voiceCoordinator` へ素通しするだけで本番の呼び出し元がない（`engine.delegate` は `VoiceInputCoordinator.swift:80,327` で Coordinator 直結。未使用は grep で確認済み）。controller が音声 delegate であるかのように責務地図を誤らせる
+  - これを呼ぶテストがあれば `voiceCoordinator` 直呼びへ寄せる（2026-07-09 Codex audit）
+
+## v1.6.6 — 置換ルールまわり
+
+- [ ] ReplacementRule.swift から置換エンジンを別ファイルに分離し、preview と実適用の実装を共有する
+  - 154-280 行の free 関数群（`buildRegex` / `applyReplacementRules` / `findReplacementMatches` / `lookupOffset`）は値型定義と変更理由が別。特に `findReplacementMatches` のオフセット逆マッピングは今後最も手が入る繊細なロジックで、独立ファイル（例: `ReplacementEngine.swift`）にするとテスト境界が明確になる
+  - 分離時に preview（`findReplacementMatches`）と実適用（`applyReplacementRules`）が別実装のまま drift しない形にする: ルール適用の primitive を共有し、オフセット写像だけを各目的で持つ。食い違うとユーザーに見える preview が嘘になる（2026-07-09 Codex audit、MUST 判定）
+- [ ] ReplacementSettings のデフォルトショートカットを定数に括り出す
+  - `ReplacementSettings.swift:59` と `:62` に `ShortcutKey(modifiers: [.control], character: "r")` が二重定義。片方だけ直すと「壊れたデータからの復帰時だけ旧デフォルト」の不整合になる
+  - あわせて ScriptSettings / ReplacementSettings で二重実装されている「空 Data = 未設定」の ShortcutKey 永続化規約を `ShortcutKey` 側に寄せるかも検討
+- [ ] ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー decode フォールバック）を撤去する
+  - v1.4.0 で patterns 複数化と同時に導入。v1.3.0 以前からの直接更新で置換ルールが decode 失敗→全損するのを防ぐための移行コード
+  - 2026-06-11 ユーザー判断: v1.4.x / v1.5.x の移行期間を確保し、v1.6 以降で撤去する。撤去条件は成立済みのため v1.x.0 節から前倒しで移動（2026-07-09。mission.md の非目標「旧フォーマットフォールバック禁止」との整合）
+
+## v1.6.7 — オーディオ・入力まわりの保守
+
+- [ ] OutputVolumeDucker のデバイス切替状態遷移にテストを追加し、smoke-only テストに意味のある assert を入れる
+  - `handleOutputDeviceChanged`（`OutputVolumeDucker.swift:94-131`）の「旧デバイス復元→新デバイス duck し直し」「`target = min(currentVolume, level)`」「savedVolume 付け替え」が CoreAudio 呼び出し直埋めで未テスト。getter/setter を注入点にすれば遷移を検証できる。放置するとデバイス切替でボリュームが復元されない/二重に絞られるリグレッションを検知できない
+  - あわせて「クラッシュしないことのみ」検証の smoke テスト（`AudioDeviceManagerTests` ほか CoreAudio listing / PanelLifecycleManager の一部）を状態検証へ強化する（2026-07-09 両 audit 一致）
+- [ ] SpeechAnalyzerEngine の startRecognition / restartTranscriber のセッション構築重複を helper に集約する
+  - transcriber 生成→フォーマット決定→ストリーム/analyzer 構築の流れが `SpeechAnalyzerEngine.swift:107-251` と `:328-377` に二重にあり、片方だけ直る drift の温床（2026-07-08 / 07-09 の audit で一致指摘）
+- [ ] macOS 26 判定と VoiceInputMode 分岐を集約する
+  - `VoiceInputSettings.swift:64-68`（初回デフォルト決定）と `InputPanelController.swift:428-430`（`defaultEnabledVoiceInputMode()`）に同一の `if #available(macOS 26, *)` 分岐が独立実装。片方だけ更新されると初回起動時とトグル復帰時でエンジン選択が食い違う。static ファクトリ 1 箇所に集約（2026-07-09 両 audit 一致）
+  - あわせて `.off` / `.dictation` / `.speechAnalyzer` 判定が if/三項で 9 ファイルに分散している箇所を、判定の意味（音声オンか・どのエンジンか）ごとの computed property として `VoiceInputMode` に寄せる。全箇所の機械的書き換えが目的ではなく、新ケース追加をコンパイラが検出できる形にするのが目的
+- [ ] HistoryStore のディレクトリ名リテラルを専用定数にする
+  - `HistoryStore.swift:18` の `"com.ryotapoi.koecho"` は Logger subsystem 定数と同値だが別目的で、Bundle ID（`com.ryotapoi.Koecho`、K 大文字）とも食い違う。「変更すると既存ユーザーの履歴保存先が変わりデータ移行が必要」を定数名 or コメントで明示する（値は変えない）
+- [ ] ShortcutKeyRecorder のキーイベント処理から純ロジックを抽出してテストする
+  - `handleKeyEvent` 相当の判定ロジックが OS イベント依存のまま未テスト。既存のテスト方針（OS 依存コードに混ざった純ロジックの抽出・注入点の追加）に沿って抽出 + unit test（2026-07-09 Codex audit）
+
+## ドキュメント整合（バージョン非依存）
+
+- [ ] ADR 0003/0011 の `appliesReplacementRulesOnConfirm` 記述を実装に同期する
+  - `docs/decisions/0003-manual-trigger-for-replacement-rules.md:34` と `0011-debounced-auto-replacement.md:13` が実在しない設定を参照している（ソース grep 0 件を確認済み）。revised 注記か supersede 記録で現状に同期する（2026-07-09 audit）
+- [ ] 置換ルール機能を scope.md（荒い粒度）と docs/specs/（振る舞い詳細）に書き分ける
+  - 置換機能（auto-replacement と手動 Ctrl+R の意図的併存を含む）の要求定義が ADR 0003/0011/0020 に分散し、正本 scope.md からは auto-run 文脈でしか読めない（2026-07-09 audit）
+  - 2026-07-09 ユーザー判断: information-management.md の共通原則に合わせる。scope.md には主要機能としての荒い節だけ追記し、振る舞い詳細（auto/手動の併存、適用タイミング等）は docs/specs/ に最初の spec ファイルとして置く
+  - あわせて scope.md が現在持っている振る舞い詳細（トグル動作・環境変数表等）も、置換ルールの spec を置くタイミング以降、触る機会に specs/ へ順次移す（scope は「粒度を荒く保つ」に寄せる）
 
 ## v1.x.0 以降（時期未定）
 
-- [ ] ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー decode フォールバック）を撤去する
-  - v1.4.0 で patterns 複数化と同時に導入。v1.3.0 以前からの直接更新で置換ルールが decode 失敗→全損するのを防ぐための移行コード
-  - 2026-06-11 ユーザー判断: v1.4.x / v1.5.x の移行期間を確保し、v1.6 以降で撤去する（条件は v1.6.0 リリース時点で満たされるため前倒し可）
 - [ ] InputPanelScriptStrip にスクリプトの drag-to-reorder を追加する
   - macOS 27 の `.reorderable()` + `.reorderContainer(for:)` で List 以外（横 ScrollView の HStack）でも並び替えが可能になった。機能自体は増えず「どこでできるか」が変わる: 設定画面を開かずに入力パネル上でスクリプト順を変えられる
   - デプロイターゲット macOS 14 のままなら `if #available(macOS 27, *)` ガードが必要。deployment target を上げた後にやれば分岐なしで書ける
   - 実装する時に、管理画面 List の `onMove`（`ReplacementRuleManagementView.swift:52` / `ScriptManagementView.swift:24`）を `reorderable` に揃えるかも同時に判断する
+- [ ] 選択した入力デバイスが解決できなかった時にパネル上でわかるようにする（必須ではない）
+  - 現状は warning ログのみで、選んだマイクと別のデバイスで録音されていることがユーザーに見えない（2026-07-09 Codex audit）
+  - 2026-07-09 ユーザー判断: 見た目的に良い形で出せるなら入れる程度の優先度。ステータス表示の意匠が決まったタイミングで実装する
 
 ## SDK 更新時（バージョン非依存）
 
@@ -25,6 +84,14 @@
   - `@ContentBuilder` への result builder 統一で overlay/background の ShapeStyle オーバーロードが曖昧になるケースあり。エラーが出たら swiftui-whats-new-27 skill の references を参照して直す（自力で推測しない）
 
 ## レビュー記録（対応不要と判断したもの）
+
+- maintenance-audit deep 比較実行（2026-07-09、Fable+sonnet 版と Codex 版の並走）で確認・不採用と判断したもの（design-decision 基準適用）:
+  - `AudioObjectPropertyAddress` 構築の factory 化 — CoreAudio 定型の反復で、共通化は呼び出し側の意味をぼやけさせ読解経路を増やす方が大きい。listener の add/remove アドレス対応は smoke テスト強化（v1.6.7）で守る
+  - Settings 系クラスの UserDefaults 永続化共通化（property wrapper 等）— キー・デフォルト値・クランプ規則（`max(1,...)` 等）は各クラスで別々に変わる知識。共通化できるのは配管だけで意味が薄い。Settings クラスが増えたら再検討
+  - エンジン別分岐（`is DictationEngine` キャスト等）の protocol 分割 — エンジン 2 実装固定の現要求では将来の先取り。触る機会に前提コメントを明記する程度で足りる
+  - error→UI message 変換の共通型化 — `errorMessage(for:)` と `scriptErrorMessage(for:script:)` は対象エラー型が別で、統合は形が似ているだけ。3 つ目の変換が必要になった時に再評価
+  - AppState のサブ状態分割（PromptState / PanelState 等）— 現状約 30 行で許容。共有可変バッグ化が進んだら再評価（watch）
+  - DI seam 流儀（protocol 注入 vs 生成パラメータ差し替え）の明文化 — 併存にはそれぞれ意味があり（外部 I/O 境界は protocol、値的依存はパラメータ）、実害が出ている箇所（AudioDeviceManager の注入点欠如）は v1.6.7 のテスト項目で扱う。全体流儀の明文化は迷いが実際に発生したら architecture.md へ
 
 - SwiftUI レビュー（2026-07-02 swiftui-specialist skill）で確認済み・対応不要: `@Observable` + `@Bindable` 統一、新 `onChange` シグネチャ、`Identifiable` な List/ForEach、unary な行ビュー、ローカライズ（カタログ登録済み）はいずれも問題なし。NavigationView / AnyView / ObservableObject 等の soft-deprecated API の使用もなし
 - macOS 27 レビュー（2026-07-02 swiftui-whats-new-27 skill）で該当なし: AsyncImage（不使用）、alert/confirmationDialog の item binding（alert 不使用）、swipeActions の非 List 対応（List のみ使用）、新 toolbar API（対象になる toolbar がほぼない）、ReadableDocument/WritableDocument（ドキュメントベースアプリではない）
