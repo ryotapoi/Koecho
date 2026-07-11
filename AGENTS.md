@@ -13,7 +13,7 @@ Koecho は macOS 14.0+ 向けの軽量音声入力アプリ。詳細は `docs/ru
 
 ```text
 goal-workflow skill（Goal の入口）
-└── .agents/workflow/goal.md（正本: commit slicing / Claude review / 完了条件）
+└── .agents/workflow/goal.md（正本: commit slicing / Goal Review / 完了条件）
     └── change/workflow.md（各 commit / 単発依頼の Intake・Routing）
         ├── change/investigate.md
         ├── change/plan.md
@@ -21,6 +21,7 @@ goal-workflow skill（Goal の入口）
         ├── change/verify.md
         ├── change/review.md
         ├── change/finish.md
+        ├── design-decision-record.md
         └── maintenance.md
 ```
 
