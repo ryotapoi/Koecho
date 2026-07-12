@@ -53,4 +53,14 @@ public struct ShortcutKey: Codable, Equatable, Hashable, Sendable {
   public static func hasRequiredModifier(_ modifiers: Set<Modifier>) -> Bool {
     !modifiers.intersection([.control, .command, .option]).isEmpty
   }
+
+  static func decodeOptional(from data: Data?) throws -> ShortcutKey? {
+    guard let data, !data.isEmpty else { return nil }
+    return try JSONDecoder().decode(ShortcutKey.self, from: data)
+  }
+
+  static func encodeOptional(_ shortcut: ShortcutKey?) throws -> Data {
+    guard let shortcut else { return Data() }
+    return try JSONEncoder().encode(shortcut)
+  }
 }

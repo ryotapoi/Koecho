@@ -63,6 +63,30 @@ struct ShortcutKeyTests {
     #expect(decoded.modifiers == [.control, .option, .command])
   }
 
+  // MARK: - Optional persistence data
+
+  @Test func optionalPersistenceDataRoundTrip() throws {
+    let original = ShortcutKey(modifiers: [.command, .shift], character: "c")
+
+    let data = try ShortcutKey.encodeOptional(original)
+
+    #expect(try ShortcutKey.decodeOptional(from: data) == original)
+  }
+
+  @Test func emptyOptionalPersistenceDataDecodesAsNil() throws {
+    #expect(try ShortcutKey.decodeOptional(from: Data()) == nil)
+    #expect(try ShortcutKey.decodeOptional(from: nil) == nil)
+    #expect(try ShortcutKey.encodeOptional(nil).isEmpty)
+  }
+
+  @Test func corruptOptionalPersistenceDataThrows() {
+    let data = Data("invalid json".utf8)
+
+    #expect(throws: (any Error).self) {
+      try ShortcutKey.decodeOptional(from: data)
+    }
+  }
+
   // MARK: - Equality
 
   @Test func equalityDifferentModifiers() {

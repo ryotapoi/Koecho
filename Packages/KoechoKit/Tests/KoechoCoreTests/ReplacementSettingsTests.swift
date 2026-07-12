@@ -112,7 +112,25 @@ struct ReplacementSettingsTests {
 
   @Test func defaultReplacementShortcutKey() {
     let settings = ReplacementSettings(defaults: makeDefaults())
-    #expect(settings.replacementShortcutKey == ShortcutKey(modifiers: [.control], character: "r"))
+    #expect(settings.replacementShortcutKey == ReplacementSettings.defaultReplacementShortcutKey)
+  }
+
+  @Test func emptyReplacementShortcutDataRemainsDisabled() {
+    let defaults = makeDefaults()
+    defaults.set(Data(), forKey: "replacementShortcut")
+
+    let settings = ReplacementSettings(defaults: defaults)
+
+    #expect(settings.replacementShortcutKey == nil)
+  }
+
+  @Test func corruptReplacementShortcutDataUsesDefault() {
+    let defaults = makeDefaults()
+    defaults.set(Data("invalid json".utf8), forKey: "replacementShortcut")
+
+    let settings = ReplacementSettings(defaults: defaults)
+
+    #expect(settings.replacementShortcutKey == ReplacementSettings.defaultReplacementShortcutKey)
   }
 
   @Test func defaultAutoReplacementEnabled() {

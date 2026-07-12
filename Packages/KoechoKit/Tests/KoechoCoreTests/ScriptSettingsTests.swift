@@ -274,6 +274,24 @@ struct ScriptSettingsTests {
     #expect(reloaded.autoRunShortcutKey == nil)
   }
 
+  @Test func emptyAutoRunShortcutDataRemainsDisabled() {
+    let defaults = makeDefaults()
+    defaults.set(Data(), forKey: "autoRunShortcut")
+
+    let settings = ScriptSettings(defaults: defaults)
+
+    #expect(settings.autoRunShortcutKey == nil)
+  }
+
+  @Test func corruptAutoRunShortcutDataFallsBackToNil() {
+    let defaults = makeDefaults()
+    defaults.set(Data("invalid json".utf8), forKey: "autoRunShortcut")
+
+    let settings = ScriptSettings(defaults: defaults)
+
+    #expect(settings.autoRunShortcutKey == nil)
+  }
+
   @Test func clampsPersistedScriptTimeout() {
     let defaults = makeDefaults()
     defaults.set(-5.0, forKey: "scriptTimeout")

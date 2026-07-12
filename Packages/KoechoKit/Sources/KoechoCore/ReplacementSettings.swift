@@ -4,6 +4,8 @@ import os
 
 @MainActor @Observable
 public final class ReplacementSettings {
+  static let defaultReplacementShortcutKey = ShortcutKey(modifiers: [.control], character: "r")
+
   private let defaults: UserDefaults
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ReplacementSettings")
 
@@ -50,16 +52,14 @@ public final class ReplacementSettings {
     }
 
     if let data = defaults.data(forKey: "replacementShortcut") {
-      if data.isEmpty {
-        _replacementShortcutKey = nil
-      } else if let decoded = try? JSONDecoder().decode(ShortcutKey.self, from: data) {
-        _replacementShortcutKey = decoded
-      } else {
+      do {
+        _replacementShortcutKey = try ShortcutKey.decodeOptional(from: data)
+      } catch {
         logger.warning("Failed to decode replacementShortcut, using default")
-        _replacementShortcutKey = ShortcutKey(modifiers: [.control], character: "r")
+        _replacementShortcutKey = Self.defaultReplacementShortcutKey
       }
     } else {
-      _replacementShortcutKey = ShortcutKey(modifiers: [.control], character: "r")
+      _replacementShortcutKey = Self.defaultReplacementShortcutKey
     }
 
     _isAutoReplacementEnabled = defaults.object(forKey: "isAutoReplacementEnabled") as? Bool ?? true
@@ -92,15 +92,11 @@ public final class ReplacementSettings {
     } catch {
       logger.error("Failed to encode replacement rules: \(error.localizedDescription)")
     }
-    if let shortcut = _replacementShortcutKey {
-      do {
-        let data = try JSONEncoder().encode(shortcut)
-        defaults.set(data, forKey: "replacementShortcut")
-      } catch {
-        logger.error("Failed to encode replacementShortcut: \(error.localizedDescription)")
-      }
-    } else {
-      defaults.set(Data(), forKey: "replacementShortcut")
+    do {
+      let data = try ShortcutKey.encodeOptional(_replacementShortcutKey)
+      defaults.set(data, forKey: "replacementShortcut")
+    } catch {
+      logger.error("Failed to encode replacementShortcut: \(error.localizedDescription)")
     }
     defaults.set(_isAutoReplacementEnabled, forKey: "isAutoReplacementEnabled")
   }

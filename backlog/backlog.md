@@ -5,7 +5,7 @@
 - [x] ReplacementRule.swift から置換エンジンを別ファイルに分離し、preview と実適用の実装を共有する
   - 154-280 行の free 関数群（`buildRegex` / `applyReplacementRules` / `findReplacementMatches` / `lookupOffset`）は値型定義と変更理由が別。特に `findReplacementMatches` のオフセット逆マッピングは今後最も手が入る繊細なロジックで、独立ファイル（例: `ReplacementEngine.swift`）にするとテスト境界が明確になる
   - 分離時に preview（`findReplacementMatches`）と実適用（`applyReplacementRules`）が別実装のまま drift しない形にする: ルール適用の primitive を共有し、オフセット写像だけを各目的で持つ。食い違うとユーザーに見える preview が嘘になる（2026-07-09 Codex audit、MUST 判定）
-- [ ] ReplacementSettings のデフォルトショートカットを定数に括り出す
+- [x] ReplacementSettings のデフォルトショートカットを定数に括り出す
   - `ReplacementSettings.swift:59` と `:62` に `ShortcutKey(modifiers: [.control], character: "r")` が二重定義。片方だけ直すと「壊れたデータからの復帰時だけ旧デフォルト」の不整合になる
   - あわせて ScriptSettings / ReplacementSettings で二重実装されている「空 Data = 未設定」の ShortcutKey 永続化規約を `ShortcutKey` 側に寄せるかも検討
 - [ ] ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー decode フォールバック）を撤去する

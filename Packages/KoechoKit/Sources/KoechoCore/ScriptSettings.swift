@@ -74,16 +74,10 @@ public final class ScriptSettings {
       _autoRunScriptId = nil
     }
 
-    if let data = defaults.data(forKey: "autoRunShortcut") {
-      if data.isEmpty {
-        _autoRunShortcutKey = nil
-      } else if let decoded = try? JSONDecoder().decode(ShortcutKey.self, from: data) {
-        _autoRunShortcutKey = decoded
-      } else {
-        logger.warning("Failed to decode autoRunShortcut, using nil")
-        _autoRunShortcutKey = nil
-      }
-    } else {
+    do {
+      _autoRunShortcutKey = try ShortcutKey.decodeOptional(from: defaults.data(forKey: "autoRunShortcut"))
+    } catch {
+      logger.warning("Failed to decode autoRunShortcut, using nil")
       _autoRunShortcutKey = nil
     }
 
@@ -125,15 +119,11 @@ public final class ScriptSettings {
     } else {
       defaults.removeObject(forKey: "autoRunScriptId")
     }
-    if let shortcut = _autoRunShortcutKey {
-      do {
-        let data = try JSONEncoder().encode(shortcut)
-        defaults.set(data, forKey: "autoRunShortcut")
-      } catch {
-        logger.error("Failed to encode autoRunShortcut: \(error.localizedDescription)")
-      }
-    } else {
-      defaults.set(Data(), forKey: "autoRunShortcut")
+    do {
+      let data = try ShortcutKey.encodeOptional(_autoRunShortcutKey)
+      defaults.set(data, forKey: "autoRunShortcut")
+    } catch {
+      logger.error("Failed to encode autoRunShortcut: \(error.localizedDescription)")
     }
   }
 }
