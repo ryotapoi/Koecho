@@ -148,9 +148,7 @@ extension InputPanelControllerTests {
     let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
 
     #expect(handled == true)
-    // Let the script Task execute
-    await Task.yield()
-    try await Task.sleep(for: .milliseconds(500))
+    await ctx.controller.shortcutScriptTask?.value
     #expect(ctx.appState.inputText == "script output")
   }
 
@@ -215,8 +213,7 @@ extension InputPanelControllerTests {
     // Ctrl+R should fall through to script (replacement shortcut is nil)
     let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
     #expect(handled == true)
-    await Task.yield()
-    try await Task.sleep(for: .milliseconds(500))
+    await ctx.controller.shortcutScriptTask?.value
     #expect(ctx.appState.inputText == "script output")
   }
 

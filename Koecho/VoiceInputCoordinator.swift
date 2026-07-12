@@ -21,6 +21,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   private static let replaySuppressionDuration: TimeInterval = 2.0
   private var transcriberAlreadyRestarted = false
   private(set) var isStoppingEngine = false
+  private(set) var restartTranscriberTask: Task<Void, Never>?
 
   var onAutoReplacement: (() -> Void)?
   var onCursorAutoReplacement: (() -> Void)?
@@ -340,7 +341,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     let shouldSuppressReplay = replayState != .idle
     // Set synchronously to prevent duplicate Task creation from handleCursorMoved + handleTextChanged
     transcriberAlreadyRestarted = true
-    Task { @MainActor in
+    restartTranscriberTask = Task { @MainActor in
       let didRestart = await restartableEngine.restartTranscriber()
       if didRestart {
         if shouldSuppressReplay {

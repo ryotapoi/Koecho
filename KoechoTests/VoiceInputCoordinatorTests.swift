@@ -7,7 +7,7 @@ import Testing
 @testable import Koecho
 
 @MainActor
-@Suite struct VoiceInputCoordinatorTests {
+@Suite(.timeLimit(.minutes(1))) struct VoiceInputCoordinatorTests {
   private func makeCoordinator(
     inputText: String = "",
     isInputPanelVisible: Bool = true
@@ -52,17 +52,6 @@ import Testing
     coordinator.textView = mockTV
 
     return (coordinator, appState, mockTV, mockEngine)
-  }
-
-  private func yieldUntilRestartCount(
-    _ expectedCount: Int,
-    engine: MockRestartableVoiceInputEngine,
-    sourceLocation: SourceLocation = #_sourceLocation
-  ) async {
-    for _ in 0..<10 where engine.restartTranscriberCallCount < expectedCount {
-      await Task.yield()
-    }
-    #expect(engine.restartTranscriberCallCount == expectedCount, sourceLocation: sourceLocation)
   }
 
   // MARK: - Engine lifecycle
@@ -440,8 +429,9 @@ import Testing
     coordinator.replayState = .restartInProgress(localText: "hello")
 
     coordinator.handleTextChanged()
-    await yieldUntilRestartCount(1, engine: engine)
+    await coordinator.restartTranscriberTask?.value
 
+    #expect(engine.restartTranscriberCallCount == 1)
     guard case .suppressing(let localText, let deadline) = coordinator.replayState else {
       Issue.record("Expected replay suppression after successful transcriber restart")
       return
@@ -454,9 +444,11 @@ import Testing
     let (coordinator, _, _, engine) = makeRestartableCoordinator(restartResult: false)
 
     coordinator.handleTextChanged()
-    await yieldUntilRestartCount(1, engine: engine)
+    await coordinator.restartTranscriberTask?.value
     coordinator.handleTextChanged()
-    await yieldUntilRestartCount(2, engine: engine)
+    await coordinator.restartTranscriberTask?.value
+
+    #expect(engine.restartTranscriberCallCount == 2)
   }
 
   @Test func restartTranscriberRunsOnceForConsecutiveRequests() async {
@@ -464,7 +456,7 @@ import Testing
 
     coordinator.handleTextChanged()
     coordinator.handleTextChanged()
-    await yieldUntilRestartCount(1, engine: engine)
+    await coordinator.restartTranscriberTask?.value
 
     #expect(engine.restartTranscriberCallCount == 1)
   }

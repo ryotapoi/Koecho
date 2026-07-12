@@ -7,7 +7,7 @@
   - 遅延を init 注入（または `start(delay:)`）にしてテストから実時間待ちを消す。製品コードのマジックナンバー解消と両得
   - 同時に `DictationEngine.swift:40` の `catch {}` を `catch is CancellationError {}` に揃える（コードベース唯一の全捨て catch。`SpeechAnalyzerEngine.swift:266` / ClipboardPaster が canonical パターン）
   - あわせて `retryTask?.cancel()` → `start()` の再入（restart 経路）にテストを追加する（2026-07-09 audit）
-- [ ] HotkeyService / ScriptRunner ほかテストの実時間依存を除去する
+- [x] HotkeyService / ScriptRunner ほかテストの実時間依存を除去する
   - `HotkeyServiceTests.swift:73,110` の 500ms sleep: `processEvent` は同期テスト可能な形になっているので、タイマー発火は `expireDoubleTapWindow()` 相当を直接呼ぶ純ロジックテストに置き換える
   - `ScriptRunnerTests.normalCompletionDoesNotTimeout` は実プロセス spawn が 5 秒に間に合わないと誤 timeout（audit で flaky fail を実測）。timeout 余裕の見直しか spawn 非依存の検証に変える
   - 対象を広げる（2026-07-09 Codex audit）: `InputPanelController*Tests` の 500ms sleep、`VoiceInputCoordinatorTests` の固定 `Task.yield()` ヘルパー、`.timeLimit` 欠落も同方針で解消する

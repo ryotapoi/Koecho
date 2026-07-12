@@ -15,6 +15,7 @@ final class InputPanelController {
   private(set) var panel: InputPanel
   private var replacementService: ReplacementService!
   private var scriptService: ScriptExecutionService!
+  private(set) var shortcutScriptTask: Task<Void, Never>?
   // Internal getter so tests can reach replay state directly instead of
   // production-unused forwarding properties on the controller.
   private(set) var voiceCoordinator: VoiceInputCoordinator!
@@ -389,7 +390,7 @@ final class InputPanelController {
           $0.shortcutKey == shortcut
         })
       else { return false }
-      Task { @MainActor in
+      self.shortcutScriptTask = Task { @MainActor in
         await self.scriptService.execute(script)
       }
       return true

@@ -198,7 +198,7 @@ nonisolated struct ScriptRunnerTests {
     let path = try makeScript("echo 'fast'")
     defer { try? FileManager.default.removeItem(atPath: path) }
 
-    let runner = ScriptRunner(timeout: 5.0)
+    let runner = ScriptRunner()
     let result = try await runner.run(scriptPath: path, input: "")
 
     #expect(result.output == "fast")

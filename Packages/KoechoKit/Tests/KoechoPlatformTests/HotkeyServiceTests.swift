@@ -63,14 +63,13 @@ struct HotkeyServiceTests {
     #expect(singleTapCount == 1)
   }
 
-  @Test(.timeLimit(.minutes(1)))
-  func doubleTapModeTimerExpiresSingleTap() async throws {
+  @Test func doubleTapModeExpiryCallsSingleTap() {
     var singleTapCount = 0
     let service = makeService(tapMode: .doubleTapToShow, onSingleTap: { singleTapCount += 1 })
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
     #expect(singleTapCount == 0)
-    try await Task.sleep(for: .milliseconds(500))
+    service.expireDoubleTapWindow()
     #expect(singleTapCount == 1)
   }
 
@@ -101,13 +100,13 @@ struct HotkeyServiceTests {
     #expect(singleTapCount == 1)
   }
 
-  @Test func keyDownCancelsDoubleTapTimer() async throws {
+  @Test func keyDownCancelsDoubleTapTimer() {
     var singleTapCount = 0
     let service = makeService(tapMode: .doubleTapToShow, onSingleTap: { singleTapCount += 1 })
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
     service.processEvent(type: .keyDown, keyCode: 0, flags: [], timestamp: 1.15)
-    try await Task.sleep(for: .milliseconds(500))
+    service.expireDoubleTapWindow()
     #expect(singleTapCount == 0)
   }
 }

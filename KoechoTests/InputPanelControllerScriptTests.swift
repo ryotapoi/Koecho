@@ -299,8 +299,7 @@ extension InputPanelControllerTests {
     let handled = ctx.controller.panel.onShortcutKey?(cmdShiftC)
 
     #expect(handled == true)
-    await Task.yield()
-    try await Task.sleep(for: .milliseconds(500))
+    await ctx.controller.shortcutScriptTask?.value
     #expect(ctx.appState.inputText == "cmd-shift output")
   }
 

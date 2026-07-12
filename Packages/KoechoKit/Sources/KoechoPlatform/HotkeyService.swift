@@ -144,6 +144,10 @@ public final class HotkeyService {
 
   private func handleDoubleTapTimerFired() {
     doubleTapTimer = nil
+    expireDoubleTapWindow()
+  }
+
+  func expireDoubleTapWindow() {
     let result = detector.expireDoubleTapWindow()
     if result == .singleTap {
       logger.debug("Single tap detected (timer expired)")

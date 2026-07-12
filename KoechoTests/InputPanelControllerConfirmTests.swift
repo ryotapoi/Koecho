@@ -87,24 +87,20 @@ extension InputPanelControllerTests {
     ctx.appState.inputText = "hello"
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
-    // Make paste suspend so we can call cancel() while confirm() is in progress
-    paster.onPaste = {
-      // Yield to allow cancel() to be attempted on the same actor
-      await Task.yield()
-    }
+    // Make paste suspend so we can call cancel() while confirm() is in progress.
+    paster.suspendsPaste = true
 
     // Start confirm in a Task so we can call cancel() after it begins
     let confirmTask = Task { @MainActor in
       await ctx.controller.confirm()
     }
-    // Wait for confirmTask to progress past stopDictation() (100ms sleep)
-    // and reach the onPaste suspension point
-    try await Task.sleep(for: .milliseconds(200))
+    await paster.waitForPasteStart()
 
     // Panel should be hidden (confirm hides it before paste) but isConfirming is true
     // cancel() should be ignored because isConfirming is true
     ctx.controller.cancel()
 
+    paster.finishPaste()
     await confirmTask.value
 
     // Confirm should have succeeded — cancel was ignored
