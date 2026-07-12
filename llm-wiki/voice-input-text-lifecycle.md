@@ -2,6 +2,7 @@
 regen: compiled
 sources:
   - Koecho/VoiceInputTextView.swift
+  - Koecho/ReplacementPreviewTooltip.swift
   - Koecho/VoiceInputTextEditor.swift
   - Koecho/VoiceInputCoordinator.swift
   - Koecho/InputPanelController.swift
@@ -25,6 +26,7 @@ sources:
 - `NSViewRepresentable.updateNSView` から `textView.string` を直接同期すると、入力中の IME composition や dictation の marked text を壊しやすい。同期の入口は `VoiceInputTextView` 側に寄せる。
 - プログラム由来の textStorage 変更でも `didChangeText` が発火する。storage 編集と callback suppression は `VoiceInputTextView` の操作へ閉じ、外部からフラグや storage を制御しない。
 - レイアウトと overlay 位置計算は `layoutManager` の glyph rect と `textContainerOrigin` を基準にする。文字列 index と画面座標を直接結びつけない。
+- replacement preview の tracking area と下線 geometry は `VoiceInputTextView`、hover tooltip の floating window・描画・画面端調整・show/hide lifecycle は `ReplacementPreviewTooltip` が所有する。TextView には tooltip subview を追加しない。
 - `wantsUpdateLayer` を `true` にすると `draw(_:)` が呼ばれない。背景や下線を `draw(_:)` で描く view では使わない。
 
 ## Dictation / focus

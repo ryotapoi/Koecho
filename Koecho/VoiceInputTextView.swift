@@ -25,9 +25,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   /// Tracking areas for hover detection over underlined matches.
   private var previewTrackingAreas: [NSTrackingArea] = []
   private var tooltipTextByArea: [ObjectIdentifier: String] = [:]
-
-  /// Lightweight floating window for instant tooltip display.
-  private var tipWindow: NSWindow?
+  private let previewTooltip = ReplacementPreviewTooltip()
 
   // MARK: - TextViewOperating
 
@@ -183,7 +181,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     guard !previewMatches.isEmpty else { return }
     previewMatches = []
     removePreviewTrackingAreas()
-    hideTip()
+    previewTooltip.hide()
     needsDisplay = true
   }
 
@@ -243,7 +241,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
       super.mouseEntered(with: event)
       return
     }
-    showTip(text, near: area.rect)
+    previewTooltip.show(text, near: area.rect, in: self)
   }
 
   override func mouseExited(with event: NSEvent) {
@@ -253,70 +251,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
       super.mouseExited(with: event)
       return
     }
-    hideTip()
-  }
-
-  // MARK: - Instant tip window
-
-  private func showTip(_ text: String, near localRect: NSRect) {
-    hideTip()
-    guard let parentWindow = window else { return }
-
-    let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
-    let attributes: [NSAttributedString.Key: Any] = [.font: font]
-    let textSize = (text as NSString).size(withAttributes: attributes)
-    let padding = NSSize(width: 12, height: 6)
-    let windowSize = NSSize(
-      width: ceil(textSize.width + padding.width),
-      height: ceil(textSize.height + padding.height)
-    )
-
-    // Position above the underlined text to avoid overlapping
-    // the Dictation microphone icon that appears below the cursor.
-    let localPoint = NSPoint(x: localRect.minX, y: localRect.minY - 4)
-    let screenPoint = parentWindow.convertPoint(toScreen: convert(localPoint, to: nil))
-
-    var origin = NSPoint(x: screenPoint.x, y: screenPoint.y)
-    if let screen = parentWindow.screen ?? NSScreen.main {
-      let frame = screen.visibleFrame
-      if origin.x + windowSize.width > frame.maxX {
-        origin.x = frame.maxX - windowSize.width
-      }
-      if origin.x < frame.minX {
-        origin.x = frame.minX
-      }
-      if origin.y + windowSize.height > frame.maxY {
-        // No room above — show below the text instead
-        let belowPoint = NSPoint(x: localRect.minX, y: localRect.maxY + 4)
-        let belowScreen = parentWindow.convertPoint(toScreen: convert(belowPoint, to: nil))
-        origin.y = belowScreen.y - windowSize.height
-      }
-    }
-
-    let tipWin = NSWindow(
-      contentRect: NSRect(origin: origin, size: windowSize),
-      styleMask: [.borderless],
-      backing: .buffered,
-      defer: false
-    )
-    tipWin.level = .floating
-    tipWin.isOpaque = false
-    tipWin.backgroundColor = .clear
-    tipWin.hasShadow = true
-    tipWin.ignoresMouseEvents = true
-
-    let contentView = TipContentView(frame: NSRect(origin: .zero, size: windowSize))
-    contentView.text = text
-    contentView.font = font
-    tipWin.contentView = contentView
-
-    tipWin.orderFront(nil)
-    tipWindow = tipWin
-  }
-
-  private func hideTip() {
-    tipWindow?.orderOut(nil)
-    tipWindow = nil
+    previewTooltip.hide()
   }
 
   // MARK: - Underline drawing
@@ -429,36 +364,5 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     else { return }
     let selectedText = (string as NSString).substring(with: range)
     onAddReplacementRule?(selectedText)
-  }
-}
-
-// MARK: - Tip content view
-
-private final class TipContentView: NSView {
-  var text: String = ""
-  var font: NSFont = .systemFont(ofSize: NSFont.smallSystemFontSize)
-
-  override func draw(_ dirtyRect: NSRect) {
-    let bgColor = NSColor.windowBackgroundColor
-    let path = NSBezierPath(roundedRect: bounds, xRadius: 4, yRadius: 4)
-    bgColor.setFill()
-    path.fill()
-
-    NSColor.separatorColor.setStroke()
-    path.lineWidth = 0.5
-    path.stroke()
-
-    let attributes: [NSAttributedString.Key: Any] = [
-      .font: font,
-      .foregroundColor: NSColor.labelColor,
-    ]
-    let textSize = (text as NSString).size(withAttributes: attributes)
-    let textRect = CGRect(
-      x: (bounds.width - textSize.width) / 2,
-      y: (bounds.height - textSize.height) / 2,
-      width: textSize.width,
-      height: textSize.height
-    )
-    (text as NSString).draw(in: textRect, withAttributes: attributes)
   }
 }
