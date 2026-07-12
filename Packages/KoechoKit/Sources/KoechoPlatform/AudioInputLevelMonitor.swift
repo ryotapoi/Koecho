@@ -7,6 +7,7 @@ import os
 @MainActor @Observable
 final class AudioInputLevelMonitor {
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "AudioInputLevelMonitor")
+  @ObservationIgnored private let exclusiveAccess: AudioInputExclusiveAccess
 
   private(set) var inputLevel: Float = 0
 
@@ -18,6 +19,10 @@ final class AudioInputLevelMonitor {
     UnsafeMutableAudioBufferListPointer?
   @ObservationIgnored private nonisolated(unsafe) var lastLevelUpdate: ContinuousClock.Instant =
     .now
+
+  init(exclusiveAccess: AudioInputExclusiveAccess = .shared) {
+    self.exclusiveAccess = exclusiveAccess
+  }
 
   nonisolated static func inputLevel(
     buffers: UnsafeMutableAudioBufferListPointer,
@@ -50,7 +55,7 @@ final class AudioInputLevelMonitor {
   func start(deviceID: AudioDeviceID?) {
     stop()
 
-    guard !AudioInputExclusiveAccess.isInUse else {
+    guard !exclusiveAccess.isInUse else {
       logger.info("Audio input in use by another component, skipping level monitoring")
       return
     }
@@ -226,7 +231,7 @@ final class AudioInputLevelMonitor {
 
     // Success — transfer ownership
     monitoringAudioUnit = unit
-    AudioInputExclusiveAccess.markAsActive { [weak self] in
+    exclusiveAccess.markAsActive { [weak self] in
       self?.stop()
     }
     logger.info("Level monitoring AUHAL started")
@@ -239,7 +244,7 @@ final class AudioInputLevelMonitor {
     AudioComponentInstanceDispose(unit)
     monitoringAudioUnit = nil
     deallocateBufferList()
-    AudioInputExclusiveAccess.clearActive()
+    exclusiveAccess.clearActive()
     inputLevel = 0
     logger.info("Level monitoring AUHAL stopped")
   }
@@ -269,8 +274,9 @@ final class AudioInputLevelMonitor {
 
     // AudioInputExclusiveAccess is @MainActor so dispatch asynchronously.
     if hadAudioUnit {
+      let exclusiveAccess = exclusiveAccess
       Task { @MainActor in
-        AudioInputExclusiveAccess.clearActive()
+        exclusiveAccess.clearActive()
       }
     }
   }

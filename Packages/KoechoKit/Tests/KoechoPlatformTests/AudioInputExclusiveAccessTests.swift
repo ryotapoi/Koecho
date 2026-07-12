@@ -5,55 +5,70 @@ import Testing
 @MainActor
 struct AudioInputExclusiveAccessTests {
   @Test func initialStateIsNotInUse() {
-    defer { AudioInputExclusiveAccess.clearActive() }
-    #expect(AudioInputExclusiveAccess.isInUse == false)
+    let access = AudioInputExclusiveAccess()
+
+    #expect(access.isInUse == false)
   }
 
   @Test func acquireSetsInUse() {
-    defer { AudioInputExclusiveAccess.release() }
-    AudioInputExclusiveAccess.acquire()
-    #expect(AudioInputExclusiveAccess.isInUse == true)
+    let access = AudioInputExclusiveAccess()
+
+    access.acquire()
+
+    #expect(access.isInUse == true)
   }
 
   @Test func releaseClearsInUse() {
-    defer { AudioInputExclusiveAccess.clearActive() }
-    AudioInputExclusiveAccess.acquire()
-    AudioInputExclusiveAccess.release()
-    #expect(AudioInputExclusiveAccess.isInUse == false)
+    let access = AudioInputExclusiveAccess()
+    access.acquire()
+
+    access.release()
+
+    #expect(access.isInUse == false)
   }
 
   @Test func acquireCallsOnAcquireHandler() {
-    defer { AudioInputExclusiveAccess.clearActive() }
+    let access = AudioInputExclusiveAccess()
     var called = false
-    AudioInputExclusiveAccess.markAsActive {
+    access.markAsActive {
       called = true
     }
-    #expect(AudioInputExclusiveAccess.isInUse == true)
+    #expect(access.isInUse == true)
 
-    AudioInputExclusiveAccess.acquire()
+    access.acquire()
     #expect(called == true)
   }
 
   @Test func clearActiveResetsState() {
-    defer { AudioInputExclusiveAccess.clearActive() }
-    AudioInputExclusiveAccess.markAsActive {}
-    #expect(AudioInputExclusiveAccess.isInUse == true)
+    let access = AudioInputExclusiveAccess()
+    access.markAsActive {}
+    #expect(access.isInUse == true)
 
-    AudioInputExclusiveAccess.clearActive()
-    #expect(AudioInputExclusiveAccess.isInUse == false)
+    access.clearActive()
+    #expect(access.isInUse == false)
   }
 
   @Test func acquireStopsActiveLevelMonitor() {
-    defer { AudioInputExclusiveAccess.clearActive() }
-    let monitor = AudioInputLevelMonitor()
-    AudioInputExclusiveAccess.markAsActive { [weak monitor] in
+    let access = AudioInputExclusiveAccess()
+    let monitor = AudioInputLevelMonitor(exclusiveAccess: access)
+    access.markAsActive { [weak monitor] in
       monitor?.stop()
     }
-    #expect(AudioInputExclusiveAccess.isInUse == true)
+    #expect(access.isInUse == true)
 
     // When another component acquires, the monitor should be stopped
-    AudioInputExclusiveAccess.acquire()
+    access.acquire()
     #expect(monitor.inputLevel == 0)
-    #expect(AudioInputExclusiveAccess.isInUse == true)
+    #expect(access.isInUse == true)
+  }
+
+  @Test func separateInstancesDoNotShareExclusiveAccessState() {
+    let first = AudioInputExclusiveAccess()
+    let second = AudioInputExclusiveAccess()
+
+    first.acquire()
+
+    #expect(first.isInUse)
+    #expect(!second.isInUse)
   }
 }

@@ -9,6 +9,8 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "SpeechAnalyzerEngine")
   private let locale: Locale
   private let deviceUID: String?
+  private let verificationCache: SpeechModelVerificationCache
+  private let audioInputExclusiveAccess: AudioInputExclusiveAccess
   public private(set) var state: VoiceInputState = .idle
   public weak var delegate: (any VoiceInputDelegate)?
 
@@ -30,9 +32,25 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     return preset
   }
 
-  public init(locale: Locale = .current, deviceUID: String? = nil) {
+  public convenience init(locale: Locale = .current, deviceUID: String? = nil) {
+    self.init(
+      locale: locale,
+      deviceUID: deviceUID,
+      verificationCache: .shared,
+      audioInputExclusiveAccess: .shared
+    )
+  }
+
+  init(
+    locale: Locale,
+    deviceUID: String?,
+    verificationCache: SpeechModelVerificationCache,
+    audioInputExclusiveAccess: AudioInputExclusiveAccess
+  ) {
     self.locale = locale
     self.deviceUID = deviceUID
+    self.verificationCache = verificationCache
+    self.audioInputExclusiveAccess = audioInputExclusiveAccess
   }
 
   public func start() {
@@ -137,8 +155,8 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     let localeKey = SpeechLocale.normalizationKey(locale)
     let modelError = await SpeechModelPreparation.ensureModelAvailable(
       localeKey: localeKey,
-      isVerified: SpeechModelVerificationCache.isVerified(localeKey:),
-      markVerified: SpeechModelVerificationCache.markVerified(localeKey:),
+      isVerified: verificationCache.isVerified(localeKey:),
+      markVerified: verificationCache.markVerified(localeKey:),
       installationRequest: { [transcriber, logger] in
         if let request = try await AssetInventory.assetInstallationRequest(
           supporting: [transcriber]
@@ -236,7 +254,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     startResultTask(transcriber: transcriber)
 
     // 10. Install audio tap and start
-    AudioInputExclusiveAccess.acquire()
+    audioInputExclusiveAccess.acquire()
     acquiredAudioInput = true
 
     installAudioTap()
@@ -397,7 +415,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     converter = nil
     analyzerFormat = nil
     if acquiredAudioInput {
-      AudioInputExclusiveAccess.release()
+      audioInputExclusiveAccess.release()
       acquiredAudioInput = false
     }
   }

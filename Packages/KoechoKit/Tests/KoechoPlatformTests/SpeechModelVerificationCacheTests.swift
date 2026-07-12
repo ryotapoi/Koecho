@@ -7,44 +7,52 @@ import Testing
 @MainActor
 struct SpeechModelVerificationCacheTests {
   @Test func markVerifiedStoresLocaleKeyForSession() {
+    let cache = SpeechModelVerificationCache()
     let locale = Locale(identifier: "en-US")
     let key = SpeechLocale.normalizationKey(locale)
-    SpeechModelVerificationCache.invalidate(for: locale)
 
-    #expect(!SpeechModelVerificationCache.isVerified(localeKey: key))
+    #expect(!cache.isVerified(localeKey: key))
 
-    SpeechModelVerificationCache.markVerified(localeKey: key)
+    cache.markVerified(localeKey: key)
 
-    #expect(SpeechModelVerificationCache.isVerified(localeKey: key))
-    SpeechModelVerificationCache.invalidate(for: locale)
+    #expect(cache.isVerified(localeKey: key))
   }
 
   @Test func invalidateRemovesOnlyMatchingNormalizedLocale() {
+    let cache = SpeechModelVerificationCache()
     let english = Locale(identifier: "en-US")
     let japanese = Locale(identifier: "ja-JP")
     let englishKey = SpeechLocale.normalizationKey(english)
     let japaneseKey = SpeechLocale.normalizationKey(japanese)
-    SpeechModelVerificationCache.invalidate(for: english)
-    SpeechModelVerificationCache.invalidate(for: japanese)
 
-    SpeechModelVerificationCache.markVerified(localeKey: englishKey)
-    SpeechModelVerificationCache.markVerified(localeKey: japaneseKey)
+    cache.markVerified(localeKey: englishKey)
+    cache.markVerified(localeKey: japaneseKey)
 
-    SpeechModelVerificationCache.invalidate(for: english)
+    cache.invalidate(for: english)
 
-    #expect(!SpeechModelVerificationCache.isVerified(localeKey: englishKey))
-    #expect(SpeechModelVerificationCache.isVerified(localeKey: japaneseKey))
-    SpeechModelVerificationCache.invalidate(for: japanese)
+    #expect(!cache.isVerified(localeKey: englishKey))
+    #expect(cache.isVerified(localeKey: japaneseKey))
   }
 
   @Test func invalidateUsesNormalizedLocaleKey() {
+    let cache = SpeechModelVerificationCache()
     let hyphenated = Locale(identifier: "en-US")
     let underscoredKey = SpeechLocale.normalizationKey("en_US")
-    SpeechModelVerificationCache.invalidate(for: hyphenated)
 
-    SpeechModelVerificationCache.markVerified(localeKey: underscoredKey)
-    SpeechModelVerificationCache.invalidate(for: hyphenated)
+    cache.markVerified(localeKey: underscoredKey)
+    cache.invalidate(for: hyphenated)
 
-    #expect(!SpeechModelVerificationCache.isVerified(localeKey: underscoredKey))
+    #expect(!cache.isVerified(localeKey: underscoredKey))
+  }
+
+  @Test func separateInstancesDoNotShareVerificationState() {
+    let first = SpeechModelVerificationCache()
+    let second = SpeechModelVerificationCache()
+    let key = SpeechLocale.normalizationKey("en_US")
+
+    first.markVerified(localeKey: key)
+
+    #expect(first.isVerified(localeKey: key))
+    #expect(!second.isVerified(localeKey: key))
   }
 }

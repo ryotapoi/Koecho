@@ -32,13 +32,20 @@ public struct LocaleItem: Identifiable, Sendable, Equatable {
 public final class SpeechAnalyzerLocaleManager {
   private let logger = Logger(
     subsystem: Logger.koechoSubsystem, category: "SpeechAnalyzerLocaleManager")
+  private let verificationCache: SpeechModelVerificationCache
 
   public private(set) var allLocales: [LocaleItem] = []
   public private(set) var isLoading = true
   public private(set) var isDownloading = false
   public private(set) var downloadError: String?
 
-  public init() {}
+  public init() {
+    verificationCache = .shared
+  }
+
+  init(verificationCache: SpeechModelVerificationCache) {
+    self.verificationCache = verificationCache
+  }
 
   public var reservedLocales: [LocaleItem] {
     allLocales.filter { $0.isReserved }
@@ -91,7 +98,7 @@ public final class SpeechAnalyzerLocaleManager {
     guard !Task.isCancelled, currentSelection == identifier else { return }
 
     let localeKey = SpeechLocale.normalizationKey(identifier)
-    if SpeechModelVerificationCache.isVerified(localeKey: localeKey) {
+    if verificationCache.isVerified(localeKey: localeKey) {
       return
     }
 
@@ -138,7 +145,7 @@ public final class SpeechAnalyzerLocaleManager {
       allLocales[index].isReserved = false
     }
     await AssetInventory.release(reservedLocale: reservedLocale)
-    SpeechModelVerificationCache.invalidate(for: Locale(identifier: item.identifier))
+    verificationCache.invalidate(for: Locale(identifier: item.identifier))
   }
 
   public func clearDownloadError() {
@@ -202,12 +209,12 @@ public final class SpeechAnalyzerLocaleManager {
       )
     else {
       // nil = already installed
-      SpeechModelVerificationCache.markVerified(localeKey: localeKey)
+      verificationCache.markVerified(localeKey: localeKey)
       return false
     }
 
     try await request.downloadAndInstall()
-    SpeechModelVerificationCache.markVerified(localeKey: localeKey)
+    verificationCache.markVerified(localeKey: localeKey)
     return true
   }
 }

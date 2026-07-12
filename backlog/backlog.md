@@ -14,7 +14,7 @@
 - [x] SpeechAnalyzer 系テストの `#available` ガードによる空実行 pass を可視化する
   - `SpeechAnalyzerEngineTests.swift` / `SpeechAnalyzerLocaleManagerTests.swift` / `VoiceInputSettingsTests.swift` / `MenuBarContentTests.swift` が `guard #available(macOS 26, *) else { return }`（または `makeEngine()` の nil 早期 return）で、macOS 26 未満のホストでは本文 0 行のまま pass 扱いになる。SpeechAnalyzer 変更のリグレッションを検知できていないことが結果から見えない
   - Swift Testing の `.enabled(if:)` 等へ寄せ、skip として計測に現れる形にする（2026-07-09 Codex audit、MUST 判定。ガード形は実コードで確認済み）
-- [ ] static 共有状態に触るテストの独立性を確保する
+- [x] static 共有状態に触るテストの独立性を確保する
   - `AudioInputExclusiveAccessTests` / `SpeechModelVerificationCacheTests` が process-global な static 可変状態を共有し、Swift Testing の並列実行で相互汚染しうる
   - 最小対処は `.serialized` 付与。`SpeechModelVerificationCache`（`@MainActor enum` + `static var`）はインスタンス化してエンジン/マネージャへ注入する案もあり、方式は実装時に design-decision で確定（2026-07-09 両 audit 一致）
 
