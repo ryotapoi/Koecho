@@ -68,10 +68,6 @@ plan mode（`EnterPlanMode` / `ExitPlanMode`）は使わない。計画は内部
 見た目や挙動が絡む調査・バグ修正では、まず自力で取れる証拠（ビルド・テスト・Preview・スクリーンショット・ログ等）で確認する。
 ユーザーの観察・判断なしに確定できない場合（権限ダイアログ、実際のディクテーション操作等）だけ Stop Conditions として扱い、Goal の通常進行中に都度の確認で止めない。
 
-## Constraints / ユーザーへの質問
-
-ユーザーに質問することになった場合は `~/.claude/resources/rules/asking-user.md` を Read してから質問を組み立てる。
-
 ## Constraints / MCP ツール使い分け
 
 ビルド・テスト・Preview・ドキュメント検索は MCP ツールを使う。Bash で `xcodebuild` を直接叩かない。使い分けの詳細（XcodeBuildMCP / Apple Xcode MCP、`RenderPreview` のパラメータ等）は `docs/rules/xcode-mcp.md` を参照する。
