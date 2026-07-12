@@ -2,7 +2,7 @@
 
 ## v1.6.4 — テスト信頼性（2026-07-08/09 maintenance-audit deep より）
 
-- [ ] DictationEngine の起動遅延 300ms を注入可能にして flaky テストを根治する
+- [x] DictationEngine の起動遅延 300ms を注入可能にして flaky テストを根治する
   - `DictationEngine.swift:38` のハードコード 300ms `Task.sleep` に対し、テストが 400ms sleep で賭けている構造（`DictationEngineTests.swift:81,95,109`）。並列実行の負荷次第で `startSendsInjectedStartDictationActionAfterDelay` が再発する（audit でも flaky fail を実測）
   - 遅延を init 注入（または `start(delay:)`）にしてテストから実時間待ちを消す。製品コードのマジックナンバー解消と両得
   - 同時に `DictationEngine.swift:40` の `catch {}` を `catch is CancellationError {}` に揃える（コードベース唯一の全捨て catch。`SpeechAnalyzerEngine.swift:266` / ClipboardPaster が canonical パターン）

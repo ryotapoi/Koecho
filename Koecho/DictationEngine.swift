@@ -5,21 +5,28 @@ import os
 @MainActor
 final class DictationEngine: VoiceInputEngine {
   typealias StartDictationActionSender = (Selector) -> Bool
+  typealias StartDelay = () async throws -> Void
 
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "DictationEngine")
   private let startDictationActionSender: StartDictationActionSender
+  private let startDelay: StartDelay
   private(set) var state: VoiceInputState = .idle
   weak var delegate: (any VoiceInputDelegate)?
   private weak var panel: InputPanel?
   private weak var textView: VoiceInputTextView?
   private var retryTask: Task<Void, Never>?
+  private var retryTaskID: UUID?
 
   init(
     startDictationActionSender: @escaping StartDictationActionSender = {
       NSApp.sendAction($0, to: nil, from: nil)
+    },
+    startDelay: @escaping StartDelay = {
+      try await Task.sleep(for: .milliseconds(300))
     }
   ) {
     self.startDictationActionSender = startDictationActionSender
+    self.startDelay = startDelay
   }
 
   /// Configure with panel and textView references.
@@ -33,11 +40,19 @@ final class DictationEngine: VoiceInputEngine {
     guard state == .idle, retryTask == nil else { return }
     guard panel != nil else { return }
 
+    let retryTaskID = UUID()
+    self.retryTaskID = retryTaskID
     retryTask = Task {
       do {
-        try await Task.sleep(for: .milliseconds(300))
+        try await startDelay()
+        try Task.checkCancellation()
         sendStartDictation()
-      } catch {}
+      } catch is CancellationError {
+        // Normal when cancel(), stop(), or restart() supersedes the pending start.
+      } catch {
+        logger.error("Dictation start delay failed: \(String(describing: error), privacy: .public)")
+        clearRetryTaskIfCurrent(retryTaskID)
+      }
     }
   }
 
@@ -46,6 +61,7 @@ final class DictationEngine: VoiceInputEngine {
   func restart() {
     retryTask?.cancel()
     retryTask = nil
+    retryTaskID = nil
     state = .idle
     start()
   }
@@ -53,6 +69,7 @@ final class DictationEngine: VoiceInputEngine {
   func stop() async {
     retryTask?.cancel()
     retryTask = nil
+    retryTaskID = nil
     guard state == .listening || state == .idle else { return }
     state = .stopping
     if let textView {
@@ -66,6 +83,7 @@ final class DictationEngine: VoiceInputEngine {
   func cancel() {
     retryTask?.cancel()
     retryTask = nil
+    retryTaskID = nil
     if let textView {
       textView.inputContext?.discardMarkedText()
     }
@@ -75,6 +93,7 @@ final class DictationEngine: VoiceInputEngine {
 
   private func sendStartDictation() {
     retryTask = nil
+    retryTaskID = nil
     guard let panel else { return }
     guard state == .idle else { return }
 
@@ -88,5 +107,11 @@ final class DictationEngine: VoiceInputEngine {
     }
     state = .listening
     logger.debug("startDictation sent")
+  }
+
+  private func clearRetryTaskIfCurrent(_ taskID: UUID) {
+    guard retryTaskID == taskID else { return }
+    retryTask = nil
+    retryTaskID = nil
   }
 }

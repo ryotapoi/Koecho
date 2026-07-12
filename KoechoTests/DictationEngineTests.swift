@@ -7,14 +7,83 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct DictationEngineTests {
-  private func makeEngine() -> (engine: DictationEngine, sentSelectors: @MainActor () -> [Selector]) {
-    var sentSelectors: [Selector] = []
-    let engine = DictationEngine { selector in
-      sentSelectors.append(selector)
+  private final class StartActionRecorder {
+    private(set) var selectors: [Selector] = []
+    private var actionContinuation: CheckedContinuation<Void, Never>?
+
+    func send(_ selector: Selector) -> Bool {
+      selectors.append(selector)
+      actionContinuation?.resume()
+      actionContinuation = nil
       return true
     }
-    return (engine, { sentSelectors })
+
+    func waitForAction() async {
+      guard selectors.isEmpty else { return }
+      await withCheckedContinuation { continuation in
+        actionContinuation = continuation
+      }
+    }
   }
+
+  private final class FirstStartDelay {
+    private var firstInvocationHasStarted = false
+    private var firstInvocationContinuation: CheckedContinuation<Void, Never>?
+
+    func wait() async throws {
+      if !firstInvocationHasStarted {
+        firstInvocationHasStarted = true
+        firstInvocationContinuation?.resume()
+        firstInvocationContinuation = nil
+        try await Task.sleep(for: .seconds(60))
+      }
+    }
+
+    func waitForFirstInvocation() async {
+      guard !firstInvocationHasStarted else { return }
+      await withCheckedContinuation { continuation in
+        firstInvocationContinuation = continuation
+      }
+    }
+  }
+
+  private enum StartDelayError: Error {
+    case failed
+  }
+
+  private final class FailingFirstStartDelay {
+    private var invocationCount = 0
+    private var firstInvocationContinuation: CheckedContinuation<Void, Never>?
+
+    func wait() async throws {
+      invocationCount += 1
+      if invocationCount == 1 {
+        firstInvocationContinuation?.resume()
+        firstInvocationContinuation = nil
+        throw StartDelayError.failed
+      }
+    }
+
+    func waitForFirstInvocation() async {
+      guard invocationCount == 0 else { return }
+      await withCheckedContinuation { continuation in
+        firstInvocationContinuation = continuation
+      }
+    }
+  }
+
+  private func makeEngine(
+    startDelay: @escaping DictationEngine.StartDelay = {}
+  ) -> (engine: DictationEngine, actions: StartActionRecorder) {
+    let actions = StartActionRecorder()
+    let engine = DictationEngine(
+      startDictationActionSender: actions.send,
+      startDelay: startDelay
+    )
+    return (engine, actions)
+  }
+
+  private let startSelector = Selector(("startDictation:"))
 
   @Test func initialStateIsIdle() {
     let engine = DictationEngine()
@@ -73,44 +142,78 @@ struct DictationEngineTests {
   }
 
   @Test func startSendsInjectedStartDictationActionAfterDelay() async {
-    let (engine, sentSelectors) = makeEngine()
+    let (engine, actions) = makeEngine()
     let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100))
     engine.configure(panel: panel, textView: nil)
 
     engine.start()
-    try? await Task.sleep(for: .milliseconds(400))
+    await actions.waitForAction()
     withExtendedLifetime(panel) {}
 
-    #expect(sentSelectors() == [Selector(("startDictation:"))])
+    #expect(actions.selectors == [startSelector])
     #expect(engine.state == .listening)
   }
 
   @Test func cancelBeforeDelayPreventsStartDictationAction() async {
-    let (engine, sentSelectors) = makeEngine()
+    let delay = FirstStartDelay()
+    let (engine, actions) = makeEngine(startDelay: delay.wait)
     let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100))
     engine.configure(panel: panel, textView: nil)
 
     engine.start()
+    await delay.waitForFirstInvocation()
     engine.cancel()
-    try? await Task.sleep(for: .milliseconds(400))
+    withExtendedLifetime(panel) {}
 
-    #expect(sentSelectors().isEmpty)
+    #expect(actions.selectors.isEmpty)
     #expect(engine.state == .idle)
   }
 
+  @Test func restartCancelsPendingStartBeforeStartingAgain() async {
+    let delay = FirstStartDelay()
+    let (engine, actions) = makeEngine(startDelay: delay.wait)
+    let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100))
+    engine.configure(panel: panel, textView: nil)
+
+    engine.start()
+    await delay.waitForFirstInvocation()
+    engine.restart()
+    await actions.waitForAction()
+    withExtendedLifetime(panel) {}
+
+    #expect(actions.selectors == [startSelector])
+    #expect(engine.state == .listening)
+  }
+
+  @Test func startRetriesAfterNonCancellationDelayFailure() async {
+    let delay = FailingFirstStartDelay()
+    let (engine, actions) = makeEngine(startDelay: delay.wait)
+    let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100))
+    engine.configure(panel: panel, textView: nil)
+
+    engine.start()
+    await delay.waitForFirstInvocation()
+    await Task.yield()
+    engine.start()
+    await actions.waitForAction()
+    withExtendedLifetime(panel) {}
+
+    #expect(actions.selectors == [startSelector])
+    #expect(engine.state == .listening)
+  }
+
   @Test func stopFromListeningTransitions() async {
-    let (engine, sentSelectors) = makeEngine()
+    let (engine, actions) = makeEngine()
     let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100))
     engine.configure(panel: panel, textView: nil)
 
     // Simulate listening state by dispatching the delayed start
     engine.start()
-    // Wait for delayed dispatch to fire
-    try? await Task.sleep(for: .milliseconds(400))
+    await actions.waitForAction()
     withExtendedLifetime(panel) {}
 
     await engine.stop()
-    #expect(sentSelectors() == [Selector(("startDictation:"))])
+    #expect(actions.selectors == [startSelector])
     #expect(engine.state == .idle)
   }
 }
