@@ -16,7 +16,7 @@ struct VoiceInputSection: View {
           Text("SpeechAnalyzer (On-device)").tag(VoiceInputMode.speechAnalyzer)
         }
         .pickerStyle(.segmented)
-        if voiceInput.voiceInputMode == .speechAnalyzer {
+        if voiceInput.voiceInputMode.usesSpeechAnalyzer {
           SpeechAnalyzerLanguageSection(
             selection: $voiceInput.speechAnalyzerLocale,
             onSpeechLocalesChanged: onSpeechLocalesChanged
@@ -30,7 +30,7 @@ struct VoiceInputSection: View {
         Toggle(
           "Voice input",
           isOn: Binding(
-            get: { voiceInput.voiceInputMode != .off },
+            get: { voiceInput.voiceInputMode.isEnabled },
             set: { voiceInput.voiceInputMode = $0 ? .dictation : .off }
           ))
       }

@@ -20,7 +20,7 @@ final class InputPanelController {
   // production-unused forwarding properties on the controller.
   private(set) var voiceCoordinator: VoiceInputCoordinator!
   private var lifecycleManager: PanelLifecycleManager!
-  private var lastEnabledVoiceInputMode: VoiceInputMode = defaultEnabledVoiceInputMode()
+  private var lastEnabledVoiceInputMode: VoiceInputMode = .defaultEnabled()
 
   init(
     appState: AppState,
@@ -47,7 +47,7 @@ final class InputPanelController {
     let engineFactory =
       makeEngine ?? { () -> any VoiceInputEngine in
         if #available(macOS 26, *),
-          appState.settings.voiceInput.effectiveVoiceInputMode == .speechAnalyzer
+          appState.settings.voiceInput.effectiveVoiceInputMode.usesSpeechAnalyzer
         {
           let locale = Locale(identifier: appState.settings.voiceInput.speechAnalyzerLocale)
           return SpeechAnalyzerEngine(
@@ -114,7 +114,7 @@ final class InputPanelController {
       return
     }
 
-    let voiceEnabled = appState.settings.voiceInput.effectiveVoiceInputMode != .off
+    let voiceEnabled = appState.settings.voiceInput.effectiveVoiceInputMode.isEnabled
     lifecycleManager.show(duckVolume: voiceEnabled)
     if voiceEnabled {
       voiceCoordinator.prepareForShow()
@@ -250,7 +250,7 @@ final class InputPanelController {
   func toggleVoiceInput() async {
     guard appState.isInputPanelVisible, !isConfirming else { return }
 
-    if appState.settings.voiceInput.effectiveVoiceInputMode == .off {
+    if !appState.settings.voiceInput.effectiveVoiceInputMode.isEnabled {
       appState.settings.voiceInput.voiceInputMode = lastEnabledVoiceInputMode
       await voiceCoordinator.switchEngine()
     } else {
@@ -406,11 +406,6 @@ final class InputPanelController {
   private func focusTextView() {
     guard let textView else { return }
     textView.makeFirstResponder(in: panel)
-  }
-
-  private static func defaultEnabledVoiceInputMode() -> VoiceInputMode {
-    if #available(macOS 26, *) { return .speechAnalyzer }
-    return .dictation
   }
 
   private func clearTextView(startEngine: Bool) {

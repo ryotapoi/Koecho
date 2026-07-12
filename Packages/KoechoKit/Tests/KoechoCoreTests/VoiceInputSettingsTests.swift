@@ -12,11 +12,23 @@ struct VoiceInputSettingsTests {
 
   @Test func defaultVoiceInputMode() {
     let settings = VoiceInputSettings(defaults: makeDefaults())
+    #expect(settings.voiceInputMode == .defaultEnabled())
+
     if #available(macOS 26, *) {
       #expect(settings.voiceInputMode == .speechAnalyzer)
     } else {
       #expect(settings.voiceInputMode == .dictation)
     }
+  }
+
+  @Test func voiceInputModeSemantics() {
+    #expect(!VoiceInputMode.off.isEnabled)
+    #expect(VoiceInputMode.dictation.isEnabled)
+    #expect(VoiceInputMode.speechAnalyzer.isEnabled)
+
+    #expect(!VoiceInputMode.off.usesSpeechAnalyzer)
+    #expect(!VoiceInputMode.dictation.usesSpeechAnalyzer)
+    #expect(VoiceInputMode.speechAnalyzer.usesSpeechAnalyzer)
   }
 
   @Test func persistsVoiceInputMode() {

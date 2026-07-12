@@ -5,6 +5,29 @@ public enum VoiceInputMode: String, Codable, CaseIterable, Sendable {
   case off
   case dictation
   case speechAnalyzer
+
+  public static func defaultEnabled() -> Self {
+    if #available(macOS 26, *) { return .speechAnalyzer }
+    return .dictation
+  }
+
+  public var isEnabled: Bool {
+    switch self {
+    case .off:
+      false
+    case .dictation, .speechAnalyzer:
+      true
+    }
+  }
+
+  public var usesSpeechAnalyzer: Bool {
+    switch self {
+    case .off, .dictation:
+      false
+    case .speechAnalyzer:
+      true
+    }
+  }
 }
 
 @MainActor @Observable
@@ -49,7 +72,7 @@ public final class VoiceInputSettings {
 
   public var effectiveVoiceInputMode: VoiceInputMode {
     if #available(macOS 26, *) { return _voiceInputMode }
-    if _voiceInputMode == .off { return .off }
+    if !_voiceInputMode.isEnabled { return .off }
     return .dictation
   }
 
@@ -61,11 +84,7 @@ public final class VoiceInputSettings {
     {
       _voiceInputMode = mode
     } else {
-      if #available(macOS 26, *) {
-        _voiceInputMode = .speechAnalyzer
-      } else {
-        _voiceInputMode = .dictation
-      }
+      _voiceInputMode = .defaultEnabled()
     }
 
     _speechAnalyzerLocale =

@@ -18,7 +18,7 @@ struct GeneralSettingsView: View {
         onSpeechLocalesChanged: onSpeechLocalesChanged
       )
       VolumeDuckingSection(volumeDucking: volumeDucking)
-        .disabled(voiceInput.effectiveVoiceInputMode == .off)
+        .disabled(!voiceInput.effectiveVoiceInputMode.isEnabled)
       Section("Clipboard") {
         TextField("Clipboard restore delay (sec)", value: $paste.pasteDelay, format: .number)
       }

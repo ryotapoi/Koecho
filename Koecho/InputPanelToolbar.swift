@@ -18,7 +18,7 @@ struct InputPanelToolbar: View {
   }
 
   private var isVoiceEnabled: Bool {
-    voiceInputMode != .off
+    voiceInputMode.isEnabled
   }
 
   var body: some View {
@@ -39,7 +39,7 @@ struct InputPanelToolbar: View {
       .buttonStyle(.koechoToolbar(isEmphasized: isVoiceEnabled))
       .disabled(isRunningScript)
       .help(
-        voiceInputMode == .off ? String(localized: "Voice input is off") : String(localized: "Voice")
+        !voiceInputMode.isEnabled ? String(localized: "Voice input is off") : String(localized: "Voice")
       )
 
       if !replacementRules.isEmpty {
