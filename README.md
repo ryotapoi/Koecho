@@ -1,6 +1,6 @@
 # Koecho
 
-[日本語](README.ja.md)
+[日本語](README.ja.md) · [Changelog](CHANGELOG.md) · [変更履歴（日本語）](CHANGELOG.ja.md)
 
 A lightweight voice input app for macOS.
 Invoke with a hotkey, edit text by voice and keyboard, process it with shell scripts, and paste it into the foreground app.
