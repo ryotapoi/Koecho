@@ -4,55 +4,68 @@ import Testing
 
 @testable import KoechoPlatform
 
-@MainActor
-@Suite(.serialized)
-struct SpeechAnalyzerEngineTests {
-  private func makeEngine() -> (any VoiceInputEngine)? {
-    guard #available(macOS 26, *) else { return nil }
-    return SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
+private let supportsSpeechAnalyzer: Bool = {
+  if #available(macOS 26, *) {
+    return true
   }
+  return false
+}()
 
+@MainActor
+@Suite(.serialized, .enabled(if: supportsSpeechAnalyzer, "Requires macOS 26 or later"))
+struct SpeechAnalyzerEngineTests {
   @Test func initialStateIsIdle() {
-    guard let engine = makeEngine() else { return }
-    #expect(engine.state == .idle)
+    if #available(macOS 26, *) {
+      let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
+      #expect(engine.state == .idle)
+    }
   }
 
   @Test func startWhenAlreadyListeningIsNoop() {
-    guard let engine = makeEngine() else { return }
-    engine.start()
-    #expect(engine.state == .listening)
-    engine.start()
-    #expect(engine.state == .listening)
-    engine.cancel()
+    if #available(macOS 26, *) {
+      let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
+      engine.start()
+      #expect(engine.state == .listening)
+      engine.start()
+      #expect(engine.state == .listening)
+      engine.cancel()
+    }
   }
 
   @Test func cancelFromIdleRemainsIdle() {
-    guard let engine = makeEngine() else { return }
-    engine.cancel()
-    #expect(engine.state == .idle)
+    if #available(macOS 26, *) {
+      let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
+      engine.cancel()
+      #expect(engine.state == .idle)
+    }
   }
 
   @Test func cancelFromListeningGoesToIdle() {
-    guard let engine = makeEngine() else { return }
-    engine.start()
-    engine.cancel()
-    #expect(engine.state == .idle)
+    if #available(macOS 26, *) {
+      let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
+      engine.start()
+      engine.cancel()
+      #expect(engine.state == .idle)
+    }
   }
 
   @Test func stopFromIdleRemainsIdle() async {
-    guard let engine = makeEngine() else { return }
-    await engine.stop()
-    #expect(engine.state == .idle)
+    if #available(macOS 26, *) {
+      let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
+      await engine.stop()
+      #expect(engine.state == .idle)
+    }
   }
 
   @Test func delegateIsRetained() {
-    guard #available(macOS 26, *) else { return }
-    let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
-    let mockDelegate = MockVoiceInputDelegate()
-    engine.delegate = mockDelegate
-    engine.start()
-    engine.cancel()
-    #expect(engine.delegate === mockDelegate)
+    if #available(macOS 26, *) {
+      let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
+      let mockDelegate = MockVoiceInputDelegate()
+      engine.delegate = mockDelegate
+      engine.start()
+      engine.cancel()
+      #expect(engine.delegate === mockDelegate)
+    }
   }
 }
 

@@ -11,7 +11,7 @@
   - `HotkeyServiceTests.swift:73,110` の 500ms sleep: `processEvent` は同期テスト可能な形になっているので、タイマー発火は `expireDoubleTapWindow()` 相当を直接呼ぶ純ロジックテストに置き換える
   - `ScriptRunnerTests.normalCompletionDoesNotTimeout` は実プロセス spawn が 5 秒に間に合わないと誤 timeout（audit で flaky fail を実測）。timeout 余裕の見直しか spawn 非依存の検証に変える
   - 対象を広げる（2026-07-09 Codex audit）: `InputPanelController*Tests` の 500ms sleep、`VoiceInputCoordinatorTests` の固定 `Task.yield()` ヘルパー、`.timeLimit` 欠落も同方針で解消する
-- [ ] SpeechAnalyzer 系テストの `#available` ガードによる空実行 pass を可視化する
+- [x] SpeechAnalyzer 系テストの `#available` ガードによる空実行 pass を可視化する
   - `SpeechAnalyzerEngineTests.swift` / `SpeechAnalyzerLocaleManagerTests.swift` / `VoiceInputSettingsTests.swift` / `MenuBarContentTests.swift` が `guard #available(macOS 26, *) else { return }`（または `makeEngine()` の nil 早期 return）で、macOS 26 未満のホストでは本文 0 行のまま pass 扱いになる。SpeechAnalyzer 変更のリグレッションを検知できていないことが結果から見えない
   - Swift Testing の `.enabled(if:)` 等へ寄せ、skip として計測に現れる形にする（2026-07-09 Codex audit、MUST 判定。ガード形は実コードで確認済み）
 - [ ] static 共有状態に触るテストの独立性を確保する
