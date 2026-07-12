@@ -1,23 +1,5 @@
 # Backlog
 
-## v1.6.4 — テスト信頼性（2026-07-08/09 maintenance-audit deep より）
-
-- [x] DictationEngine の起動遅延 300ms を注入可能にして flaky テストを根治する
-  - `DictationEngine.swift:38` のハードコード 300ms `Task.sleep` に対し、テストが 400ms sleep で賭けている構造（`DictationEngineTests.swift:81,95,109`）。並列実行の負荷次第で `startSendsInjectedStartDictationActionAfterDelay` が再発する（audit でも flaky fail を実測）
-  - 遅延を init 注入（または `start(delay:)`）にしてテストから実時間待ちを消す。製品コードのマジックナンバー解消と両得
-  - 同時に `DictationEngine.swift:40` の `catch {}` を `catch is CancellationError {}` に揃える（コードベース唯一の全捨て catch。`SpeechAnalyzerEngine.swift:266` / ClipboardPaster が canonical パターン）
-  - あわせて `retryTask?.cancel()` → `start()` の再入（restart 経路）にテストを追加する（2026-07-09 audit）
-- [x] HotkeyService / ScriptRunner ほかテストの実時間依存を除去する
-  - `HotkeyServiceTests.swift:73,110` の 500ms sleep: `processEvent` は同期テスト可能な形になっているので、タイマー発火は `expireDoubleTapWindow()` 相当を直接呼ぶ純ロジックテストに置き換える
-  - `ScriptRunnerTests.normalCompletionDoesNotTimeout` は実プロセス spawn が 5 秒に間に合わないと誤 timeout（audit で flaky fail を実測）。timeout 余裕の見直しか spawn 非依存の検証に変える
-  - 対象を広げる（2026-07-09 Codex audit）: `InputPanelController*Tests` の 500ms sleep、`VoiceInputCoordinatorTests` の固定 `Task.yield()` ヘルパー、`.timeLimit` 欠落も同方針で解消する
-- [x] SpeechAnalyzer 系テストの `#available` ガードによる空実行 pass を可視化する
-  - `SpeechAnalyzerEngineTests.swift` / `SpeechAnalyzerLocaleManagerTests.swift` / `VoiceInputSettingsTests.swift` / `MenuBarContentTests.swift` が `guard #available(macOS 26, *) else { return }`（または `makeEngine()` の nil 早期 return）で、macOS 26 未満のホストでは本文 0 行のまま pass 扱いになる。SpeechAnalyzer 変更のリグレッションを検知できていないことが結果から見えない
-  - Swift Testing の `.enabled(if:)` 等へ寄せ、skip として計測に現れる形にする（2026-07-09 Codex audit、MUST 判定。ガード形は実コードで確認済み）
-- [x] static 共有状態に触るテストの独立性を確保する
-  - `AudioInputExclusiveAccessTests` / `SpeechModelVerificationCacheTests` が process-global な static 可変状態を共有し、Swift Testing の並列実行で相互汚染しうる
-  - 最小対処は `.serialized` 付与。`SpeechModelVerificationCache`（`@MainActor enum` + `static var`）はインスタンス化してエンジン/マネージャへ注入する案もあり、方式は実装時に design-decision で確定（2026-07-09 両 audit 一致）
-
 ## v1.6.5 — テキスト編集経路の整理
 
 - [ ] volatile テキスト挿入経路を VoiceInputTextView に集約する（実装前に design-decision で方式確定）

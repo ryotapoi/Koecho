@@ -4,6 +4,14 @@ All notable changes to Koecho are documented here. Release notes are reconstruct
 
 Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi/Koecho/releases).
 
+## Unreleased
+
+### Internal
+
+- Removed timing-dependent waits from dictation, hotkey, script, input-panel, and voice-input tests.
+- Reported unavailable Speech Analyzer tests as disabled instead of silently passing empty test bodies.
+- Isolated shared audio-input and speech-model verification state between tests.
+
 ## 1.6.3 — 2026-07-05
 
 - Improved replacement-rule editing when adding or removing multiple patterns.
