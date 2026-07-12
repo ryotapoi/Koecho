@@ -18,7 +18,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello world"
+    ctx.appState.setInputText("hello world")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -35,7 +35,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -55,7 +55,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "えーと天気"
+    ctx.appState.setInputText("えーと天気")
 
     ctx.controller.applyReplacementRulesNow()
 
@@ -69,7 +69,7 @@ extension InputPanelControllerTests {
     )
 
     // Don't call showPanel — panel is not visible
-    ctx.appState.inputText = "えーと天気"
+    ctx.appState.setInputText("えーと天気")
 
     ctx.controller.applyReplacementRulesNow()
 
@@ -83,7 +83,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "えーと天気"
+    ctx.appState.setInputText("えーと天気")
     ctx.appState.isRunningScript = true
 
     ctx.controller.applyReplacementRulesNow()
@@ -95,7 +95,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
 
     ctx.controller.applyReplacementRulesNow()
 
@@ -109,7 +109,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
 
     ctx.controller.applyReplacementRulesNow()
 
@@ -125,7 +125,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "えーと天気"
+    ctx.appState.setInputText("えーと天気")
 
     let handled = ctx.controller.panel.onShortcutKey?(
       ShortcutKey(modifiers: [.control], character: "r"))
@@ -143,7 +143,7 @@ extension InputPanelControllerTests {
     // No replacement rules — Ctrl+R should fall through to script
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "original"
+    ctx.appState.setInputText("original")
 
     let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
 
@@ -163,7 +163,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "えーと天気"
+    ctx.appState.setInputText("えーと天気")
 
     let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
 
@@ -181,7 +181,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "えーと天気"
+    ctx.appState.setInputText("えーと天気")
 
     // Ctrl+X should apply replacement rules
     let handledX = ctx.controller.panel.onShortcutKey?(
@@ -190,7 +190,7 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "天気")
 
     // Ctrl+R should NOT apply replacement rules (no longer the shortcut)
-    ctx.appState.inputText = "えーと天気"
+    ctx.appState.setInputText("えーと天気")
     let handledR = ctx.controller.panel.onShortcutKey?(
       ShortcutKey(modifiers: [.control], character: "r"))
     #expect(handledR == false)
@@ -208,7 +208,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "えーと天気"
+    ctx.appState.setInputText("えーと天気")
 
     // Ctrl+R should fall through to script (replacement shortcut is nil)
     let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
@@ -223,7 +223,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello world hello"
+    ctx.appState.setInputText("hello world hello")
 
     let rule = ReplacementRule(pattern: "hello", replacement: "hi")
     ctx.controller.addReplacementRule(rule)
@@ -254,7 +254,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello world"
+    ctx.appState.setInputText("hello world")
 
     let newRule = ReplacementRule(pattern: "hello", replacement: "hi")
     ctx.controller.addReplacementRule(newRule)

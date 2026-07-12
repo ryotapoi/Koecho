@@ -155,7 +155,7 @@ final class InputPanelController {
     } else {
       rawText = appState.inputText
     }
-    textView?.setString("", suppressingCallbacks: true)
+    textView?.replaceText("")
     return rawText
   }
 
@@ -181,8 +181,8 @@ final class InputPanelController {
     guard let autoScript = appState.settings.script.autoRunScript else { return text }
     guard appState.isInputPanelVisible else { return nil }
 
-    appState.inputText = text
-    textView?.setString(text, suppressingCallbacks: true)
+    appState.setInputText(text)
+    textView?.replaceText(text)
 
     appState.isRunningScript = true
     defer { appState.isRunningScript = false }
@@ -193,8 +193,8 @@ final class InputPanelController {
       return transformed
     } catch {
       guard appState.isInputPanelVisible else { return nil }
-      appState.inputText = text
-      textView?.setString(text, suppressingCallbacks: true)
+      appState.setInputText(text)
+      textView?.replaceText(text)
       appState.errorMessage = scriptService.scriptErrorMessage(for: error, script: autoScript)
       return nil
     }
@@ -222,7 +222,7 @@ final class InputPanelController {
       paster.restoreClipboard()
       appState.isInputPanelVisible = true
       panel.makeKeyAndOrderFront(nil)
-      appState.inputText = text
+      appState.setInputText(text)
       appState.errorMessage = errorMessage(for: error)
       logger.error("Paste failed: \(error)")
     }
@@ -264,7 +264,7 @@ final class InputPanelController {
 
   func handleTextChanged(_ text: String) {
     if let textView, !textView.hasMarkedText() {
-      appState.inputText = text
+      appState.setInputText(text)
     }
     appState.errorMessage = nil
     if appState.settings.replacement.isAutoReplacementEnabled {
@@ -413,7 +413,7 @@ final class InputPanelController {
 
   private func handleTextCommitted() {
     if let textView {
-      appState.inputText = textView.string
+      appState.setInputText(textView.string)
     }
     replacementService.clearPreviews()
     if appState.settings.replacement.isAutoReplacementEnabled {
@@ -445,7 +445,7 @@ final class InputPanelController {
 
   private func resetTextViewContent(startEngine: Bool) {
     guard let textView else { return }
-    textView.setString(appState.inputText, suppressingCallbacks: true)
+    textView.replaceText(appState.inputText)
     if textView.window != nil {
       textView.makeFirstResponder(in: panel)
       let endOfText = NSRange(location: (textView.string as NSString).length, length: 0)

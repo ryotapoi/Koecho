@@ -15,7 +15,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
 
     await ctx.controller.executeScript(script)
 
@@ -29,7 +29,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "original"
+    ctx.appState.setInputText("original")
 
     await ctx.controller.executeScript(script)
 
@@ -44,7 +44,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "original"
+    ctx.appState.setInputText("original")
 
     await ctx.controller.executeScript(script)
 
@@ -60,7 +60,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "input"
+    ctx.appState.setInputText("input")
     ctx.appState.promptText = "my prompt"
 
     await ctx.controller.executeScript(script)
@@ -75,7 +75,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "original"
+    ctx.appState.setInputText("original")
 
     await ctx.controller.executeScript(script)
 
@@ -91,7 +91,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "input"
+    ctx.appState.setInputText("input")
 
     // First call: show prompt UI
     await ctx.controller.executeScript(script)
@@ -131,7 +131,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "original"
+    ctx.appState.setInputText("original")
     ctx.appState.isRunningScript = true
 
     await ctx.controller.executeScript(script)
@@ -145,7 +145,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     // Don't call showPanel — panel is not visible
-    ctx.appState.inputText = "original"
+    ctx.appState.setInputText("original")
 
     await ctx.controller.executeScript(script)
 
@@ -171,7 +171,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
     ctx.appState.isRunningScript = true
 
@@ -207,7 +207,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "original"
+    ctx.appState.setInputText("original")
 
     // Show prompt for script1
     await ctx.controller.executeScript(script1)
@@ -227,7 +227,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "original"
+    ctx.appState.setInputText("original")
 
     let executeTask = Task { @MainActor in
       await ctx.controller.executeScript(script)
@@ -251,7 +251,7 @@ extension InputPanelControllerTests {
 
     // Test emptyScript
     let emptyScriptEntry = Script(name: "Empty", scriptPath: "")
-    ctx.appState.inputText = "text"
+    ctx.appState.setInputText("text")
     await ctx.controller.executeScript(emptyScriptEntry)
     #expect(ctx.appState.errorMessage == String(localized: "Script command is empty."))
 
@@ -259,7 +259,7 @@ extension InputPanelControllerTests {
     let failPath = try makeScript("echo 'err msg' >&2; exit 2")
     let failScript = Script(name: "Fail", scriptPath: failPath)
     ctx.appState.errorMessage = nil
-    ctx.appState.inputText = "text"
+    ctx.appState.setInputText("text")
     await ctx.controller.executeScript(failScript)
     #expect(ctx.appState.errorMessage?.contains("Fail") == true)
     #expect(ctx.appState.errorMessage?.contains("err msg") == true)
@@ -268,7 +268,7 @@ extension InputPanelControllerTests {
     let emptyPath = try makeScript("printf ''")
     let emptyScript = Script(name: "Empty", scriptPath: emptyPath)
     ctx.appState.errorMessage = nil
-    ctx.appState.inputText = "text"
+    ctx.appState.setInputText("text")
     await ctx.controller.executeScript(emptyScript)
     #expect(ctx.appState.errorMessage?.contains("Empty") == true)
 
@@ -279,7 +279,7 @@ extension InputPanelControllerTests {
       makeScriptRunner: { ScriptRunner(timeout: 0.1) }
     )
     ctx2.controller.showPanel()
-    ctx2.appState.inputText = "text"
+    ctx2.appState.setInputText("text")
     await ctx2.controller.executeScript(timeoutScript)
     #expect(ctx2.appState.errorMessage?.contains("Timeout") == true)
   }
@@ -294,7 +294,7 @@ extension InputPanelControllerTests {
     ctx.appState.settings.script.scripts = [script]
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "original"
+    ctx.appState.setInputText("original")
 
     let handled = ctx.controller.panel.onShortcutKey?(cmdShiftC)
 
@@ -311,7 +311,7 @@ extension InputPanelControllerTests {
     ctx.appState.settings.script.scripts = [script]
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "original"
+    ctx.appState.setInputText("original")
 
     // Cmd+Shift+C should NOT match Cmd+C
     let handled = ctx.controller.panel.onShortcutKey?(cmdShiftC)
@@ -360,7 +360,7 @@ extension InputPanelControllerTests {
     ctx.appState.settings.script.autoRunScriptId = script.id
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -381,7 +381,7 @@ extension InputPanelControllerTests {
     ctx.appState.settings.script.autoRunScriptId = script.id
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -402,7 +402,7 @@ extension InputPanelControllerTests {
     ctx.appState.settings.script.autoRunScriptId = script.id
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -434,7 +434,7 @@ extension InputPanelControllerTests {
     ctx.appState.settings.script.autoRunScriptId = script.id
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     let confirmTask = Task { @MainActor in
@@ -462,7 +462,7 @@ extension InputPanelControllerTests {
     ctx.appState.settings.script.scripts = [script]
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
 
     let handled = ctx.controller.panel.onShortcutKey?(ctrlA)
 

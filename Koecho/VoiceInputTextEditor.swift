@@ -56,13 +56,10 @@ struct VoiceInputTextEditor: NSViewRepresentable {
     textView.onAddReplacementRule = onAddReplacementRule
 
     if textView.string != text,
-      !textView.isSuppressingCallbacks,
       !textView.hasMarkedText(),
       textView.volatileRange == nil
     {
-      textView.isSuppressingCallbacks = true
-      textView.string = text
-      textView.isSuppressingCallbacks = false
+      textView.replaceText(text)
     }
 
     textView.isEditable = !isDisabled

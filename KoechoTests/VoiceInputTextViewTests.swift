@@ -27,7 +27,7 @@ struct VoiceInputTextViewTests {
     #expect(receivedText == "hello")
   }
 
-  @Test func didChangeTextSkipsWhenSuppressed() {
+  @Test func replaceTextDoesNotFireOnTextChanged() {
     let textView = makeTextView()
 
     var callCount = 0
@@ -35,10 +35,9 @@ struct VoiceInputTextViewTests {
       callCount += 1
     }
 
-    textView.isSuppressingCallbacks = true
-    textView.string = "hello"
-    textView.didChangeText()
+    textView.replaceText("hello")
 
+    #expect(textView.string == "hello")
     #expect(callCount == 0)
   }
 
@@ -107,6 +106,16 @@ struct VoiceInputTextViewTests {
 
     #expect(textView.string == "hello world")
     #expect(textView.volatileRange == NSRange(location: 0, length: 6))
+  }
+
+  @Test func setVolatileTextRemovesDuplicateLeadingPunctuation() {
+    let textView = makeTextView()
+    textView.string = "hello."
+
+    textView.setVolatileText(". world", at: 6)
+
+    #expect(textView.string == "hello. world")
+    #expect(textView.volatileRange == NSRange(location: 6, length: 6))
   }
 
   @Test func setVolatileTextReplacesExisting() {
@@ -217,6 +226,41 @@ struct VoiceInputTextViewTests {
     #expect(textView.volatileRange == NSRange(location: 6, length: 10))
   }
 
+  // MARK: - Finalized text insertion
+
+  @Test func insertFinalizedTextInsertsAtClampedPositionWithoutCallbacks() {
+    let textView = makeTextView()
+    textView.string = "hi"
+    var callCount = 0
+    textView.onTextChanged = { _ in callCount += 1 }
+
+    let insertedText = textView.insertFinalizedText(" there", at: 100)
+
+    #expect(insertedText == " there")
+    #expect(textView.string == "hi there")
+    #expect(callCount == 0)
+  }
+
+  @Test func insertFinalizedTextRemovesDuplicateLeadingPunctuation() {
+    let textView = makeTextView()
+    textView.string = "hello."
+
+    let insertedText = textView.insertFinalizedText(". world", at: 6)
+
+    #expect(insertedText == " world")
+    #expect(textView.string == "hello. world")
+  }
+
+  @Test func insertFinalizedTextKeepsDuplicateNonPunctuation() {
+    let textView = makeTextView()
+    textView.string = "hello"
+
+    let insertedText = textView.insertFinalizedText("o world", at: 5)
+
+    #expect(insertedText == "o world")
+    #expect(textView.string == "helloo world")
+  }
+
   // MARK: - Edge case tests
 
   @Test func shouldChangeTextFinalizesVolatile() {
@@ -254,22 +298,6 @@ struct VoiceInputTextViewTests {
     #expect(textView.string == "hello")
   }
 
-  @Test func shouldChangeTextSkipsWhenSuppressed() {
-    let textView = makeTextView()
-    textView.string = "hello"
-    textView.setVolatileText(" world", at: 5)
-
-    textView.isSuppressingCallbacks = true
-    _ = textView.shouldChangeText(
-      in: NSRange(location: 5, length: 0),
-      replacementString: "!"
-    )
-    textView.isSuppressingCallbacks = false
-
-    // Volatile should NOT be cleared when suppressing
-    #expect(textView.volatileRange != nil)
-  }
-
   @Test func setVolatileTextClampsToStorageLength() {
     let textView = makeTextView()
     textView.string = "hi"
@@ -287,9 +315,7 @@ struct VoiceInputTextViewTests {
 
     textView.setVolatileText(" world", at: 5)
     // Simulate external modification that corrupts the range
-    textView.isSuppressingCallbacks = true
     textView.textStorage?.replaceCharacters(in: NSRange(location: 0, length: 11), with: "hi")
-    textView.isSuppressingCallbacks = false
 
     // Should safely handle out-of-bounds range
     textView.clearVolatileText()

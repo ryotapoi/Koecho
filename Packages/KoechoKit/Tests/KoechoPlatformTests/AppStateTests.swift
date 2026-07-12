@@ -26,7 +26,7 @@ struct AppStateTests {
 
   @Test func stateModification() {
     let appState = AppState()
-    appState.inputText = "Hello, world!"
+    appState.setInputText("Hello, world!")
     #expect(appState.inputText == "Hello, world!")
     appState.isInputPanelVisible = true
     #expect(appState.isInputPanelVisible == true)

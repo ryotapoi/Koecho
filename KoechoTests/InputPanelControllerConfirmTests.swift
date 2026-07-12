@@ -14,7 +14,7 @@ extension InputPanelControllerTests {
     let ctx = makeController(paster: paster)
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     // Set a fake frontmost app — use current app as a stand-in
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
@@ -33,7 +33,7 @@ extension InputPanelControllerTests {
     let ctx = makeController(paster: paster)
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -48,7 +48,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "   \n  "
+    ctx.appState.setInputText("   \n  ")
 
     await ctx.controller.confirm()
 
@@ -70,7 +70,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = nil
 
     await ctx.controller.confirm()
@@ -84,7 +84,7 @@ extension InputPanelControllerTests {
     let ctx = makeController(paster: paster)
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     // Make paste suspend so we can call cancel() while confirm() is in progress.
@@ -126,7 +126,7 @@ extension InputPanelControllerTests {
     let ctx = makeController(paster: paster)
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -144,7 +144,7 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "えーと今日はいい天気"
+    ctx.appState.setInputText("えーと今日はいい天気")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -160,7 +160,7 @@ extension InputPanelControllerTests {
     ctx.appState.settings.history.isHistoryEnabled = false
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -174,7 +174,7 @@ extension InputPanelControllerTests {
     let ctx = makeController(paster: paster)
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -187,7 +187,7 @@ extension InputPanelControllerTests {
     let ctx = makeController(paster: paster)
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "   \n  "
+    ctx.appState.setInputText("   \n  ")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()

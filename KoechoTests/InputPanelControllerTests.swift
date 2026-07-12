@@ -32,7 +32,7 @@ struct InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "some text"
+    ctx.appState.setInputText("some text")
     ctx.controller.cancel()
 
     #expect(ctx.appState.isInputPanelVisible == false)
@@ -45,7 +45,7 @@ struct InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "some text"
+    ctx.appState.setInputText("some text")
     ctx.controller.panel.close()
 
     #expect(ctx.appState.isInputPanelVisible == false)
@@ -56,7 +56,7 @@ struct InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello world"
+    ctx.appState.setInputText("hello world")
     ctx.controller.cancel()
 
     #expect(ctx.appState.inputText == "")
@@ -66,7 +66,7 @@ struct InputPanelControllerTests {
     let ctx = makeController()
 
     ctx.controller.showPanel()
-    ctx.appState.inputText = "hello"
+    ctx.appState.setInputText("hello")
     ctx.controller.showPanel()
 
     #expect(ctx.appState.inputText == "hello")
@@ -170,7 +170,7 @@ struct InputPanelControllerTests {
     let ducker = MockVolumeDucker()
     let ctx = makeController(ducker: ducker)
     ctx.controller.showPanel()
-    ctx.appState.inputText = ""
+    ctx.appState.setInputText("")
     await ctx.controller.confirm()
     // Empty text path calls clearState() which calls restore()
     #expect(ducker.restoreCallCount == 1)

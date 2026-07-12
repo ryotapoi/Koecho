@@ -16,7 +16,7 @@ import Testing
     let appState = makeTestAppState()
     appState.settings.script.scriptTimeout = scriptTimeout
     appState.isInputPanelVisible = isInputPanelVisible
-    appState.inputText = inputText
+    appState.setInputText(inputText)
 
     let coordinator = makeTestVoiceCoordinator(appState: appState)
     let service = ScriptExecutionService(

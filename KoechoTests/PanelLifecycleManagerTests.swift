@@ -91,7 +91,7 @@ import Testing
 
   @Test func clearStateResetsAllAppStateProperties() {
     let (manager, appState, _, _, _) = makeManager()
-    appState.inputText = "hello"
+    appState.setInputText("hello")
     appState.isInputPanelVisible = true
     appState.frontmostApplication = NSRunningApplication.current
     appState.errorMessage = "error"

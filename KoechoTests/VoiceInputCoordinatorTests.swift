@@ -14,7 +14,7 @@ import Testing
   ) -> (VoiceInputCoordinator, AppState, MockTextViewOperating, MockVoiceInputEngine) {
     let appState = makeTestAppState()
     appState.isInputPanelVisible = isInputPanelVisible
-    appState.inputText = inputText
+    appState.setInputText(inputText)
 
     let mockEngine = MockVoiceInputEngine()
     let coordinator = makeTestVoiceCoordinator(
@@ -37,7 +37,7 @@ import Testing
   ) -> (VoiceInputCoordinator, AppState, MockTextViewOperating, MockRestartableVoiceInputEngine) {
     let appState = makeTestAppState()
     appState.isInputPanelVisible = isInputPanelVisible
-    appState.inputText = inputText
+    appState.setInputText(inputText)
 
     let mockEngine = MockRestartableVoiceInputEngine()
     mockEngine.restartResult = restartResult
@@ -123,14 +123,14 @@ import Testing
   // MARK: - VoiceInputDelegate: didFinalize
 
   @Test func didFinalizeInsertsText() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "")
-    let storage = NSTextStorage(string: "")
-    mockTV.textStorage = storage
-    mockTV.typingAttributes = [:]
+    let (coordinator, appState, mockTV, _) = makeCoordinator(inputText: "")
 
     coordinator.voiceInput(didFinalize: "hello")
 
-    #expect(storage.string == "hello")
+    #expect(mockTV.insertFinalizedTextCalls.count == 1)
+    #expect(mockTV.insertFinalizedTextCalls[0].text == "hello")
+    #expect(mockTV.string == "hello")
+    #expect(appState.inputText == "hello")
     #expect(coordinator.voiceInsertionPoint == 5)
   }
 
@@ -139,20 +139,15 @@ import Testing
       inputText: "",
       isInputPanelVisible: false
     )
-    let storage = NSTextStorage(string: "")
-    mockTV.textStorage = storage
-
     coordinator.voiceInput(didFinalize: "hello")
 
-    #expect(storage.string == "")
+    #expect(mockTV.insertFinalizedTextCalls.isEmpty)
+    #expect(mockTV.string == "")
   }
 
   @Test func didFinalizeCallsOnAutoReplacement() {
     let (coordinator, appState, mockTV, _) = makeCoordinator(inputText: "")
     appState.settings.replacement.isAutoReplacementEnabled = true
-    let storage = NSTextStorage(string: "")
-    mockTV.textStorage = storage
-    mockTV.typingAttributes = [:]
     var autoReplacementCalled = false
     coordinator.onAutoReplacement = { autoReplacementCalled = true }
 
@@ -164,9 +159,6 @@ import Testing
   @Test func didFinalizeSkipsAutoReplacementWhenDisabled() {
     let (coordinator, appState, mockTV, _) = makeCoordinator(inputText: "")
     appState.settings.replacement.isAutoReplacementEnabled = false
-    let storage = NSTextStorage(string: "")
-    mockTV.textStorage = storage
-    mockTV.typingAttributes = [:]
     var autoReplacementCalled = false
     coordinator.onAutoReplacement = { autoReplacementCalled = true }
 
@@ -209,9 +201,6 @@ import Testing
 
   @Test func replayFinalizeIsSkippedInReplayContext() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    let storage = NSTextStorage(string: "hello")
-    mockTV.textStorage = storage
-    mockTV.typingAttributes = [:]
     coordinator.handleCursorMoved(5)
 
     // Simulate locally finalized state with replay context
@@ -221,15 +210,14 @@ import Testing
     coordinator.voiceInput(didFinalize: "hello")
 
     // Text should not be inserted again
-    #expect(storage.string == "hello")
+    #expect(mockTV.insertFinalizedTextCalls.isEmpty)
+    #expect(mockTV.string == "hello")
   }
 
   // MARK: - VoiceInputDelegate: didUpdateVolatile
 
   @Test func didUpdateVolatileSetsVolatileText() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    let storage = NSTextStorage(string: "hello")
-    mockTV.textStorage = storage
     coordinator.handleCursorMoved(5)
 
     coordinator.voiceInput(didUpdateVolatile: " world")
@@ -240,8 +228,6 @@ import Testing
 
   @Test func didUpdateVolatileSuppressesReplayWithinDeadline() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    let storage = NSTextStorage(string: "hello")
-    mockTV.textStorage = storage
     coordinator.handleCursorMoved(5)
     coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
 
@@ -254,9 +240,8 @@ import Testing
 
   @Test func didFinalizeStripsOverlappingPrefix() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "")
-    let storage = NSTextStorage(string: "hello")
-    mockTV.textStorage = storage
-    mockTV.typingAttributes = [:]
+    mockTV.string = "hello"
+    mockTV.finalizedString = "hello"
     coordinator.handleCursorMoved(5)
 
     // First finalize
@@ -266,7 +251,7 @@ import Testing
     coordinator.voiceInput(didFinalize: "hello world")
 
     // Should insert only " world", not "hello world"
-    #expect(storage.string.hasSuffix(" world"))
+    #expect(mockTV.string.hasSuffix(" world"))
   }
 
   @Test func stripOverlappingPrefixReturnsOriginalForEmptyInputs() {
@@ -323,41 +308,6 @@ import Testing
     #expect(result == " world")
   }
 
-  @Test func stripLeadingDuplicatePunctuationRemovesDuplicateAtInsertionPoint() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello.")
-    mockTV.textStorage = NSTextStorage(string: "hello.")
-
-    let result = coordinator.stripLeadingDuplicatePunctuation(". world", at: 6)
-
-    #expect(result == " world")
-  }
-
-  @Test func stripLeadingDuplicatePunctuationKeepsDuplicateNonPunctuation() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    mockTV.textStorage = NSTextStorage(string: "hello")
-
-    let result = coordinator.stripLeadingDuplicatePunctuation("o world", at: 5)
-
-    #expect(result == "o world")
-  }
-
-  @Test func stripLeadingDuplicatePunctuationKeepsNonDuplicatePunctuation() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello,")
-    mockTV.textStorage = NSTextStorage(string: "hello,")
-
-    let result = coordinator.stripLeadingDuplicatePunctuation(". world", at: 6)
-
-    #expect(result == ". world")
-  }
-
-  @Test func stripLeadingDuplicatePunctuationKeepsTextAtStartAndEmptyText() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: ".")
-    mockTV.textStorage = NSTextStorage(string: ".")
-
-    #expect(coordinator.stripLeadingDuplicatePunctuation(". world", at: 0) == ". world")
-    #expect(coordinator.stripLeadingDuplicatePunctuation("", at: 1) == "")
-  }
-
   // MARK: - handleCursorMoved
 
   @Test func handleCursorMovedUpdatesVoiceInsertionPoint() {
@@ -385,8 +335,6 @@ import Testing
 
   @Test func didUpdateVolatileSuppressesWhenLocallyFinalizedAndNoDeadline() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    let storage = NSTextStorage(string: "hello")
-    mockTV.textStorage = storage
     coordinator.handleCursorMoved(5)
     coordinator.replayState = .restartInProgress(localText: "world")
 
@@ -397,8 +345,6 @@ import Testing
 
   @Test func didUpdateVolatileClearsStateWhenDeadlineExpired() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    let storage = NSTextStorage(string: "hello")
-    mockTV.textStorage = storage
     coordinator.handleCursorMoved(5)
     coordinator.replayState = .suppressing(localText: "world", deadline: Date.distantPast)
 
@@ -410,8 +356,6 @@ import Testing
 
   @Test func handleCursorMovedThenVolatileIsSuppressed() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    let storage = NSTextStorage(string: "hello world")
-    mockTV.textStorage = storage
     mockTV.string = "hello world"
     mockTV.finalizedString = "hello"
     mockTV.volatileRange = NSRange(location: 5, length: 6)
@@ -463,8 +407,6 @@ import Testing
 
   @Test func didUpdateVolatileClearsStateOnNonMatchingTextWithinDeadline() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    let storage = NSTextStorage(string: "hello")
-    mockTV.textStorage = storage
     coordinator.handleCursorMoved(5)
     coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
 

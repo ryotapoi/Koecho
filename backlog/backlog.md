@@ -2,7 +2,7 @@
 
 ## v1.6.5 — テキスト編集経路の整理
 
-- [ ] volatile テキスト挿入経路を VoiceInputTextView に集約する（実装前に design-decision で方式確定）
+- [x] volatile テキスト挿入経路を VoiceInputTextView に集約する（実装前に design-decision で方式確定）
   - `VoiceInputCoordinator.insertFinalizedText`（`VoiceInputCoordinator.swift:388-409`）が textView の `textStorage` を外から直接編集し、`isSuppressingCallbacks` を外部制御している。同フラグの管理者が TextView 内部・Coordinator・`VoiceInputTextEditor.updateNSView` の 3 箇所に分散（結合分析で「深刻」判定）
   - 確定挿入メソッドを TextView 側に移し、`TextViewOperating` から `textStorage` / `isSuppressingCallbacks` を外せば、textStorage を触る責務が 1 ファイルに閉じる
   - 放置すると volatile・置換プレビュー・カーソル移動の相互作用を変える時にフラグ立て忘れ→テキスト重複（`VoiceInputTextView.swift:22-24` が警告する既知の壊れ方）が再発しうる

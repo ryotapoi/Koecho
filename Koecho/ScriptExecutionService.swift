@@ -40,7 +40,7 @@ final class ScriptExecutionService {
     if let textView {
       let tvString = textView.finalizedString
       if !tvString.isEmpty {
-        appState.inputText = tvString
+        appState.setInputText(tvString)
       }
     }
 
@@ -65,11 +65,11 @@ final class ScriptExecutionService {
         context: context
       )
       guard appState.isInputPanelVisible else { return }
-      appState.inputText = result.output
+      appState.setInputText(result.output)
       voiceCoordinator.moveVoiceInsertionPoint(toEndOf: result.output)
     } catch {
       guard appState.isInputPanelVisible else { return }
-      appState.inputText = originalText
+      appState.setInputText(originalText)
       appState.errorMessage = scriptErrorMessage(for: error, script: script)
     }
   }

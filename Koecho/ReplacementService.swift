@@ -59,9 +59,9 @@ final class ReplacementService {
       }
       voiceCoordinator.moveVoiceInsertionPoint(to: voiceInsertionPoint, in: result)
 
-      appState.inputText = result
+      appState.setInputText(result)
       appState.errorMessage = nil
-      textView?.setString(result, suppressingCallbacks: true)
+      textView?.replaceText(result)
     }
   }
 

@@ -172,7 +172,7 @@ struct InputPanelContent: View {
   let settings = KoechoCore.Settings(defaults: defaults)
   settings.voiceInput.voiceInputMode = .dictation
   let appState = AppState(settings: settings)
-  appState.inputText = "Hello, this is a voice transcription."
+  appState.setInputText("Hello, this is a voice transcription.")
   return InputPanelContent(
     appState: appState,
     onExecuteScript: { _ in },

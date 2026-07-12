@@ -101,7 +101,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     await engine.stop()
     textView?.clearVolatileText()
     if let textView {
-      appState.inputText = textView.finalizedString
+      appState.setInputText(textView.finalizedString)
     }
     regenerateEngine()
     voiceInsertionPoint =
@@ -116,7 +116,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     await engine.stop()
     textView?.clearVolatileText()
     if let textView {
-      appState.inputText = textView.finalizedString
+      appState.setInputText(textView.finalizedString)
     }
     clearReplayState()
     accumulatedFinalizedText = ""
@@ -184,7 +184,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
       } else {
         textView.clearVolatileText()
       }
-      appState.inputText = textView.finalizedString
+      appState.setInputText(textView.finalizedString)
       onCursorAutoReplacement?()
       restartTranscriberIfNeeded()
     }
@@ -275,9 +275,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
       return
     case .textEditor:
       transcriberAlreadyRestarted = false
-      let point = min(voiceInsertionPoint, textView?.textStorage?.length ?? 0)
-      let adjustedText = stripLeadingDuplicatePunctuation(text, at: point)
-      textView?.setVolatileText(adjustedText, at: voiceInsertionPoint)
+      textView?.setVolatileText(text, at: voiceInsertionPoint)
     }
   }
 
@@ -373,39 +371,14 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     return newText
   }
 
-  func stripLeadingDuplicatePunctuation(_ text: String, at insertionPoint: Int) -> String {
-    guard let storage = textView?.textStorage,
-      insertionPoint > 0, !text.isEmpty
-    else { return text }
-    let prevChar = (storage.string as NSString).substring(
-      with: NSRange(location: insertionPoint - 1, length: 1))
-    let firstChar = String(text.prefix(1))
-    if prevChar == firstChar, Character(firstChar).isPunctuation {
-      return String(text.dropFirst())
-    }
-    return text
-  }
-
   @discardableResult
   private func insertFinalizedText(_ text: String, at insertionPoint: Int) -> String {
-    guard let textView, let storage = textView.textStorage else { return "" }
-    let clampedPoint = min(insertionPoint, storage.length)
-    let adjustedText = stripLeadingDuplicatePunctuation(text, at: clampedPoint)
-    guard !adjustedText.isEmpty else {
-      appState.inputText = textView.finalizedString
-      return ""
-    }
-    let nsText = adjustedText as NSString
-    textView.isSuppressingCallbacks = true
-    storage.beginEditing()
-    storage.insert(
-      NSAttributedString(string: adjustedText, attributes: textView.typingAttributes),
-      at: clampedPoint
-    )
-    storage.endEditing()
-    textView.isSuppressingCallbacks = false
+    guard let textView else { return "" }
+    let clampedPoint = min(insertionPoint, (textView.string as NSString).length)
+    let insertedText = textView.insertFinalizedText(text, at: clampedPoint)
+    let nsText = insertedText as NSString
     voiceInsertionPoint = clampedPoint + nsText.length
-    appState.inputText = textView.finalizedString
-    return adjustedText
+    appState.setInputText(textView.finalizedString)
+    return insertedText
   }
 }

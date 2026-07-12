@@ -8,18 +8,28 @@ final class MockTextViewOperating: TextViewOperating {
   var string: String = ""
   var finalizedString: String = ""
   var volatileRange: NSRange?
-  var textStorage: NSTextStorage? = NSTextStorage()
-  var typingAttributes: [NSAttributedString.Key: Any] = [:]
-  var isSuppressingCallbacks = false
 
   var markedText = false
   func hasMarkedText() -> Bool { markedText }
 
-  var setStringCalls: [(text: String, suppressing: Bool)] = []
-  func setString(_ text: String, suppressingCallbacks: Bool) {
-    setStringCalls.append((text, suppressingCallbacks))
+  var replaceTextCalls: [String] = []
+  func replaceText(_ text: String) {
+    replaceTextCalls.append(text)
     string = text
     finalizedString = text
+  }
+
+  var insertFinalizedTextCalls: [(text: String, position: Int)] = []
+  var insertFinalizedTextResult: String?
+  func insertFinalizedText(_ text: String, at position: Int) -> String {
+    insertFinalizedTextCalls.append((text, position))
+    let insertedText = insertFinalizedTextResult ?? text
+    let mutableString = NSMutableString(string: string)
+    let clampedPosition = min(position, mutableString.length)
+    mutableString.insert(insertedText, at: clampedPosition)
+    string = mutableString as String
+    finalizedString = string
+    return insertedText
   }
 
   var setVolatileTextCalls: [(text: String, position: Int)] = []

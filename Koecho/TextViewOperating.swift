@@ -6,11 +6,9 @@ protocol TextViewOperating: AnyObject {
   var string: String { get }
   var finalizedString: String { get }
   var volatileRange: NSRange? { get }
-  var textStorage: NSTextStorage? { get }
-  var typingAttributes: [NSAttributedString.Key: Any] { get }
   func hasMarkedText() -> Bool
-  var isSuppressingCallbacks: Bool { get set }
-  func setString(_ text: String, suppressingCallbacks: Bool)
+  func replaceText(_ text: String)
+  func insertFinalizedText(_ text: String, at position: Int) -> String
   func setVolatileText(_ text: String, at position: Int)
   func clearVolatileText()
   func finalizeVolatileText()

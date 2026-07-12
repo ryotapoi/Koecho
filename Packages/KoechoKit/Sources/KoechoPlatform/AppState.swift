@@ -9,7 +9,7 @@ public final class AppState {
 
   public let settings: Settings
 
-  public var inputText: String = ""
+  public private(set) var inputText: String = ""
   public var isInputPanelVisible: Bool = false
   public var frontmostApplication: NSRunningApplication?
   public var errorMessage: String?
@@ -26,5 +26,9 @@ public final class AppState {
 
   public convenience init() {
     self.init(settings: Settings())
+  }
+
+  public func setInputText(_ text: String) {
+    inputText = text
   }
 }

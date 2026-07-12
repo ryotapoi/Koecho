@@ -116,7 +116,7 @@ import Testing
       paster.errorToThrow = error
       let ctx = makeController(paster: paster)
       ctx.controller.showPanel()
-      ctx.appState.inputText = "hello"
+      ctx.appState.setInputText("hello")
       ctx.appState.frontmostApplication = NSRunningApplication.current
 
       await ctx.controller.confirm()

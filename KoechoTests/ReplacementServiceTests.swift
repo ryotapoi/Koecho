@@ -14,7 +14,7 @@ import Testing
   ) -> (ReplacementService, AppState, MockTextViewOperating, VoiceInputCoordinator) {
     let appState = makeTestAppState()
     appState.isInputPanelVisible = isInputPanelVisible
-    appState.inputText = inputText
+    appState.setInputText(inputText)
 
     let coordinator = makeTestVoiceCoordinator(appState: appState)
 
@@ -40,8 +40,7 @@ import Testing
     service.applyNow()
 
     #expect(appState.inputText == "天気")
-    #expect(mockTV.setStringCalls.last?.text == "天気")
-    #expect(mockTV.setStringCalls.last?.suppressing == true)
+    #expect(mockTV.replaceTextCalls.last == "天気")
   }
 
   @Test func applyNowAdjustsVoiceInsertionPoint() {

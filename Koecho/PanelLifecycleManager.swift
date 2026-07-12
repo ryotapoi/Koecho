@@ -28,9 +28,9 @@ final class PanelLifecycleManager {
     if let app = appState.frontmostApplication,
       let result = selectedTextReader.read(from: app.processIdentifier)
     {
-      appState.inputText = result.text
+      appState.setInputText(result.text)
     } else {
-      appState.inputText = ""
+      appState.setInputText("")
     }
     appState.errorMessage = nil
     appState.isInputPanelVisible = true
@@ -42,7 +42,7 @@ final class PanelLifecycleManager {
 
   func clearState() {
     ducker.restore()
-    appState.inputText = ""
+    appState.setInputText("")
     appState.isInputPanelVisible = false
     appState.frontmostApplication = nil
     appState.errorMessage = nil

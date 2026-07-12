@@ -10,11 +10,9 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   /// The parameter is the volatile text that was finalized.
   var onVolatileFinalized: ((String) -> Void)?
 
-  /// When true, `didChangeText()` will not fire `onTextChanged`.
-  /// Used by both the NSViewRepresentable Coordinator (to prevent feedback
-  /// loops during `updateNSView`) and the controller (when programmatically
-  /// clearing the text view).
-  var isSuppressingCallbacks = false
+  /// Programmatic storage edits must not flow back through `onTextChanged`.
+  /// Keep this state private so every storage mutation uses the same guard.
+  private var isSuppressingCallbacks = false
 
   /// SpeechAnalyzer mode: range of volatile (unconfirmed) text in the text storage.
   private(set) var volatileRange: NSRange?
@@ -33,10 +31,28 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   // MARK: - TextViewOperating
 
-  func setString(_ text: String, suppressingCallbacks: Bool) {
-    if suppressingCallbacks { isSuppressingCallbacks = true }
-    string = text
-    if suppressingCallbacks { isSuppressingCallbacks = false }
+  func replaceText(_ text: String) {
+    suppressCallbacks {
+      string = text
+    }
+  }
+
+  @discardableResult
+  func insertFinalizedText(_ text: String, at position: Int) -> String {
+    guard let storage = textStorage else { return "" }
+    let clampedPoint = min(position, storage.length)
+    let adjustedText = removingDuplicateLeadingPunctuation(text, at: clampedPoint)
+    guard !adjustedText.isEmpty else { return "" }
+
+    suppressCallbacks {
+      storage.beginEditing()
+      storage.insert(
+        NSAttributedString(string: adjustedText, attributes: typingAttributes),
+        at: clampedPoint
+      )
+      storage.endEditing()
+    }
+    return adjustedText
   }
 
   func makeFirstResponder(in panel: InputPanel) {
@@ -49,16 +65,18 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   /// Replaces any previous volatile text.
   func setVolatileText(_ text: String, at insertionPoint: Int) {
     clearVolatileText()
-    guard !text.isEmpty else { return }
-    let nsText = text as NSString
     let storage = textStorage!
     let clampedPoint = min(insertionPoint, storage.length)
+    let adjustedText = removingDuplicateLeadingPunctuation(text, at: clampedPoint)
+    guard !adjustedText.isEmpty else { return }
+    let nsText = adjustedText as NSString
 
-    isSuppressingCallbacks = true
-    storage.beginEditing()
-    storage.insert(NSAttributedString(string: text, attributes: typingAttributes), at: clampedPoint)
-    storage.endEditing()
-    isSuppressingCallbacks = false
+    suppressCallbacks {
+      storage.beginEditing()
+      storage.insert(
+        NSAttributedString(string: adjustedText, attributes: typingAttributes), at: clampedPoint)
+      storage.endEditing()
+    }
 
     let range = NSRange(location: clampedPoint, length: nsText.length)
     volatileRange = range
@@ -74,11 +92,11 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
       return
     }
 
-    isSuppressingCallbacks = true
-    storage.beginEditing()
-    storage.deleteCharacters(in: range)
-    storage.endEditing()
-    isSuppressingCallbacks = false
+    suppressCallbacks {
+      storage.beginEditing()
+      storage.deleteCharacters(in: range)
+      storage.endEditing()
+    }
 
     volatileRange = nil
   }
@@ -92,16 +110,16 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
       return
     }
 
-    isSuppressingCallbacks = true
-    storage.beginEditing()
-    // Re-apply typingAttributes to restore normal text appearance.
-    // Simply removing foregroundColor can leave text with no explicit color,
-    // which may render incorrectly in dark mode.
-    storage.setAttributes(typingAttributes, range: range)
-    storage.endEditing()
-    layoutManager?.removeTemporaryAttribute(.foregroundColor, forCharacterRange: range)
-    layoutManager?.removeTemporaryAttribute(.backgroundColor, forCharacterRange: range)
-    isSuppressingCallbacks = false
+    suppressCallbacks {
+      storage.beginEditing()
+      // Re-apply typingAttributes to restore normal text appearance.
+      // Simply removing foregroundColor can leave text with no explicit color,
+      // which may render incorrectly in dark mode.
+      storage.setAttributes(typingAttributes, range: range)
+      storage.endEditing()
+      layoutManager?.removeTemporaryAttribute(.foregroundColor, forCharacterRange: range)
+      layoutManager?.removeTemporaryAttribute(.backgroundColor, forCharacterRange: range)
+    }
 
     volatileRange = nil
   }
@@ -128,6 +146,29 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
       value: NSColor.systemGray.withAlphaComponent(0.1),
       forCharacterRange: range
     )
+  }
+
+  private func removingDuplicateLeadingPunctuation(_ text: String, at insertionPoint: Int) -> String
+  {
+    guard let storage = textStorage,
+      insertionPoint > 0,
+      insertionPoint <= storage.length,
+      !text.isEmpty
+    else { return text }
+    let previousCharacter = (storage.string as NSString).substring(
+      with: NSRange(location: insertionPoint - 1, length: 1))
+    let firstCharacter = String(text.prefix(1))
+    guard previousCharacter == firstCharacter,
+      Character(firstCharacter).isPunctuation
+    else { return text }
+    return String(text.dropFirst())
+  }
+
+  private func suppressCallbacks(_ operation: () -> Void) {
+    let wasSuppressingCallbacks = isSuppressingCallbacks
+    isSuppressingCallbacks = true
+    operation()
+    isSuppressingCallbacks = wasSuppressingCallbacks
   }
 
   // MARK: - Replacement previews
