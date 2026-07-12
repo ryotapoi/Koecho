@@ -1,15 +1,5 @@
 # Backlog
 
-## v1.6.7 — オーディオ・入力まわりの保守
-
-- [x] OutputVolumeDucker のデバイス切替状態遷移にテストを追加し、smoke-only テストに意味のある assert を入れる
-  - `handleOutputDeviceChanged`（`OutputVolumeDucker.swift:94-131`）の「旧デバイス復元→新デバイス duck し直し」「`target = min(currentVolume, level)`」「savedVolume 付け替え」が CoreAudio 呼び出し直埋めで未テスト。getter/setter を注入点にすれば遷移を検証できる。放置するとデバイス切替でボリュームが復元されない/二重に絞られるリグレッションを検知できない
-  - あわせて「クラッシュしないことのみ」検証の smoke テスト（`AudioDeviceManagerTests` ほか CoreAudio listing / PanelLifecycleManager の一部）を状態検証へ強化する（2026-07-09 両 audit 一致）
-- [x] SpeechAnalyzerEngine の startRecognition / restartTranscriber のセッション構築重複を helper に集約する
-  - transcriber 生成→フォーマット決定→ストリーム/analyzer 構築の流れが `SpeechAnalyzerEngine.swift:107-251` と `:328-377` に二重にあり、片方だけ直る drift の温床（2026-07-08 / 07-09 の audit で一致指摘）
-- [x] macOS 26 判定と VoiceInputMode 分岐を集約する
-  - `VoiceInputSettings.swift:64-68`（初回デフォルト決定）と `InputPanelController.swift:428-430`（`defaultEnabledVoiceInputMode()`）に同一の `if #available(macOS 26, *)` 分岐が独立実装。片方だけ更新されると初回起動時とトグル復帰時でエンジン選択が食い違う。static ファクトリ 1 箇所に集約（2026-07-09 両 audit 一致）
-  - あわせて `.off` / `.dictation` / `.speechAnalyzer` 判定が if/三項で 9 ファイルに分散している箇所を、判定の意味（音声オンか・どのエンジンか）ごとの computed property として `VoiceInputMode` に寄せる。全箇所の機械的書き換えが目的ではなく、新ケース追加をコンパイラが検出できる形にするのが目的
 - [ ] HistoryStore のディレクトリ名リテラルを専用定数にする
   - `HistoryStore.swift:18` の `"com.ryotapoi.koecho"` は Logger subsystem 定数と同値だが別目的で、Bundle ID（`com.ryotapoi.Koecho`、K 大文字）とも食い違う。「変更すると既存ユーザーの履歴保存先が変わりデータ移行が必要」を定数名 or コメントで明示する（値は変えない）
 - [ ] ShortcutKeyRecorder のキーイベント処理から純ロジックを抽出してテストする

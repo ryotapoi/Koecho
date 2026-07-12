@@ -8,6 +8,9 @@ Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi
 
 ### Internal
 
+- Added regression coverage and stronger assertions for output-volume device changes and CoreAudio-dependent components.
+- Centralized Speech Analyzer session setup shared by recognition start and transcriber restart.
+- Centralized VoiceInputMode defaults and semantic state checks.
 - Removed timing-dependent waits from dictation, hotkey, script, input-panel, and voice-input tests.
 - Reported unavailable Speech Analyzer tests as disabled instead of silently passing empty test bodies.
 - Isolated shared audio-input and speech-model verification state between tests.
