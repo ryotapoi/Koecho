@@ -294,24 +294,6 @@ final class InputPanelController {
     scriptService.cycleAutoRunScript()
   }
 
-  // MARK: - VoiceInputDelegate forwarding
-
-  func voiceInput(didFinalize text: String) {
-    voiceCoordinator.voiceInput(didFinalize: text)
-  }
-
-  func voiceInput(didUpdateVolatile text: String) {
-    voiceCoordinator.voiceInput(didUpdateVolatile: text)
-  }
-
-  func voiceInput(didEncounterError error: VoiceInputEngineError) {
-    voiceCoordinator.voiceInput(didEncounterError: error)
-  }
-
-  func voiceInput(didUpdateStatus status: VoiceInputEngineStatus?) {
-    voiceCoordinator.voiceInput(didUpdateStatus: status)
-  }
-
   // MARK: - Private
 
   private func configureContentView() {

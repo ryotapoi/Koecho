@@ -18,11 +18,11 @@ extension InputPanelControllerTests {
     ctx.controller.showPanel()
 
     // Simulate first finalize: "なんですか？"
-    ctx.controller.voiceInput(didFinalize: "なんですか？")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "なんですか？")
     let firstText = ctx.appState.inputText
 
     // Simulate second finalize with overlap: "なんですか？こんにちは。"
-    ctx.controller.voiceInput(didFinalize: "なんですか？こんにちは。")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "なんですか？こんにちは。")
 
     // Only "こんにちは。" should be added
     #expect(ctx.appState.inputText == firstText + "こんにちは。")
@@ -33,10 +33,10 @@ extension InputPanelControllerTests {
     ctx.controller.showPanel()
 
     // Simulate finalize ending with punctuation
-    ctx.controller.voiceInput(didFinalize: "hello.")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello.")
 
     // Next finalize starts with the same punctuation
-    ctx.controller.voiceInput(didFinalize: ".world")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: ".world")
 
     // The overlapping "." should be removed
     #expect(ctx.appState.inputText == "hello.world")
@@ -46,8 +46,8 @@ extension InputPanelControllerTests {
     let ctx = makeController()
     ctx.controller.showPanel()
 
-    ctx.controller.voiceInput(didFinalize: "hello")
-    ctx.controller.voiceInput(didFinalize: " world")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: " world")
 
     #expect(ctx.appState.inputText == "hello world")
   }
@@ -56,9 +56,9 @@ extension InputPanelControllerTests {
     let ctx = makeController()
     ctx.controller.showPanel()
 
-    ctx.controller.voiceInput(didFinalize: "hello")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
     // Complete duplicate — should produce empty after stripping
-    ctx.controller.voiceInput(didFinalize: "hello")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
 
     #expect(ctx.appState.inputText == "hello")
   }
@@ -67,9 +67,9 @@ extension InputPanelControllerTests {
     let ctx = makeController()
     ctx.controller.showPanel()
 
-    ctx.controller.voiceInput(didFinalize: "あ")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "あ")
     // Single char non-punctuation overlap should NOT be stripped
-    ctx.controller.voiceInput(didFinalize: "あいう")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "あいう")
 
     #expect(ctx.appState.inputText == "ああいう")
   }
@@ -77,26 +77,26 @@ extension InputPanelControllerTests {
   @Test func overlapRemovalResetOnShowPanel() {
     let ctx = makeController()
     ctx.controller.showPanel()
-    ctx.controller.voiceInput(didFinalize: "hello")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
 
     // Cancel and reopen
     ctx.controller.cancel()
     ctx.controller.showPanel()
 
     // After reopen, accumulated should be reset — no stripping
-    ctx.controller.voiceInput(didFinalize: "hello")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
     #expect(ctx.appState.inputText == "hello")
   }
 
   @Test func overlapRemovalResetOnSwitchEngine() async {
     let ctx = makeController()
     ctx.controller.showPanel()
-    ctx.controller.voiceInput(didFinalize: "hello")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
 
     await ctx.controller.switchEngine()
 
     // After switch, accumulated should be reset — no stripping
-    ctx.controller.voiceInput(didFinalize: "hello")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
 
     // inputText should contain "hello" from after switch (first "hello" was cleared by switchEngine reading textView)
     #expect(ctx.appState.inputText.contains("hello"))
@@ -124,7 +124,7 @@ extension InputPanelControllerTests {
     text: String,
     suppressUntil: Date? = nil
   ) {
-    controller.voiceInput(didUpdateVolatile: text)
+    controller.voiceCoordinator.voiceInput(didUpdateVolatile: text)
     textView.finalizeVolatileText()
     textView.onVolatileFinalized?(text)
     if let suppressUntil {
@@ -146,7 +146,7 @@ extension InputPanelControllerTests {
     let textAfterFinalize = ctx.appState.inputText
 
     // Replay volatile "こん" — should be suppressed during time window
-    ctx.controller.voiceInput(didUpdateVolatile: "こん")
+    ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: "こん")
     #expect(textView.volatileRange == nil)
     #expect(ctx.appState.inputText == textAfterFinalize)
   }
@@ -165,7 +165,7 @@ extension InputPanelControllerTests {
       suppressUntil: Date.now - 1)
 
     // New volatile after deadline expired — should be displayed
-    ctx.controller.voiceInput(didUpdateVolatile: "あ")
+    ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: "あ")
     #expect(textView.volatileRange != nil)
     // Replay state should be cleared
     #expect(ctx.controller.voiceCoordinator.replayState == .idle)
@@ -180,7 +180,7 @@ extension InputPanelControllerTests {
     }
 
     // Insert text via normal finalize first
-    ctx.controller.voiceInput(didFinalize: "こんにちは")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
     let textAfterFirstFinalize = ctx.appState.inputText
 
     simulateLocalFinalize(
@@ -188,7 +188,7 @@ extension InputPanelControllerTests {
       suppressUntil: Date.now + 10)
 
     // Replay finalize — exact match with suppressed local text → skipped
-    ctx.controller.voiceInput(didFinalize: "こんにちは")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
     #expect(ctx.appState.inputText == textAfterFirstFinalize)
     #expect(ctx.controller.voiceCoordinator.replayState == .idle)
   }
@@ -202,18 +202,18 @@ extension InputPanelControllerTests {
     }
 
     // Insert text via normal finalize first
-    ctx.controller.voiceInput(didFinalize: "こんにちは")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
 
     simulateLocalFinalize(
       controller: ctx.controller, textView: textView, text: "こんにちは",
       suppressUntil: Date.now + 10)
 
     // Replay finalize — clears replay state
-    ctx.controller.voiceInput(didFinalize: "こんにちは")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
     #expect(ctx.controller.voiceCoordinator.replayState == .idle)
 
     // Next volatile should be displayed (deadline cleared)
-    ctx.controller.voiceInput(didUpdateVolatile: "あ")
+    ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: "あ")
     #expect(textView.volatileRange != nil)
   }
 
@@ -226,14 +226,14 @@ extension InputPanelControllerTests {
     }
 
     // Insert text via normal finalize first
-    ctx.controller.voiceInput(didFinalize: "こんにちは")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
 
     simulateLocalFinalize(
       controller: ctx.controller, textView: textView, text: "こんにちは",
       suppressUntil: Date.now + 10)
 
     // New speech finalize with no overlap — should be inserted
-    ctx.controller.voiceInput(didFinalize: "ありがとう")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "ありがとう")
     #expect(ctx.appState.inputText.contains("ありがとう"))
     #expect(ctx.controller.voiceCoordinator.replayState == .idle)
   }
@@ -247,7 +247,7 @@ extension InputPanelControllerTests {
     }
 
     // Insert text via normal finalize first
-    ctx.controller.voiceInput(didFinalize: "こんにちは")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
 
     // Local finalize (e.g. user presses Enter)
     simulateLocalFinalize(
@@ -255,15 +255,15 @@ extension InputPanelControllerTests {
       suppressUntil: Date.now + 10)
 
     // Replay finalize — clears flags
-    ctx.controller.voiceInput(didFinalize: "こんにちは")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
 
     // New volatile should now be displayed
-    ctx.controller.voiceInput(didUpdateVolatile: "あ")
+    ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: "あ")
     #expect(textView.volatileRange != nil)
 
     // New finalize should insert text
     let textBeforeFinalize = ctx.appState.inputText
-    ctx.controller.voiceInput(didFinalize: "ありがとう")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "ありがとう")
     #expect(ctx.appState.inputText != textBeforeFinalize)
     #expect(ctx.appState.inputText.contains("ありがとう"))
   }
@@ -277,7 +277,7 @@ extension InputPanelControllerTests {
     }
 
     // Insert text via normal finalize first so accumulatedFinalizedText is set
-    ctx.controller.voiceInput(didFinalize: "こんにちは")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
     let textAfterFirstFinalize = ctx.appState.inputText
 
     // Now simulate local finalize (as if user typed Enter to restart transcriber)
@@ -286,10 +286,10 @@ extension InputPanelControllerTests {
       suppressUntil: Date.now + 10)
 
     // Replay finalize — clears flags
-    ctx.controller.voiceInput(didFinalize: "こんにちは")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
 
     // Same text finalized again — stripOverlappingPrefix removes it
-    ctx.controller.voiceInput(didFinalize: "こんにちは")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
     #expect(ctx.appState.inputText == textAfterFirstFinalize)
   }
 
@@ -302,7 +302,7 @@ extension InputPanelControllerTests {
     }
 
     // No simulateLocalFinalize, no deadline — initial state
-    ctx.controller.voiceInput(didUpdateVolatile: "あ")
+    ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: "あ")
     #expect(textView.volatileRange != nil)
   }
 }

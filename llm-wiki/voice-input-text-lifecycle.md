@@ -44,4 +44,5 @@ sources:
 ## InputPanelController 分割
 
 - `InputPanelController` は UI 制御の中心で、置換やスクリプト実行の詳細は service に分離されている。
+- 音声入力 engine の delegate と認識 callback の処理は `VoiceInputCoordinator` が所有し、engine の生成・再生成時に Coordinator へ直接接続する。`InputPanelController` は delegate callback を forwarding しない。
 - Controller に機能を戻すと、volatile text、履歴、focus、スクリプト実行の責務が再び絡まりやすい。新しい振る舞いは既存 service の責務に沿って置く。

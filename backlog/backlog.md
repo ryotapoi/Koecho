@@ -9,7 +9,7 @@
   - 方式確定には `appState.inputText` の書き込み口集約も含める（現在 6 ファイルが直書きで source-of-truth が textView と二重。2026-07-09 両 audit 一致）
 - [x] VoiceInputTextView から tooltip ウィンドウ機構を切り出す
   - `showTip` / `TipContentView` / NSWindow 生成・画面端クランプ（220-279, 396-426 行）は TextView の他責務と状態を共有せず `NSTrackingArea` 経由の疎結合。別ファイル化で volatile 処理・プレビュー描画との同居を解消（構造・肥大化の 2 エージェントが一致して指摘）
-- [ ] InputPanelController の VoiceInputDelegate forwarding 4 メソッドを削除する
+- [x] InputPanelController の VoiceInputDelegate forwarding 4 メソッドを削除する
   - `InputPanelController.swift:296-312` の `voiceInput(did...)` 4 メソッドは `voiceCoordinator` へ素通しするだけで本番の呼び出し元がない（`engine.delegate` は `VoiceInputCoordinator.swift:80,327` で Coordinator 直結。未使用は grep で確認済み）。controller が音声 delegate であるかのように責務地図を誤らせる
   - これを呼ぶテストがあれば `voiceCoordinator` 直呼びへ寄せる（2026-07-09 Codex audit）
 
