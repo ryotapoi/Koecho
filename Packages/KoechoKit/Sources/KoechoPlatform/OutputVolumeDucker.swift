@@ -10,10 +10,21 @@ public protocol VolumeDucking {
   func restore()
 }
 
+@MainActor
+struct OutputVolumeDuckerCoreAudio {
+  let defaultOutputDeviceID: () -> AudioDeviceID?
+  let outputVolumeElement: (AudioDeviceID) -> AudioObjectPropertyElement?
+  let readOutputVolume: (AudioDeviceID, AudioObjectPropertyElement) -> Float?
+  let setOutputVolume: (Float, AudioDeviceID, AudioObjectPropertyElement) -> Void
+  let installOutputDeviceListener: () -> Void
+  let removeOutputDeviceListener: () -> Void
+}
+
 @MainActor @Observable
 public final class OutputVolumeDucker: VolumeDucking {
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "OutputVolumeDucker")
   private let settings: VolumeDuckingSettings
+  @ObservationIgnored private let coreAudio: OutputVolumeDuckerCoreAudio?
 
   public private(set) var isDucked = false
 
@@ -27,6 +38,12 @@ public final class OutputVolumeDucker: VolumeDucking {
 
   public init(settings: VolumeDuckingSettings) {
     self.settings = settings
+    self.coreAudio = nil
+  }
+
+  init(settings: VolumeDuckingSettings, coreAudio: OutputVolumeDuckerCoreAudio) {
+    self.settings = settings
+    self.coreAudio = coreAudio
   }
 
   deinit {
@@ -91,7 +108,7 @@ public final class OutputVolumeDucker: VolumeDucking {
 
   // MARK: - Device change handling
 
-  private func handleOutputDeviceChanged() {
+  func handleOutputDeviceChanged() {
     guard isDucked else { return }
 
     // Restore old device volume (best-effort)
@@ -133,6 +150,9 @@ public final class OutputVolumeDucker: VolumeDucking {
   // MARK: - CoreAudio helpers
 
   private func defaultOutputDeviceID() -> AudioDeviceID? {
+    if let coreAudio {
+      return coreAudio.defaultOutputDeviceID()
+    }
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioHardwarePropertyDefaultOutputDevice,
       mScope: kAudioObjectPropertyScopeGlobal,
@@ -149,6 +169,9 @@ public final class OutputVolumeDucker: VolumeDucking {
   }
 
   private func outputVolumeElement(for deviceID: AudioDeviceID) -> AudioObjectPropertyElement? {
+    if let coreAudio {
+      return coreAudio.outputVolumeElement(deviceID)
+    }
     if supportsOutputVolumeOnElement(deviceID, element: kAudioObjectPropertyElementMain) {
       return kAudioObjectPropertyElementMain
     }
@@ -177,6 +200,9 @@ public final class OutputVolumeDucker: VolumeDucking {
   private func readOutputVolume(deviceID: AudioDeviceID, element: AudioObjectPropertyElement)
     -> Float?
   {
+    if let coreAudio {
+      return coreAudio.readOutputVolume(deviceID, element)
+    }
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioDevicePropertyVolumeScalar,
       mScope: kAudioObjectPropertyScopeOutput,
@@ -193,6 +219,10 @@ public final class OutputVolumeDucker: VolumeDucking {
   private func setOutputVolume(
     _ volume: Float, deviceID: AudioDeviceID, element: AudioObjectPropertyElement
   ) {
+    if let coreAudio {
+      coreAudio.setOutputVolume(volume, deviceID, element)
+      return
+    }
     var address = AudioObjectPropertyAddress(
       mSelector: kAudioDevicePropertyVolumeScalar,
       mScope: kAudioObjectPropertyScopeOutput,
@@ -211,6 +241,10 @@ public final class OutputVolumeDucker: VolumeDucking {
   // MARK: - Listener management
 
   private func installOutputDeviceListener() {
+    if let coreAudio {
+      coreAudio.installOutputDeviceListener()
+      return
+    }
     guard defaultOutputDeviceListenerBlock == nil else { return }
 
     var address = AudioObjectPropertyAddress(
@@ -231,6 +265,10 @@ public final class OutputVolumeDucker: VolumeDucking {
   }
 
   private func removeOutputDeviceListener() {
+    if let coreAudio {
+      coreAudio.removeOutputDeviceListener()
+      return
+    }
     removeOutputDeviceListenerSync()
   }
 

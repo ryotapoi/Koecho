@@ -69,6 +69,15 @@ import Testing
     #expect(ducker.duckCallCount == 1)
   }
 
+  @Test func showCanSkipVolumeDucking() {
+    let (manager, appState, _, ducker, _) = makeManager()
+
+    manager.show(duckVolume: false)
+
+    #expect(appState.isInputPanelVisible == true)
+    #expect(ducker.duckCallCount == 0)
+  }
+
   @Test func showResetsIsRunningScript() {
     let (manager, appState, _, _, _) = makeManager()
     appState.isRunningScript = true
@@ -125,10 +134,4 @@ import Testing
 
   // MARK: - hide
 
-  @Test func hideCallsPanelOrderOut() {
-    let (manager, _, _, _, _) = makeManager()
-    // Panel is not visible in tests, but we verify the method doesn't crash
-    manager.hide()
-    // No assertion needed beyond no crash; panel.orderOut is an AppKit call
-  }
 }

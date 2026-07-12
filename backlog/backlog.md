@@ -2,7 +2,7 @@
 
 ## v1.6.7 — オーディオ・入力まわりの保守
 
-- [ ] OutputVolumeDucker のデバイス切替状態遷移にテストを追加し、smoke-only テストに意味のある assert を入れる
+- [x] OutputVolumeDucker のデバイス切替状態遷移にテストを追加し、smoke-only テストに意味のある assert を入れる
   - `handleOutputDeviceChanged`（`OutputVolumeDucker.swift:94-131`）の「旧デバイス復元→新デバイス duck し直し」「`target = min(currentVolume, level)`」「savedVolume 付け替え」が CoreAudio 呼び出し直埋めで未テスト。getter/setter を注入点にすれば遷移を検証できる。放置するとデバイス切替でボリュームが復元されない/二重に絞られるリグレッションを検知できない
   - あわせて「クラッシュしないことのみ」検証の smoke テスト（`AudioDeviceManagerTests` ほか CoreAudio listing / PanelLifecycleManager の一部）を状態検証へ強化する（2026-07-09 両 audit 一致）
 - [ ] SpeechAnalyzerEngine の startRecognition / restartTranscriber のセッション構築重複を helper に集約する

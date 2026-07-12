@@ -4,8 +4,11 @@ import Testing
 
 @MainActor
 struct AudioDeviceManagerTests {
-  @Test func enumerateInputDevicesDoesNotCrash() {
+  @Test func refreshDevicesMatchesListing() {
     let manager = AudioDeviceManager()
-    _ = manager.inputDevices
+    manager.refreshDevices()
+
+    #expect(Set(manager.inputDevices.map(\.uid)).count == manager.inputDevices.count)
+    #expect(manager.inputDevices.allSatisfy { !$0.uid.isEmpty && !$0.name.isEmpty })
   }
 }
