@@ -94,7 +94,6 @@ public nonisolated final class ScriptRunner: Sendable {
 
         let timedOut = state.isTimedOut
 
-        // Collect remaining pipe data
         let stdoutData = stdoutCollector.finalize()
         let stderrData = stderrCollector.finalize()
 

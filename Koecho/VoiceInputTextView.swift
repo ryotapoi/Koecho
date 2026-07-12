@@ -398,18 +398,15 @@ private final class TipContentView: NSView {
   var font: NSFont = .systemFont(ofSize: NSFont.smallSystemFontSize)
 
   override func draw(_ dirtyRect: NSRect) {
-    // Rounded background
     let bgColor = NSColor.windowBackgroundColor
     let path = NSBezierPath(roundedRect: bounds, xRadius: 4, yRadius: 4)
     bgColor.setFill()
     path.fill()
 
-    // Border
     NSColor.separatorColor.setStroke()
     path.lineWidth = 0.5
     path.stroke()
 
-    // Text
     let attributes: [NSAttributedString.Key: Any] = [
       .font: font,
       .foregroundColor: NSColor.labelColor,

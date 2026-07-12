@@ -217,7 +217,7 @@ struct VoiceInputTextViewTests {
     #expect(textView.volatileRange == NSRange(location: 6, length: 10))
   }
 
-  // MARK: - Edge case tests (Step 7)
+  // MARK: - Edge case tests
 
   @Test func shouldChangeTextFinalizesVolatile() {
     let textView = makeTextView()
