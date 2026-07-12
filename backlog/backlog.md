@@ -1,18 +1,5 @@
 # Backlog
 
-## v1.6.5 — テキスト編集経路の整理
-
-- [x] volatile テキスト挿入経路を VoiceInputTextView に集約する（実装前に design-decision で方式確定）
-  - `VoiceInputCoordinator.insertFinalizedText`（`VoiceInputCoordinator.swift:388-409`）が textView の `textStorage` を外から直接編集し、`isSuppressingCallbacks` を外部制御している。同フラグの管理者が TextView 内部・Coordinator・`VoiceInputTextEditor.updateNSView` の 3 箇所に分散（結合分析で「深刻」判定）
-  - 確定挿入メソッドを TextView 側に移し、`TextViewOperating` から `textStorage` / `isSuppressingCallbacks` を外せば、textStorage を触る責務が 1 ファイルに閉じる
-  - 放置すると volatile・置換プレビュー・カーソル移動の相互作用を変える時にフラグ立て忘れ→テキスト重複（`VoiceInputTextView.swift:22-24` が警告する既知の壊れ方）が再発しうる
-  - 方式確定には `appState.inputText` の書き込み口集約も含める（現在 6 ファイルが直書きで source-of-truth が textView と二重。2026-07-09 両 audit 一致）
-- [x] VoiceInputTextView から tooltip ウィンドウ機構を切り出す
-  - `showTip` / `TipContentView` / NSWindow 生成・画面端クランプ（220-279, 396-426 行）は TextView の他責務と状態を共有せず `NSTrackingArea` 経由の疎結合。別ファイル化で volatile 処理・プレビュー描画との同居を解消（構造・肥大化の 2 エージェントが一致して指摘）
-- [x] InputPanelController の VoiceInputDelegate forwarding 4 メソッドを削除する
-  - `InputPanelController.swift:296-312` の `voiceInput(did...)` 4 メソッドは `voiceCoordinator` へ素通しするだけで本番の呼び出し元がない（`engine.delegate` は `VoiceInputCoordinator.swift:80,327` で Coordinator 直結。未使用は grep で確認済み）。controller が音声 delegate であるかのように責務地図を誤らせる
-  - これを呼ぶテストがあれば `voiceCoordinator` 直呼びへ寄せる（2026-07-09 Codex audit）
-
 ## v1.6.6 — 置換ルールまわり
 
 - [ ] ReplacementRule.swift から置換エンジンを別ファイルに分離し、preview と実適用の実装を共有する

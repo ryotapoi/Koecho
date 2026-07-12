@@ -11,6 +11,9 @@ Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi
 - Removed timing-dependent waits from dictation, hotkey, script, input-panel, and voice-input tests.
 - Reported unavailable Speech Analyzer tests as disabled instead of silently passing empty test bodies.
 - Isolated shared audio-input and speech-model verification state between tests.
+- Centralized finalized and in-progress voice-input text editing and input-state writes under clear ownership.
+- Extracted and tested replacement-preview tooltip presentation.
+- Removed unused voice-input delegate forwarding from the input-panel controller.
 
 ## 1.6.3 — 2026-07-05
 
