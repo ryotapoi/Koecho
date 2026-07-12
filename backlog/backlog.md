@@ -1,17 +1,5 @@
 # Backlog
 
-## v1.6.6 — 置換ルールまわり
-
-- [x] ReplacementRule.swift から置換エンジンを別ファイルに分離し、preview と実適用の実装を共有する
-  - 154-280 行の free 関数群（`buildRegex` / `applyReplacementRules` / `findReplacementMatches` / `lookupOffset`）は値型定義と変更理由が別。特に `findReplacementMatches` のオフセット逆マッピングは今後最も手が入る繊細なロジックで、独立ファイル（例: `ReplacementEngine.swift`）にするとテスト境界が明確になる
-  - 分離時に preview（`findReplacementMatches`）と実適用（`applyReplacementRules`）が別実装のまま drift しない形にする: ルール適用の primitive を共有し、オフセット写像だけを各目的で持つ。食い違うとユーザーに見える preview が嘘になる（2026-07-09 Codex audit、MUST 判定）
-- [x] ReplacementSettings のデフォルトショートカットを定数に括り出す
-  - `ReplacementSettings.swift:59` と `:62` に `ShortcutKey(modifiers: [.control], character: "r")` が二重定義。片方だけ直すと「壊れたデータからの復帰時だけ旧デフォルト」の不整合になる
-  - あわせて ScriptSettings / ReplacementSettings で二重実装されている「空 Data = 未設定」の ShortcutKey 永続化規約を `ShortcutKey` 側に寄せるかも検討
-- [x] ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー decode フォールバック）を撤去する
-  - v1.4.0 で patterns 複数化と同時に導入。v1.3.0 以前からの直接更新で置換ルールが decode 失敗→全損するのを防ぐための移行コード
-  - 2026-06-11 ユーザー判断: v1.4.x / v1.5.x の移行期間を確保し、v1.6 以降で撤去する。撤去条件は成立済みのため v1.x.0 節から前倒しで移動（2026-07-09。mission.md の非目標「旧フォーマットフォールバック禁止」との整合）
-
 ## v1.6.7 — オーディオ・入力まわりの保守
 
 - [ ] OutputVolumeDucker のデバイス切替状態遷移にテストを追加し、smoke-only テストに意味のある assert を入れる

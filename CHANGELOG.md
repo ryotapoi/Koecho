@@ -14,6 +14,9 @@ Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi
 - Centralized finalized and in-progress voice-input text editing and input-state writes under clear ownership.
 - Extracted and tested replacement-preview tooltip presentation.
 - Removed unused voice-input delegate forwarding from the input-panel controller.
+- Shared the replacement engine between preview and actual application paths.
+- Centralized replacement-shortcut defaults and optional shortcut persistence.
+- Removed legacy singular-pattern decoding for replacement rules.
 
 ## 1.6.3 — 2026-07-05
 
