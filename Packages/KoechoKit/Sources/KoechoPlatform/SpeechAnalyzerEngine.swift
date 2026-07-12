@@ -24,6 +24,18 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
   private var analyzerFormat: AVAudioFormat?
   private var isRestarting = false
 
+  private struct RecognitionSession {
+    let transcriber: DictationTranscriber
+    let analyzerFormat: AVAudioFormat
+    let inputContinuation: AsyncStream<AnalyzerInput>.Continuation
+    let analyzer: SpeechAnalyzer
+  }
+
+  private enum RecognitionSessionFormat {
+    case determine(from: AVAudioFormat)
+    case reuse(AVAudioFormat)
+  }
+
   /// Shared preset used for both recognition and model download.
   public static var defaultPreset: DictationTranscriber.Preset {
     var preset = DictationTranscriber.Preset.progressiveLongDictation
@@ -148,8 +160,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     logger.info(
       "Preset transcriptionOptions: \(String(describing: preset.transcriptionOptions), privacy: .public)"
     )
-    let transcriber = DictationTranscriber(locale: locale, preset: preset)
-    self.transcriber = transcriber
+    let transcriber = makeTranscriber(preset: preset)
 
     // 3. Check / download model (skip if already verified this session)
     let localeKey = SpeechLocale.normalizationKey(locale)
@@ -215,22 +226,19 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       return
     }
 
-    // 5. Get best format for analyzer
-    guard
-      let bestFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
-        compatibleWith: [transcriber],
-        considering: inputFormat
-      )
-    else {
+    // 5. Create the recognition session using the best compatible format.
+    guard let session = await makeRecognitionSession(
+      transcriber: transcriber,
+      format: .determine(from: inputFormat)
+    ) else {
       reportError(.noCompatibleAudioFormat)
       return
     }
-    self.analyzerFormat = bestFormat
 
     // 6. Create format converter if needed
-    let needsConversion = inputFormat != bestFormat
+    let needsConversion = inputFormat != session.analyzerFormat
     if needsConversion {
-      guard let conv = AVAudioConverter(from: inputFormat, to: bestFormat) else {
+      guard let conv = AVAudioConverter(from: inputFormat, to: session.analyzerFormat) else {
         reportError(.audioFormatConversionNotSupported)
         return
       }
@@ -238,22 +246,9 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     } else {
       self.converter = nil
     }
+    activate(session)
 
-    // 7. Create async stream for audio input
-    let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
-    self.inputContinuation = continuation
-
-    // 8. Create SpeechAnalyzer with input sequence
-    let analyzer = SpeechAnalyzer(
-      inputSequence: stream,
-      modules: [transcriber]
-    )
-    self.analyzer = analyzer
-
-    // 9. Start consuming results
-    startResultTask(transcriber: transcriber)
-
-    // 10. Install audio tap and start
+    // 7. Install audio tap and start
     audioInputExclusiveAccess.acquire()
     acquiredAudioInput = true
 
@@ -289,6 +284,49 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       }
     }
     self.resultTask = resultsTask
+  }
+
+  private func makeRecognitionSession(
+    transcriber: DictationTranscriber,
+    format: RecognitionSessionFormat
+  ) async -> RecognitionSession? {
+    let analyzerFormat: AVAudioFormat
+
+    switch format {
+    case let .determine(inputFormat):
+      guard let bestFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
+        compatibleWith: [transcriber],
+        considering: inputFormat
+      ) else {
+        return nil
+      }
+      analyzerFormat = bestFormat
+    case let .reuse(existingFormat):
+      analyzerFormat = existingFormat
+    }
+
+    let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
+    let analyzer = SpeechAnalyzer(inputSequence: stream, modules: [transcriber])
+    return RecognitionSession(
+      transcriber: transcriber,
+      analyzerFormat: analyzerFormat,
+      inputContinuation: continuation,
+      analyzer: analyzer
+    )
+  }
+
+  private func activate(_ session: RecognitionSession) {
+    transcriber = session.transcriber
+    analyzerFormat = session.analyzerFormat
+    inputContinuation = session.inputContinuation
+    analyzer = session.analyzer
+    startResultTask(transcriber: session.transcriber)
+  }
+
+  private func makeTranscriber(
+    preset: DictationTranscriber.Preset
+  ) -> DictationTranscriber {
+    DictationTranscriber(locale: locale, preset: preset)
   }
 
   private func installAudioTap() {
@@ -369,14 +407,16 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     // 2. Re-check state (stop/cancel may have run during await)
     guard state == .listening else { return false }
 
-    // 3. Create new transcriber/stream/analyzer
-    let preset = Self.defaultPreset
-    let newTranscriber = DictationTranscriber(locale: locale, preset: preset)
-    self.transcriber = newTranscriber
-    let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
-    self.inputContinuation = continuation
-    self.analyzer = SpeechAnalyzer(inputSequence: stream, modules: [newTranscriber])
-    startResultTask(transcriber: newTranscriber)
+    // 3. Create a new session with the format selected at initial start.
+    guard let analyzerFormat else { return false }
+    guard let session = await makeRecognitionSession(
+      transcriber: makeTranscriber(preset: Self.defaultPreset),
+      format: .reuse(analyzerFormat)
+    ) else {
+      return false
+    }
+    guard state == .listening else { return false }
+    activate(session)
 
     // 4. Re-install audio tap and restart audio engine
     installAudioTap()
