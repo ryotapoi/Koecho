@@ -12,6 +12,7 @@ sources:
   - Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift
   - Packages/KoechoKit/Sources/KoechoCore/ScriptSettings.swift
   - Packages/KoechoKit/Sources/KoechoCore/ReplacementRule.swift
+  - Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift
   - Packages/KoechoKit/Sources/KoechoCore/ReplacementSettings.swift
   - Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift
   - Packages/KoechoKit/Sources/KoechoCore/HistoryEntry.swift

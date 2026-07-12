@@ -2,7 +2,7 @@
 
 ## v1.6.6 — 置換ルールまわり
 
-- [ ] ReplacementRule.swift から置換エンジンを別ファイルに分離し、preview と実適用の実装を共有する
+- [x] ReplacementRule.swift から置換エンジンを別ファイルに分離し、preview と実適用の実装を共有する
   - 154-280 行の free 関数群（`buildRegex` / `applyReplacementRules` / `findReplacementMatches` / `lookupOffset`）は値型定義と変更理由が別。特に `findReplacementMatches` のオフセット逆マッピングは今後最も手が入る繊細なロジックで、独立ファイル（例: `ReplacementEngine.swift`）にするとテスト境界が明確になる
   - 分離時に preview（`findReplacementMatches`）と実適用（`applyReplacementRules`）が別実装のまま drift しない形にする: ルール適用の primitive を共有し、オフセット写像だけを各目的で持つ。食い違うとユーザーに見える preview が嘘になる（2026-07-09 Codex audit、MUST 判定）
 - [ ] ReplacementSettings のデフォルトショートカットを定数に括り出す

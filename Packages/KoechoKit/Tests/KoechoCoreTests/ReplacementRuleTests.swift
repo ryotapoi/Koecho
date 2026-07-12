@@ -174,6 +174,24 @@ struct ReplacementRuleTests {
     #expect(matches[1] == ReplacementMatch(range: NSRange(location: 3, length: 3), replacement: ""))
   }
 
+  @Test func previewMatchesChainedApplicationAndMapsToOriginalOffsets() {
+    let rules = [
+      ReplacementRule(pattern: "ab", replacement: "WXYZ"),
+      ReplacementRule(pattern: "WXYZ", replacement: "Q"),
+    ]
+    let text = "ab-ab"
+
+    #expect(applyReplacementRules(rules, to: text) == "Q-Q")
+    #expect(
+      findReplacementMatches(rules, in: text) == [
+        ReplacementMatch(range: NSRange(location: 0, length: 2), replacement: "WXYZ"),
+        ReplacementMatch(range: NSRange(location: 3, length: 2), replacement: "WXYZ"),
+        ReplacementMatch(range: NSRange(location: 0, length: 4), replacement: "Q"),
+        ReplacementMatch(range: NSRange(location: 3, length: 4), replacement: "Q"),
+      ]
+    )
+  }
+
   @Test func findMatchesRegexCaptureGroups() {
     let rules = [
       ReplacementRule(

@@ -7,7 +7,7 @@ sources:
   - Koecho/HistoryView.swift
   - Koecho/GeneralSettingsView.swift
   - Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift
-  - Packages/KoechoKit/Sources/KoechoCore/ReplacementRule.swift
+  - Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift
 ---
 
 # macOS / AppKit
