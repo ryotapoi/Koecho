@@ -24,6 +24,12 @@ Key design choices:
 - textView is distributed to each service via `onTextViewCreated` callback
 - Forward methods and computed properties on the coordinator maintain backward-compatible API for existing integration tests
 
+## 現状 (v1.6.5)
+
+上記の forwarding API に関する記述は、この ADR を採用した当時の判断を示している。v1.6.5 では本番の呼び出し元がないことを確認し、`InputPanelController` の `VoiceInputDelegate` forwarding 4 メソッド（`didFinalize`、`didUpdateVolatile`、`didEncounterError`、`didUpdateStatus`）を削除した。integration tests は `voiceCoordinator` を直接呼び出す形へ移行した。
+
+音声入力 engine は delegate を `VoiceInputCoordinator` へ直接設定し、delegate callback も同 Coordinator が所有する。`InputPanelController` はこの delegate 経路に含まれない。この変更は当時設けたテスト向け互換 API の後続整理であり、service 分割の決定を覆すものではない。
+
 ## Consequences
 
 - **Positive**: Each service is independently unit-testable with mock TextViewOperating. 49 new unit tests added. Cognitive load reduced when working on a single concern.
