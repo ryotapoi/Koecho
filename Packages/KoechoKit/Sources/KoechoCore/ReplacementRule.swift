@@ -108,26 +108,13 @@ extension ReplacementRule: Codable {
     case id, patterns, replacement, usesRegularExpression, matchesWholeWord
   }
 
-  // Legacy key for migration from single-pattern format
-  private enum LegacyCodingKeys: String, CodingKey {
-    case pattern
-  }
-
   public init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     id = try container.decode(UUID.self, forKey: .id)
     replacement = try container.decode(String.self, forKey: .replacement)
     usesRegularExpression = try container.decode(Bool.self, forKey: .usesRegularExpression)
     matchesWholeWord = try container.decode(Bool.self, forKey: .matchesWholeWord)
-
-    if container.contains(.patterns) {
-      let decoded = try container.decode([String].self, forKey: .patterns)
-      patterns = Self.makePatterns(from: decoded)
-    } else {
-      let legacyContainer = try decoder.container(keyedBy: LegacyCodingKeys.self)
-      let single = try legacyContainer.decode(String.self, forKey: .pattern)
-      patterns = Self.makePatterns(from: [single])
-    }
+    patterns = Self.makePatterns(from: try container.decode([String].self, forKey: .patterns))
   }
 
   public func encode(to encoder: Encoder) throws {

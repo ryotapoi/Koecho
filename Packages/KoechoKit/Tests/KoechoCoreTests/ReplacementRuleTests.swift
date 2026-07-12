@@ -288,9 +288,9 @@ struct ReplacementRuleTests {
     #expect(rule.displayName == "hello → bye")
   }
 
-  // MARK: - Codable migration (pattern → patterns)
+  // MARK: - Codable
 
-  @Test func decodeLegacySinglePatternFormat() throws {
+  @Test func decodeLegacySinglePatternFormatFails() {
     let json = """
       {
           "id": "00000000-0000-0000-0000-000000000001",
@@ -300,10 +300,9 @@ struct ReplacementRuleTests {
           "matchesWholeWord": false
       }
       """.data(using: .utf8)!
-    let rule = try JSONDecoder().decode(ReplacementRule.self, from: json)
-    #expect(rule.patternTexts == ["えーと"])
-    #expect(rule.pattern == "えーと")
-    #expect(rule.replacement == "")
+    #expect(throws: DecodingError.self) {
+      try JSONDecoder().decode(ReplacementRule.self, from: json)
+    }
   }
 
   @Test func decodeNewPatternsFormat() throws {
@@ -348,7 +347,7 @@ struct ReplacementRuleTests {
     #expect(decoded.patterns.map(\.id) != rule.patterns.map(\.id))
   }
 
-  @Test func decodeLegacyEmptyPatternFormat() throws {
+  @Test func decodeLegacyEmptyPatternFormatFails() {
     let json = """
       {
           "id": "00000000-0000-0000-0000-000000000003",
@@ -358,9 +357,9 @@ struct ReplacementRuleTests {
           "matchesWholeWord": false
       }
       """.data(using: .utf8)!
-    let rule = try JSONDecoder().decode(ReplacementRule.self, from: json)
-    #expect(rule.patternTexts == [""])
-    #expect(rule.pattern == "")
+    #expect(throws: DecodingError.self) {
+      try JSONDecoder().decode(ReplacementRule.self, from: json)
+    }
   }
 
   @Test func decodeEmptyPatternsArrayFallsBack() throws {

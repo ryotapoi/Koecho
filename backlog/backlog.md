@@ -8,7 +8,7 @@
 - [x] ReplacementSettings のデフォルトショートカットを定数に括り出す
   - `ReplacementSettings.swift:59` と `:62` に `ShortcutKey(modifiers: [.control], character: "r")` が二重定義。片方だけ直すと「壊れたデータからの復帰時だけ旧デフォルト」の不整合になる
   - あわせて ScriptSettings / ReplacementSettings で二重実装されている「空 Data = 未設定」の ShortcutKey 永続化規約を `ShortcutKey` 側に寄せるかも検討
-- [ ] ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー decode フォールバック）を撤去する
+- [x] ReplacementRule.swift の `LegacyCodingKeys`（旧 pattern 単数キー decode フォールバック）を撤去する
   - v1.4.0 で patterns 複数化と同時に導入。v1.3.0 以前からの直接更新で置換ルールが decode 失敗→全損するのを防ぐための移行コード
   - 2026-06-11 ユーザー判断: v1.4.x / v1.5.x の移行期間を確保し、v1.6 以降で撤去する。撤去条件は成立済みのため v1.x.0 節から前倒しで移動（2026-07-09。mission.md の非目標「旧フォーマットフォールバック禁止」との整合）
 

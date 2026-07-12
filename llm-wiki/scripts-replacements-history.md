@@ -35,7 +35,7 @@ sources:
 
 ## 置換ルール
 
-- `ReplacementRule` は Core の pure logic。plain text mode は複数 `patterns` を持ち、regex mode は single `pattern` を使う。
+- `ReplacementRule` は Core の pure logic。plain text mode は複数 `patterns` を持ち、regex mode は single `pattern` を使う。保存形式の decode は `patterns` のみを受け付け、旧 `pattern` 単数形式は移行しない。
 - `applyReplacementRules` は確定時や手動適用で使う。`findReplacementMatches` は preview overlay 用で、元テキスト座標へ range を戻す。
 - `ReplacementService.applyOrPreview()` は panel 表示中・script 非実行中だけ動く。marked text 中は preview、通常時は apply、volatile range 中は preview clear。
 - voice insertion point は `VoiceInputCoordinator` が所有するため、置換後は `ReplacementService.applyNow()` が replacement delta を反映して移動させる。
@@ -51,4 +51,4 @@ sources:
 
 - script / replacement / history は `InputPanelController.confirm()` の順序に直結する。confirm 順序を変えるなら `InputPanelControllerConfirmTests` と service tests を見る。
 - prompt の volatile text は `appState.volatilePromptText` として分かれている。本文側 volatile text とは別系統なので [音声入力テキストライフサイクル](voice-input-text-lifecycle.md) を併読する。
-- replacement data model を変える場合は `ReplacementRule` の Codable migration と docs/decisions/0020-multiple-patterns-per-replacement-rule.md を確認する。
+- replacement data model を変える場合は `ReplacementRule` の Codable 契約（`patterns` のみ）と docs/decisions/0020-multiple-patterns-per-replacement-rule.md を確認する。

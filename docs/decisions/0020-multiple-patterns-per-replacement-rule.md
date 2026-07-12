@@ -46,3 +46,7 @@ pattern 行を `ReplacementRulePattern` として ID 付き値型にする。保
 
 影響:
 SwiftUI の `ForEach` は pattern 行の安定 ID を使える。既存の UserDefaults JSON 形式は変わらない。置換ロジックや重複検出は `patternTexts` を通じて保存対象の文字列列を読む。
+
+## 追記 2026-07-13: 旧単数形式の移行終了
+
+2026-06-11 のユーザー判断に従い、v1.4.x / v1.5.x で確保した移行期間の終了後、v1.6.6 で `pattern` 単数キーの decode fallback を撤去した。以後の保存形式は `patterns` のみとし、旧形式は暗黙に移行しない。これは mission.md の旧フォーマット fallback を置かない方針に整合する。
