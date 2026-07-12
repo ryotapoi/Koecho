@@ -72,13 +72,33 @@ struct DictationEngineTests {
     }
   }
 
+  private final class RetryTaskClearRecorder {
+    private var clearCount = 0
+    private var clearContinuation: CheckedContinuation<Void, Never>?
+
+    func recordClear() {
+      clearCount += 1
+      clearContinuation?.resume()
+      clearContinuation = nil
+    }
+
+    func waitForClear() async {
+      guard clearCount == 0 else { return }
+      await withCheckedContinuation { continuation in
+        clearContinuation = continuation
+      }
+    }
+  }
+
   private func makeEngine(
-    startDelay: @escaping DictationEngine.StartDelay = {}
+    startDelay: @escaping DictationEngine.StartDelay = {},
+    retryTaskClearObserver: @escaping DictationEngine.RetryTaskClearObserver = {}
   ) -> (engine: DictationEngine, actions: StartActionRecorder) {
     let actions = StartActionRecorder()
     let engine = DictationEngine(
       startDictationActionSender: actions.send,
-      startDelay: startDelay
+      startDelay: startDelay,
+      retryTaskClearObserver: retryTaskClearObserver
     )
     return (engine, actions)
   }
@@ -187,13 +207,17 @@ struct DictationEngineTests {
 
   @Test func startRetriesAfterNonCancellationDelayFailure() async {
     let delay = FailingFirstStartDelay()
-    let (engine, actions) = makeEngine(startDelay: delay.wait)
+    let retryTaskClearRecorder = RetryTaskClearRecorder()
+    let (engine, actions) = makeEngine(
+      startDelay: delay.wait,
+      retryTaskClearObserver: retryTaskClearRecorder.recordClear
+    )
     let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100))
     engine.configure(panel: panel, textView: nil)
 
     engine.start()
     await delay.waitForFirstInvocation()
-    await Task.yield()
+    await retryTaskClearRecorder.waitForClear()
     engine.start()
     await actions.waitForAction()
     withExtendedLifetime(panel) {}

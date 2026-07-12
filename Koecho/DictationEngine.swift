@@ -6,10 +6,12 @@ import os
 final class DictationEngine: VoiceInputEngine {
   typealias StartDictationActionSender = (Selector) -> Bool
   typealias StartDelay = () async throws -> Void
+  typealias RetryTaskClearObserver = () -> Void
 
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "DictationEngine")
   private let startDictationActionSender: StartDictationActionSender
   private let startDelay: StartDelay
+  private let retryTaskClearObserver: RetryTaskClearObserver
   private(set) var state: VoiceInputState = .idle
   weak var delegate: (any VoiceInputDelegate)?
   private weak var panel: InputPanel?
@@ -23,10 +25,12 @@ final class DictationEngine: VoiceInputEngine {
     },
     startDelay: @escaping StartDelay = {
       try await Task.sleep(for: .milliseconds(300))
-    }
+    },
+    retryTaskClearObserver: @escaping RetryTaskClearObserver = {}
   ) {
     self.startDictationActionSender = startDictationActionSender
     self.startDelay = startDelay
+    self.retryTaskClearObserver = retryTaskClearObserver
   }
 
   /// Configure with panel and textView references.
@@ -113,5 +117,6 @@ final class DictationEngine: VoiceInputEngine {
     guard retryTaskID == taskID else { return }
     retryTask = nil
     retryTaskID = nil
+    retryTaskClearObserver()
   }
 }
