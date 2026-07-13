@@ -8,7 +8,7 @@
   - `handleKeyEvent` 相当の判定ロジックが OS イベント依存のまま未テスト。既存のテスト方針（OS 依存コードに混ざった純ロジックの抽出・注入点の追加）に沿って抽出 + unit test（2026-07-09 Codex audit）
 - [x] ADR 0003/0011 の確認時置換トグルに関する記述を実装に同期する
   - `docs/decisions/0003-manual-trigger-for-replacement-rules.md:34` と `0011-debounced-auto-replacement.md:13` が実在しない設定を参照している（ソース grep 0 件を確認済み）。revised 注記か supersede 記録で現状に同期する（2026-07-09 audit）
-- [ ] 置換ルール機能を scope.md（荒い粒度）と docs/specs/（振る舞い詳細）に書き分ける
+- [x] 置換ルール機能を scope.md（荒い粒度）と docs/specs/（振る舞い詳細）に書き分ける
   - 置換機能（auto-replacement と手動 Ctrl+R の意図的併存を含む）の要求定義が ADR 0003/0011/0020 に分散し、正本 scope.md からは auto-run 文脈でしか読めない（2026-07-09 audit）
   - 2026-07-09 ユーザー判断: information-management.md の共通原則に合わせる。scope.md には主要機能としての荒い節だけ追記し、振る舞い詳細（auto/手動の併存、適用タイミング等）は docs/specs/ に最初の spec ファイルとして置く
   - あわせて scope.md が現在持っている振る舞い詳細（トグル動作・環境変数表等）も、置換ルールの spec を置くタイミング以降、触る機会に specs/ へ順次移す（scope は「粒度を荒く保つ」に寄せる）
