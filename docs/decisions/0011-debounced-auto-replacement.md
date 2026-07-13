@@ -4,13 +4,17 @@
 
 Accepted (supersedes ADR 0003)
 
+## Implementation sync (2026-07-13)
+
+The confirm-time toggle described in the original context was never implemented and is not a current setting. `isAutoReplacementEnabled` controls only automatic replacement while the input panel is open. `InputPanelController.confirm()` always applies replacement rules after finalizing Dictation, then trims the result before handling an empty confirm, auto-run, and paste.
+
 ## Context
 
 ADR 0003 chose manual-only replacement triggers because macOS Dictation holds text in a marked text buffer invisible to `NSTextView.string`. Real-time detection was impossible at the time.
 
 ADR 0010 introduced DictationTextView, an NSTextView subclass whose `didChangeText()` fires reliably on every text mutation — including when Dictation commits marked text. This made auto-replacement feasible.
 
-The confirm-time application (`appliesReplacementRulesOnConfirm`) had a UX problem: users could not see the replacement result before pasting. Auto-replacement while the panel is open solves this.
+Confirm-time application had a UX problem: users could not see the replacement result before pasting. Auto-replacement while the panel is open solves this.
 
 Initially a debounced approach (configurable delay timer) was implemented, but `hasMarkedText()` guard already prevents replacement during active Dictation. The debounce added unnecessary latency without benefit — replacement should apply immediately once Dictation commits text.
 
