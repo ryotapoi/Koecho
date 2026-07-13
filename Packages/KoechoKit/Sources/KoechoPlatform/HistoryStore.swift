@@ -6,6 +6,9 @@ import os
 
 @MainActor @Observable
 public final class HistoryStore {
+  // This existing user data location requires migration if it ever changes.
+  private static let historyDirectoryName = "com.ryotapoi.koecho"
+
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "HistoryStore")
   private let fileURL: URL
   public private(set) var entries: [HistoryEntry] = []
@@ -15,7 +18,7 @@ public final class HistoryStore {
       directoryURL
       ?? FileManager.default.urls(
         for: .applicationSupportDirectory, in: .userDomainMask
-      ).first!.appendingPathComponent("com.ryotapoi.koecho")
+      ).first!.appendingPathComponent(Self.historyDirectoryName)
     self.fileURL = directory.appendingPathComponent("history.json")
     load()
   }

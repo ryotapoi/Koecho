@@ -2,7 +2,7 @@
 
 ## v1.6.8 — 保守・ドキュメント・リリース整備
 
-- [ ] HistoryStore のディレクトリ名リテラルを専用定数にする
+- [x] HistoryStore のディレクトリ名リテラルを専用定数にする
   - `HistoryStore.swift:18` の `"com.ryotapoi.koecho"` は Logger subsystem 定数と同値だが別目的で、Bundle ID（`com.ryotapoi.Koecho`、K 大文字）とも食い違う。「変更すると既存ユーザーの履歴保存先が変わりデータ移行が必要」を定数名 or コメントで明示する（値は変えない）
 - [ ] ShortcutKeyRecorder のキーイベント処理から純ロジックを抽出してテストする
   - `handleKeyEvent` 相当の判定ロジックが OS イベント依存のまま未テスト。既存のテスト方針（OS 依存コードに混ざった純ロジックの抽出・注入点の追加）に沿って抽出 + unit test（2026-07-09 Codex audit）
