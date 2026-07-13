@@ -3,6 +3,27 @@ import KoechoCore
 import KoechoPlatform
 import SwiftUI
 
+nonisolated enum ShortcutKeyRecorderEventDecision: Equatable {
+  case cancel
+  case ignore
+  case record(ShortcutKey)
+
+  static func decide(
+    keyCode: UInt16,
+    characters: String?,
+    modifiers: Set<Modifier>
+  ) -> Self {
+    guard keyCode != 53 else { return .cancel }
+    guard let characters = characters?.lowercased(),
+      ShortcutKey.isPrintableASCII(characters),
+      ShortcutKey.hasRequiredModifier(modifiers)
+    else {
+      return .ignore
+    }
+    return .record(ShortcutKey(modifiers: modifiers, character: characters))
+  }
+}
+
 struct ShortcutKeyRecorder: NSViewRepresentable {
   @Binding var shortcutKey: ShortcutKey?
 
@@ -134,32 +155,22 @@ final class ShortcutKeyRecorderView: NSView {
   }
 
   private func handleKeyEvent(_ event: NSEvent) -> Bool {
-    // Escape cancels recording
-    if event.keyCode == 53 {
+    let decision = ShortcutKeyRecorderEventDecision.decide(
+      keyCode: event.keyCode,
+      characters: event.charactersIgnoringModifiers,
+      modifiers: ShortcutKey.modifiers(from: event.modifierFlags)
+    )
+
+    switch decision {
+    case .cancel:
       stopRecording()
-      return true
+    case .ignore:
+      break
+    case .record(let shortcut):
+      shortcutKey = shortcut
+      onShortcutKeyChanged?(shortcut)
+      stopRecording()
     }
-
-    guard let characters = event.charactersIgnoringModifiers?.lowercased(),
-      !characters.isEmpty
-    else {
-      return true
-    }
-
-    guard ShortcutKey.isPrintableASCII(characters) else {
-      return true
-    }
-
-    let mods = ShortcutKey.modifiers(from: event.modifierFlags)
-
-    guard ShortcutKey.hasRequiredModifier(mods) else {
-      return true
-    }
-
-    let newShortcut = ShortcutKey(modifiers: mods, character: characters)
-    shortcutKey = newShortcut
-    onShortcutKeyChanged?(newShortcut)
-    stopRecording()
     return true
   }
 
