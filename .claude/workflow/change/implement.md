@@ -30,10 +30,10 @@
 
 - **Intent**: 要求された振る舞いを最小十分な差分で実装する。
 - **Constraints**:
-  - Goal 経由の Change の Code Change は execution mode に従う。既定の `solo` では Implementer 自身が実装する。`delegate` では `change/delegate.md` に従い Implementer subagent が実装エージェントへ委譲する。どの mode でも Documentation Sync は Implementer の責務。diff 全量レビュー・受け入れ判定は Gatekeeper（Small では Conductor）が担い、commit は Conductor が行う。
+  - Goal 経由の Change の Code Change は Implementer のモデル指定に従う。Claude 系では Implementer 自身が実装する。GPT 系では `change/delegate.md` に従い Implementer（codex）が実装する。どの mode でも Documentation Sync は Implementer の責務。diff 全量レビュー・受け入れ判定は Gatekeeper（Small では Conductor）が担い、commit は Conductor が行う。
   - テストファーストで進める場合は `tdd` スキルに従う。
   - 構造の悪さが実装を歪める場合は、同じ変更で直すか、別リファクタ plan に切るかを判断する。
-  - コードコメントに書くのは、コードから復元できず今後の変更判断に影響する制約・前提と、再導入されやすい代替案を採らない理由（Why not）だけ。コードの再説明・変更経緯・レビュアー向けの説明は書かない。API の契約を説明する doc comment は対象外。
+  - コードコメントに書くのは、コードから復元できず今後の変更判断に影響する制約・前提と、再導入されやすい代替案を採らない理由（Why not）だけ。コードの再説明・変更経緯・レビュアー向けの説明は書かない。API の契約を説明する doc comment は対象外。テストコードも同じ基準で扱い、「しない・呼ばないこと」が意図だという説明、テストデータの値選定理由（境界値・曜日など）、regression テストの再発防止対象は、コードから復元できない前提として書く。
 - **Acceptance**: plan と実装上の事実が食い違っていない。
 - **Relevant**: 変更対象コード、関連テスト、関連 `docs/specs/`。
 

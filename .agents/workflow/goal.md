@@ -63,13 +63,14 @@
 - fresh Implementer は full-history fork ではなく新規コンテキストで起動する。前 commit / 前 Implementer の会話履歴は渡さず、必要な事実は commit、差分、現在のファイル、backlog、review result など現在の repository state から確認させる。
 - Conductor は実装を直接担当しない。責務は base / review_cursor 管理、commit slicing、brief 確定、agent 起動、機械照合、commit、Goal Review、最終報告に限る。
 - Conductor は次の 1 Change を選び、fresh Implementer を 1 つずつ直列起動する。同じ worktree で複数の Implementer を並行実行しない。Gatekeeper も brief と repository state 以外の実装文脈を引き継がない fresh worker とする。
-- Implementer の既定は `worker` Custom Agent（`gpt-5.6-terra` / medium）。ユーザーが Goal Implementer のモデルを明示指定した場合だけ `worker` を使わず、`model` と `reasoning_effort` を直接指定して fresh subagent を起動する。難度や利用可否を理由に別モデルへ暗黙 fallback しない。
+- Implementer の既定は `worker` Custom Agent（短名・effort の既定は `models.md` を正とする）。ユーザーは Goal の呼び出し文で `implementer: <短名> [effort], gatekeeper: <短名> [effort]` の形でモデルと reasoning effort を役割ごとに明示指定できる（短名→フル ID・effort の解決は `models.md` の表を正とする。無指定の役割は既定のまま）。Codex からは GPT 系のみ起動できるため、Claude 系の短名（`fable` / `opus` / `sonnet` / `haiku`）を指定されたら停止してユーザーに確認する。明示指定された役割だけ `worker` を使わず、`model` と `reasoning_effort` を直接指定して fresh subagent を起動する。難度や利用可否を理由に別モデルへ暗黙 fallback しない。
+- reasoning effort は既定（`models.md`）のまま動かさない。High-risk Change で、文脈を十分与えても誤る「問題が難しい」型の失敗が観測された場合に限り、Conductor は同系統の 1 段上のモデル（`models.md` の序列）への引き上げを検討してよい（既定は引き上げなし。実施したら最終報告に理由と結果を記録する。系統は跨がない）。読み飛ばし・検証不足型の失敗は、引き上げでなく契約項目と差し戻しで直す。ユーザーの明示指定（モデル・effort とも）が常に最優先。
 - Conductor は `agents.spawn_agent` を `fork_turns: "none"` で使う。既定では `agent_type: "worker"` を指定し、ユーザー明示モデルでは `agent_type` を省略する。起動結果と rollout / usage の実モデルが指定と一致しなければ、その結果を採用せず停止する。
 - Implementer の完了は `agents.wait_agent` で待ち、追加指示は `agents.followup_task` または `agents.send_message`、中断は `agents.interrupt_agent`、状態確認は `agents.list_agents` を使う。完了・中断を確認するまで別 writer を起動しない。
 - Implementer は渡された Change だけを active scope とし、Goal 全体を再計画・再分割しない。
 - 通常は `change/workflow.md` に従い、調査から実装・検証まで完了して戻る。commit と review lane は担当しない。
 - 1 commit として不自然だと分かった場合は、作業を広げず事実を Conductor に返す。Conductor が commit 単位を切り直す。
-- 戻りの表示形式は固定しないが、plan 参照、変更ファイル、検証コマンドと結果、逸脱・自己判断、commit message 案、stop 理由を必ず引き継ぐ。
+- 戻りの表示形式は固定しないが、終了種別（completed / stopped / blocked / interrupted のいずれか）、plan 参照、変更ファイル、検証コマンドと結果、逸脱・自己判断、commit message 案を必ず引き継ぐ。stopped / blocked の場合は理由と判断点を含める。
 - Implementer が中断した場合、fresh 再起動より先に同じ agent への追加指示・再開を試みてよい。
 - Implementer / Gatekeeper / subagent の報告どうしが食い違う場合、Conductor はどれかを採用する前に実ソース・実測で裏取りしてから記録・報告する。
 - 直接実行の例外は Goal 経由の作業には適用しない。Goal を経由しない単発 Change だけは、現在の agent が直接実行してよい。
