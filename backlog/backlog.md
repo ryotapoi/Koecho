@@ -1,18 +1,21 @@
 # Backlog
 
+## v1.6.8 — 保守・ドキュメント・リリース整備
+
 - [ ] HistoryStore のディレクトリ名リテラルを専用定数にする
   - `HistoryStore.swift:18` の `"com.ryotapoi.koecho"` は Logger subsystem 定数と同値だが別目的で、Bundle ID（`com.ryotapoi.Koecho`、K 大文字）とも食い違う。「変更すると既存ユーザーの履歴保存先が変わりデータ移行が必要」を定数名 or コメントで明示する（値は変えない）
 - [ ] ShortcutKeyRecorder のキーイベント処理から純ロジックを抽出してテストする
   - `handleKeyEvent` 相当の判定ロジックが OS イベント依存のまま未テスト。既存のテスト方針（OS 依存コードに混ざった純ロジックの抽出・注入点の追加）に沿って抽出 + unit test（2026-07-09 Codex audit）
-
-## ドキュメント整合（バージョン非依存）
-
 - [ ] ADR 0003/0011 の `appliesReplacementRulesOnConfirm` 記述を実装に同期する
   - `docs/decisions/0003-manual-trigger-for-replacement-rules.md:34` と `0011-debounced-auto-replacement.md:13` が実在しない設定を参照している（ソース grep 0 件を確認済み）。revised 注記か supersede 記録で現状に同期する（2026-07-09 audit）
 - [ ] 置換ルール機能を scope.md（荒い粒度）と docs/specs/（振る舞い詳細）に書き分ける
   - 置換機能（auto-replacement と手動 Ctrl+R の意図的併存を含む）の要求定義が ADR 0003/0011/0020 に分散し、正本 scope.md からは auto-run 文脈でしか読めない（2026-07-09 audit）
   - 2026-07-09 ユーザー判断: information-management.md の共通原則に合わせる。scope.md には主要機能としての荒い節だけ追記し、振る舞い詳細（auto/手動の併存、適用タイミング等）は docs/specs/ に最初の spec ファイルとして置く
   - あわせて scope.md が現在持っている振る舞い詳細（トグル動作・環境変数表等）も、置換ルールの spec を置くタイミング以降、触る機会に specs/ へ順次移す（scope は「粒度を荒く保つ」に寄せる）
+- [ ] Release 成果物を Developer ID で署名し、Apple の公証を取得する
+  - Release ビルドを `Developer ID Application` 証明書と hardened runtime でコード署名し、`notarytool` で notarization に提出、成功後に ticket を staple した配布物を作成する
+  - `codesign --verify` と `spctl --assess` で配布前検証を行い、証明書・公証用認証情報はリポジトリに保存しない
+  - 署名・公証済みの配布に切り替えたら、README の「Apple Developer ID で未署名」という導入手順を更新する
 
 ## v1.x.0 以降（時期未定）
 
