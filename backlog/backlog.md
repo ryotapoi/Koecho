@@ -12,9 +12,9 @@
   - 置換機能（auto-replacement と手動 Ctrl+R の意図的併存を含む）の要求定義が ADR 0003/0011/0020 に分散し、正本 scope.md からは auto-run 文脈でしか読めない（2026-07-09 audit）
   - 2026-07-09 ユーザー判断: information-management.md の共通原則に合わせる。scope.md には主要機能としての荒い節だけ追記し、振る舞い詳細（auto/手動の併存、適用タイミング等）は docs/specs/ に最初の spec ファイルとして置く
   - あわせて scope.md が現在持っている振る舞い詳細（トグル動作・環境変数表等）も、置換ルールの spec を置くタイミング以降、触る機会に specs/ へ順次移す（scope は「粒度を荒く保つ」に寄せる）
-- [ ] Release 成果物を Developer ID で署名し、Apple の公証を取得する
-  - Release ビルドを `Developer ID Application` 証明書と hardened runtime でコード署名し、`notarytool` で notarization に提出、成功後に ticket を staple した配布物を作成する
-  - `codesign --verify` と `spctl --assess` で配布前検証を行い、証明書・公証用認証情報はリポジトリに保存しない
+- [x] Release 成果物を Developer ID で署名し、Apple の公証を取得する
+  - Release ビルドを `Developer ID Application` 証明書と hardened runtime でコード署名し、Xcode Organizer から notarization に提出、成功後に ticket を staple した配布物を作成した
+  - `codesign --verify`、`spctl --assess`、`stapler validate` で配布前検証済み。証明書・公証用認証情報はリポジトリに保存しない
   - 署名・公証済みの配布に切り替えたら、README の「Apple Developer ID で未署名」という導入手順を更新する
 
 ## v1.x.0 以降（時期未定）
