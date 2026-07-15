@@ -4,7 +4,11 @@ All notable changes to Koecho are documented here. Release notes are reconstruct
 
 Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi/Koecho/releases).
 
-## Unreleased
+## 1.6.8 — 2026-07-15
+
+### Distribution
+
+- Signed release artifacts with Developer ID and notarized them with Apple for standard Gatekeeper verification.
 
 ### Internal
 
@@ -20,6 +24,10 @@ Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi
 - Shared the replacement engine between preview and actual application paths.
 - Centralized replacement-shortcut defaults and optional shortcut persistence.
 - Removed legacy singular-pattern decoding for replacement rules.
+- Named the HistoryStore data directory and documented its migration constraint.
+- Extracted and tested shortcut-recorder key event decisions independently of AppKit events.
+- Aligned replacement-rule decision records with the implemented confirmation behavior.
+- Documented replacement rules at product-scope and detailed-behavior levels.
 
 ## 1.6.3 — 2026-07-05
 

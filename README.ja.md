@@ -22,11 +22,7 @@ macOS 向けの音声入力+キーボード入力アプリ。
 
 1. [Releases](https://github.com/ryotapoi/Koecho/releases) から最新の zip をダウンロード
 2. 解凍して `Koecho.app` を `/Applications` に移動
-3. 初回起動時にブロックされる（Apple Developer ID で署名されていないため）
-   - システム設定 → プライバシーとセキュリティ を開く
-   - 「"Koecho.app" がブロックされました」の横にある「このまま開く」をクリック
-   - 確認アラートが表示されるので、再度「このまま開く」をクリック
-   - 2回目以降は通常通り起動できる
+3. `Koecho.app` を起動。Release 成果物は Apple Developer ID で署名され、Apple の公証を取得済みです。
 
 ### ソースからビルド
 
