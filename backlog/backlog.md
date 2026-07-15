@@ -11,33 +11,16 @@
   - デプロイターゲット macOS 14 のままなら `if #available(macOS 27, *)` ガードが必要。deployment target を上げた後にやれば分岐なしで書ける
   - 実装する時に、管理画面 List の `onMove`（`ReplacementRuleManagementView.swift:52` / `ScriptManagementView.swift:24`）を `reorderable` に揃えるかも同時に判断する
 
-## v1.x.0 以降（時期未定）
-
-- [ ] 選択した入力デバイスが解決できなかった時にパネル上でわかるようにする（必須ではない）
-  - 現状は warning ログのみで、選んだマイクと別のデバイスで録音されていることがユーザーに見えない（2026-07-09 Codex audit）
-  - 2026-07-09 ユーザー判断: 見た目的に良い形で出せるなら入れる程度の優先度。ステータス表示の意匠が決まったタイミングで実装する
-  - 現在の `voiceEngineStatus` は ProgressView の表示と入力欄の dim を伴う「処理中」用なので、録音を継続できるフォールバック警告に流用しない。スピナーなしの非ブロッキング通知として意匠・状態を分ける
-  - 選択デバイスを解決できない結果から通知状態への変換は unit test で検証できる。実際のデバイス切断とシステムデフォルトへのフォールバックは手動確認する
-
 ## SDK 更新時（バージョン非依存）
 
 - [ ] Xcode 27 SDK でのビルド互換を確認する
   - SDK 27 で `@State` が property wrapper からマクロに移行。問題になる 3 パターン（init 内で `@State` より後の stored property に代入・property wrapper の合成・extension での memberwise init 委譲）は現状のコードに該当なしと確認済みだが、SDK 更新時にビルドして確認する
   - `@ContentBuilder` への result builder 統一で overlay/background の ShapeStyle オーバーロードが曖昧になるケースあり。エラーが出たら swiftui-whats-new-27 skill の references を参照して直す（自力で推測しない）
 
-## レビュー記録（対応不要と判断したもの）
+## いつかやりたい改善
 
-- maintenance-audit deep 比較実行（2026-07-09、Fable+sonnet 版と Codex 版の並走）で確認・不採用と判断したもの（design-decision 基準適用）:
-  - `AudioObjectPropertyAddress` 構築の factory 化 — CoreAudio 定型の反復で、共通化は呼び出し側の意味をぼやけさせ読解経路を増やす方が大きい。listener の add/remove アドレス対応は smoke テスト強化（v1.6.7）で守る
-  - Settings 系クラスの UserDefaults 永続化共通化（property wrapper 等）— キー・デフォルト値・クランプ規則（`max(1,...)` 等）は各クラスで別々に変わる知識。共通化できるのは配管だけで意味が薄い。Settings クラスが増えたら再検討
-  - エンジン別分岐（`is DictationEngine` キャスト等）の protocol 分割 — エンジン 2 実装固定の現要求では将来の先取り。触る機会に前提コメントを明記する程度で足りる
-  - error→UI message 変換の共通型化 — `errorMessage(for:)` と `scriptErrorMessage(for:script:)` は対象エラー型が別で、統合は形が似ているだけ。3 つ目の変換が必要になった時に再評価
-  - AppState のサブ状態分割（PromptState / PanelState 等）— 現状約 30 行で許容。共有可変バッグ化が進んだら再評価（watch）
-  - DI seam 流儀（protocol 注入 vs 生成パラメータ差し替え）の明文化 — 併存にはそれぞれ意味があり（外部 I/O 境界は protocol、値的依存はパラメータ）、実害が出ている箇所（AudioDeviceManager の注入点欠如）は v1.6.7 のテスト項目で扱う。全体流儀の明文化は迷いが実際に発生したら architecture.md へ
-
-- SwiftUI レビュー（2026-07-02 swiftui-specialist skill）で確認済み・対応不要: `@Observable` + `@Bindable` 統一、新 `onChange` シグネチャ、`Identifiable` な List/ForEach、unary な行ビュー、ローカライズ（カタログ登録済み）はいずれも問題なし。NavigationView / AnyView / ObservableObject 等の soft-deprecated API の使用もなし
-- macOS 27 レビュー（2026-07-02 swiftui-whats-new-27 skill）で該当なし: AsyncImage（不使用）、alert/confirmationDialog の item binding（alert 不使用）、swipeActions の非 List 対応（List のみ使用）、新 toolbar API（対象になる toolbar がほぼない）、ReadableDocument/WritableDocument（ドキュメントベースアプリではない）
-- テストカバレッジ調査（2026-07-03 実測: App target 42.3% / KoechoCore 91〜100% / KoechoPlatform は OS 依存層に空白）。方針: テスト数を増やすのではなく「OS 依存コードに混ざった純ロジックの抽出・注入点の追加」でテスト可能な形に直す（上の v1.6.0〜v1.8.0 に割り振り済み）
-  - KoechoCore は初期値・永続化・migration・エッジケースまで網羅済みで追加余地が小さい
-  - 設定系 SwiftUI View の 0%（GeneralSettingsView / VoiceInputSection / HistoryView 等）は View 宣言主体で、ロジックは委譲先の型が持つ。View の行カバレッジ自体は追わない
-  - LiveAccessibilityClient / LiveCGEventClient / AccessibilityTrust は OS API の薄いラッパーで protocol 境界の外側。消費者側（SelectedTextReader / ClipboardPaster）は Mock 注入でテスト済み
+- [ ] 選択した入力デバイスが解決できなかった時にパネル上でわかるようにする（必須ではない）
+  - 現状は warning ログのみで、選んだマイクと別のデバイスで録音されていることがユーザーに見えない（2026-07-09 Codex audit）
+  - 2026-07-09 ユーザー判断: 見た目的に良い形で出せるなら入れる程度の優先度。ステータス表示の意匠が決まったタイミングで実装する
+  - 現在の `voiceEngineStatus` は ProgressView の表示と入力欄の dim を伴う「処理中」用なので、録音を継続できるフォールバック警告に流用しない。スピナーなしの非ブロッキング通知として意匠・状態を分ける
+  - 選択デバイスを解決できない結果から通知状態への変換は unit test で検証できる。実際のデバイス切断とシステムデフォルトへのフォールバックは手動確認する
