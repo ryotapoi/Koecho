@@ -144,6 +144,7 @@ final class InputPanelController {
   /// Confirm phase 1: stop dictation and collect the finalized text,
   /// clearing the text view.
   private func finalizeDictation() async -> String {
+    textView?.commitMarkedTextIfNeeded()
     replacementService.clearPreviews()
     await voiceCoordinator.stopEngine()
     voiceCoordinator.finalizeRemainingVolatile()

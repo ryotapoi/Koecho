@@ -24,6 +24,7 @@ sources:
 - `VoiceInputTextView` は `NSTextView` subclass として確定テキスト、marked text、volatile テキストを扱う。
 - 確定テキストの正本は `AppState.inputText`、`VoiceInputTextView` は marked / volatile text を含む表示・編集バッファ。所有権と同期境界は ADR 0022 を参照する。
 - `NSViewRepresentable.updateNSView` から `textView.string` を直接同期すると、入力中の IME composition や dictation の marked text を壊しやすい。同期の入口は `VoiceInputTextView` 側に寄せる。
+- confirm は `VoiceInputTextView.commitMarkedTextIfNeeded()` で IME marked text を通常入力として確定してから `DictationEngine.stop()` を呼ぶ。stop は残った marked text を破棄するため、この順序を逆にしない。
 - プログラム由来の textStorage 変更でも `didChangeText` が発火する。storage 編集と callback suppression は `VoiceInputTextView` の操作へ閉じ、外部からフラグや storage を制御しない。
 - レイアウトと overlay 位置計算は `layoutManager` の glyph rect と `textContainerOrigin` を基準にする。文字列 index と画面座標を直接結びつけない。
 - replacement preview の tracking area と下線 geometry は `VoiceInputTextView`、hover tooltip の floating window・描画・画面端調整・show/hide lifecycle は `ReplacementPreviewTooltip` が所有する。TextView には tooltip subview を追加しない。

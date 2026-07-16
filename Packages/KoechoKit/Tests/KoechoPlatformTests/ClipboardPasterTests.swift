@@ -128,6 +128,25 @@ struct ClipboardPasterTests {
     }
   }
 
+  @Test func clipboardPasterRechecksTrustOnRetry() async throws {
+    let client = MockCGEventClient()
+    client.trusted = false
+    let paster = ClipboardPaster(pasteDelay: 0.1, cgEventClient: client)
+    let target = MockClipboardPasteTarget()
+    let pasteboard = makeTestPasteboard()
+
+    await #expect(throws: ClipboardPasterError.accessibilityNotTrusted) {
+      try await paster.paste(text: "first", to: target, using: pasteboard)
+    }
+
+    client.trusted = true
+    try await paster.paste(text: "second", to: target, using: pasteboard)
+
+    #expect(client.simulatePasteCallCount == 1)
+    #expect(target.activateCallCount == 1)
+    #expect(pasteboard.string(forType: .string) == "second")
+  }
+
   @Test func clipboardPasterCallsSimulatePaste() async throws {
     let client = MockCGEventClient()
     let paster = ClipboardPaster(pasteDelay: 0.1, cgEventClient: client)

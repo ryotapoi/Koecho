@@ -29,6 +29,12 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   // MARK: - TextViewOperating
 
+  /// Commits an active IME composition before an operation that may discard it.
+  func commitMarkedTextIfNeeded() {
+    guard hasMarkedText() else { return }
+    unmarkText()
+  }
+
   func replaceText(_ text: String) {
     suppressCallbacks {
       string = text

@@ -54,7 +54,9 @@ extension InputPanelControllerTests {
     ctx.controller.showPanel()
     await Task.yield()
     let startCallCountBeforeFailure = engine.startCallCount
-    ctx.appState.setInputText("hello")
+    // The mock paster cannot exercise real TCC; it fixes the controller's
+    // transformed-text, target, retry, history, and cleanup contract.
+    ctx.appState.setInputText("こんにちは")
     ctx.appState.frontmostApplication = targetApp
 
     await ctx.controller.confirm()
@@ -72,7 +74,7 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.isInputPanelVisible == false)
     #expect(ctx.appState.frontmostApplication == nil)
     #expect(ctx.appState.inputText == "")
-    #expect(ctx.historyStore.entries.map(\.text) == ["hello"])
+    #expect(ctx.historyStore.entries.map(\.text) == ["こんにちは"])
   }
 
   @Test func terminatedTargetCancelsRetryAndReopensEmptyPanel() async {

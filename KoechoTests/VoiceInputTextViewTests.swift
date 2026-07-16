@@ -70,6 +70,20 @@ struct VoiceInputTextViewTests {
     #expect(committed == true)
   }
 
+  @Test func commitMarkedTextKeepsJapaneseComposition() {
+    let textView = makeTextView()
+    textView.setMarkedText(
+      "こんにちは",
+      selectedRange: NSRange(location: 5, length: 0),
+      replacementRange: NSRange(location: NSNotFound, length: 0)
+    )
+
+    textView.commitMarkedTextIfNeeded()
+
+    #expect(textView.hasMarkedText() == false)
+    #expect(textView.string == "こんにちは")
+  }
+
   @Test func addReplacementRuleCallbackWithSelectedText() {
     let textView = makeTextView()
     textView.string = "hello world"
