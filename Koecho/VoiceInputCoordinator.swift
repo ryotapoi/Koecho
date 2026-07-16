@@ -157,6 +157,25 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     }
   }
 
+  /// Finalize volatile editor text before a whole-document operation.
+  /// SpeechAnalyzer restarts replay locally finalized text, so preserve the
+  /// same suppression lifecycle used by cursor-driven finalization.
+  func finalizeVolatileForTextOperation() {
+    guard !(engine is DictationEngine), let textView, let range = textView.volatileRange else {
+      textView?.finalizeVolatileText()
+      return
+    }
+    guard range.location + range.length <= (textView.string as NSString).length else {
+      textView.clearVolatileText()
+      return
+    }
+
+    let volatileText = (textView.string as NSString).substring(with: range)
+    textView.finalizeVolatileText()
+    recordLocalFinalization(volatileText)
+    restartTranscriberIfNeeded()
+  }
+
   func resetState() {
     clearReplayState()
     accumulatedFinalizedText = ""

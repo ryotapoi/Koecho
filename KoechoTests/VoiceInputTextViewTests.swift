@@ -41,6 +41,21 @@ struct VoiceInputTextViewTests {
     #expect(callCount == 0)
   }
 
+  @Test func replaceTextSelectingUpdatesTextSelectionAndScrollWithoutCallbacks() {
+    let textView = makeTextView()
+    var textChanged = 0
+    var cursorMoved = 0
+    textView.onTextChanged = { _ in textChanged += 1 }
+    textView.onCursorMoved = { _ in cursorMoved += 1 }
+
+    textView.replaceText("😀one", selecting: NSRange(location: 2, length: 3))
+
+    #expect(textView.string == "😀one")
+    #expect(textView.selectedRange() == NSRange(location: 2, length: 3))
+    #expect(textChanged == 0)
+    #expect(cursorMoved == 0)
+  }
+
   @Test func insertTextFiresOnTextCommitted() {
     let textView = makeTextView()
     textView.textContainer?.widthTracksTextView = true

@@ -35,6 +35,18 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     }
   }
 
+  /// Replace the document and its selected result as one suppressed UI update.
+  func replaceText(_ text: String, selecting range: NSRange) {
+    suppressCallbacks {
+      string = text
+      let length = (text as NSString).length
+      let location = max(0, min(range.location, length))
+      let selection = NSRange(location: location, length: max(0, min(range.length, length - location)))
+      setSelectedRange(selection)
+      scrollRangeToVisible(selection)
+    }
+  }
+
   @discardableResult
   func insertFinalizedText(_ text: String, at position: Int) -> String {
     guard let storage = textStorage else { return "" }

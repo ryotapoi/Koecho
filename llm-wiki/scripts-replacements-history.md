@@ -30,7 +30,7 @@ sources:
 
 - 手動スクリプトは `ScriptExecutionService.execute(_:)` が入口。prompt が必要な script は一度 `appState.promptScript` を立て、次回実行で `KOECHO_PROMPT` を渡す。
 - auto-run は `InputPanelController.confirm()` の中で、置換ルール適用・trim 後、paste 前に `applyAutoRunScript(to:)` から `ScriptExecutionService.runAutoScript` を呼ぶ。
-- `Script` は custom と builtin を kind / feature ID で保存する。builtin は command/name を保存値として使わず、indent feature は 2 / 4 spaces を保存する。`ScriptSettings` は専用 flag により default builtin を一度だけ既存 scripts の後ろへ追加するため、削除後に復元しない。builtin は prompt 不可かつ auto-run 候補外。
+- `Script` は custom と builtin を kind / feature ID で保存する。builtin は command/name を保存値として使わず、indent feature は 2 / 4 spaces を保存する。`ScriptSettings` は専用 flag により default builtin を一度だけ既存 scripts の後ろへ追加するため、削除後に復元しない。builtin は prompt 不可かつ auto-run 候補外。実行時は `ScriptExecutionService` が builtin を `BuiltinTextOperation` へ dispatch し、volatile を確定してから UTF-16 の全文・selection を変換する。builtin は `ScriptRunner` を通らず、App target が suppression 下で text view / AppState / voice insertion point を同じ結果へ同期する。
 - `ScriptRunner` は Core にあり、`/bin/sh -c`、stdin、stdout/stderr、timeout、`KOECHO_*` env を扱う。TCC と cwd の罠は [macOS / AppKit](macos-appkit.md)。
 - script 失敗時、手動実行は元テキストに戻して errorMessage を出す。auto-run は panel を閉じず、trim 済み置換後テキストへ fallback する。
 

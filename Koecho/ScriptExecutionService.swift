@@ -36,6 +36,11 @@ final class ScriptExecutionService {
       return
     }
 
+    if script.kind == .builtin {
+      executeBuiltin(script)
+      return
+    }
+
     textView?.clearVolatileText()
     if let textView {
       let tvString = textView.finalizedString
@@ -105,6 +110,28 @@ final class ScriptExecutionService {
       context: context
     )
     return result.output
+  }
+
+  private func executeBuiltin(_ script: Script) {
+    guard let builtin = script.builtin else { return }
+
+    // Volatile text is real storage content. Keep it before deriving UTF-16 offsets.
+    voiceCoordinator.finalizeVolatileForTextOperation()
+    let currentText = textView?.string ?? appState.inputText
+    let currentSelection = textView?.selectedRange() ?? NSRange(location: 0, length: 0)
+    let result = BuiltinTextOperation.apply(
+      to: currentText,
+      selection: currentSelection,
+      builtin: builtin
+    )
+
+    appState.errorMessage = nil
+    textView?.replaceText(result.text, selecting: result.selection)
+    appState.setInputText(result.text)
+    voiceCoordinator.moveVoiceInsertionPoint(
+      to: result.selection.location + result.selection.length,
+      in: result.text
+    )
   }
 
   private func makeScriptContext(prompt: String) -> ScriptRunnerContext {

@@ -11,14 +11,15 @@ import Testing
   private func makeService(
     inputText: String = "",
     isInputPanelVisible: Bool = true,
-    scriptTimeout: TimeInterval = 30.0
+    scriptTimeout: TimeInterval = 30.0,
+    makeEngine: @escaping () -> any VoiceInputEngine = { MockVoiceInputEngine() }
   ) -> (ScriptExecutionService, AppState, MockTextViewOperating, VoiceInputCoordinator) {
     let appState = makeTestAppState()
     appState.settings.script.scriptTimeout = scriptTimeout
     appState.isInputPanelVisible = isInputPanelVisible
     appState.setInputText(inputText)
 
-    let coordinator = makeTestVoiceCoordinator(appState: appState)
+    let coordinator = makeTestVoiceCoordinator(appState: appState, makeEngine: makeEngine)
     let service = ScriptExecutionService(
       appState: appState,
       makeScriptRunner: { ScriptRunner(timeout: appState.settings.script.scriptTimeout) },
@@ -28,6 +29,7 @@ import Testing
     let mockTV = MockTextViewOperating()
     mockTV.string = inputText
     mockTV.finalizedString = inputText
+    coordinator.textView = mockTV
     service.textView = mockTV
     return (service, appState, mockTV, coordinator)
   }
@@ -75,6 +77,67 @@ import Testing
   }
 
   // MARK: - Voice insertion point
+
+  @Test func executeBuiltinFinalizesVolatileAndSynchronizesTextSelectionAndVoiceInsertion() async {
+    let (service, appState, textView, coordinator) = makeService(inputText: "stale")
+    textView.string = "one\ntwo"
+    textView.finalizedString = "one"
+    textView.volatileRange = NSRange(location: 3, length: 4)
+    textView.selectedRangeValue = NSRange(location: 0, length: 3)
+    let builtin = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .two)!
+    )
+
+    await service.execute(builtin)
+
+    #expect(textView.finalizeVolatileTextCallCount == 1)
+    #expect(textView.clearVolatileTextCallCount == 0)
+    #expect(textView.replaceTextSelectingCalls.count == 1)
+    #expect(textView.replaceTextSelectingCalls[0].text == "  one\ntwo")
+    #expect(textView.replaceTextSelectingCalls[0].range == NSRange(location: 0, length: 5))
+    #expect(appState.inputText == "  one\ntwo")
+    #expect(coordinator.voiceInsertionPoint == 5)
+    #expect(appState.errorMessage == nil)
+  }
+
+  @Test func executeBuiltinSuppressesReplayedVolatileFinalization() async {
+    let engine = MockRestartableVoiceInputEngine()
+    let (service, appState, textView, coordinator) = makeService(
+      inputText: "one",
+      makeEngine: { engine }
+    )
+    textView.string = "one two"
+    textView.finalizedString = "one"
+    textView.volatileRange = NSRange(location: 3, length: 4)
+    textView.selectedRangeValue = NSRange(location: 0, length: 7)
+    let builtin = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .blockQuote)!
+    )
+
+    await service.execute(builtin)
+    await coordinator.restartTranscriberTask?.value
+    coordinator.voiceInput(didFinalize: " two")
+
+    #expect(engine.restartTranscriberCallCount == 1)
+    #expect(appState.inputText == "> one two")
+    #expect(textView.insertFinalizedTextCalls.isEmpty)
+  }
+
+  @Test func executeBuiltinDoesNotUseCustomRunnerFailurePath() async {
+    let (service, appState, _, _) = makeService(inputText: "one")
+    let builtin = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .blockQuote)!
+    )
+
+    appState.errorMessage = "Previous script failed"
+    await service.execute(builtin)
+
+    #expect(appState.inputText == "> one")
+    #expect(appState.errorMessage == nil)
+  }
 
   @Test func executeMovesVoiceInsertionPointToEndOfOutput() async {
     let (service, appState, _, coordinator) = makeService(inputText: "hello")

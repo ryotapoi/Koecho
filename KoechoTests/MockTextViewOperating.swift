@@ -19,6 +19,14 @@ final class MockTextViewOperating: TextViewOperating {
     finalizedString = text
   }
 
+  var replaceTextSelectingCalls: [(text: String, range: NSRange)] = []
+  func replaceText(_ text: String, selecting range: NSRange) {
+    replaceTextSelectingCalls.append((text, range))
+    string = text
+    finalizedString = text
+    selectedRangeValue = range
+  }
+
   var insertFinalizedTextCalls: [(text: String, position: Int)] = []
   var insertFinalizedTextResult: String?
   func insertFinalizedText(_ text: String, at position: Int) -> String {

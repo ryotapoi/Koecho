@@ -8,6 +8,7 @@ protocol TextViewOperating: AnyObject {
   var volatileRange: NSRange? { get }
   func hasMarkedText() -> Bool
   func replaceText(_ text: String)
+  func replaceText(_ text: String, selecting range: NSRange)
   func insertFinalizedText(_ text: String, at position: Int) -> String
   func setVolatileText(_ text: String, at position: Int)
   func clearVolatileText()
