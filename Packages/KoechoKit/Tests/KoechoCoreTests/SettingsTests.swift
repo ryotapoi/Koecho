@@ -52,7 +52,8 @@ struct SettingsTests {
 
     // Reload via fresh Settings (same defaults) and verify
     let reloaded = Settings(defaults: defaults)
-    #expect(reloaded.script.scripts.count == 1)
+    #expect(reloaded.script.scripts.count == Script.defaultBuiltins.count + 1)
+    #expect(reloaded.script.scripts.last?.name == "Test")
     #expect(reloaded.replacement.replacementRules.count == 1)
   }
 }

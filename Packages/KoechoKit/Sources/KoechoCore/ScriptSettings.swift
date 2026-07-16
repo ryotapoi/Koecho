@@ -4,6 +4,8 @@ import os
 
 @MainActor @Observable
 public final class ScriptSettings {
+  private static let builtinScriptsRegisteredKey = "builtinScriptsRegistered"
+
   private let defaults: UserDefaults
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ScriptSettings")
 
@@ -44,7 +46,7 @@ public final class ScriptSettings {
   }
 
   public var eligibleAutoRunScripts: [Script] {
-    scripts.filter { !$0.requiresPrompt }
+    scripts.filter { $0.kind == .custom && !$0.requiresPrompt }
   }
 
   public var autoRunScript: Script? {
@@ -66,6 +68,11 @@ public final class ScriptSettings {
       }
     } else {
       _scripts = []
+    }
+
+    if !defaults.bool(forKey: Self.builtinScriptsRegisteredKey) {
+      _scripts.append(contentsOf: Script.defaultBuiltins)
+      defaults.set(true, forKey: Self.builtinScriptsRegisteredKey)
     }
 
     if let uuidString = defaults.string(forKey: "autoRunScriptId") {
