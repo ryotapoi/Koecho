@@ -152,7 +152,10 @@ struct InputPanelContent: View {
       selectedScript: appState.promptScript,
       isRunningScript: appState.isRunningScript,
       hasPromptScript: hasPromptScript,
-      onExecuteScript: onExecuteScript
+      onExecuteScript: onExecuteScript,
+      onReorderScripts: { reordered in
+        appState.settings.script.scripts = reordered
+      }
     )
     .opacity(hasPromptScript ? 0.45 : 1.0)
   }
