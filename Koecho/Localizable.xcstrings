@@ -82,6 +82,12 @@
         }
       }
     },
+    "2 spaces" : {
+
+    },
+    "4 spaces" : {
+
+    },
     "Accessibility permission required. Open System Settings > Privacy & Security > Accessibility." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -229,6 +235,9 @@
         }
       }
     },
+    "Built-in Feature" : {
+
+    },
     "Cancel" : {
       "localizations" : {
         "ja" : {
@@ -361,6 +370,9 @@
         }
       }
     },
+    "Custom Script" : {
+
+    },
     "Cycle auto-run script selection" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -485,6 +497,9 @@
         }
       }
     },
+    "Enable Koecho in System Settings > Privacy & Security > Accessibility, then retry. If it is already enabled, remove and add the current Koecho again. Restart Koecho only if the permission still does not take effect." : {
+
+    },
     "Engine" : {
       "localizations" : {
         "ja" : {
@@ -527,6 +542,9 @@
           }
         }
       }
+    },
+    "Feature" : {
+
     },
     "Fn (Globe)" : {
       "extractionState" : "manual",
@@ -571,6 +589,9 @@
           }
         }
       }
+    },
+    "Indent Width" : {
+
     },
     "Input Level" : {
       "localizations" : {
@@ -1291,6 +1312,9 @@
           }
         }
       }
+    },
+    "Type" : {
+
     },
     "Use $1, $2 to reference capture groups" : {
       "localizations" : {
