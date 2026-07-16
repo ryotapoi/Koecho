@@ -4,6 +4,17 @@ All notable changes to Koecho are documented here. Release notes are reconstruct
 
 Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi/Koecho/releases).
 
+## 1.7.0 — 2026-07-16
+
+### What's New
+
+- Added built-in Decrease Indent, Increase Indent, and Block Quote operations for selected lines, with configurable indentation width and no external script setup required.
+- Added script reordering directly from the input panel on macOS 27 or later.
+
+### Bug Fixes
+
+- Allowed paste retry after granting Accessibility permission without restarting Koecho, while preserving the committed text and original target application.
+
 ## 1.6.8 — 2026-07-15
 
 ### Distribution

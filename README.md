@@ -11,6 +11,7 @@ Invoke with a hotkey, edit text by voice and keyboard, process it with shell scr
 
 - Voice + keyboard: dictate and edit with the keyboard at the same time. Recognition results update in real time
 - Built on macOS Dictation: no extra speech engine required. Punctuation and line breaks can be spoken (macOS 26+ also supports the Speech framework engine)
+- Built-in text operations: increase or decrease indentation and add block quotes to selected lines without configuring external scripts
 - Script integration: transform text with shell scripts. Combine with Claude Code headless mode to auto-format or translate voice transcriptions
 
 ## Requirements
