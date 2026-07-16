@@ -70,3 +70,15 @@ func makeController(
     ducker: d
   )
 }
+
+@MainActor
+func findVoiceInputTextView(in controller: InputPanelController) -> VoiceInputTextView? {
+  func find(in view: NSView) -> VoiceInputTextView? {
+    if let textView = view as? VoiceInputTextView { return textView }
+    for subview in view.subviews {
+      if let found = find(in: subview) { return found }
+    }
+    return nil
+  }
+  return controller.panel.contentView.flatMap { find(in: $0) }
+}

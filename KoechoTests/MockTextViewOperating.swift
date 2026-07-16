@@ -12,12 +12,6 @@ final class MockTextViewOperating: TextViewOperating {
   var markedText = false
   func hasMarkedText() -> Bool { markedText }
 
-  var commitMarkedTextIfNeededCallCount = 0
-  func commitMarkedTextIfNeeded() {
-    commitMarkedTextIfNeededCallCount += 1
-    markedText = false
-  }
-
   var replaceTextCalls: [String] = []
   func replaceText(_ text: String) {
     replaceTextCalls.append(text)

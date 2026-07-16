@@ -9,17 +9,6 @@ import Testing
 // MARK: - confirm
 
 extension InputPanelControllerTests {
-  private func findTextView(in controller: InputPanelController) -> VoiceInputTextView? {
-    func find(in view: NSView) -> VoiceInputTextView? {
-      if let textView = view as? VoiceInputTextView { return textView }
-      for subview in view.subviews {
-        if let found = find(in: subview) { return found }
-      }
-      return nil
-    }
-    return controller.panel.contentView.flatMap { find(in: $0) }
-  }
-
   @Test func confirmSuccessClearsState() async {
     let paster = MockPaster()
     let ctx = makeController(paster: paster)
@@ -97,7 +86,7 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     await Task.yield()
-    guard let textView = findTextView(in: ctx.controller) else {
+    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
       Issue.record("textView not found")
       return
     }
@@ -128,6 +117,40 @@ extension InputPanelControllerTests {
     #expect(engine.stopCallCount == stopCallCountBeforeFailure + 1)
     #expect(engine.cancelCallCount == cancelCallCountBeforeFailure)
     #expect(engine.state == .idle)
+  }
+
+  @Test func confirmCommitsMarkedJapaneseTextBeforeStoppingDictation() async {
+    var discardedTextViews: [VoiceInputTextView] = []
+    let engine = DictationEngine(
+      startDelay: { try await Task.sleep(for: .seconds(60)) },
+      markedTextDiscarder: { textView in
+        discardedTextViews.append(textView)
+        textView.inputContext?.discardMarkedText()
+      }
+    )
+    let paster = MockPaster()
+    let ctx = makeController(paster: paster, makeEngine: { engine })
+
+    ctx.controller.showPanel()
+    await Task.yield()
+    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
+      Issue.record("textView not found")
+      return
+    }
+    textView.setMarkedText(
+      "こんにちは",
+      selectedRange: NSRange(location: 5, length: 0),
+      replacementRange: NSRange(location: NSNotFound, length: 0)
+    )
+    #expect(textView.hasMarkedText())
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+
+    await ctx.controller.confirm()
+
+    // If commit moves after stop or is removed, this discarder clears the
+    // composition and the controller has no text to paste.
+    #expect(discardedTextViews.isEmpty)
+    #expect(paster.pastedTexts == ["こんにちは"])
   }
 
   @Test func terminatedTargetCancelsRetryAndReopensEmptyPanel() async {

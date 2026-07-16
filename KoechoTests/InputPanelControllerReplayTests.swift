@@ -104,17 +104,6 @@ extension InputPanelControllerTests {
 
   // MARK: - Replay Volatile Suppression
 
-  private func findTextView(in controller: InputPanelController) -> VoiceInputTextView? {
-    func find(in view: NSView) -> VoiceInputTextView? {
-      if let tv = view as? VoiceInputTextView { return tv }
-      for sub in view.subviews {
-        if let found = find(in: sub) { return found }
-      }
-      return nil
-    }
-    return controller.panel.contentView.flatMap { find(in: $0) }
-  }
-
   /// Simulate local finalization: set volatile text, finalize it, trigger onVolatileFinalized.
   /// Pass `suppressUntil` to also simulate the transcriber restart completing,
   /// which opens the replay suppression window.
@@ -135,7 +124,7 @@ extension InputPanelControllerTests {
   @Test func replayVolatileSuppressedDuringTimeWindow() {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findTextView(in: ctx.controller) else {
+    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
       Issue.record("textView not found")
       return
     }
@@ -154,7 +143,7 @@ extension InputPanelControllerTests {
   @Test func volatileDisplayedAfterDeadlineExpires() {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findTextView(in: ctx.controller) else {
+    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
       Issue.record("textView not found")
       return
     }
@@ -174,7 +163,7 @@ extension InputPanelControllerTests {
   @Test func replayFinalizeSkippedByExactMatch() {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findTextView(in: ctx.controller) else {
+    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
       Issue.record("textView not found")
       return
     }
@@ -196,7 +185,7 @@ extension InputPanelControllerTests {
   @Test func replayFinalizeClearsDeadline() {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findTextView(in: ctx.controller) else {
+    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
       Issue.record("textView not found")
       return
     }
@@ -220,7 +209,7 @@ extension InputPanelControllerTests {
   @Test func newFinalizeWhileLocallyFinalizedInsertsText() {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findTextView(in: ctx.controller) else {
+    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
       Issue.record("textView not found")
       return
     }
@@ -241,7 +230,7 @@ extension InputPanelControllerTests {
   @Test func newInputAfterReplay() {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findTextView(in: ctx.controller) else {
+    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
       Issue.record("textView not found")
       return
     }
@@ -271,7 +260,7 @@ extension InputPanelControllerTests {
   @Test func sameTextReSpokenAfterReplay() {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findTextView(in: ctx.controller) else {
+    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
       Issue.record("textView not found")
       return
     }
@@ -296,7 +285,7 @@ extension InputPanelControllerTests {
   @Test func volatileDisplayedWithoutDeadline() {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findTextView(in: ctx.controller) else {
+    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
       Issue.record("textView not found")
       return
     }
