@@ -246,8 +246,8 @@ final class InputPanelController {
     appState.isInputPanelVisible = true
     appState.setInputText(text)
     appState.errorMessage = errorMessage(for: error)
-    textView?.replaceText(text)
     panel.makeKeyAndOrderFront(nil)
+    clearTextView(startEngine: false)
   }
 
   private func showPanelAfterTargetTermination() {

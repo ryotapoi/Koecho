@@ -9,6 +9,17 @@ import Testing
 // MARK: - confirm
 
 extension InputPanelControllerTests {
+  private func findTextView(in controller: InputPanelController) -> VoiceInputTextView? {
+    func find(in view: NSView) -> VoiceInputTextView? {
+      if let textView = view as? VoiceInputTextView { return textView }
+      for subview in view.subviews {
+        if let found = find(in: subview) { return found }
+      }
+      return nil
+    }
+    return controller.panel.contentView.flatMap { find(in: $0) }
+  }
+
   @Test func confirmSuccessClearsState() async {
     let paster = MockPaster()
     let ctx = makeController(paster: paster)
@@ -75,6 +86,48 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.frontmostApplication == nil)
     #expect(ctx.appState.inputText == "")
     #expect(ctx.historyStore.entries.map(\.text) == ["こんにちは"])
+  }
+
+  @Test func accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput() async {
+    let paster = MockPaster()
+    paster.errorToThrow = ClipboardPasterError.accessibilityNotTrusted
+    let engine = MockVoiceInputEngine()
+    let ctx = makeController(paster: paster, makeEngine: { engine })
+    let targetApp = NSRunningApplication.current
+
+    ctx.controller.showPanel()
+    await Task.yield()
+    guard let textView = findTextView(in: ctx.controller) else {
+      Issue.record("textView not found")
+      return
+    }
+    let startCallCountBeforeFailure = engine.startCallCount
+    let stopCallCountBeforeFailure = engine.stopCallCount
+    let cancelCallCountBeforeFailure = engine.cancelCallCount
+    let text = "こんにちは"
+    ctx.appState.setInputText(text)
+    ctx.appState.frontmostApplication = targetApp
+    // orderOut does not clear NSWindow.firstResponder in this test host, so
+    // model the focus transfer that occurs while the target app is activated.
+    let focusSink = NSTextView(frame: .zero)
+    paster.onPasteAttempt = {
+      ctx.controller.panel.contentView?.addSubview(focusSink)
+      ctx.controller.panel.initialFirstResponder = focusSink
+      ctx.controller.panel.makeFirstResponder(nil)
+    }
+
+    await ctx.controller.confirm()
+    await Task.yield()
+
+    #expect(ctx.appState.inputText == text)
+    #expect(textView.string == text)
+    #expect(ctx.controller.panel.firstResponder === textView)
+    #expect(textView.selectedRange() == NSRange(location: (text as NSString).length, length: 0))
+    #expect(ctx.appState.frontmostApplication === targetApp)
+    #expect(engine.startCallCount == startCallCountBeforeFailure)
+    #expect(engine.stopCallCount == stopCallCountBeforeFailure + 1)
+    #expect(engine.cancelCallCount == cancelCallCountBeforeFailure)
+    #expect(engine.state == .idle)
   }
 
   @Test func terminatedTargetCancelsRetryAndReopensEmptyPanel() async {

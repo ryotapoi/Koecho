@@ -9,6 +9,7 @@ final class MockPaster: Pasting {
   var pastedApplications: [NSRunningApplication] = []
   var errorToThrow: (any Error)?
   var restoreClipboardCallCount = 0
+  var onPasteAttempt: (() -> Void)?
   var onPaste: (() async -> Void)?
   var suspendsPaste = false
   private var pasteStartedWaiter: CheckedContinuation<Void, Never>?
@@ -18,6 +19,7 @@ final class MockPaster: Pasting {
     async throws
   {
     pastedApplications.append(application)
+    onPasteAttempt?()
     if let error = errorToThrow {
       throw error
     }
