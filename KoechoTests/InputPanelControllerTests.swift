@@ -33,6 +33,7 @@ struct InputPanelControllerTests {
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("some text")
+    ctx.appState.frontmostApplication = NSRunningApplication.current
     ctx.controller.cancel()
 
     #expect(ctx.appState.isInputPanelVisible == false)

@@ -6,6 +6,7 @@ import KoechoPlatform
 @MainActor
 final class MockPaster: Pasting {
   var pastedTexts: [String] = []
+  var pastedApplications: [NSRunningApplication] = []
   var errorToThrow: (any Error)?
   var restoreClipboardCallCount = 0
   var onPaste: (() async -> Void)?
@@ -16,6 +17,7 @@ final class MockPaster: Pasting {
   func paste(text: String, to application: NSRunningApplication, using pasteboard: NSPasteboard)
     async throws
   {
+    pastedApplications.append(application)
     if let error = errorToThrow {
       throw error
     }

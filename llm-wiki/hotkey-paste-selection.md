@@ -43,5 +43,5 @@ sources:
 ## 変更時の注意
 
 - Hotkey は Input Monitoring / Accessibility 権限に依存する。monitor 登録失敗はクラッシュではなく warning に留める。
-- ClipboardPaster の失敗は panel 復帰と errorMessage に繋がる。confirm 中の状態遷移を変えるなら `InputPanelControllerConfirmTests` と `ClipboardPasterTests` を見る。
+- ClipboardPaster の失敗は panel 復帰と errorMessage に繋がる。Accessibility trust failure だけは `InputPanelController` が確定済みテキストと捕捉済み target を復元して同じ panel から再試行させるため、通常の panel show（frontmost app 再取得・voice start）を通さない。target 終了は retry state を破棄して空の panel に戻す。confirm 中の状態遷移を変えるなら `InputPanelControllerConfirmTests` と `ClipboardPasterTests` を見る。
 - Shortcut recorder UI は App target の `Koecho/ShortcutKeyRecorder.swift`。設定 model は Core、key capture は AppKit view、key code mapping は Platform の役割。

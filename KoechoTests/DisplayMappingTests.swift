@@ -94,7 +94,7 @@ import Testing
         ClipboardPasterError.accessibilityNotTrusted,
         String(
           localized:
-            "Accessibility permission required. Open System Settings > Privacy & Security > Accessibility."
+            "Enable Koecho in System Settings > Privacy & Security > Accessibility, then retry. If it is already enabled, remove and add the current Koecho again. Restart Koecho only if the permission still does not take effect."
         )
       ),
       (

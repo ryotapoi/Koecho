@@ -220,12 +220,46 @@ final class InputPanelController {
       logger.info("Paste completed successfully")
     } catch {
       paster.restoreClipboard()
-      appState.isInputPanelVisible = true
-      panel.makeKeyAndOrderFront(nil)
-      appState.setInputText(text)
-      appState.errorMessage = errorMessage(for: error)
+      if case ClipboardPasterError.targetAppTerminated = error {
+        showPanelAfterTargetTermination()
+      } else {
+        restorePanelAfterPasteFailure(
+          text: text,
+          targetApp: isAccessibilityTrustFailure(error) ? targetApp : nil,
+          error: error
+        )
+      }
       logger.error("Paste failed: \(error)")
     }
+  }
+
+  /// Restores only the finalized input state after a paste failure. It deliberately
+  /// bypasses `showPanel()` so retrying Accessibility permission does not capture
+  /// System Settings as the paste target or start a new voice-input session.
+  private func restorePanelAfterPasteFailure(
+    text: String,
+    targetApp: NSRunningApplication?,
+    error: any Error
+  ) {
+    appState.frontmostApplication = targetApp
+    appState.isInputPanelVisible = true
+    appState.setInputText(text)
+    appState.errorMessage = errorMessage(for: error)
+    textView?.replaceText(text)
+    panel.makeKeyAndOrderFront(nil)
+  }
+
+  private func showPanelAfterTargetTermination() {
+    appState.isInputPanelVisible = true
+    appState.errorMessage = errorMessage(for: ClipboardPasterError.targetAppTerminated)
+    panel.makeKeyAndOrderFront(nil)
+  }
+
+  private func isAccessibilityTrustFailure(_ error: any Error) -> Bool {
+    if case ClipboardPasterError.accessibilityNotTrusted = error {
+      return true
+    }
+    return false
   }
 
   func cancel() {
@@ -439,7 +473,7 @@ final class InputPanelController {
     case ClipboardPasterError.accessibilityNotTrusted:
       String(
         localized:
-          "Accessibility permission required. Open System Settings > Privacy & Security > Accessibility."
+          "Enable Koecho in System Settings > Privacy & Security > Accessibility, then retry. If it is already enabled, remove and add the current Koecho again. Restart Koecho only if the permission still does not take effect."
       )
     case ClipboardPasterError.targetAppTerminated:
       String(localized: "Target application has been terminated.")

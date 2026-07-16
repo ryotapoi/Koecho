@@ -45,4 +45,5 @@ sources:
 
 - `InputPanelController` は UI 制御の中心で、置換やスクリプト実行の詳細は service に分離されている。
 - 音声入力 engine の delegate と認識 callback の処理は `VoiceInputCoordinator` が所有し、engine の生成・再生成時に Coordinator へ直接接続する。`InputPanelController` は delegate callback を forwarding しない。
+- Accessibility paste failure の復帰は、確定済みテキストと既存 target を戻すだけで voice engine を再開しない。通常の panel show は target 捕捉と音声開始を含むため、この復帰経路には使わない。
 - Controller に機能を戻すと、volatile text、履歴、focus、スクリプト実行の責務が再び絡まりやすい。新しい振る舞いは既存 service の責務に沿って置く。

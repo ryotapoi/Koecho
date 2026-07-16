@@ -44,16 +44,67 @@ extension InputPanelControllerTests {
     #expect(paster.restoreClipboardCallCount == 1)
   }
 
+  @Test func accessibilityFailureRetriesSameTargetWithoutRestartingVoiceInput() async {
+    let paster = MockPaster()
+    paster.errorToThrow = ClipboardPasterError.accessibilityNotTrusted
+    let engine = MockVoiceInputEngine()
+    let ctx = makeController(paster: paster, makeEngine: { engine })
+    let targetApp = NSRunningApplication.current
+
+    ctx.controller.showPanel()
+    await Task.yield()
+    let startCallCountBeforeFailure = engine.startCallCount
+    ctx.appState.setInputText("hello")
+    ctx.appState.frontmostApplication = targetApp
+
+    await ctx.controller.confirm()
+
+    #expect(paster.restoreClipboardCallCount == 1)
+    #expect(ctx.appState.frontmostApplication === targetApp)
+    #expect(engine.startCallCount == startCallCountBeforeFailure)
+
+    paster.errorToThrow = nil
+    await ctx.controller.confirm()
+
+    #expect(paster.pastedApplications.count == 2)
+    #expect(paster.pastedApplications[0] === targetApp)
+    #expect(paster.pastedApplications[1] === targetApp)
+    #expect(ctx.appState.isInputPanelVisible == false)
+    #expect(ctx.appState.frontmostApplication == nil)
+    #expect(ctx.appState.inputText == "")
+    #expect(ctx.historyStore.entries.map(\.text) == ["hello"])
+  }
+
+  @Test func terminatedTargetCancelsRetryAndReopensEmptyPanel() async {
+    let paster = MockPaster()
+    paster.errorToThrow = ClipboardPasterError.targetAppTerminated
+    let ctx = makeController(paster: paster)
+
+    ctx.controller.showPanel()
+    ctx.appState.setInputText("hello")
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+
+    await ctx.controller.confirm()
+
+    #expect(paster.restoreClipboardCallCount == 1)
+    #expect(ctx.appState.isInputPanelVisible == true)
+    #expect(ctx.appState.frontmostApplication == nil)
+    #expect(ctx.appState.inputText == "")
+    #expect(ctx.appState.errorMessage == String(localized: "Target application has been terminated."))
+  }
+
   @Test func confirmWithEmptyTextActsAsCancel() async {
     let ctx = makeController()
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("   \n  ")
+    ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
 
     #expect(ctx.appState.isInputPanelVisible == false)
     #expect(ctx.appState.inputText == "")
+    #expect(ctx.appState.frontmostApplication == nil)
     #expect(ctx.paster.restoreClipboardCallCount == 1)
   }
 
