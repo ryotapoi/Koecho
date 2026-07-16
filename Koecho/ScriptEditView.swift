@@ -6,34 +6,126 @@ struct ScriptEditView: View {
 
   var body: some View {
     Form {
-      TextField("Name", text: $script.name)
-
-      HStack {
-        TextField("Script Command", text: $script.scriptPath)
-          .help(
-            "Shell command to run. You can use arguments, pipes, and redirects. Quote paths with spaces: '/path/to/my script.sh' arg1"
-          )
-        Button("Choose...") {
-          chooseFile()
-        }
+      Picker("Type", selection: kindRawValueBinding) {
+        Text("Custom Script").tag(ScriptKind.custom.rawValue)
+        Text("Built-in Feature").tag(ScriptKind.builtin.rawValue)
       }
 
-      VStack(alignment: .leading, spacing: 4) {
+      if script.kind == .custom {
+        TextField("Name", text: $script.name)
+
         HStack {
-          Text("Shortcut Key")
-          Spacer()
-          ShortcutKeyRecorder(shortcutKey: $script.shortcutKey)
-            .frame(width: 120)
+          TextField("Script Command", text: $script.scriptPath)
+            .help(
+              "Shell command to run. You can use arguments, pipes, and redirects. Quote paths with spaces: '/path/to/my script.sh' arg1"
+            )
+          Button("Choose...") {
+            chooseFile()
+          }
         }
-        Text("Avoid shortcuts used by other apps or the system")
-          .font(.caption)
-          .foregroundStyle(.secondary)
+
+        Toggle("Requires Prompt", isOn: $script.requiresPrompt)
+      } else {
+        builtinControls
       }
 
-      Toggle("Requires Prompt", isOn: $script.requiresPrompt)
+      shortcutControl
     }
     .formStyle(.grouped)
     .frame(maxHeight: .infinity, alignment: .top)
+  }
+
+  private var kindRawValueBinding: Binding<String> {
+    Binding(
+      get: { script.kind.rawValue },
+      set: { rawValue in
+        guard let kind = ScriptKind(rawValue: rawValue) else { return }
+        replaceKind(kind)
+      }
+    )
+  }
+
+  @ViewBuilder
+  private var builtinControls: some View {
+    Picker("Feature", selection: builtinFeatureRawValueBinding) {
+      ForEach(BuiltinScriptFeature.allCases, id: \.self) { feature in
+        Text(feature.displayName).tag(feature.rawValue)
+      }
+    }
+
+    if builtinFeature.supportsIndentationWidth {
+      Picker("Indent Width", selection: builtinWidthRawValueBinding) {
+        Text("2 spaces").tag(BuiltinScriptIndentationWidth.two.rawValue)
+        Text("4 spaces").tag(BuiltinScriptIndentationWidth.four.rawValue)
+      }
+    }
+  }
+
+  private var shortcutControl: some View {
+    VStack(alignment: .leading, spacing: 4) {
+      HStack {
+        Text("Shortcut Key")
+        Spacer()
+        ShortcutKeyRecorder(shortcutKey: $script.shortcutKey)
+          .frame(width: 120)
+      }
+      Text("Avoid shortcuts used by other apps or the system")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+  }
+
+  private var builtinFeature: BuiltinScriptFeature {
+    script.builtin?.feature ?? .decreaseIndent
+  }
+
+  private var builtinFeatureRawValueBinding: Binding<String> {
+    Binding(
+      get: { builtinFeature.rawValue },
+      set: { rawValue in
+        guard let feature = BuiltinScriptFeature(rawValue: rawValue) else { return }
+        replaceBuiltin(feature: feature, indentationWidth: defaultWidth(for: feature))
+      }
+    )
+  }
+
+  private var builtinWidthRawValueBinding: Binding<Int> {
+    Binding(
+      get: { script.builtin?.indentationWidth?.rawValue ?? BuiltinScriptIndentationWidth.two.rawValue },
+      set: { rawValue in
+        guard let width = BuiltinScriptIndentationWidth(rawValue: rawValue) else { return }
+        replaceBuiltin(feature: builtinFeature, indentationWidth: width)
+      }
+    )
+  }
+
+  private func replaceKind(_ kind: ScriptKind) {
+    guard kind != script.kind else { return }
+
+    switch kind {
+    case .custom:
+      script = Script(
+        id: script.id,
+        name: String(localized: "New Script"),
+        scriptPath: "",
+        shortcutKey: script.shortcutKey
+      )
+    case .builtin:
+      replaceBuiltin(feature: .decreaseIndent, indentationWidth: .two)
+    }
+  }
+
+  private func replaceBuiltin(
+    feature: BuiltinScriptFeature,
+    indentationWidth: BuiltinScriptIndentationWidth?
+  ) {
+    let width = feature.supportsIndentationWidth ? indentationWidth ?? .two : nil
+    guard let builtin = BuiltinScript(feature: feature, indentationWidth: width) else { return }
+    script = Script(id: script.id, builtin: builtin, shortcutKey: script.shortcutKey)
+  }
+
+  private func defaultWidth(for feature: BuiltinScriptFeature) -> BuiltinScriptIndentationWidth? {
+    feature.supportsIndentationWidth ? script.builtin?.indentationWidth ?? .two : nil
   }
 
   private func chooseFile() {

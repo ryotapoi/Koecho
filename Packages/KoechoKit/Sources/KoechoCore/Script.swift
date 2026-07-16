@@ -1,16 +1,16 @@
 import Foundation
 
-public enum ScriptKind: String, Codable, Equatable, Sendable {
+public enum ScriptKind: String, Codable, Equatable, Hashable, Sendable {
   case custom
   case builtin
 }
 
-public enum BuiltinScriptFeature: String, Codable, CaseIterable, Equatable, Sendable {
+public enum BuiltinScriptFeature: String, Codable, CaseIterable, Equatable, Hashable, Sendable {
   case decreaseIndent
   case increaseIndent
   case blockQuote
 
-  var displayName: String {
+  public var displayName: String {
     switch self {
     case .decreaseIndent:
       "Decrease Indent"
@@ -21,12 +21,12 @@ public enum BuiltinScriptFeature: String, Codable, CaseIterable, Equatable, Send
     }
   }
 
-  var supportsIndentationWidth: Bool {
+  public var supportsIndentationWidth: Bool {
     self == .decreaseIndent || self == .increaseIndent
   }
 }
 
-public enum BuiltinScriptIndentationWidth: Int, Codable, Equatable, Sendable {
+public enum BuiltinScriptIndentationWidth: Int, Codable, Equatable, Hashable, Sendable {
   case two = 2
   case four = 4
 }
@@ -39,6 +39,11 @@ public struct BuiltinScript: Codable, Equatable, Sendable {
     guard feature.supportsIndentationWidth == (indentationWidth != nil) else { return nil }
     self.feature = feature
     self.indentationWidth = indentationWidth
+  }
+
+  public var displayName: String {
+    guard let indentationWidth else { return feature.displayName }
+    return "\(feature.displayName) (\(indentationWidth.rawValue) spaces)"
   }
 }
 
@@ -57,6 +62,10 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
       guard kind == .custom else { return }
       customName = newValue
     }
+  }
+
+  public var displayName: String {
+    builtin?.displayName ?? customName!
   }
 
   public var scriptPath: String {

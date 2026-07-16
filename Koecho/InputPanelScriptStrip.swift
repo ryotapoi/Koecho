@@ -24,17 +24,23 @@ struct InputPanelScriptStrip: View {
         ScrollView(.horizontal) {
           HStack(spacing: 8) {
             ForEach(scripts) { script in
+              let label = ScriptPresentation.label(for: script)
               Button {
                 Task { await onExecuteScript(script) }
               } label: {
-                Label {
-                  Text(script.name)
-                } icon: {
-                  Image(systemName: script.requiresPrompt ? "text.bubble.fill" : "play.fill")
+                if script.kind == .builtin {
+                  Image(systemName: ScriptPresentation.symbolName(for: script))
+                } else {
+                  Label {
+                    Text(label)
+                  } icon: {
+                    Image(systemName: ScriptPresentation.symbolName(for: script))
+                  }
                 }
               }
               .buttonStyle(.koechoToolbar(isSelected: selectedScript?.id == script.id))
-              .help(script.name)
+              .help(label)
+              .accessibilityLabel(label)
               .disabled(
                 isRunningScript || (hasPromptScript && selectedScript?.id != script.id)
               )

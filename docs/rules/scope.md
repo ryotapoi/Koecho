@@ -54,6 +54,8 @@
 - スクリプトは**複数登録**できる
 - 各スクリプトは「名前」「コマンド」「ショートカットキー（修飾キーの組み合わせ + 文字キー、任意）」「追加入力の有無」を持つ
 - スクリプトはユーザー定義の custom と内蔵操作を区別する。内蔵操作は stable feature ID で識別し、表示名・実行コマンド・bundle 内 path を永続化契約にしない。
+- Settings では custom / 内蔵機能を選択して登録する。内蔵機能では feature、必要な indent width、ショートカットだけを編集し、名前・コマンド・path・追加プロンプトは表示しない。
+- Input Panel の内蔵機能は icon-only button で表示し、設定込みの英語ラベルを tooltip と accessibility label に使う。custom の表示と prompt 操作は従来どおり維持する。
 - feature 導入時には既存 scripts の末尾へ Decrease Indent（2 spaces）、Increase Indent（2 spaces）、Block Quote を一度だけ登録する。ユーザーが削除した内蔵操作は復元しない。
 - 「コマンド」はシェルコマンド文字列（`/bin/sh -c` に渡される）。引数・パイプ・リダイレクト等をそのまま記述可能。スペースを含むパスはシングルクォートで囲む（例: `'/path/to/my script.sh' arg1`）
 - 実行するとウィンドウ内のテキストが結果で**その場で置き換わる**

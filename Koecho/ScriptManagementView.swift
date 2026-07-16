@@ -18,16 +18,22 @@ struct ScriptManagementView: View {
   private var scriptList: some View {
     List(selection: $selection) {
       ForEach(settings.scripts) { script in
-        Text(script.name)
+        Label(
+          ScriptPresentation.label(for: script),
+          systemImage: ScriptPresentation.symbolName(for: script)
+        )
           .tag(script.id)
       }
       .onMove { source, destination in
         settings.moveScripts(from: source, to: destination)
       }
     }
-    .safeAreaInset(edge: .bottom) {
+      .safeAreaInset(edge: .bottom) {
       HStack {
-        Button(action: addScript) {
+        Menu {
+          Button("Custom Script", action: addCustomScript)
+          Button("Built-in Feature", action: addBuiltinScript)
+        } label: {
           Label("Add Script", systemImage: "plus")
             .frame(width: 16, height: 16)
         }
@@ -56,11 +62,32 @@ struct ScriptManagementView: View {
 
   private func scriptBinding(for id: UUID) -> Binding<Script>? {
     guard let index = settings.scripts.firstIndex(where: { $0.id == id }) else { return nil }
-    return $settings.scripts[index]
+    return Binding(
+      get: { settings.scripts[index] },
+      set: { settings.updateScript($0) }
+    )
   }
 
-  private func addScript() {
+  private func addCustomScript() {
     let script = Script(name: String(localized: "New Script"), scriptPath: "")
+    settings.addScript(script)
+    selection = script.id
+  }
+
+  private func addBuiltinScript() {
+    let candidates = BuiltinScriptFeature.allCases.flatMap { feature in
+      feature.supportsIndentationWidth
+        ? [
+          BuiltinScript(feature: feature, indentationWidth: .two)!,
+          BuiltinScript(feature: feature, indentationWidth: .four)!,
+        ]
+        : [BuiltinScript(feature: feature)!]
+    }
+    guard let builtin = candidates.first(where: { candidate in
+      !settings.scripts.contains { $0.builtin == candidate }
+    }) else { return }
+
+    let script = Script(id: UUID(), builtin: builtin)
     settings.addScript(script)
     selection = script.id
   }

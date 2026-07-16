@@ -159,6 +159,112 @@ struct ScriptSettingsTests {
     #expect(settings.scripts[0].id == script.id)
   }
 
+  @Test func allowsBuiltinFeatureConfigurationsAndCustomNameCollisions() {
+    let settings = makeEmptySettings()
+    let twoSpaces = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .two)!
+    )
+    let fourSpaces = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .four)!
+    )
+    let custom = Script(name: "Increase Indent (2 spaces)", scriptPath: "/bin/custom")
+
+    settings.addScript(twoSpaces)
+    settings.addScript(fourSpaces)
+    settings.addScript(custom)
+
+    #expect(settings.scripts == [twoSpaces, fourSpaces, custom])
+  }
+
+  @Test func rejectsOnlyExactDuplicateBuiltinConfiguration() {
+    let settings = makeEmptySettings()
+    let builtin = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .decreaseIndent, indentationWidth: .two)!,
+      shortcutKey: ShortcutKey(modifiers: [.control], character: "d")
+    )
+    let duplicate = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .decreaseIndent, indentationWidth: .two)!
+    )
+
+    settings.addScript(builtin)
+    settings.addScript(duplicate)
+
+    #expect(settings.scripts == [builtin])
+  }
+
+  @Test func bulkAssignmentPersistsOnlyTheFirstExactBuiltinConfiguration() {
+    let defaults = makeDefaults()
+    let settings = ScriptSettings(defaults: defaults)
+    let first = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .decreaseIndent, indentationWidth: .two)!
+    )
+    let duplicate = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .decreaseIndent, indentationWidth: .two)!
+    )
+    let custom = Script(name: "Decrease Indent (2 spaces)", scriptPath: "/bin/custom")
+
+    settings.scripts = [first, duplicate, custom]
+
+    let reloaded = ScriptSettings(defaults: defaults)
+    #expect(reloaded.scripts == [first, custom])
+  }
+
+  @Test func canReAddDeletedBuiltinThroughTheSharedAddAPI() {
+    let defaults = makeDefaults()
+    let settings = ScriptSettings(defaults: defaults)
+    let deleted = settings.scripts[0]
+
+    settings.deleteScript(id: deleted.id)
+    settings.addScript(Script(id: UUID(), builtin: deleted.builtin!))
+
+    let reloaded = ScriptSettings(defaults: defaults)
+    #expect(reloaded.scripts.count == Script.defaultBuiltins.count)
+    #expect(reloaded.scripts.filter { $0.builtin == deleted.builtin }.count == 1)
+    #expect(reloaded.scripts.last?.builtin == deleted.builtin)
+  }
+
+  @Test func rejectsEditingBuiltinIntoAnExistingConfiguration() {
+    let settings = makeEmptySettings()
+    let twoSpaces = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .two)!
+    )
+    let fourSpaces = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .four)!
+    )
+    settings.scripts = [twoSpaces, fourSpaces]
+
+    settings.updateScript(
+      Script(id: fourSpaces.id, builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .two)!)
+    )
+
+    #expect(settings.scripts == [twoSpaces, fourSpaces])
+  }
+
+  @Test func persistsBuiltinConfigurationAndShortcutThroughEditing() {
+    let defaults = makeDefaults()
+    let settings = ScriptSettings(defaults: defaults)
+    settings.scripts = []
+    let script = Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .four)!,
+      shortcutKey: ShortcutKey(modifiers: [.option], character: "i")
+    )
+
+    settings.addScript(script)
+
+    let reloaded = ScriptSettings(defaults: defaults)
+    #expect(reloaded.scripts == [script])
+    #expect(reloaded.scripts[0].displayName == "Increase Indent (4 spaces)")
+  }
+
   @Test func updateScript() {
     let settings = makeEmptySettings()
     var script = Script(name: "Original", scriptPath: "/bin/original")

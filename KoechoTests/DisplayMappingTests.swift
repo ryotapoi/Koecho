@@ -12,6 +12,44 @@ import Testing
     case fallback
   }
 
+  @Test func scriptPresentationMapsBuiltinLabelsAndSymbols() {
+    let cases: [(Script, String, String)] = [
+      (
+        Script(
+          id: UUID(),
+          builtin: BuiltinScript(feature: .decreaseIndent, indentationWidth: .two)!
+        ),
+        "Decrease Indent (2 spaces)",
+        "decrease.indent"
+      ),
+      (
+        Script(
+          id: UUID(),
+          builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .four)!
+        ),
+        "Increase Indent (4 spaces)",
+        "increase.indent"
+      ),
+      (
+        Script(id: UUID(), builtin: BuiltinScript(feature: .blockQuote)!),
+        "Block Quote",
+        "text.quote"
+      ),
+    ]
+
+    for (script, label, symbol) in cases {
+      #expect(ScriptPresentation.label(for: script) == label)
+      #expect(ScriptPresentation.symbolName(for: script) == symbol)
+    }
+  }
+
+  @Test func scriptPresentationPreservesCustomNamesAndPromptSymbol() {
+    let custom = Script(name: "Rewrite", scriptPath: "rewrite.sh", requiresPrompt: true)
+
+    #expect(ScriptPresentation.label(for: custom) == "Rewrite")
+    #expect(ScriptPresentation.symbolName(for: custom) == "text.bubble.fill")
+  }
+
   @Test func voiceInputErrorDisplayMessagesCoverAllCases() {
     let appState = makeTestAppState()
     let coordinator = makeTestVoiceCoordinator(

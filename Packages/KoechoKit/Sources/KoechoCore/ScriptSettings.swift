@@ -13,7 +13,7 @@ public final class ScriptSettings {
   public var scripts: [Script] {
     get { _scripts }
     set {
-      _scripts = newValue
+      _scripts = Self.deduplicatingBuiltinScripts(newValue)
       save()
     }
   }
@@ -74,6 +74,7 @@ public final class ScriptSettings {
       _scripts.append(contentsOf: Script.defaultBuiltins)
       defaults.set(true, forKey: Self.builtinScriptsRegisteredKey)
     }
+    _scripts = Self.deduplicatingBuiltinScripts(_scripts)
 
     if let uuidString = defaults.string(forKey: "autoRunScriptId") {
       _autoRunScriptId = UUID(uuidString: uuidString)
@@ -96,12 +97,15 @@ public final class ScriptSettings {
   }
 
   public func updateScript(_ script: Script) {
-    guard let index = scripts.firstIndex(where: { $0.id == script.id }) else { return }
-    scripts[index] = script
+    guard let index = _scripts.firstIndex(where: { $0.id == script.id }) else { return }
+    guard !containsBuiltinConfiguration(of: script, excluding: script.id) else { return }
+    var updated = _scripts
+    updated[index] = script
+    scripts = updated
   }
 
   public func deleteScript(id: UUID) {
-    _scripts.removeAll { $0.id == id }
+    scripts.removeAll { $0.id == id }
     if _autoRunScriptId == id {
       _autoRunScriptId = nil
     }
@@ -109,8 +113,9 @@ public final class ScriptSettings {
   }
 
   public func moveScripts(from source: IndexSet, to destination: Int) {
-    _scripts.moveElements(fromOffsets: source, toOffset: destination)
-    save()
+    var reordered = _scripts
+    reordered.moveElements(fromOffsets: source, toOffset: destination)
+    scripts = reordered
   }
 
   private func save() {
@@ -132,5 +137,27 @@ public final class ScriptSettings {
     } catch {
       logger.error("Failed to encode autoRunShortcut: \(error.localizedDescription)")
     }
+  }
+
+  private static func deduplicatingBuiltinScripts(_ scripts: [Script]) -> [Script] {
+    var accepted: [Script] = []
+    var registeredBuiltins: [BuiltinScript] = []
+
+    for script in scripts {
+      guard let builtin = script.builtin else {
+        accepted.append(script)
+        continue
+      }
+      guard !registeredBuiltins.contains(builtin) else { continue }
+      registeredBuiltins.append(builtin)
+      accepted.append(script)
+    }
+
+    return accepted
+  }
+
+  private func containsBuiltinConfiguration(of script: Script, excluding id: UUID) -> Bool {
+    guard let builtin = script.builtin else { return false }
+    return _scripts.contains { $0.id != id && $0.builtin == builtin }
   }
 }
