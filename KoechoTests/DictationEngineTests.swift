@@ -92,13 +92,15 @@ struct DictationEngineTests {
 
   private func makeEngine(
     startDelay: @escaping DictationEngine.StartDelay = {},
-    retryTaskClearObserver: @escaping DictationEngine.RetryTaskClearObserver = {}
+    retryTaskClearObserver: @escaping DictationEngine.RetryTaskClearObserver = {},
+    markedTextDiscarder: @escaping DictationEngine.MarkedTextDiscarder = { _ in }
   ) -> (engine: DictationEngine, actions: StartActionRecorder) {
     let actions = StartActionRecorder()
     let engine = DictationEngine(
       startDictationActionSender: actions.send,
       startDelay: startDelay,
-      retryTaskClearObserver: retryTaskClearObserver
+      retryTaskClearObserver: retryTaskClearObserver,
+      markedTextDiscarder: markedTextDiscarder
     )
     return (engine, actions)
   }
@@ -239,5 +241,46 @@ struct DictationEngineTests {
     await engine.stop()
     #expect(actions.selectors == [startSelector])
     #expect(engine.state == .idle)
+  }
+
+  @Test func stopKeepsJapaneseCompositionCommittedBeforeStop() async {
+    var discardedTextViews: [VoiceInputTextView] = []
+    let (engine, _) = makeEngine(markedTextDiscarder: { textView in
+      discardedTextViews.append(textView)
+    })
+    let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100))
+    let textView = VoiceInputTextView()
+    engine.configure(panel: panel, textView: textView)
+    textView.setMarkedText(
+      "こんにちは",
+      selectedRange: NSRange(location: 5, length: 0),
+      replacementRange: NSRange(location: NSNotFound, length: 0)
+    )
+
+    textView.commitMarkedTextIfNeeded()
+    await engine.stop()
+
+    #expect(textView.string == "こんにちは")
+    #expect(discardedTextViews.isEmpty)
+  }
+
+  @Test func cancelDiscardsUncommittedMarkedText() {
+    var discardedTextViews: [VoiceInputTextView] = []
+    let (engine, _) = makeEngine(markedTextDiscarder: { textView in
+      discardedTextViews.append(textView)
+    })
+    let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100))
+    let textView = VoiceInputTextView()
+    engine.configure(panel: panel, textView: textView)
+    textView.setMarkedText(
+      "こんにちは",
+      selectedRange: NSRange(location: 5, length: 0),
+      replacementRange: NSRange(location: NSNotFound, length: 0)
+    )
+
+    engine.cancel()
+
+    #expect(discardedTextViews.count == 1)
+    #expect(discardedTextViews.first === textView)
   }
 }

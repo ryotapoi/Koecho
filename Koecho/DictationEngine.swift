@@ -7,11 +7,13 @@ final class DictationEngine: VoiceInputEngine {
   typealias StartDictationActionSender = (Selector) -> Bool
   typealias StartDelay = () async throws -> Void
   typealias RetryTaskClearObserver = () -> Void
+  typealias MarkedTextDiscarder = (VoiceInputTextView) -> Void
 
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "DictationEngine")
   private let startDictationActionSender: StartDictationActionSender
   private let startDelay: StartDelay
   private let retryTaskClearObserver: RetryTaskClearObserver
+  private let markedTextDiscarder: MarkedTextDiscarder
   private(set) var state: VoiceInputState = .idle
   weak var delegate: (any VoiceInputDelegate)?
   private weak var panel: InputPanel?
@@ -26,11 +28,15 @@ final class DictationEngine: VoiceInputEngine {
     startDelay: @escaping StartDelay = {
       try await Task.sleep(for: .milliseconds(300))
     },
-    retryTaskClearObserver: @escaping RetryTaskClearObserver = {}
+    retryTaskClearObserver: @escaping RetryTaskClearObserver = {},
+    markedTextDiscarder: @escaping MarkedTextDiscarder = {
+      $0.inputContext?.discardMarkedText()
+    }
   ) {
     self.startDictationActionSender = startDictationActionSender
     self.startDelay = startDelay
     self.retryTaskClearObserver = retryTaskClearObserver
+    self.markedTextDiscarder = markedTextDiscarder
   }
 
   /// Configure with panel and textView references.
@@ -76,8 +82,8 @@ final class DictationEngine: VoiceInputEngine {
     retryTaskID = nil
     guard state == .listening || state == .idle else { return }
     state = .stopping
-    if let textView {
-      textView.inputContext?.discardMarkedText()
+    if let textView, textView.hasMarkedText() {
+      markedTextDiscarder(textView)
     }
     panel?.makeFirstResponder(nil)
     try? await Task.sleep(for: .milliseconds(100))
@@ -88,8 +94,8 @@ final class DictationEngine: VoiceInputEngine {
     retryTask?.cancel()
     retryTask = nil
     retryTaskID = nil
-    if let textView {
-      textView.inputContext?.discardMarkedText()
+    if let textView, textView.hasMarkedText() {
+      markedTextDiscarder(textView)
     }
     panel?.makeFirstResponder(nil)
     state = .idle
