@@ -49,7 +49,6 @@ product decision（UX・データ意味・cross-surface 等）を変える plan 
 
 - 設計判断の前に `design-decision` スキルを呼ぶ。判断境界は `change/workflow.md` に従う
 - モジュール配置・共通化方針・型選択を判断する
-- プロジェクト固有制約に触れるなら `project-risk-check` で確認する。観点は skill 側が持つ。
 - 採用案・却下案・理由・残リスクを plan に残す。実装寄りの設計判断と、ステークホルダーに報告すべき product decision を混ぜない。
 
 ## 先行リファクタ判定
@@ -73,8 +72,8 @@ product decision（UX・データ意味・cross-surface 等）を変える plan 
 
 - 通常は実装後レビュー（`change/review.md`）を標準とし、plan review は self-check でよい。
 - 実装差分レビューでは Small 以外を原則 `/code-review xhigh` 観点ベースのレビューに通すため、plan 時点でもレビュー深度と追加 skill の要否を明記する。
-- 領域固有リスクがあれば該当観点の skill を plan に当てる。`project-risk-check` 以外で固有制約に触れる場合は次の slot のマッピングに従う。
-  <!-- slot: project-risk-check 以外の領域固有レビュー skill があれば追記する（例: UI 層を触るなら対応する specialist skill）。 -->
+- 領域固有リスクがあれば該当観点の skill を plan に当てる。マッピングは次の slot に従う。
+  <!-- slot: 領域固有レビュー skill があれば追記する（例: UI 層を触るなら対応する specialist skill）。 -->
   - SwiftUI View 層を触るなら `swiftui-specialist` を使う。
   <!-- /slot -->
 - High-risk / 設計判断が重い / 曖昧 / 実装後では手戻りが大きい場合だけ、`claude-fresh-review` でプランファイルを実装文脈を引き継がない fresh reviewer に回す。別系統エージェントへのクロスレビューは plan 段階では行わず、Goal Review 側に置く。

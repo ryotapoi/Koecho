@@ -95,7 +95,7 @@
 - 通常は `change/workflow.md` に従い、調査から実装・検証まで完了して戻る（commit と review lane の起動は含まない）。
 - 1 commit として不自然だと分かった場合は、作業を広げず事実を Conductor に返す。Conductor が commit 単位を切り直す。
 - 戻りの表示形式は固定しないが、次を必ず引き継ぐ: 終了種別（completed / stopped / blocked / interrupted のいずれか）、plan 参照、変更ファイル一覧、実行した検証コマンドと結果、逸脱・自己判断した点、commit message の草案。stopped / blocked の場合は理由と判断点。
-- Implementer がセッション上限などで中断した場合、fresh 再起動より先に同一 Implementer への追加入力（`SendMessage`）で再開を試みてよい。再開できれば中断時点の文脈のまま完了させる。subagent の完了通知待ちで停止した Implementer も同様に `SendMessage` で能動的に再開させる（完了通知は配信されない・大幅に遅延することがある）。
+- Implementer が session / turn 上限、完了通知待ち、または未完了 handoff で止まった場合は、fresh 再起動より先に同一 Implementer へ `SendMessage`（GPT 系委譲は同一 codex session の resume）して再開する。再開条件と fresh recovery への切替条件は「Subagent Progress and Recovery」を正とする。
 - Implementer / Gatekeeper / subagent の報告どうしが食い違う場合、Conductor はどれかを採用する前に実ソース・実測で裏取りしてから記録・報告する。
 - 直接実行の例外は Goal 経由の作業には適用しない。Goal を経由しない単発 Change だけは、現在の agent が直接実行してよい。
 
@@ -111,14 +111,17 @@
 - 存在理由は検出力の高さそのものではなく、(i) 指摘採否を実装文脈から独立させること、(ii) 裏取り手続き（テスト再実行・diff 実読）の構造的な実行点を作ること、(iii) per-commit の詳細を Conductor の複利コンテキストから隔離すること、の 3 点にある。中身のバグ検出の主役は従来どおり review lane の finder subagent と Goal Review であり、Gatekeeper 自身の役割は独立した実行点の確保にある。
 - Goal Review が MUST を出した場合、その欠陥がどの Gatekeeper 手続きをすり抜けたかを Final Report に記録する（すり抜け記録義務、分類は goal.md 冒頭の Constraints 参照）。
 
-## Unresponsive Subagent
+## Subagent Progress and Recovery
 
 この節は Implementer と Gatekeeper の両方に適用する。
 
-- subagent（Implementer または Gatekeeper）の結果が返らない・完了通知が来ない場合、Conductor はまず同一 subagent へ `SendMessage` で status request を送り、現在 phase / 実行中の作業 / 残作業 / blocker の短い報告を求める。
-- status request にも応答がない場合は、Conductor が `git status --short`、`git diff --stat`、必要な `git diff`、`git log --oneline -n` で実状態を確認する。元 subagent がまだ実行中の可能性がある場合は明示的に停止（`TaskStop`）し、終了を確認するまで別 writer を起動しない。
-- 元 subagent の終了を確認でき、未コミット差分が今回の Change scope 内にあると判断できる場合は、その差分と同じ Change scope を 1 つの fresh recovery subagent（中断したのが Implementer なら recovery Implementer、Gatekeeper なら recovery Gatekeeper）に渡し、担当していた作業（Implementer なら実装・検証、Gatekeeper なら diff 実読・review lane・受け入れ判定）を続行させる。commit は引き続き Conductor が行う。Conductor は実状態の確認と引き継ぎに留め、実装や判定を代行しない。元 subagent の終了を確認できない場合は停止する。
-- 差分が scope 外、破壊的、または完了状態を判断できない場合は、差分を破棄せず停止してユーザー確認する。
+- Task / Bash / delegate の timeout は Conductor または watchdog 側の polling / process window にすぎず、subagent の失敗・終了・session / turn 上限を自動的には意味しない。Goal workflow は固定の経過時間だけで agent を巻き取らない。
+- 結果や完了通知が返らない場合は、同一 subagent へ `SendMessage` で status request を送り、現在 phase / 実行中コマンド / 直近の実質進捗 / 残作業 / blocker を求める。既知の長時間コマンドが動いている、または応答に実質進捗がある場合は同じ subagent / codex session を継続し、fresh recovery を起動しない。コマンド状態が変わるまで同じ status request を反復しない。
+- running subagent が status request にも応答しない場合だけ `TaskStop` で停止する。終了を確認するまで別 writer を起動しない。終了確認後、Conductor は `git status --short`、`git diff --stat`、必要な `git diff`、`git log --oneline -n` で実状態を確認する。
+- completed / idle subagent が Acceptance 未達、session / turn 上限、時間切迫、または未完了 handoff を返した場合、待機では続行しないが、fresh agent より先に同じ subagent へ `SendMessage` する。GPT 系委譲は同じ codex session を resume する。残作業と優先順位だけを渡し、既に完了した調査・実装・検証を再実行させない。
+- fresh recovery へ切り替えるのは、同じ subagent / codex session を再開できない、文脈または差分が今回の Change と整合しない、または同じ session の再開 2 turn で実質進捗が観測できない場合に限る。実質進捗は、scope 内の diff / artifact の変化、新しい test / build / review evidence、または根拠付きで blocker・残作業が縮小したことのいずれかで判断し、status 文面の更新だけでは進捗とみなさない。単なる timeout、自己申告の時間切迫、正常な未完了 handoff は fresh recovery の条件にしない。
+- stopped / blocked は未完了 handoff と区別し、同じ入力のまま自動再開しない。Stop Conditions または不足する判断を解消してから再開する。
+- recovery が必要な場合、元 subagent の終了を確認し、未コミット差分が今回の Change scope 内にあると判断できた後だけ、元が Implementer なら fresh recovery Implementer、元が Gatekeeper なら fresh recovery Gatekeeper に同じ担当作業を続行させる。commit は引き続き Conductor が行う。Conductor は実状態の確認と引き継ぎに留め、実装・判定を代行しない。差分が scope 外、破壊的、または完了状態を判断できない場合は、差分を破棄せず停止してユーザー確認する。
 - この回収手順は例外処理であり、通常の Implementer / Gatekeeper に定期報告ファイルや常時 ledger を要求しない。
 
 ## Goal Review

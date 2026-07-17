@@ -40,7 +40,7 @@ Claude Code 由来の `.claude/` は参考資料として扱ってよいが、Co
 ## Core Policies
 
 - workflow / skill は ICAR（Intent / Constraints / Acceptance / Relevant）を基本形にする。細かい手順や長い観点は、必要に応じて workflow 内の phase ICAR、別 md、`llm-wiki/` へ逃がす。
-- `.claude/`・`CLAUDE.md`（Claude 側）と `.agents/`・`AGENTS.md`（Codex 側）は、目的・制約・判断基準の方向性を揃える。文言や構成の完全一致は求めず、subagent、review delegation、tool 呼び出し、skill / workflow の実行手順は各エージェントの仕組みに合わせてよい。`skills/project-risk-check/SKILL.md` は **チェック観点（Intent / Constraints / Acceptance / Checkpoints の方向性）を両側で揃える**。片方の観点を変更したら、同じコミットで他方にも反映する。
+- `.claude/`・`CLAUDE.md`（Claude 側）と `.agents/`・`AGENTS.md`（Codex 側）は、目的・制約・判断基準の方向性を揃える。文言や構成の完全一致は求めず、subagent、review delegation、tool 呼び出し、skill / workflow の実行手順は各エージェントの仕組みに合わせてよい。片方を変更したら、同じコミットで他方にも反映する。
 - 小さい変更に重い手続きを載せない。作業の大きさとリスクで plan / verify / review の深さを選ぶ。
 - 原則 1 plan = 1 commit。独立した成果が混ざるなら plan を分ける。
 - 理想は全体が綺麗な状態だが、各 plan では今回の変更範囲と直接の依存先/依存元を中心に見る。広い構造改善は必要に応じて `backlog/backlog.md` または `maintenance.md` へ切り出す。
@@ -55,8 +55,6 @@ Claude Code 由来の `.claude/` は参考資料として扱ってよいが、Co
 ## Skills
 
 `AGENTS.md` ではスキルの場所や一覧を管理しない。入口は Entry Point、phase ごとの skill 選択は `.agents/workflow/change/*.md` を正とする。
-
-Koecho 固有制約のチェック観点は `project-risk-check` を使い、Claude 側の対応観点と方向性を揃える。
 
 独立した調査・レビュー・実装は subagent で並列化してよい。subagent に依頼するときは、作業ディレクトリ `/Users/ryota/Sources/ryotapoi/Koecho` を明記する。
 

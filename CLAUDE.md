@@ -75,6 +75,6 @@ plan mode（`EnterPlanMode` / `ExitPlanMode`）は使わない。計画は内部
 ## Constraints / ドキュメント管理
 
 - 同じ情報を複数のドキュメントに書かない。各情報の置き場所は1箇所に限定する（DRY / SSoT は `docs/rules/information-management.md` 参照）
-- `.claude/`・`CLAUDE.md`（Claude 側）と `.agents/`・`AGENTS.md`（Codex 側）は、目的・制約・判断基準の方向性を揃える。文言や構成の完全一致は求めず、subagent、review delegation、tool 呼び出し、skill / workflow の実行手順は各エージェントの仕組みに合わせてよい。`skills/project-risk-check/SKILL.md` は **チェック観点（Intent / Constraints / Acceptance / Checkpoints の方向性）を両側で揃える**。片方の観点を変更したら、同じコミットで他方にも反映する。
+- `.claude/`・`CLAUDE.md`（Claude 側）と `.agents/`・`AGENTS.md`（Codex 側）は、目的・制約・判断基準の方向性を揃える。文言や構成の完全一致は求めず、subagent、review delegation、tool 呼び出し、skill / workflow の実行手順は各エージェントの仕組みに合わせてよい。片方を変更したら、同じコミットで他方にも反映する。
 - 新しいスキルやファイルを作成したら、同じステップで `.claude/settings.json` 等への登録も行う
 - 技術的知見は「特定ソースの罠 → そのソースのコメント / 横断的な挙動・設計理解 → `llm-wiki/` の地図」へ分配し、単一の集約ファイルは作らない
