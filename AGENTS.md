@@ -13,7 +13,9 @@ Koecho は macOS 14.0+ 向けの軽量音声入力アプリ。詳細は `docs/ru
 
 ```text
 goal-workflow skill（Goal の入口）
-└── .agents/workflow/goal.md（正本: commit slicing / Goal Review / 完了条件）
+└── .agents/workflow/goal.md（正本: 役割定義〈Conductor / Implementer / Gatekeeper / Advisor / Auditor〉/ commit slicing / 完了条件）
+    ├── goal-review.md — Goal Review の実行手順（実施直前に読む）
+    ├── models.md — モデルの短名・序列・reasoning effort・役割既定
     └── change/workflow.md（各 commit / 単発依頼の Intake・Routing）
         ├── change/investigate.md
         ├── change/plan.md
@@ -21,8 +23,7 @@ goal-workflow skill（Goal の入口）
         ├── change/verify.md
         ├── change/review.md
         ├── change/finish.md
-        ├── design-decision-record.md
-        └── maintenance.md
+        └── design-decision-record.md
 ```
 
 Claude Code 由来の `.claude/` は参考資料として扱ってよいが、Codex の入口は `AGENTS.md` と `.agents/` に統一する。
@@ -43,7 +44,7 @@ Claude Code 由来の `.claude/` は参考資料として扱ってよいが、Co
 - `.claude/`・`CLAUDE.md`（Claude 側）と `.agents/`・`AGENTS.md`（Codex 側）は、目的・制約・判断基準の方向性を揃える。文言や構成の完全一致は求めず、subagent、review delegation、tool 呼び出し、skill / workflow の実行手順は各エージェントの仕組みに合わせてよい。片方を変更したら、同じコミットで他方にも反映する。
 - 小さい変更に重い手続きを載せない。作業の大きさとリスクで plan / verify / review の深さを選ぶ。
 - 原則 1 plan = 1 commit。独立した成果が混ざるなら plan を分ける。
-- 理想は全体が綺麗な状態だが、各 plan では今回の変更範囲と直接の依存先/依存元を中心に見る。広い構造改善は必要に応じて `backlog/backlog.md` または `maintenance.md` へ切り出す。
+- 理想は全体が綺麗な状態だが、各 plan では今回の変更範囲と直接の依存先/依存元を中心に見る。広い構造改善は必要に応じて `backlog/backlog.md` へ切り出すか、グローバル `maintenance-audit` skill をユーザー起点で使う。
 - 不明点が仕様、UX、データ保持、削除方針に影響するならユーザーに確認する。
 - 自分で確認できることは自分で確認する。ユーザー確認は、実機依存・観察が必要な挙動・ユーザーの期待出力が早い場合に限る。
 - 仕様変更は `docs/rules/`、`docs/specs/`、`backlog/backlog.md` の適切な場所に同期する。`docs/specs/` とテストが矛盾したら、現在の要求・`docs/rules/`・`docs/decisions/` と照合して古い方を直す。
@@ -72,15 +73,11 @@ Claude Code 由来の `.claude/` は参考資料として扱ってよいが、Co
 
 ## Tooling
 
-Codex で利用可能な場合は XcodeBuildMCP を優先する。使えない Apple Tooling は、素の `xcodebuild` / `swift test` ベースに読み替える。
+XcodeBuildMCP を優先する。Bash で `xcodebuild` を直接叩かない。
 
 ```bash
 swift test --package-path Packages/KoechoKit
-xcodebuild -project Koecho.xcodeproj -scheme Koecho -configuration Debug build
-xcodebuild test -project Koecho.xcodeproj -scheme Koecho -only-testing:KoechoTests
 ```
-
-XcodeBuildMCP を使える場合:
 
 - ビルド: `build_macos`
 - テスト（アプリ）: `test_macos`（`-only-testing:KoechoTests` で UITests を除外）

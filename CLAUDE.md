@@ -13,17 +13,17 @@ Koecho は macOS 14.0+ 向けの軽量音声入力アプリ。詳細: docs/rules
 
 ```text
 goal-workflow skill（Goal の入口）
-└── goal.md（正本: execution mode / commit slicing / Goal Review / branch 運用）
+└── goal.md（正本: 役割定義〈Conductor / Implementer / Gatekeeper / Advisor / Auditor〉/ commit slicing / branch 運用）
+    ├── goal-review.md — Goal Review の実行手順（実施直前に Read する）
+    ├── models.md — モデルの短名・序列・reasoning effort・役割既定
     └── change/workflow.md（各 commit / 単発依頼の Intake・Routing）
         ├── change/investigate.md — Exploratory 用の事実集め
         ├── change/plan.md — 計画作成（省略可条件含む。plan mode は使わない）
         ├── change/implement.md — 実装
-        ├── change/delegate.md — Goal の execution mode `delegate` 用（外部エージェントへの直接委譲）
         ├── change/verify.md — 動作確認
         ├── change/review.md — リスクベースの review depth 選択
         ├── change/finish.md — コミット + 文書同期
-        ├── design-decision-record.md — 設計判断 / Product Decision Ledger の記録基準
-        └── maintenance.md — L3、節目で呼ぶ構造棚卸し
+        └── design-decision-record.md — 設計判断 / Product Decision Ledger の記録基準
 ```
 
 各 phase ファイルは入る前に Read で読む（CLAUDE.md の要約で済ませない）。
