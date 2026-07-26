@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (supersedes ADR 0009)
+Accepted
 
 ## Context
 

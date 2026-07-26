@@ -2,11 +2,7 @@
 
 ## Status
 
-Accepted (supersedes ADR 0003)
-
-## Implementation sync (2026-07-13)
-
-The confirm-time toggle described in the original context was never implemented and is not a current setting. `isAutoReplacementEnabled` controls only automatic replacement while the input panel is open. `InputPanelController.confirm()` always applies replacement rules after finalizing Dictation, then trims the result before handling an empty confirm, auto-run, and paste.
+Accepted
 
 ## Context
 

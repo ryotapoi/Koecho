@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted (revised from original becomeKey + retry approach)
+Accepted
 
 ## Context
 

@@ -14,6 +14,12 @@
 - 正規表現モードでは先頭の 1 pattern だけを使用し、複数 pattern と `Match Whole Word` は適用しない。置換先では `$1`、`$2` などの capture group を参照できる。無効な正規表現と空の pattern はそのルールを適用せず、入力テキストを保つ。
 - 通常の文字列モードの複数 pattern は、長い pattern を先に照合する。これにより、短い pattern が長い pattern の一部を先に消費しない。ルール一覧は登録順に順次適用し、先行するルールの置換結果は後続ルールの入力になる。この複数 pattern の契約と理由は [ADR 0020](../decisions/0020-multiple-patterns-per-replacement-rule.md) を参照する。
 
+### 編集 UI での pattern 行の identity
+
+- 編集 UI の pattern 行は ID を持つ値型（`ReplacementRulePattern`）として扱い、行の追加・削除・並べ替えで入力中の行が入れ替わらないようにする。
+- 保存形式は文字列の配列であり、行 ID は永続化しない。読み込み時に新しい行 ID を割り当てる。
+- 行 ID は UI 上の identity のためだけに使い、ルール同士の等価比較には含めない。
+
 ## 適用契機
 
 ### 自動適用
@@ -28,7 +34,7 @@
 
 Confirm は `Auto-replace` の設定にかかわらず、音声入力を finalize した後に必ず置換ルールを適用する。置換後のテキストは前後の空白・改行を trim し、空になった場合はペーストせずキャンセル相当としてパネルを閉じる。auto-run script を選択している場合も、置換と trim が先に完了したテキストをスクリプトへ渡す。
 
-これは、入力中に直接置換できない状態でも、最終的に貼り付けるテキストへルールを反映するためである。`Auto-replace` が confirm 時の適用を制御しないことは [ADR 0003](../decisions/0003-manual-trigger-for-replacement-rules.md) と [ADR 0011](../decisions/0011-debounced-auto-replacement.md) の implementation sync にも記録されている。
+これは、入力中に直接置換できない状態でも、最終的に貼り付けるテキストへルールを反映するためである。`Auto-replace` は入力中の自動適用だけを制御し、confirm 時の適用は制御しない。
 
 ## 入力中の安全分岐と preview
 

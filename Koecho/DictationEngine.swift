@@ -101,6 +101,12 @@ final class DictationEngine: VoiceInputEngine {
     state = .idle
   }
 
+  /// Sends `startDictation:` exactly once per start request.
+  ///
+  /// Do not add a retry here: `startDictation:` toggles Dictation, so a second
+  /// send stops what the first one started. Gate starts with a flag set at
+  /// panel-show time instead of reacting to `becomeKey()`, which fires
+  /// independently of `makeFirstResponder` and breaks the required ordering.
   private func sendStartDictation() {
     retryTask = nil
     retryTaskID = nil

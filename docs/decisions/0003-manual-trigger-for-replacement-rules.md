@@ -4,10 +4,6 @@
 
 Superseded by ADR 0011
 
-## Implementation sync (2026-07-13)
-
-The confirm-time toggle described below was never implemented and is not a current setting. `isAutoReplacementEnabled` controls only automatic replacement while the input panel is open. `InputPanelController.confirm()` always applies replacement rules after finalizing Dictation, then trims the result before handling an empty confirm, auto-run, and paste.
-
 ## Context
 
 Replacement rules were initially designed to apply automatically in real-time as the user dictates. However, macOS Dictation holds uncommitted text in an internal marked text buffer (NSTextInputClient) and does not update `NSTextView.string` or `textStorage` until the text is committed. This means:
