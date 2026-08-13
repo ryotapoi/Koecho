@@ -2,35 +2,9 @@
 
 Koecho は macOS 14.0+ 向けの軽量音声入力アプリ。詳細は `docs/rules/mission.md` を正とする。
 
-## Entry Point
-
-入口は依頼の形で 2 通り。
-
-- **Goal（`/goal` または `goal-workflow` を明示指定）**: グローバル `goal-workflow` skill を入口にする。Goal は作業全体を 1 commit 単位へ分割し、各 commit で `.agents/workflow/change/workflow.md` 以下の phase workflow を回す。Goal 手順の正本は `.agents/workflow/goal.md`。
-- **単発依頼**: 最初に `.agents/workflow/change/workflow.md` を読み、Intake から必要な phase ファイルへ進む。
-
-各 phase に入るときだけ、対応する workflow ファイルを読む。`AGENTS.md` の要約だけで進めない。
-
-```text
-goal-workflow skill（Goal の入口）
-└── .agents/workflow/goal.md（正本: 役割定義〈Conductor / Implementer / Gatekeeper / Advisor / Auditor〉/ commit slicing / 完了条件）
-    ├── goal-review.md — Goal Review の実行手順（実施直前に読む）
-    ├── models.md — モデルの短名・序列・reasoning effort・役割既定
-    └── change/workflow.md（各 commit / 単発依頼の Intake・Routing）
-        ├── change/investigate.md
-        ├── change/plan.md
-        ├── change/implement.md
-        ├── change/verify.md
-        ├── change/review.md
-        ├── change/finish.md
-        └── design-decision-record.md
-```
-
-Claude Code 由来の `.claude/` は参考資料として扱ってよいが、Codex の入口は `AGENTS.md` と `.agents/` に統一する。
-
 ## Information Sources
 
-- `docs/rules/`: プロダクト目的、スコープ、アーキテクチャ、制約、Xcode 操作、情報管理
+- `docs/rules/`: プロダクト目的、スコープ、アーキテクチャ、制約、検証、Xcode 操作、情報管理
 - `docs/specs/`: 振る舞い仕様。現状は未配置だが、テストだけでは意図が残らない仕様が増えたら追加する
 - `backlog/backlog.md`: 未着手・進行中の作業項目
 - `docs/decisions/`: 後から理由を問われる判断
@@ -38,24 +12,24 @@ Claude Code 由来の `.claude/` は参考資料として扱ってよいが、Co
 
 必要な情報だけ読む。全ファイルを毎回読む必要はない。ただし判断に影響する可能性がある情報源は、推測で済ませず実物を確認する。
 
+変更時の検証方法と必須gateは `docs/rules/verification.md` を正本とする。
+
 ## Core Policies
 
 - workflow / skill は ICAR（Intent / Constraints / Acceptance / Relevant）を基本形にする。細かい手順や長い観点は、必要に応じて workflow 内の phase ICAR、別 md、`llm-wiki/` へ逃がす。
-- `.claude/`・`CLAUDE.md`（Claude 側）と `.agents/`・`AGENTS.md`（Codex 側）は、目的・制約・判断基準の方向性を揃える。文言や構成の完全一致は求めず、subagent、review delegation、tool 呼び出し、skill / workflow の実行手順は各エージェントの仕組みに合わせてよい。片方を変更したら、同じコミットで他方にも反映する。
 - 小さい変更に重い手続きを載せない。作業の大きさとリスクで plan / verify / review の深さを選ぶ。
 - 原則 1 plan = 1 commit。独立した成果が混ざるなら plan を分ける。
 - 理想は全体が綺麗な状態だが、各 plan では今回の変更範囲と直接の依存先/依存元を中心に見る。広い構造改善は必要に応じて `backlog/backlog.md` へ切り出すか、グローバル `maintenance-audit` skill をユーザー起点で使う。
 - 不明点が仕様、UX、データ保持、削除方針に影響するならユーザーに確認する。
-- 自分で確認できることは自分で確認する。ユーザー確認は、実機依存・観察が必要な挙動・ユーザーの期待出力が早い場合に限る。
 - 仕様変更は `docs/rules/`、`docs/specs/`、`backlog/backlog.md` の適切な場所に同期する。`docs/specs/` とテストが矛盾したら、現在の要求・`docs/rules/`・`docs/decisions/` と照合して古い方を直す。
 - 技術的知見は「特定ソースの罠 → そのソースのコメント / 横断的な挙動・設計理解 → `llm-wiki/` の地図」へ分配し、単一の集約ファイルは作らない。
 - 後から制約になる判断は `docs/decisions/` に残す。
-- workflow は 1 つの commit 単位で回す。Goal が複数 commit に分かれる場合は `goal-workflow` skill に従って commit 単位へ分けて繰り返す。
-- 単発依頼はコミットまで終えたら止まる（次のタスクはユーザー指示待ち）。Goal は完了したら止まる。
 
 ## Skills
 
-`AGENTS.md` ではスキルの場所や一覧を管理しない。入口は Entry Point、phase ごとの skill 選択は `.agents/workflow/change/*.md` を正とする。
+`AGENTS.md` ではスキルの場所や一覧を管理しない。
+
+SwiftUI View 層を変更するときは `swiftui-specialist` を使う。
 
 独立した調査・レビュー・実装は subagent で並列化してよい。subagent に依頼するときは、作業ディレクトリ `/Users/ryota/Sources/ryotapoi/Koecho` を明記する。
 
@@ -66,24 +40,9 @@ Claude Code 由来の `.claude/` は参考資料として扱ってよいが、Co
 - NSTextView 依存のコード（DictationEngine 等）を App target の外に漏らさない。
 - ディクテーション制御・テキストコミットのライフサイクル、volatile テキスト、`isSuppressingCallbacks`、NSTextView / textStorage の直接操作は High-risk として扱う。
 - UserDefaults の永続化パターン変更・設定マイグレーション、権限依存機能（Accessibility / Input Monitoring）、CGEvent ペースト、グローバルホットキー（NSEvent）、外部スクリプト実行（Process + Pipe）、並行性（@MainActor 境界、async/await、AVAudioEngine コールバック）は High-risk として扱う。
-- テスト可能な振る舞い変更や bug fix には unit test / regression test を追加または更新する。追加できない場合は理由を明記する。
 - 後方互換性のためだけの shim / deprecated / fallback 分岐を追加しない。
 - `--no-verify` でフックをスキップしない。
 - 明示的な指示なしに force push しない。
-
-## Tooling
-
-XcodeBuildMCP を優先する。Bash で `xcodebuild` を直接叩かない。
-
-```bash
-swift test --package-path Packages/KoechoKit
-```
-
-- ビルド: `build_macos`
-- テスト（アプリ）: `test_macos`（`-only-testing:KoechoTests` で UITests を除外）
-- 実画面確認: `build_run_macos`
-
-Apple Xcode MCP の `RenderPreview` / `DocumentationSearch` が使えない場合は、ビルド、実行、公式ドキュメント確認など利用可能な手段で代替し、代替したことを報告する。
 
 ## Language
 

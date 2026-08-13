@@ -1,35 +1,10 @@
 # CLAUDE.md
 
+この project の指示の正本は `AGENTS.md`。作業開始時に読み、以降はその入口と参照先に従う。
+
 ## プロジェクト概要
 
 Koecho は macOS 14.0+ 向けの軽量音声入力アプリ。詳細: docs/rules/mission.md
-
-## ワークフロー入口
-
-入口は依頼の形で 2 通り。
-
-- **Goal（`/goal` または `goal-workflow` を明示指定）**: `goal-workflow` skill を入口にする。Goal は作業全体を 1 commit 単位へ分割し、各 commit で `.claude/workflow/change/workflow.md` 以下の phase workflow を回す。Goal 手順の正本は `.claude/workflow/goal.md`。`goal-workflow` skill はそのファイルを読んで進める。Goal 前提では都度確認を避けて自動進行し、止まるのは各 workflow の Stop Conditions だけ。
-- **単発依頼**: `.claude/workflow/change/workflow.md` を最初に Read し、Intake 分類（Small / Normal / High-risk / Exploratory）から必要な phase ファイルへ進む。
-
-```text
-goal-workflow skill（Goal の入口）
-└── goal.md（正本: 役割定義〈Conductor / Implementer / Gatekeeper / Advisor / Auditor〉/ commit slicing / branch 運用）
-    ├── goal-review.md — Goal Review の実行手順（実施直前に Read する）
-    ├── models.md — モデルの短名・序列・reasoning effort・役割既定
-    └── change/workflow.md（各 commit / 単発依頼の Intake・Routing）
-        ├── change/investigate.md — Exploratory 用の事実集め
-        ├── change/plan.md — 計画作成（省略可条件含む。plan mode は使わない）
-        ├── change/implement.md — 実装
-        ├── change/verify.md — 動作確認
-        ├── change/review.md — リスクベースの review depth 選択
-        ├── change/finish.md — コミット + 文書同期
-        └── design-decision-record.md — 設計判断 / Product Decision Ledger の記録基準
-```
-
-各 phase ファイルは入る前に Read で読む（CLAUDE.md の要約で済ませない）。
-plan mode（`EnterPlanMode` / `ExitPlanMode`）は使わない。計画は内部で立ててそのまま実装する。
-不明点があれば止まってユーザーに確認。なければ自動進行。
-単発依頼はコミットまで終えたら止まる（次のタスクはユーザー指示待ち）。Goal は完了したら止まる。
 
 ## docs/rules/
 
@@ -41,6 +16,7 @@ plan mode（`EnterPlanMode` / `ExitPlanMode`）は使わない。計画は内部
 - 機能スコープ: docs/rules/scope.md
 - モジュール構成・依存方向: docs/rules/architecture.md
 - Xcode 操作（ビルド・テスト・Preview・ドキュメント検索）: docs/rules/xcode-mcp.md
+- 変更時の検証方法と必須 gate: docs/rules/verification.md
 - 情報管理の原則（フォルダ構成・情報分類・SSoT）: docs/rules/information-management.md
 
 ## Constraints / サブエージェント活用
@@ -63,18 +39,8 @@ plan mode（`EnterPlanMode` / `ExitPlanMode`）は使わない。計画は内部
 - 回数ではなく「結果の量」「全体像把握が要るか」「main コンテキストを汚すか」で判断する
 - 1 サブエージェント = 1 タスクに絞り、焦点を明確にする
 
-## Constraints / ユーザー観察
-
-見た目や挙動が絡む調査・バグ修正では、まず自力で取れる証拠（ビルド・テスト・Preview・スクリーンショット・ログ等）で確認する。
-ユーザーの観察・判断なしに確定できない場合（権限ダイアログ、実際のディクテーション操作等）だけ Stop Conditions として扱い、Goal の通常進行中に都度の確認で止めない。
-
-## Constraints / MCP ツール使い分け
-
-ビルド・テスト・Preview・ドキュメント検索は MCP ツールを使う。Bash で `xcodebuild` を直接叩かない。使い分けの詳細（XcodeBuildMCP / Apple Xcode MCP、`RenderPreview` のパラメータ等）は `docs/rules/xcode-mcp.md` を参照する。
-
 ## Constraints / ドキュメント管理
 
 - 同じ情報を複数のドキュメントに書かない。各情報の置き場所は1箇所に限定する（DRY / SSoT は `docs/rules/information-management.md` 参照）
-- `.claude/`・`CLAUDE.md`（Claude 側）と `.agents/`・`AGENTS.md`（Codex 側）は、目的・制約・判断基準の方向性を揃える。文言や構成の完全一致は求めず、subagent、review delegation、tool 呼び出し、skill / workflow の実行手順は各エージェントの仕組みに合わせてよい。片方を変更したら、同じコミットで他方にも反映する。
 - 新しいスキルやファイルを作成したら、同じステップで `.claude/settings.json` 等への登録も行う
 - 技術的知見は「特定ソースの罠 → そのソースのコメント / 横断的な挙動・設計理解 → `llm-wiki/` の地図」へ分配し、単一の集約ファイルは作らない

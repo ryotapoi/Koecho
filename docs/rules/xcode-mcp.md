@@ -14,7 +14,7 @@
 
 Xcode の内部状態にアクセスする必要があるときに使う（Xcode 起動が必要）。
 
-- Apple ドキュメント検索: `DocumentationSearch`（WebSearch より優先）
+- Apple ドキュメント検索: `DocumentationSearch`（WebSearch より優先）。使えない場合は Apple 公式ドキュメントで確認する
 - Swift REPL 実行: `ExecuteSnippet`（Bash の `swift` より優先）
 - SwiftUI プレビュー: `RenderPreview`
   - `sourceFilePath`: Xcode プロジェクト内の相対パス（例: `Koecho/ReplacementRuleEditView.swift`）
