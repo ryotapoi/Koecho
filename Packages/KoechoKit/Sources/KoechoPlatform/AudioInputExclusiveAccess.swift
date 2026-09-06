@@ -2,18 +2,6 @@
 public final class AudioInputExclusiveAccess {
   public static let shared = AudioInputExclusiveAccess()
 
-  public static var isInUse: Bool {
-    shared.isInUse
-  }
-
-  public static func acquire() {
-    shared.acquire()
-  }
-
-  public static func release() {
-    shared.release()
-  }
-
   public private(set) var isInUse = false
 
   /// Called before acquiring — stops any active level monitoring.
