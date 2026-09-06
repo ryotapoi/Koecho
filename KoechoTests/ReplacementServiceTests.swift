@@ -29,34 +29,34 @@ import Testing
     return (service, appState, mockTV, coordinator)
   }
 
-  // MARK: - applyNow
+  // MARK: - applyOrPreview
 
-  @Test func applyNowTransformsText() {
+  @Test func applyOrPreviewTransformsText() {
     let (service, appState, mockTV, _) = makeService(inputText: "えーと天気")
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "えーと", replacement: "")
     )
 
-    service.applyNow()
+    service.applyOrPreview()
 
     #expect(appState.inputText == "天気")
     #expect(mockTV.replaceTextCalls.last == "天気")
   }
 
-  @Test func applyNowAdjustsVoiceInsertionPoint() {
+  @Test func applyOrPreviewAdjustsVoiceInsertionPoint() {
     let (service, appState, _, coordinator) = makeService(inputText: "えーと天気")
     coordinator.handleCursorMoved(5)  // after "えーと天気" = 5 UTF-16 units
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "えーと", replacement: "")
     )
 
-    service.applyNow()
+    service.applyOrPreview()
 
     // "えーと" (3 chars) removed before insertion point, so 5 - 3 = 2
     #expect(coordinator.voiceInsertionPoint == 2)
   }
 
-  @Test func applyNowSkipsWhenNotVisible() {
+  @Test func applyOrPreviewSkipsWhenNotVisible() {
     let (service, appState, _, _) = makeService(
       inputText: "えーと天気",
       isInputPanelVisible: false
@@ -65,26 +65,49 @@ import Testing
       ReplacementRule(pattern: "えーと", replacement: "")
     )
 
-    service.applyNow()
+    service.applyOrPreview()
 
     #expect(appState.inputText == "えーと天気")
   }
 
-  @Test func applyNowSkipsWhenNoRules() {
+  @Test func applyOrPreviewSkipsWhenNoRules() {
     let (service, appState, _, _) = makeService(inputText: "hello")
 
-    service.applyNow()
+    service.applyOrPreview()
 
     #expect(appState.inputText == "hello")
   }
 
-  @Test func applyNowWithEmptyText() {
+  @Test func applyOrPreviewSkipsDuringScript() {
+    let (service, appState, _, _) = makeService(inputText: "hello")
+    appState.settings.replacement.addReplacementRule(
+      ReplacementRule(pattern: "hello", replacement: "bye")
+    )
+    appState.isRunningScript = true
+
+    service.applyOrPreview()
+
+    #expect(appState.inputText == "hello")
+  }
+
+  @Test func applyOrPreviewLeavesTextUnchangedWhenNoRuleMatches() {
+    let (service, appState, _, _) = makeService(inputText: "hello")
+    appState.settings.replacement.addReplacementRule(
+      ReplacementRule(pattern: "goodbye", replacement: "bye")
+    )
+
+    service.applyOrPreview()
+
+    #expect(appState.inputText == "hello")
+  }
+
+  @Test func applyOrPreviewWithEmptyText() {
     let (service, appState, _, _) = makeService(inputText: "")
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "hello", replacement: "bye")
     )
 
-    service.applyNow()
+    service.applyOrPreview()
 
     #expect(appState.inputText == "")
   }
@@ -111,8 +134,6 @@ import Testing
 
     #expect(result == "hello")
   }
-
-  // MARK: - applyOrPreview
 
   @Test func applyOrPreviewSuppressesWhenVolatilePresent() {
     let (service, appState, mockTV, _) = makeService(inputText: "hello")
@@ -150,22 +171,25 @@ import Testing
       ReplacementRule(pattern: "あのー", replacement: "")
     )
 
-    service.applyNow()
+    service.applyOrPreview()
 
     #expect(appState.inputText == "天気")
   }
 
   // MARK: - addRule
 
-  @Test func addRuleAddsAndApplies() {
+  @Test func addRuleAddsAndAppliesExistingRules() {
     let (service, appState, _, _) = makeService(inputText: "hello world")
     appState.pendingReplacementPattern = "hello"
+    appState.settings.replacement.addReplacementRule(
+      ReplacementRule(pattern: "world", replacement: "earth")
+    )
 
     service.addRule(ReplacementRule(pattern: "hello", replacement: "bye"))
 
-    #expect(appState.settings.replacement.replacementRules.count == 1)
+    #expect(appState.settings.replacement.replacementRules.count == 2)
     #expect(appState.pendingReplacementPattern == nil)
-    #expect(appState.inputText == "bye world")
+    #expect(appState.inputText == "bye earth")
   }
 
   // MARK: - clearPreviews

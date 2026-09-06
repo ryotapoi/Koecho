@@ -46,76 +46,6 @@ extension InputPanelControllerTests {
     #expect(paster.restoreClipboardCallCount == 1)
   }
 
-  // MARK: - Manual Replacement Rules
-
-  @Test func applyReplacementRulesNowReplacesText() {
-    let ctx = makeController()
-    ctx.appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "えーと", replacement: "")
-    )
-
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("えーと天気")
-
-    ctx.controller.applyReplacementRulesNow()
-
-    #expect(ctx.appState.inputText == "天気")
-  }
-
-  @Test func applyReplacementRulesNowWhenNotVisibleIsNoop() {
-    let ctx = makeController()
-    ctx.appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "えーと", replacement: "")
-    )
-
-    // Don't call showPanel — panel is not visible
-    ctx.appState.setInputText("えーと天気")
-
-    ctx.controller.applyReplacementRulesNow()
-
-    #expect(ctx.appState.inputText == "えーと天気")
-  }
-
-  @Test func applyReplacementRulesNowDuringScriptIsNoop() {
-    let ctx = makeController()
-    ctx.appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "えーと", replacement: "")
-    )
-
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("えーと天気")
-    ctx.appState.isRunningScript = true
-
-    ctx.controller.applyReplacementRulesNow()
-
-    #expect(ctx.appState.inputText == "えーと天気")
-  }
-
-  @Test func applyReplacementRulesNowWithNoRulesIsNoop() {
-    let ctx = makeController()
-
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("hello")
-
-    ctx.controller.applyReplacementRulesNow()
-
-    #expect(ctx.appState.inputText == "hello")
-  }
-
-  @Test func applyReplacementRulesNowWithNoMatchIsNoop() {
-    let ctx = makeController()
-    ctx.appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "えーと", replacement: "")
-    )
-
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("hello")
-
-    ctx.controller.applyReplacementRulesNow()
-
-    #expect(ctx.appState.inputText == "hello")
-  }
-
   // MARK: - Replacement shortcuts
 
   @Test func shortcutRAppliesReplacementRules() {
@@ -217,24 +147,6 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "script output")
   }
 
-  // MARK: - Add Replacement Rule from Context Menu
-
-  @Test func addReplacementRuleSavesAndApplies() {
-    let ctx = makeController()
-
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("hello world hello")
-
-    let rule = ReplacementRule(pattern: "hello", replacement: "hi")
-    ctx.controller.addReplacementRule(rule)
-
-    #expect(ctx.appState.settings.replacement.replacementRules.count == 1)
-    #expect(ctx.appState.settings.replacement.replacementRules[0].pattern == "hello")
-    #expect(ctx.appState.settings.replacement.replacementRules[0].replacement == "hi")
-    #expect(ctx.appState.inputText == "hi world hi")
-    #expect(ctx.appState.pendingReplacementPattern == nil)
-  }
-
   @Test func cancelClearsPendingReplacementPattern() {
     let ctx = makeController()
 
@@ -244,24 +156,6 @@ extension InputPanelControllerTests {
     ctx.controller.cancel()
 
     #expect(ctx.appState.pendingReplacementPattern == nil)
-  }
-
-  @Test func addReplacementRuleAppliesAllRules() {
-    let ctx = makeController()
-
-    ctx.appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "world", replacement: "earth")
-    )
-
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("hello world")
-
-    let newRule = ReplacementRule(pattern: "hello", replacement: "hi")
-    ctx.controller.addReplacementRule(newRule)
-
-    // Both existing and new rules should be applied
-    #expect(ctx.appState.settings.replacement.replacementRules.count == 2)
-    #expect(ctx.appState.inputText == "hi earth")
   }
 
   // MARK: - Auto Replacement

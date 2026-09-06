@@ -61,12 +61,12 @@ import Testing
   }
 
   @Test func executeWithPromptIncludesVolatilePromptText() async throws {
-    let scriptPath = try makeScript("echo \"$KOECHO_PROMPT\"")
-    defer { try? FileManager.default.removeItem(atPath: scriptPath) }
-
     let (service, appState, _, _) = makeService(inputText: "hello")
-    let script = Script(name: "Test", scriptPath: scriptPath, requiresPrompt: true)
-    appState.promptScript = script
+    let script = Script(name: "Test", scriptPath: "echo \"$KOECHO_PROMPT\"", requiresPrompt: true)
+
+    await service.execute(script)
+    #expect(appState.promptScript == script)
+
     appState.promptText = "make "
     appState.volatilePromptText = "short"
 
@@ -141,12 +141,14 @@ import Testing
 
   @Test func executeMovesVoiceInsertionPointToEndOfOutput() async {
     let (service, appState, _, coordinator) = makeService(inputText: "hello")
-    let script = Script(name: "Test", scriptPath: "cat")
+    let script = Script(name: "Test", scriptPath: "tr a-z A-Z")
+    appState.errorMessage = "Previous failure"
 
     await service.execute(script)
 
-    #expect(appState.inputText == "hello")
+    #expect(appState.inputText == "HELLO")
     #expect(coordinator.voiceInsertionPoint == 5)
+    #expect(appState.errorMessage == nil)
   }
 
   // MARK: - Concurrent execution guard
@@ -154,7 +156,7 @@ import Testing
   @Test func executeSkipsWhenAlreadyRunning() async {
     let (service, appState, _, _) = makeService(inputText: "hello")
     appState.isRunningScript = true
-    let script = Script(name: "Test", scriptPath: "cat")
+    let script = Script(name: "Test", scriptPath: "tr a-z A-Z")
 
     await service.execute(script)
 
@@ -169,11 +171,43 @@ import Testing
       inputText: "hello",
       isInputPanelVisible: false
     )
-    let script = Script(name: "Test", scriptPath: "cat")
+    let script = Script(name: "Test", scriptPath: "tr a-z A-Z")
 
     await service.execute(script)
 
     #expect(appState.inputText == "hello")
+  }
+
+  @Test func executeRestoresTextAfterFailure() async {
+    let (service, appState, _, _) = makeService(inputText: "original")
+    let script = Script(name: "Fail", scriptPath: "exit 1")
+
+    await service.execute(script)
+
+    #expect(appState.inputText == "original")
+    #expect(appState.errorMessage?.contains("Fail") == true)
+  }
+
+  @Test func executeRestoresTextAfterEmptyOutput() async {
+    let (service, appState, _, _) = makeService(inputText: "original")
+    let script = Script(name: "Empty", scriptPath: "printf ''")
+
+    await service.execute(script)
+
+    #expect(appState.inputText == "original")
+    #expect(appState.errorMessage?.contains("Empty") == true)
+  }
+
+  @Test func executeRejectsDifferentScriptWhilePromptIsOpen() async {
+    let (service, appState, _, _) = makeService(inputText: "original")
+    let promptScript = Script(name: "Prompt", scriptPath: "cat", requiresPrompt: true)
+    let otherScript = Script(name: "Other", scriptPath: "tr a-z A-Z")
+
+    await service.execute(promptScript)
+    await service.execute(otherScript)
+
+    #expect(appState.inputText == "original")
+    #expect(appState.promptScript == promptScript)
   }
 
   // MARK: - runAutoScript
@@ -245,22 +279,34 @@ import Testing
     #expect(appState.settings.script.autoRunScriptId == script2.id)
   }
 
+  @Test func cycleAutoRunScriptClearsSelectionWhenNoScriptsAreEligible() {
+    let (service, appState, _, _) = makeService()
+    let script = Script(name: "Prompt", scriptPath: "cat", requiresPrompt: true)
+    appState.settings.script.scripts = [script]
+    appState.settings.script.autoRunScriptId = script.id
+
+    service.cycleAutoRunScript()
+
+    #expect(appState.settings.script.autoRunScriptId == nil)
+  }
+
   // MARK: - Panel selection context
 
   @Test func executePassesPanelSelection() async throws {
     let scriptPath = try makeScript(
-      "echo \"sel=$KOECHO_SELECTION start=$KOECHO_SELECTION_START end=$KOECHO_SELECTION_END\""
+      "echo \"sel=$KOECHO_SELECTION start=$KOECHO_SELECTION_START end=$KOECHO_SELECTION_END prompt=$KOECHO_PROMPT\""
     )
     defer { try? FileManager.default.removeItem(atPath: scriptPath) }
 
     let (service, appState, mockTV, _) = makeService(inputText: "hello world")
     mockTV.string = "hello world"
     mockTV.selectedRangeValue = NSRange(location: 6, length: 5)
+    appState.promptText = "my prompt"
     let script = Script(name: "Test", scriptPath: scriptPath)
 
     await service.execute(script)
 
-    #expect(appState.inputText == "sel=world start=6 end=11")
+    #expect(appState.inputText == "sel=world start=6 end=11 prompt=my prompt")
   }
 
   @Test func executeWithNoSelectionPassesCursorPosition() async throws {
@@ -292,6 +338,21 @@ import Testing
     await service.execute(script)
 
     #expect(appState.inputText == "sel= start=0 end=0")
+  }
+
+  @Test func scriptErrorMessageDescribesRunnerErrors() {
+    let (service, _, _, _) = makeService()
+    let script = Script(name: "Test", scriptPath: "cat")
+
+    #expect(service.scriptErrorMessage(for: ScriptRunnerError.emptyScript, script: script)
+      == String(localized: "Script command is empty."))
+    #expect(service.scriptErrorMessage(for: ScriptRunnerError.timeout, script: script)
+      == String(localized: "Script '\(script.name)' timed out."))
+    #expect(service.scriptErrorMessage(
+      for: ScriptRunnerError.nonZeroExit(code: 2, stderr: "failure"), script: script)
+      .contains("failure"))
+    #expect(service.scriptErrorMessage(for: ScriptRunnerError.emptyOutput, script: script)
+      == String(localized: "Script '\(script.name)' produced empty output."))
   }
 
   // MARK: - cancelPrompt

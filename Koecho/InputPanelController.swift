@@ -308,25 +308,9 @@ final class InputPanelController {
     voiceCoordinator.handleTextChanged()
   }
 
-  func applyReplacementRulesNow() {
-    replacementService.applyNow()
-  }
-
-  func addReplacementRule(_ rule: ReplacementRule) {
-    replacementService.addRule(rule)
-  }
-
-  func executeScript(_ script: Script) async {
-    await scriptService.execute(script)
-  }
-
   func cancelPrompt() {
     voiceCoordinator.currentVoiceTarget = .textEditor
     scriptService.cancelPrompt()
-  }
-
-  func cycleAutoRunScript() {
-    scriptService.cycleAutoRunScript()
   }
 
   // MARK: - Private

@@ -29,16 +29,11 @@ final class ReplacementService {
     } else if let textView, textView.hasMarkedText() {
       showPreview(rules: rules)
     } else {
-      applyNow()
+      applyNow(rules: rules)
     }
   }
 
-  func applyNow() {
-    guard appState.isInputPanelVisible,
-      !appState.isRunningScript
-    else { return }
-    let rules = appState.settings.replacement.replacementRules
-    guard !rules.isEmpty else { return }
+  private func applyNow(rules: [ReplacementRule]) {
     textView?.clearReplacementPreviews()
     let currentText = appState.inputText
     let result = applyReplacementRules(rules, to: currentText)
