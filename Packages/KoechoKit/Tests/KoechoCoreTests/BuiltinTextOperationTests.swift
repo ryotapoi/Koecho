@@ -72,4 +72,36 @@ struct BuiltinTextOperationTests {
     #expect(empty.selection == NSRange(location: 0, length: 2))
     #expect(spaced.text == "    one  ")
   }
+
+  @Test func handlesCRLFAndUnicodeLineSeparators() {
+    let crlf = BuiltinTextOperation.apply(
+      to: "one\r\ntwo", selection: NSRange(location: 0, length: 5), builtin: quote)
+    let lineSeparator = BuiltinTextOperation.apply(
+      to: "one\u{2028}two", selection: NSRange(location: 0, length: 4), builtin: quote)
+    let acrossCRLF = BuiltinTextOperation.apply(
+      to: "one\r\ntwo", selection: NSRange(location: 1, length: 6), builtin: quote)
+
+    #expect(crlf.text == "> one\r\ntwo")
+    #expect(crlf.selection == NSRange(location: 0, length: 5))
+    #expect(lineSeparator.text == "> one\u{2028}two")
+    #expect(lineSeparator.selection == NSRange(location: 0, length: 5))
+    #expect(acrossCRLF.text == "> one\r\n> two")
+    #expect(acrossCRLF.selection == NSRange(location: 0, length: 12))
+  }
+
+  @Test func cursorAtDocumentEndTargetsLastLine() {
+    let result = BuiltinTextOperation.apply(
+      to: "one", selection: NSRange(location: 3, length: 0), builtin: increase)
+
+    #expect(result.text == "  one")
+    #expect(result.selection == NSRange(location: 0, length: 5))
+  }
+
+  @Test func clampsOutOfBoundsSelectionsBeforeTransformingLines() {
+    let result = BuiltinTextOperation.apply(
+      to: "one\ntwo", selection: NSRange(location: -2, length: 99), builtin: increase)
+
+    #expect(result.text == "  one\n  two")
+    #expect(result.selection == NSRange(location: 0, length: 11))
+  }
 }
