@@ -106,7 +106,7 @@ struct OutputVolumeDuckerTests {
     #expect(coreAudio.writes.last?.element == 1)
   }
 
-  @Test func listenerIsInstalledOnceAcrossDeviceChangesAndRemovedOnRestore() {
+  @Test func listenerIsInstalledOnceAcrossDeviceChangesAndRemovedOnRestore() throws {
     let settings = makeSettings(enabled: true, level: 0.3)
     let coreAudio = CoreAudioSpy()
     coreAudio.defaultOutputDeviceID = 1
@@ -117,7 +117,7 @@ struct OutputVolumeDuckerTests {
     let ducker = OutputVolumeDucker(settings: settings, coreAudio: coreAudio.makeOperations())
 
     ducker.duck()
-    let listener = try! #require(coreAudio.addedListeners.first)
+    let listener = try #require(coreAudio.addedListeners.first)
 
     coreAudio.defaultOutputDeviceID = 2
     ducker.handleOutputDeviceChanged()

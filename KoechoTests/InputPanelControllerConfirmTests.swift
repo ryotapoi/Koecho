@@ -77,7 +77,7 @@ extension InputPanelControllerTests {
     #expect(ctx.historyStore.entries.map(\.text) == ["こんにちは"])
   }
 
-  @Test func accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput() async {
+  @Test func accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput() async throws {
     let paster = MockPaster()
     paster.errorToThrow = ClipboardPasterError.accessibilityNotTrusted
     let engine = MockVoiceInputEngine()
@@ -86,10 +86,7 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     await Task.yield()
-    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
-      Issue.record("textView not found")
-      return
-    }
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
     let startCallCountBeforeFailure = engine.startCallCount
     let stopCallCountBeforeFailure = engine.stopCallCount
     let cancelCallCountBeforeFailure = engine.cancelCallCount
@@ -119,7 +116,7 @@ extension InputPanelControllerTests {
     #expect(engine.state == .idle)
   }
 
-  @Test func confirmCommitsMarkedJapaneseTextBeforeStoppingDictation() async {
+  @Test func confirmCommitsMarkedJapaneseTextBeforeStoppingDictation() async throws {
     var discardedTextViews: [VoiceInputTextView] = []
     let engine = DictationEngine(
       startDelay: { try await Task.sleep(for: .seconds(60)) },
@@ -133,10 +130,7 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     await Task.yield()
-    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
-      Issue.record("textView not found")
-      return
-    }
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
     textView.setMarkedText(
       "こんにちは",
       selectedRange: NSRange(location: 5, length: 0),

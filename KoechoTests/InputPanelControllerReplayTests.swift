@@ -121,13 +121,10 @@ extension InputPanelControllerTests {
     }
   }
 
-  @Test func replayVolatileSuppressedDuringTimeWindow() {
+  @Test func replayVolatileSuppressedDuringTimeWindow() throws {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
-      Issue.record("textView not found")
-      return
-    }
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
 
     simulateLocalFinalize(
       controller: ctx.controller, textView: textView, text: "こんにちは",
@@ -140,13 +137,10 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == textAfterFinalize)
   }
 
-  @Test func volatileDisplayedAfterDeadlineExpires() {
+  @Test func volatileDisplayedAfterDeadlineExpires() throws {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
-      Issue.record("textView not found")
-      return
-    }
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
 
     // Deadline in the past — expired
     simulateLocalFinalize(
@@ -160,13 +154,10 @@ extension InputPanelControllerTests {
     #expect(ctx.controller.voiceCoordinator.replayState == .idle)
   }
 
-  @Test func replayFinalizeSkippedByExactMatch() {
+  @Test func replayFinalizeSkippedByExactMatch() throws {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
-      Issue.record("textView not found")
-      return
-    }
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
 
     // Insert text via normal finalize first
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
@@ -182,13 +173,10 @@ extension InputPanelControllerTests {
     #expect(ctx.controller.voiceCoordinator.replayState == .idle)
   }
 
-  @Test func replayFinalizeClearsDeadline() {
+  @Test func replayFinalizeClearsDeadline() throws {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
-      Issue.record("textView not found")
-      return
-    }
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
 
     // Insert text via normal finalize first
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
@@ -206,13 +194,10 @@ extension InputPanelControllerTests {
     #expect(textView.volatileRange != nil)
   }
 
-  @Test func newFinalizeWhileLocallyFinalizedInsertsText() {
+  @Test func newFinalizeWhileLocallyFinalizedInsertsText() throws {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
-      Issue.record("textView not found")
-      return
-    }
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
 
     // Insert text via normal finalize first
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
@@ -227,13 +212,10 @@ extension InputPanelControllerTests {
     #expect(ctx.controller.voiceCoordinator.replayState == .idle)
   }
 
-  @Test func newInputAfterReplay() {
+  @Test func newInputAfterReplay() throws {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
-      Issue.record("textView not found")
-      return
-    }
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
 
     // Insert text via normal finalize first
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
@@ -257,13 +239,10 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText.contains("ありがとう"))
   }
 
-  @Test func sameTextReSpokenAfterReplay() {
+  @Test func sameTextReSpokenAfterReplay() throws {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
-      Issue.record("textView not found")
-      return
-    }
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
 
     // Insert text via normal finalize first so accumulatedFinalizedText is set
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
@@ -282,13 +261,10 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == textAfterFirstFinalize)
   }
 
-  @Test func volatileDisplayedWithoutDeadline() {
+  @Test func volatileDisplayedWithoutDeadline() throws {
     let ctx = makeController()
     ctx.controller.showPanel()
-    guard let textView = findVoiceInputTextView(in: ctx.controller) else {
-      Issue.record("textView not found")
-      return
-    }
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
 
     // No simulateLocalFinalize, no deadline — initial state
     ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: "あ")

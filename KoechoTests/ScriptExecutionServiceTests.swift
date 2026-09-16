@@ -240,11 +240,8 @@ import Testing
     let (service, _, _, _) = makeService(inputText: "hello")
     let script = Script(name: "Test", scriptPath: "exit 1")
 
-    do {
-      _ = try await service.runAutoScript(script, on: "hello")
-      Issue.record("Expected error to be thrown")
-    } catch {
-      // Expected
+    await #expect(throws: (any Error).self) {
+      try await service.runAutoScript(script, on: "hello")
     }
   }
 
