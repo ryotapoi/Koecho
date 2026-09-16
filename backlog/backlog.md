@@ -13,12 +13,13 @@
 
 ### v1.8.0 Xcode27・新OS対応
 
-- [ ] Xcode 27 SDK でのビルド互換を確認する
-  - SDK 27 で `@State` が property wrapper からマクロに移行。問題になる 3 パターン（init 内で `@State` より後の stored property に代入・property wrapper の合成・extension での memberwise init 委譲）は現状のコードに該当なしと確認済みだが、SDK 更新時にビルドして確認する
-  - `@ContentBuilder` への result builder 統一で overlay/background の ShapeStyle オーバーロードが曖昧になるケースあり。エラーが出たら swiftui-whats-new-27 skill の references を参照して直す（自力で推測しない）
+- [x] Xcode 27 SDK でのビルド互換を確認する
+  - Xcode 27.0（27A266a）/ macOS SDK 27 / Swift 6.4 で Debug ビルド（16.5秒）と Release ビルド（25.7秒）が成功。Swift Testing は両製品で成功し、XcodeBuildMCP の `KoechoTests` は 232 passed / 0 failed / 0 skipped（19.835秒）
+  - SDK 27 で影響しうる `@State` の 3 パターンは現状のコードに該当せず、`@ContentBuilder` による ShapeStyle オーバーロードの曖昧性も発生なし
 
-- [ ] Xcode 推奨設定を確認し、必要な変更を適用する
-  - 差分と影響を確認して採否を決め、ビルド・テスト・配布に必要な設定の整合を確認する
+- [x] Xcode 推奨設定を確認し、必要な変更を適用する
+  - 非ローカライズ文字列の静的解析、dead code stripping、String Catalog のシンボル生成を採用
+  - 設定適用前後で、ユーザーがアプリ起動と UnitTests の成功を確認
 
 - [ ] Swift の更新内容を確認し、有益な言語機能・設定を採用する
   - 現行の Swift 6 言語モードを基準に、コンパイラ更新と言語モード変更を区別する
