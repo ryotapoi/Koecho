@@ -15,7 +15,7 @@ Koecho (App target)
 Koecho → KoechoPlatform → KoechoCore
 ```
 
-- **KoechoCore**: Foundation のみ。macOS 固有 API (Carbon, CoreAudio, AppKit 等) を import しない
+- **KoechoCore**: Foundation に加え、Observation による状態追跡と os によるログを使用できる。Carbon、CoreAudio、AppKit、AVFoundation などの macOS I/O API を import しない
 - **KoechoPlatform**: KoechoCore に依存。macOS 固有 API を使用する
 - **Koecho (App)**: KoechoPlatform と KoechoCore に依存。SwiftUI View、AppKit カスタムビュー、アプリエントリポイントを含む
 
