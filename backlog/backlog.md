@@ -32,6 +32,10 @@
   - macOS 14+ と macOS 26 の対応を維持し、互換コードは除去しない。下限の引き上げは将来のユーザー判断として分離する
   - 開発基準は Xcode 27.0 / macOS SDK 27 / Swift compiler 6.4。言語モード 6.0 と Package tools 6.0 は維持し、不要な compiler gate の除去やバージョン更新はしない
 
+- [x] `Script` の custom / builtin 状態を単一の `Content` enum に統合する
+  - 相関する5フィールドの整合性管理を型に集約し、公開 API と既存 JSON 形式を維持。値の編集・保存形式・不正な内蔵設定を検証するテストを追加
+  - Package テスト386件・KoechoTests 232件・Debug build が成功。Grok TUI と Sol Subagent の独立レビューで、本体コードとしての簡約を確認し、要修正指摘なし
+
 ### いつかやりたい改善
 
 - [ ] 選択した入力デバイスが解決できなかった時にパネル上でわかるようにする（必須ではない）

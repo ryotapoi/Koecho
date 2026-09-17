@@ -48,40 +48,72 @@ public struct BuiltinScript: Codable, Equatable, Sendable {
 }
 
 public struct Script: Codable, Identifiable, Equatable, Sendable {
-  public var id: UUID
-  public private(set) var kind: ScriptKind
-  public private(set) var builtin: BuiltinScript?
+  private enum Content: Equatable, Sendable {
+    case custom(name: String, scriptPath: String, requiresPrompt: Bool)
+    case builtin(BuiltinScript)
+  }
 
-  private var customName: String?
-  private var customScriptPath: String?
-  private var customRequiresPrompt: Bool?
+  public var id: UUID
+  private var content: Content
+
+  public var kind: ScriptKind {
+    switch content {
+    case .custom:
+      .custom
+    case .builtin:
+      .builtin
+    }
+  }
+
+  public var builtin: BuiltinScript? {
+    guard case let .builtin(builtin) = content else { return nil }
+    return builtin
+  }
 
   public var name: String {
-    get { builtin?.feature.displayName ?? customName! }
+    get {
+      switch content {
+      case let .custom(name, _, _):
+        name
+      case let .builtin(builtin):
+        builtin.feature.displayName
+      }
+    }
     set {
-      guard kind == .custom else { return }
-      customName = newValue
+      guard case let .custom(_, scriptPath, requiresPrompt) = content else { return }
+      content = .custom(name: newValue, scriptPath: scriptPath, requiresPrompt: requiresPrompt)
     }
   }
 
   public var displayName: String {
-    builtin?.displayName ?? customName!
+    switch content {
+    case let .custom(name, _, _):
+      name
+    case let .builtin(builtin):
+      builtin.displayName
+    }
   }
 
   public var scriptPath: String {
-    get { customScriptPath ?? "" }
+    get {
+      guard case let .custom(_, scriptPath, _) = content else { return "" }
+      return scriptPath
+    }
     set {
-      guard kind == .custom else { return }
-      customScriptPath = newValue
+      guard case let .custom(name, _, requiresPrompt) = content else { return }
+      content = .custom(name: name, scriptPath: newValue, requiresPrompt: requiresPrompt)
     }
   }
 
   public var shortcutKey: ShortcutKey?
   public var requiresPrompt: Bool {
-    get { customRequiresPrompt ?? false }
+    get {
+      guard case let .custom(_, _, requiresPrompt) = content else { return false }
+      return requiresPrompt
+    }
     set {
-      guard kind == .custom else { return }
-      customRequiresPrompt = newValue
+      guard case let .custom(name, scriptPath, _) = content else { return }
+      content = .custom(name: name, scriptPath: scriptPath, requiresPrompt: newValue)
     }
   }
 
@@ -93,22 +125,14 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
     requiresPrompt: Bool = false
   ) {
     self.id = id
-    kind = .custom
-    builtin = nil
-    customName = name
-    customScriptPath = scriptPath
+    content = .custom(name: name, scriptPath: scriptPath, requiresPrompt: requiresPrompt)
     self.shortcutKey = shortcutKey
-    customRequiresPrompt = requiresPrompt
   }
 
   public init(id: UUID, builtin: BuiltinScript, shortcutKey: ShortcutKey? = nil) {
     self.id = id
-    kind = .builtin
-    self.builtin = builtin
-    customName = nil
-    customScriptPath = nil
+    content = .builtin(builtin)
     self.shortcutKey = shortcutKey
-    customRequiresPrompt = nil
   }
 
   public static let defaultBuiltins: [Script] = [
@@ -140,15 +164,16 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
   public init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     id = try container.decode(UUID.self, forKey: .id)
-    kind = try container.decodeIfPresent(ScriptKind.self, forKey: .kind) ?? .custom
+    let kind = try container.decodeIfPresent(ScriptKind.self, forKey: .kind) ?? .custom
     shortcutKey = try container.decodeIfPresent(ShortcutKey.self, forKey: .shortcutKey)
 
     switch kind {
     case .custom:
-      builtin = nil
-      customName = try container.decode(String.self, forKey: .name)
-      customScriptPath = try container.decode(String.self, forKey: .scriptPath)
-      customRequiresPrompt = try container.decode(Bool.self, forKey: .requiresPrompt)
+      content = .custom(
+        name: try container.decode(String.self, forKey: .name),
+        scriptPath: try container.decode(String.self, forKey: .scriptPath),
+        requiresPrompt: try container.decode(Bool.self, forKey: .requiresPrompt)
+      )
     case .builtin:
       let feature = try container.decode(BuiltinScriptFeature.self, forKey: .builtinFeature)
       let indentationWidth = try container.decodeIfPresent(
@@ -162,10 +187,7 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
           debugDescription: "Builtin feature and indentation width are incompatible"
         )
       }
-      builtin = builtinScript
-      customName = nil
-      customScriptPath = nil
-      customRequiresPrompt = nil
+      content = .builtin(builtinScript)
     }
   }
 
@@ -175,13 +197,12 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
     try container.encode(kind, forKey: .kind)
     try container.encodeIfPresent(shortcutKey, forKey: .shortcutKey)
 
-    switch kind {
-    case .custom:
-      try container.encode(customName!, forKey: .name)
-      try container.encode(customScriptPath!, forKey: .scriptPath)
-      try container.encode(customRequiresPrompt!, forKey: .requiresPrompt)
-    case .builtin:
-      let builtin = builtin!
+    switch content {
+    case let .custom(name, scriptPath, requiresPrompt):
+      try container.encode(name, forKey: .name)
+      try container.encode(scriptPath, forKey: .scriptPath)
+      try container.encode(requiresPrompt, forKey: .requiresPrompt)
+    case let .builtin(builtin):
       try container.encode(builtin.feature, forKey: .builtinFeature)
       try container.encodeIfPresent(builtin.indentationWidth, forKey: .indentationWidth)
     }
