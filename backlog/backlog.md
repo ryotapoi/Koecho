@@ -57,12 +57,6 @@
   - ユーザー確認: この問題には対処する。
   - 作業・完了条件: 「空」と「読取失敗」を区別し、自動 purge / save が元ファイルを変更しないことを回帰テストで確認する。通知と手動 reset は決めない。
 
-- [x] N4 scope の音声入力操作とマイク適用を更新する
-  - Settings でのエンジン選択、表示中パネルの Voice ボタンによる切替、専用メニューバー Voice メニューを設けないことを scope に記載した。選択マイクを SpeechAnalyzer の認識とレベルメーターに適用し、Dictation による認識はシステムデフォルト入力を使うことも記載した。
-
-- [x] N5 Core の許可依存を正確にする
-  - KoechoCore は Foundation に加えて Observation による状態追跡と os によるログを許可し、Carbon・CoreAudio・AppKit・AVFoundation など macOS I/O 依存を禁止する境界を architecture に記載した。
-
 #### backlog
 
 以下の候補は、実装時に[Change Scope](/Users/ryota/dotfiles/agents/.config/agents/change-scope.md)に従って、望む観測可能な結果と「変更しない」案を含む minimum coherent change を決める。[テスト・検証方針](/Users/ryota/dotfiles/agents/.config/agents/test-verification-policy.md)と既存の証拠から必要な確認を選び、プロジェクト必須 check を実施する。完了は、採用した今回の範囲の作業を検証すること、または不要とする理由と証拠を記録することとする。対応を defer する場合は、未解決の問題と追跡先を記録する。
