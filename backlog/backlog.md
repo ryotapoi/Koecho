@@ -11,11 +11,17 @@
 
 ## タスク
 
-### 保守監査（2026-09-17）
+### v2.0.0 macOS 27 専用化・信頼性改善
 
-- バージョン目安: bug fix・内部 refactor・テストは patch scope（v1.8.0 後なら v1.8.1 相当）。fallback 通知のような新しいユーザー向け機能は、決定後に v1.9.0 相当となり得る。この監査グループの version は未確定。
+- バージョン: v1.8.0 を macOS 14 を対応下限とする最終リリースとし、本グループは macOS 27 以降向けの v2.0.0 とする。
 
-#### now
+#### macOS 27 専用化
+
+- [ ] M1 macOS 27-only へ移行する
+  - 目的・根拠: 対応 OS を macOS 27 以降へ固定し、現在の製品挙動を保ったまま旧 OS 向けの可用性分岐・フォールバックを必要な範囲で整理する。Dictation は選択可能な engine として維持する。
+  - 作業・完了条件: deployment target と Package platform を macOS 27 に更新し、現在の正本・ユーザー向け文書を更新する。ADR 0023 の対応 OS 基準に関わる部分を supersede する新しい decision を記録し、既存 ADR 本文は書き換えない。旧 OS にのみ必要な availability / fallback 分岐だけを削除し、旧 OS 固有ではない製品挙動は保持する。`docs/rules/verification.md` の必須 gate と macOS 27 runtime 確認を実施する。旧 OS 向け test / CI は、これらの作業に必要な場合を除き追加しない。
+
+#### 信頼性改善
 
 - [ ] N1 音声変換失敗時の停止・復旧方法を決める
   - 目的・根拠: format / device 変更時に音声だけ落ちて listening 表示が残るのを防ぐ。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) の変換失敗分岐が return のみ。
@@ -32,7 +38,7 @@
   - ユーザー確認: この問題には対処する。
   - 作業・完了条件: 「空」と「読取失敗」を区別し、自動 purge / save が元ファイルを変更しないことを回帰テストで確認する。通知と手動 reset は決めない。
 
-#### backlog
+#### 追加検証・内部整理
 
 以下の候補は、実装時に[Change Scope](/Users/ryota/dotfiles/agents/.config/agents/change-scope.md)に従って、望む観測可能な結果と「変更しない」案を含む minimum coherent change を決める。[テスト・検証方針](/Users/ryota/dotfiles/agents/.config/agents/test-verification-policy.md)と既存の証拠から必要な確認を選び、プロジェクト必須 check を実施する。完了は、採用した今回の範囲の作業を検証すること、または不要とする理由と証拠を記録することとする。対応を defer する場合は、未解決の問題と追跡先を記録する。
 
