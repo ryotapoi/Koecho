@@ -4,6 +4,18 @@ Koecho の変更履歴です。GitHub Releases と version tag を照合して�
 
 リリース成果物は [GitHub Releases](https://github.com/ryotapoi/Koecho/releases) から入手できます。
 
+## 1.8.0 — 2026-09-20
+
+### 互換性
+
+- macOS 14.0 以上の対応を維持したまま、Xcode 27・macOS SDK 27・Swift compiler 6.4 でのビルド互換性を確認。
+
+### 内部改善
+
+- 既存の保存済みスクリプトと JSON 形式を維持しながら、custom / builtin スクリプトの状態を単一のモデルへ統合。
+- Xcode 推奨の非ローカライズ文字列解析、dead code stripping、String Catalog シンボル生成を有効化。
+- 内蔵テキスト操作、置換処理、入力パネルのサービス境界と、それらの回帰テストを整理。
+
 ## 1.7.0 — 2026-07-16
 
 ### 新機能

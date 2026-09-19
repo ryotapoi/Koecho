@@ -11,34 +11,9 @@
 
 ## タスク
 
-### v1.8.0 Xcode27・新OS対応
-
-- [x] Xcode 27 SDK でのビルド互換を確認する
-  - Xcode 27.0（27A266a）/ macOS SDK 27 / Swift 6.4 で Debug ビルド（16.5秒）と Release ビルド（25.7秒）が成功。`swift test --package-path Packages/KoechoKit` が成功し、XcodeBuildMCP の `KoechoTests` は 232 passed / 0 failed / 0 skipped（19.835秒）
-  - SDK 27 で影響しうる `@State` の 3 パターンは現状のコードに該当せず、`@ContentBuilder` による ShapeStyle オーバーロードの曖昧性も発生なし
-
-- [x] Xcode 推奨設定を確認し、必要な変更を適用する
-  - 非ローカライズ文字列の静的解析、dead code stripping、String Catalog のシンボル生成を採用
-  - 設定適用前後で、ユーザーがアプリ起動と UnitTests の成功を確認
-
-- [x] Swift の更新内容を確認し、有益な言語機能・設定を採用する
-  - Swift 6.4 compiler と言語モード 6.0 を区別し、既存の MainActor / approachable concurrency 設定と Package の tools 6.0 を維持。採否理由は [ADR 0023](../docs/decisions/0023-xcode-27-adoption.md)
-
-- [x] macOS 27 の新機能・API の採用候補を調査し、有益なものを実装する
-  - 既存の `reorderable` は compiler / macOS 27 gate と旧OS fallback を備え、他の SwiftUI・Speech・AppKit API に必要な移行はなし。音声 API の更新は macOS 26 / 27 の二経路と realtime 検証を要するため採用しない。詳細は [ADR 0023](../docs/decisions/0023-xcode-27-adoption.md)
-  - 検証ホストは macOS 26.6.2。SDK 27 のビルド成功は macOS 27 上の動作を保証せず、既存の並べ替えを含む macOS 27 runtime は未確認
-
-- [x] 対応環境と移行範囲を決める
-  - macOS 14+ と macOS 26 の対応を維持し、互換コードは除去しない。下限の引き上げは将来のユーザー判断として分離する
-  - 開発基準は Xcode 27.0 / macOS SDK 27 / Swift compiler 6.4。言語モード 6.0 と Package tools 6.0 は維持し、不要な compiler gate の除去やバージョン更新はしない
-
-- [x] `Script` の custom / builtin 状態を単一の `Content` enum に統合する
-  - 相関する5フィールドの整合性管理を型に集約し、公開 API と既存 JSON 形式を維持。値の編集・保存形式・不正な内蔵設定を検証するテストを追加
-  - Package テスト386件・KoechoTests 232件・Debug build が成功。Grok TUI と Sol Subagent の独立レビューで、本体コードとしての簡約を確認し、要修正指摘なし
-
 ### 保守監査（2026-09-17）
 
-- バージョン目安: bug fix・内部 refactor・テストは patch scope（v1.8.0 後なら v1.8.1 相当）。fallback 通知のような新しいユーザー向け機能は、決定後に v1.9.0 相当となり得る。現在の設定・tag は v1.7.0 であり、この監査グループの version は未確定。
+- バージョン目安: bug fix・内部 refactor・テストは patch scope（v1.8.0 後なら v1.8.1 相当）。fallback 通知のような新しいユーザー向け機能は、決定後に v1.9.0 相当となり得る。この監査グループの version は未確定。
 
 #### now
 

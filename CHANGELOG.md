@@ -4,6 +4,18 @@ All notable changes to Koecho are documented here. Release notes are reconstruct
 
 Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi/Koecho/releases).
 
+## 1.8.0 — 2026-09-20
+
+### Compatibility
+
+- Verified build compatibility with Xcode 27, macOS SDK 27, and Swift compiler 6.4 while retaining support for macOS 14.0 and later.
+
+### Internal
+
+- Consolidated custom and built-in script state into a single model while preserving existing saved scripts and the JSON format.
+- Enabled Xcode recommended nonlocalized-string analysis, dead-code stripping, and String Catalog symbol generation.
+- Simplified built-in text operations, replacement handling, input-panel service boundaries, and their regression tests.
+
 ## 1.7.0 — 2026-07-16
 
 ### What's New
