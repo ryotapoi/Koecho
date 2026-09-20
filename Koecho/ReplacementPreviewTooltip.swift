@@ -16,7 +16,7 @@ final class ReplacementPreviewTooltip {
       height: ceil(textSize.height + padding.height)
     )
 
-    // Keep the tooltip above the preview so it does not overlap the Dictation microphone icon.
+    // Keep the tooltip above the preview so it does not overlap the microphone control.
     let abovePoint = NSPoint(x: localRect.minX, y: localRect.minY - 4)
     let belowPoint = NSPoint(x: localRect.minX, y: localRect.maxY + 4)
     let aboveAnchor = screenPoint(abovePoint, in: hostView, window: parentWindow)

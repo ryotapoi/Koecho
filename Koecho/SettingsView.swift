@@ -88,7 +88,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
 #Preview("Default") {
   let defaults = UserDefaults(suiteName: "preview-settings-default")!
   let settings = KoechoCore.Settings(defaults: defaults)
-  settings.voiceInput.voiceInputMode = .dictation
+  settings.voiceInput.isVoiceInputEnabled = true
   let dir = FileManager.default.temporaryDirectory
     .appendingPathComponent("preview-settings")
   try? FileManager.default.removeItem(at: dir)

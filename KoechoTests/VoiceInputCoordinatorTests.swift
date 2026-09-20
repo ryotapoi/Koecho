@@ -146,7 +146,7 @@ import Testing
   }
 
   @Test func didFinalizeCallsOnAutoReplacement() {
-    let (coordinator, appState, mockTV, _) = makeCoordinator(inputText: "")
+    let (coordinator, appState, _, _) = makeCoordinator(inputText: "")
     appState.settings.replacement.isAutoReplacementEnabled = true
     var autoReplacementCalled = false
     coordinator.onAutoReplacement = { autoReplacementCalled = true }
@@ -157,7 +157,7 @@ import Testing
   }
 
   @Test func didFinalizeSkipsAutoReplacementWhenDisabled() {
-    let (coordinator, appState, mockTV, _) = makeCoordinator(inputText: "")
+    let (coordinator, appState, _, _) = makeCoordinator(inputText: "")
     appState.settings.replacement.isAutoReplacementEnabled = false
     var autoReplacementCalled = false
     coordinator.onAutoReplacement = { autoReplacementCalled = true }
@@ -323,7 +323,7 @@ import Testing
     mockTV.volatileRange = NSRange(location: 5, length: 6)
     mockTV.string = "hello world"
     mockTV.finalizedString = "hello"
-    // Set a non-DictationEngine by using the mock engine (which is not DictationEngine)
+    // The mock engine exercises the generic volatile-text lifecycle.
 
     coordinator.handleCursorMoved(3)
 
@@ -361,7 +361,7 @@ import Testing
     mockTV.volatileRange = NSRange(location: 5, length: 6)
 
     coordinator.handleCursorMoved(3)
-    // MockEngine is not SpeechAnalyzerEngine, so restartTranscriberIfNeeded() is a no-op.
+    // The non-restartable mock leaves restartTranscriberIfNeeded() as a no-op.
     // This tests the restartInProgress suppression path (all volatile suppressed).
     coordinator.voiceInput(didUpdateVolatile: "replay")
 

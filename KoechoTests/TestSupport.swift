@@ -20,11 +20,9 @@ func makeTestVoiceCoordinator(
   appState: AppState,
   makeEngine: @escaping () -> any VoiceInputEngine = { MockVoiceInputEngine() }
 ) -> VoiceInputCoordinator {
-  let panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200))
   return VoiceInputCoordinator(
     appState: appState,
-    makeEngine: makeEngine,
-    panel: panel
+    makeEngine: makeEngine
   )
 }
 

@@ -2,7 +2,7 @@ import KoechoCore
 import SwiftUI
 
 struct InputPanelToolbar: View {
-  let voiceInputMode: VoiceInputMode
+  let isVoiceInputEnabled: Bool
   let replacementRules: [ReplacementRule]
   @Bindable var scriptSettings: ScriptSettings
   let isRunningScript: Bool
@@ -18,7 +18,7 @@ struct InputPanelToolbar: View {
   }
 
   private var isVoiceEnabled: Bool {
-    voiceInputMode.isEnabled
+    isVoiceInputEnabled
   }
 
   var body: some View {
@@ -39,7 +39,7 @@ struct InputPanelToolbar: View {
       .buttonStyle(.koechoToolbar(isEmphasized: isVoiceEnabled))
       .disabled(isRunningScript)
       .help(
-        !voiceInputMode.isEnabled ? String(localized: "Voice input is off") : String(localized: "Voice")
+        !isVoiceInputEnabled ? String(localized: "Voice input is off") : String(localized: "Voice")
       )
 
       if !replacementRules.isEmpty {
@@ -149,7 +149,7 @@ extension HotkeyConfig {
     Script(name: "AI", scriptPath: "ai.sh"),
   ]
   return InputPanelToolbar(
-    voiceInputMode: .dictation,
+    isVoiceInputEnabled: true,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     scriptSettings: scriptSettings,
     isRunningScript: false,
@@ -167,7 +167,7 @@ extension HotkeyConfig {
   let defaults = UserDefaults(suiteName: "preview-toolbar-running")!
   let scriptSettings = ScriptSettings(defaults: defaults)
   return InputPanelToolbar(
-    voiceInputMode: .off,
+    isVoiceInputEnabled: false,
     replacementRules: [],
     scriptSettings: scriptSettings,
     isRunningScript: true,
@@ -189,7 +189,7 @@ extension HotkeyConfig {
     Script(name: "AI", scriptPath: "ai.sh"),
   ]
   return InputPanelToolbar(
-    voiceInputMode: .dictation,
+    isVoiceInputEnabled: true,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     scriptSettings: scriptSettings,
     isRunningScript: false,
@@ -212,7 +212,7 @@ extension HotkeyConfig {
     Script(name: "AI", scriptPath: "ai.sh"),
   ]
   return InputPanelToolbar(
-    voiceInputMode: .dictation,
+    isVoiceInputEnabled: true,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     scriptSettings: scriptSettings,
     isRunningScript: false,

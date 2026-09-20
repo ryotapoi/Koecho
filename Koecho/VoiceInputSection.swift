@@ -9,22 +9,15 @@ struct VoiceInputSection: View {
 
   var body: some View {
     Section("Voice Input") {
-      Picker("Engine", selection: $voiceInput.voiceInputMode) {
-        Text("Off").tag(VoiceInputMode.off)
-        Text("System Dictation").tag(VoiceInputMode.dictation)
-        Text("SpeechAnalyzer (On-device)").tag(VoiceInputMode.speechAnalyzer)
-      }
-      .pickerStyle(.segmented)
-      if voiceInput.voiceInputMode.usesSpeechAnalyzer {
-        SpeechAnalyzerLanguageSection(
-          selection: $voiceInput.speechAnalyzerLocale,
-          onSpeechLocalesChanged: onSpeechLocalesChanged
-        )
-        AudioInputDeviceSection(
-          deviceUID: $voiceInput.audioInputDeviceUID,
-          deviceName: $voiceInput.audioInputDeviceName
-        )
-      }
+      Toggle("Enable voice input", isOn: $voiceInput.isVoiceInputEnabled)
+      SpeechAnalyzerLanguageSection(
+        selection: $voiceInput.speechAnalyzerLocale,
+        onSpeechLocalesChanged: onSpeechLocalesChanged
+      )
+      AudioInputDeviceSection(
+        deviceUID: $voiceInput.audioInputDeviceUID,
+        deviceName: $voiceInput.audioInputDeviceName
+      )
     }
   }
 }
@@ -239,10 +232,10 @@ private struct AudioInputDeviceSection: View {
 
 // MARK: - Previews
 
-#Preview("Dictation") {
-  let defaults = UserDefaults(suiteName: "preview-voiceInput-dictation")!
+#Preview("Enabled") {
+  let defaults = UserDefaults(suiteName: "preview-voiceInput-enabled")!
   let settings = VoiceInputSettings(defaults: defaults)
-  settings.voiceInputMode = .dictation
+  settings.isVoiceInputEnabled = true
   return Form {
     VoiceInputSection(voiceInput: settings, onSpeechLocalesChanged: {})
   }
@@ -253,7 +246,7 @@ private struct AudioInputDeviceSection: View {
 #Preview("Off") {
   let defaults = UserDefaults(suiteName: "preview-voiceInput-off")!
   let settings = VoiceInputSettings(defaults: defaults)
-  settings.voiceInputMode = .off
+  settings.isVoiceInputEnabled = false
   return Form {
     VoiceInputSection(voiceInput: settings, onSpeechLocalesChanged: {})
   }

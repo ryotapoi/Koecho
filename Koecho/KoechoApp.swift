@@ -124,7 +124,7 @@ struct KoechoApp: App {
   }
 
   private func refreshDownloadedLocales() async {
-    guard appState.settings.voiceInput.voiceInputMode.usesSpeechAnalyzer else {
+    guard appState.settings.voiceInput.isVoiceInputEnabled else {
       downloadedLocales = []
       return
     }

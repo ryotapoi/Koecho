@@ -38,7 +38,7 @@ struct InputPanelContent: View {
       .padding(.bottom, 8)
 
       InputPanelToolbar(
-        voiceInputMode: appState.settings.voiceInput.voiceInputMode,
+        isVoiceInputEnabled: appState.settings.voiceInput.isVoiceInputEnabled,
         replacementRules: appState.settings.replacement.replacementRules,
         scriptSettings: appState.settings.script,
         isRunningScript: appState.isRunningScript,
@@ -173,7 +173,7 @@ struct InputPanelContent: View {
 #Preview("With Text") {
   let defaults = UserDefaults(suiteName: "preview-panel-withText")!
   let settings = KoechoCore.Settings(defaults: defaults)
-  settings.voiceInput.voiceInputMode = .dictation
+  settings.voiceInput.isVoiceInputEnabled = true
   let appState = AppState(settings: settings)
   appState.setInputText("Hello, this is a voice transcription.")
   return InputPanelContent(
@@ -189,7 +189,7 @@ struct InputPanelContent: View {
 #Preview("Empty") {
   let defaults = UserDefaults(suiteName: "preview-panel-empty")!
   let settings = KoechoCore.Settings(defaults: defaults)
-  settings.voiceInput.voiceInputMode = .dictation
+  settings.voiceInput.isVoiceInputEnabled = true
   let appState = AppState(settings: settings)
   return InputPanelContent(
     appState: appState,

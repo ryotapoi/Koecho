@@ -29,7 +29,3 @@
   - 検出: AXIsProcessTrusted() のランタイムチェック（実装済み）
 - Input Monitoring 権限が必要（NSEvent.addGlobalMonitorForEvents）。macOS バージョンによりアクセシビリティ権限と別途必要になるケースがある
   - 検出: ランタイムでイベント監視の成否を確認
-- macOS Dictation がユーザーにより有効化されている必要がある（無効の場合はキーボード入力のみ）
-  - 検出: 自動検出困難。Dictation 開始失敗時にユーザー通知
-- `startDictation:` セレクタは公開 API ではない。将来の macOS で動作しなくなる可能性があり、Mac App Store 配布の障害にもなる（mission.md の非目標により配布はしない）
-  - 検出: `Selector(("startDictation:"))` の文字列リテラル経由呼び出し

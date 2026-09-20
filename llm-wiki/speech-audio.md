@@ -13,7 +13,7 @@ sources:
   - docs/decisions/0014-separate-output-volume-ducker-class.md
   - docs/decisions/0015-persist-device-name-in-settings.md
   - docs/decisions/0016-accumulated-text-overlap-removal-for-speechanalyzer.md
-  - docs/decisions/0019-voice-input-off-as-engine-mode.md
+  - docs/decisions/0025-speechanalyzer-only-voice-input.md
 ---
 
 # Speech / Audio

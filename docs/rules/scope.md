@@ -31,7 +31,7 @@
 ### 注意: フォアグラウンドアプリの記憶
 - パネル表示前に NSWorkspace.shared.frontmostApplication を記録
 - ペースト前にそのアプリを activate(options:) で再アクティベート
-- TextEditor で Dictation を受けるにはウィンドウがキーウィンドウである必要がある
+- 音声入力とキーボード入力を同じパネルで扱うため、ウィンドウはキーウィンドウになる必要がある
 
 ### 操作
 - ホットキー再押下: テキスト確定・貼り付け（auto-run スクリプト選択時はスクリプトが自動実行される）
@@ -131,7 +131,7 @@
 ### メニュー項目
 - パネル開閉
 - Auto-run スクリプト選択
-- 認識言語切り替え（SpeechAnalyzer モード / ダウンロード済み言語 2+ の場合のみ）
+- 認識言語切り替え（音声入力が有効かつダウンロード済み言語 2+ の場合のみ）
 - 最後の履歴をコピー
 - 設定を開く
 - 終了
@@ -176,13 +176,7 @@
 ## 音声入力エンジン
 
 ### VoiceInputEngine プロトコル
-音声入力の抽象化レイヤー。DictationEngine と SpeechAnalyzerEngine の2つの実装がある。
-
-### DictationEngine
-- macOS 標準の Dictation（`startDictation:` セレクタ）を使用
-- NSTextView の marked text / insertText 経路でテキストを受け取る
-- 0.3 秒遅延付き開始（パネル表示直後の不安定さ対策）
-- `restart()` メソッドでフォーカス遷移後の再送信が可能（DictationEngine 固有）
+音声入力の抽象化レイヤー。production の実装は SpeechAnalyzerEngine のみである。
 
 ### SpeechAnalyzerEngine
 - Speech フレームワークの SpeechAnalyzer / DictationTranscriber を使用
@@ -194,19 +188,18 @@
 - 初回使用時にモデルの自動ダウンロードが発生する場合がある
 
 ### 設定
-- Settings の Voice Input セクションで Off / Dictation / SpeechAnalyzer を選択
-- `voiceInputMode` は保存した選択をそのまま表す
+- Settings の Voice Input セクションで音声入力の有効・無効を選択
+- `voiceInputMode` キーには canonical な `on` / `off` を保存する。旧 `dictation` / `speechAnalyzer` / `on` は有効、`off` は無効、欠損・未知値は有効として読み込み時に再保存する
 - SpeechAnalyzer の locale は Settings で指定（デフォルト: macOS の優先言語設定から自動判定、フォールバック en-US）
 - パネル表示時にエンジンが生成される（設定変更は次回パネル表示時に反映）
 - メニューバーからの認識言語切り替え時は、パネル表示中でも即時反映（switchEngine で再生成）
-- 音声入力オフモード: `voiceInputMode = .off` でエンジン起動・ボリュームダッキングをスキップ。キーボード入力のみで使用可能。
-- エンジン（Off を含む）は Settings で選択する。入力パネルの表示中は Voice ボタンで音声入力を切り替えられる。専用のメニューバー Voice メニューは設けない
+- 音声入力が無効なときは認識開始・ボリュームダッキングをスキップし、キーボード入力だけで使用できる。入力パネルの Voice ボタンでも有効・無効を切り替えられる。専用のメニューバー Voice メニューは設けない
 
 ### マイク入力デバイス
 - 使用するマイクは Settings で選択する。デバイス UID と表示名の両方を永続化する（切断中のデバイスも名前を表示できるようにするため）
 - 表示名の更新は、ユーザーが接続済みデバイスを選んだときのみ行う。「System Default」選択時は UID・名前ともクリアする
 - 選択中のデバイスが切断された場合、保存済みの名前は書き換えない
-- 選択したマイクはレベルメーターと SpeechAnalyzer による音声認識に適用する。Dictation による音声認識はシステムデフォルト入力を使用する
+- 選択したマイクはレベルメーターと音声認識に適用する
 
 ---
 

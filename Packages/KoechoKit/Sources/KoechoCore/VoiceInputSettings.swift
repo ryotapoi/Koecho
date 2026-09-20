@@ -1,43 +1,15 @@
 import Foundation
 import Observation
 
-public enum VoiceInputMode: String, Codable, CaseIterable, Sendable {
-  case off
-  case dictation
-  case speechAnalyzer
-
-  public static func defaultEnabled() -> Self {
-    .speechAnalyzer
-  }
-
-  public var isEnabled: Bool {
-    switch self {
-    case .off:
-      false
-    case .dictation, .speechAnalyzer:
-      true
-    }
-  }
-
-  public var usesSpeechAnalyzer: Bool {
-    switch self {
-    case .off, .dictation:
-      false
-    case .speechAnalyzer:
-      true
-    }
-  }
-}
-
 @MainActor @Observable
 public final class VoiceInputSettings {
   private let defaults: UserDefaults
 
-  private var _voiceInputMode: VoiceInputMode
-  public var voiceInputMode: VoiceInputMode {
-    get { _voiceInputMode }
+  private var _isVoiceInputEnabled: Bool
+  public var isVoiceInputEnabled: Bool {
+    get { _isVoiceInputEnabled }
     set {
-      _voiceInputMode = newValue
+      _isVoiceInputEnabled = newValue
       save()
     }
   }
@@ -72,13 +44,9 @@ public final class VoiceInputSettings {
   public init(defaults: UserDefaults) {
     self.defaults = defaults
 
-    if let rawMode = defaults.string(forKey: "voiceInputMode"),
-      let mode = VoiceInputMode(rawValue: rawMode)
-    {
-      _voiceInputMode = mode
-    } else {
-      _voiceInputMode = .defaultEnabled()
-    }
+    _isVoiceInputEnabled = Self.voiceInputEnabled(
+      from: defaults.string(forKey: "voiceInputMode")
+    )
 
     _speechAnalyzerLocale =
       defaults.string(forKey: "speechAnalyzerLocale")
@@ -98,8 +66,16 @@ public final class VoiceInputSettings {
     return preferred.replacing("_", with: "-")
   }
 
+  nonisolated private static func voiceInputEnabled(from rawValue: String?) -> Bool {
+    switch rawValue {
+    case "off": false
+    case "dictation", "speechAnalyzer", "on", nil: true
+    default: true
+    }
+  }
+
   private func save() {
-    defaults.set(_voiceInputMode.rawValue, forKey: "voiceInputMode")
+    defaults.set(_isVoiceInputEnabled ? "on" : "off", forKey: "voiceInputMode")
     defaults.set(_speechAnalyzerLocale, forKey: "speechAnalyzerLocale")
     if let uid = _audioInputDeviceUID {
       defaults.set(uid, forKey: "audioInputDeviceUID")

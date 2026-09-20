@@ -18,7 +18,7 @@ struct GeneralSettingsView: View {
         onSpeechLocalesChanged: onSpeechLocalesChanged
       )
       VolumeDuckingSection(volumeDucking: volumeDucking)
-        .disabled(!voiceInput.voiceInputMode.isEnabled)
+        .disabled(!voiceInput.isVoiceInputEnabled)
       Section("Clipboard") {
         TextField("Clipboard restore delay (sec)", value: $paste.pasteDelay, format: .number)
       }
@@ -73,7 +73,7 @@ struct GeneralSettingsView: View {
 #Preview("Default") {
   let defaults = UserDefaults(suiteName: "preview-general-default")!
   let voiceInput = VoiceInputSettings(defaults: defaults)
-  voiceInput.voiceInputMode = .dictation
+  voiceInput.isVoiceInputEnabled = true
   return GeneralSettingsView(
     voiceInput: voiceInput,
     script: ScriptSettings(defaults: defaults),

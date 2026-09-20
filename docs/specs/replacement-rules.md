@@ -38,7 +38,7 @@ Confirm は `Auto-replace` の設定にかかわらず、音声入力を finaliz
 
 ## 入力中の安全分岐と preview
 
-- macOS Dictation の marked text が存在する間は、テキストを直接変更しない。代わりに一致箇所へ下線を描き、ポインタを重ねると置換後の文字列を tooltip で表示する。marked text が確定した後は、通常どおり直接置換する。
+- IME の marked text が存在する間は、テキストを直接変更しない。代わりに一致箇所へ下線を描き、ポインタを重ねると置換後の文字列を tooltip で表示する。marked text が確定した後は、通常どおり直接置換する。
 - SpeechAnalyzer の volatile（未確定）テキストが存在する間は、置換も preview も行わない。既存の preview があれば消去する。
 - preview は表示専用であり、入力テキストを変更しない。Confirm で volatile テキストを finalize した後は、前節の確定時適用により置換される。
 

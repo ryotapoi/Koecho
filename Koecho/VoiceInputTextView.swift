@@ -18,7 +18,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   private(set) var volatileRange: NSRange?
 
   /// Replacement preview data drawn as underlines in `draw(_:)`.
-  /// Subviews must not be added during Dictation — doing so corrupts
+  /// Subviews must not be added during IME composition — doing so corrupts
   /// the marked text state and causes duplicate text.
   private var previewMatches: [ReplacementMatch] = []
 

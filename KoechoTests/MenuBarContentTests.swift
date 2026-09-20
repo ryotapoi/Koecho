@@ -9,7 +9,7 @@ struct MenuBarContentTests {
   @Test
   func recognitionLanguageMenuVisibilityFollowsDownloadedLocaleCount() {
     let appState = makeTestAppState()
-    appState.settings.voiceInput.voiceInputMode = .speechAnalyzer
+    appState.settings.voiceInput.isVoiceInputEnabled = true
 
     #expect(
       !MenuBarContent.shouldShowRecognitionLanguageMenu(
@@ -26,9 +26,9 @@ struct MenuBarContentTests {
   }
 
   @Test
-  func recognitionLanguageMenuIsHiddenOutsideSpeechAnalyzerMode() {
+  func recognitionLanguageMenuIsHiddenWhenVoiceInputIsDisabled() {
     let appState = makeTestAppState()
-    appState.settings.voiceInput.voiceInputMode = .dictation
+    appState.settings.voiceInput.isVoiceInputEnabled = false
 
     #expect(
       !MenuBarContent.shouldShowRecognitionLanguageMenu(

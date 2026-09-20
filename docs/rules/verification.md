@@ -23,6 +23,6 @@
 - Xcode の build / test / 実行には XcodeBuildMCP を優先し、Bash で `xcodebuild` を直接実行しない。project 既定は `Koecho.xcodeproj`、scheme は `Koecho`、configuration は Debug。XcodeBuildMCP が使えず必須 gate を実行できない場合は、未実行として報告する。
 - `Koecho` scheme は `KoechoTests` と `KoechoUITests` の両方を含む。通常の app test は `-only-testing:KoechoTests` で UITests を除外し、UITest を追加・変更した場合だけ対象に含める。
 - `KoechoTests` は `TEST_HOST = Koecho.app` の hosted test。通常の app lifecycle を起動するため、system integration は `TEST_HOST` 判定で抑止し、テストでは factory / mock を使う。UserDefaults を扱うテストは専用の `suiteName` で隔離する。
-- `startDictation:` など OS action の実送信は unit test で行わず、注入した action や mock までを検証する。実動作は実環境の確認で補う。
+- 音声認識の OS / hardware 連携は unit test で実送信せず、注入した engine や mock までを検証する。実動作は実環境の確認で補う。
 - `RenderPreview` が使えない場合は `build_run_macos` とスクリーンショットで代替する。いずれも使えず対象 View の局所確認しかできない場合は、未確認の見た目を報告する。SPM module を使う Preview は事前 build が必要。
 - app test が hang / timeout した場合は、再実行前に残留した test process / test host app を確認する。中断した run に由来すると確認できる process だけを終了し、再実行結果で判断する。

@@ -86,7 +86,7 @@ struct MenuBarContent: View {
     appState: AppState,
     downloadedLocales: [LocaleItem]
   ) -> Bool {
-    return appState.settings.voiceInput.voiceInputMode.usesSpeechAnalyzer
+    return appState.settings.voiceInput.isVoiceInputEnabled
       && downloadedLocales.count >= 2
   }
 }
@@ -96,7 +96,7 @@ struct MenuBarContent: View {
 #Preview("Default") {
   let defaults = UserDefaults(suiteName: "preview-menuBar-default")!
   let settings = KoechoCore.Settings(defaults: defaults)
-  settings.voiceInput.voiceInputMode = .dictation
+  settings.voiceInput.isVoiceInputEnabled = true
   let appState = AppState(settings: settings)
   let dir = FileManager.default.temporaryDirectory
     .appendingPathComponent("preview-menuBar")

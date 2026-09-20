@@ -20,7 +20,6 @@ final class InputPanelController {
   // production-unused forwarding properties on the controller.
   private(set) var voiceCoordinator: VoiceInputCoordinator!
   private var lifecycleManager: PanelLifecycleManager!
-  private var lastEnabledVoiceInputMode: VoiceInputMode = .defaultEnabled()
 
   init(
     appState: AppState,
@@ -46,20 +45,16 @@ final class InputPanelController {
 
     let engineFactory =
       makeEngine ?? { () -> any VoiceInputEngine in
-        if appState.settings.voiceInput.voiceInputMode.usesSpeechAnalyzer {
-          let locale = Locale(identifier: appState.settings.voiceInput.speechAnalyzerLocale)
-          return SpeechAnalyzerEngine(
-            locale: locale,
-            deviceUID: appState.settings.voiceInput.audioInputDeviceUID
-          )
-        }
-        return DictationEngine()
+        let locale = Locale(identifier: appState.settings.voiceInput.speechAnalyzerLocale)
+        return SpeechAnalyzerEngine(
+          locale: locale,
+          deviceUID: appState.settings.voiceInput.audioInputDeviceUID
+        )
       }
 
     self.voiceCoordinator = VoiceInputCoordinator(
       appState: appState,
-      makeEngine: engineFactory,
-      panel: panel
+      makeEngine: engineFactory
     )
 
     self.replacementService = ReplacementService(
@@ -112,13 +107,11 @@ final class InputPanelController {
       return
     }
 
-    let voiceEnabled = appState.settings.voiceInput.voiceInputMode.isEnabled
+    let voiceEnabled = appState.settings.voiceInput.isVoiceInputEnabled
     lifecycleManager.show(duckVolume: voiceEnabled)
     if voiceEnabled {
       voiceCoordinator.prepareForShow()
-    } else {
-      voiceCoordinator.prepareForShowWithoutEngine()
-    }
+    } else { voiceCoordinator.resetState() }
     clearTextView(startEngine: voiceEnabled)
 
     logger.info("Panel shown, isKeyWindow: \(self.panel.isKeyWindow)")
@@ -127,7 +120,7 @@ final class InputPanelController {
   func confirm() async {
     guard appState.isInputPanelVisible, !isConfirming, !appState.isRunningScript else { return }
 
-    let rawText = await finalizeDictation()
+    let rawText = await finalizeVoiceInput()
     let text = replacementService.applyRules(to: rawText)
       .trimmingCharacters(in: .whitespacesAndNewlines)
     guard !text.isEmpty else {
@@ -139,9 +132,9 @@ final class InputPanelController {
     await pasteAndRecord(preparedText)
   }
 
-  /// Confirm phase 1: stop dictation and collect the finalized text,
+  /// Confirm phase 1: stop voice input and collect the finalized text,
   /// clearing the text view.
-  private func finalizeDictation() async -> String {
+  private func finalizeVoiceInput() async -> String {
     textView?.commitMarkedTextIfNeeded()
     replacementService.clearPreviews()
     await voiceCoordinator.stopEngine()
@@ -165,7 +158,7 @@ final class InputPanelController {
     logger.info("confirm() with empty text, treated as cancel")
   }
 
-  /// Shared teardown: resets dictation state, clears panel app state,
+  /// Shared teardown: resets voice-input state, clears panel app state,
   /// and hides the panel.
   private func resetStateAndHidePanel() {
     voiceCoordinator.resetState()
@@ -283,13 +276,12 @@ final class InputPanelController {
   func toggleVoiceInput() async {
     guard appState.isInputPanelVisible, !isConfirming else { return }
 
-    if !appState.settings.voiceInput.voiceInputMode.isEnabled {
-      appState.settings.voiceInput.voiceInputMode = lastEnabledVoiceInputMode
+    if !appState.settings.voiceInput.isVoiceInputEnabled {
+      appState.settings.voiceInput.isVoiceInputEnabled = true
       await voiceCoordinator.switchEngine()
     } else {
-      lastEnabledVoiceInputMode = appState.settings.voiceInput.voiceInputMode
       await voiceCoordinator.disableEngine()
-      appState.settings.voiceInput.voiceInputMode = .off
+      appState.settings.voiceInput.isVoiceInputEnabled = false
     }
   }
 
@@ -335,7 +327,6 @@ final class InputPanelController {
         onPromptFocused: { [weak self] in
           guard let self else { return }
           self.voiceCoordinator.currentVoiceTarget = .prompt
-          self.voiceCoordinator.restartDictationIfNeeded()
         },
         onAddReplacementRule: { [weak self] rule in
           self?.replacementService.addRule(rule)
@@ -407,7 +398,6 @@ final class InputPanelController {
     view.onVolatileFinalized = { [weak self] volatileText in
       self?.voiceCoordinator.recordLocalFinalization(volatileText)
     }
-    voiceCoordinator.configureEngineWithTextView()
   }
 
   private func handleTextCommitted() {

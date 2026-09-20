@@ -10,7 +10,7 @@ Invoke with a hotkey, edit text by voice and keyboard, process it with shell scr
 ## Features
 
 - Voice + keyboard: dictate and edit with the keyboard at the same time. Recognition results update in real time
-- Choose macOS Dictation or the on-device SpeechAnalyzer engine. Punctuation and line breaks can be spoken with either engine
+- On-device speech recognition with spoken punctuation and line breaks
 - Built-in text operations: increase or decrease indentation and add block quotes to selected lines without configuring external scripts
 - Script integration: transform text with shell scripts. Combine with Claude Code headless mode to auto-format or translate voice transcriptions
 
@@ -42,7 +42,7 @@ The system will prompt for these permissions on first launch:
 
 - Accessibility: required for pasting text and reading selected text from the foreground app
 - Input Monitoring: required for detecting global hotkeys
-- Microphone (when using SpeechAnalyzer): required for on-device speech recognition
+- Microphone: required for on-device speech recognition
 
 ## Usage
 

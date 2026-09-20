@@ -8,7 +8,6 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "VoiceInputCoordinator")
   private let appState: AppState
   private let makeEngine: () -> any VoiceInputEngine
-  private let panel: InputPanel
 
   var textView: (any TextViewOperating)?
 
@@ -71,12 +70,10 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
 
   init(
     appState: AppState,
-    makeEngine: @escaping () -> any VoiceInputEngine,
-    panel: InputPanel
+    makeEngine: @escaping () -> any VoiceInputEngine
   ) {
     self.appState = appState
     self.makeEngine = makeEngine
-    self.panel = panel
     self.engine = makeEngine()
     self.engine.delegate = self
   }
@@ -128,10 +125,6 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     resetShowState()
   }
 
-  func prepareForShowWithoutEngine() {
-    resetShowState()
-  }
-
   private func resetShowState() {
     moveVoiceInsertionPoint(toEndOf: appState.inputText)
     currentVoiceTarget = .textEditor
@@ -161,7 +154,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   /// SpeechAnalyzer restarts replay locally finalized text, so preserve the
   /// same suppression lifecycle used by cursor-driven finalization.
   func finalizeVolatileForTextOperation() {
-    guard !(engine is DictationEngine), let textView, let range = textView.volatileRange else {
+    guard let textView, let range = textView.volatileRange else {
       textView?.finalizeVolatileText()
       return
     }
@@ -181,18 +174,9 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     accumulatedFinalizedText = ""
   }
 
-  func configureEngineWithTextView() {
-    if let dictation = engine as? DictationEngine,
-      let tv = textView as? VoiceInputTextView
-    {
-      dictation.configure(panel: panel, textView: tv)
-    }
-  }
-
   // MARK: - Text editing hooks
 
   func handleCursorMoved(_ position: Int) {
-    guard !(engine is DictationEngine) else { return }
     if let textView, textView.volatileRange != nil {
       if let range = textView.volatileRange,
         range.location + range.length <= (textView.string as NSString).length
@@ -219,12 +203,6 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   /// must be tracked for suppression.
   func recordLocalFinalization(_ text: String) {
     replayState.recordLocalFinalization(text)
-  }
-
-  func restartDictationIfNeeded() {
-    if let dictation = engine as? DictationEngine {
-      dictation.restart()
-    }
   }
 
   // MARK: - VoiceInputDelegate
@@ -343,7 +321,6 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   private func regenerateEngine() {
     engine = makeEngine()
     engine.delegate = self
-    configureEngineWithTextView()
   }
 
   private func clearReplayState() {

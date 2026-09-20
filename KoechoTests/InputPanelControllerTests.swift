@@ -182,7 +182,7 @@ struct InputPanelControllerTests {
   @Test func showPanelWithVoiceOffSkipsDucking() {
     let ducker = MockVolumeDucker()
     let ctx = makeController(ducker: ducker)
-    ctx.appState.settings.voiceInput.voiceInputMode = .off
+    ctx.appState.settings.voiceInput.isVoiceInputEnabled = false
     ctx.controller.showPanel()
 
     #expect(ducker.duckCallCount == 0)
@@ -191,7 +191,7 @@ struct InputPanelControllerTests {
   @Test func showPanelWithVoiceOnDucks() {
     let ducker = MockVolumeDucker()
     let ctx = makeController(ducker: ducker)
-    ctx.appState.settings.voiceInput.voiceInputMode = .dictation
+    ctx.appState.settings.voiceInput.isVoiceInputEnabled = true
     ctx.controller.showPanel()
 
     #expect(ducker.duckCallCount == 1)
@@ -199,7 +199,7 @@ struct InputPanelControllerTests {
 
   @Test func confirmWithVoiceOffIsIdempotent() async {
     let ctx = makeController()
-    ctx.appState.settings.voiceInput.voiceInputMode = .off
+    ctx.appState.settings.voiceInput.isVoiceInputEnabled = false
     ctx.controller.showPanel()
 
     // confirm with empty text — should not crash
@@ -209,7 +209,7 @@ struct InputPanelControllerTests {
 
   @Test func cancelWithVoiceOffIsIdempotent() {
     let ctx = makeController()
-    ctx.appState.settings.voiceInput.voiceInputMode = .off
+    ctx.appState.settings.voiceInput.isVoiceInputEnabled = false
     ctx.controller.showPanel()
 
     ctx.controller.cancel()
@@ -218,32 +218,32 @@ struct InputPanelControllerTests {
 
   @Test func toggleVoiceInputDisablesEnabledVoice() async {
     let ctx = makeController()
-    ctx.appState.settings.voiceInput.voiceInputMode = .dictation
+    ctx.appState.settings.voiceInput.isVoiceInputEnabled = true
     ctx.controller.showPanel()
 
     await ctx.controller.toggleVoiceInput()
 
-    #expect(ctx.appState.settings.voiceInput.voiceInputMode == .off)
+    #expect(!ctx.appState.settings.voiceInput.isVoiceInputEnabled)
   }
 
   @Test func toggleVoiceInputEnablesVoiceOffMode() async {
     let ctx = makeController()
-    ctx.appState.settings.voiceInput.voiceInputMode = .off
+    ctx.appState.settings.voiceInput.isVoiceInputEnabled = false
     ctx.controller.showPanel()
 
     await ctx.controller.toggleVoiceInput()
 
-    #expect(ctx.appState.settings.voiceInput.voiceInputMode != .off)
+    #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
   }
 
-  @Test func toggleVoiceInputRestoresPreviousEnabledMode() async {
+  @Test func toggleVoiceInputReenablesVoice() async {
     let ctx = makeController()
-    ctx.appState.settings.voiceInput.voiceInputMode = .dictation
+    ctx.appState.settings.voiceInput.isVoiceInputEnabled = true
     ctx.controller.showPanel()
 
     await ctx.controller.toggleVoiceInput()
     await ctx.controller.toggleVoiceInput()
 
-    #expect(ctx.appState.settings.voiceInput.voiceInputMode == .dictation)
+    #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
   }
 }

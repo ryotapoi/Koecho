@@ -500,12 +500,12 @@
     "Enable Koecho in System Settings > Privacy & Security > Accessibility, then retry. If it is already enabled, remove and add the current Koecho again. Restart Koecho only if the permission still does not take effect." : {
 
     },
-    "Engine" : {
+    "Enable voice input" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "エンジン"
+            "value" : "音声入力を有効にする"
           }
         }
       }
@@ -835,6 +835,7 @@
       }
     },
     "Off" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1232,32 +1233,12 @@
         }
       }
     },
-    "SpeechAnalyzer (On-device)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SpeechAnalyzer（オンデバイス）"
-          }
-        }
-      }
-    },
     "System Default" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "システムデフォルト"
-          }
-        }
-      }
-    },
-    "System Dictation" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "システム音声入力"
           }
         }
       }

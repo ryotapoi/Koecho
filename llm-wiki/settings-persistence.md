@@ -48,3 +48,4 @@ sources:
 - script 設定: `Packages/KoechoKit/Sources/KoechoCore/ScriptSettings.swift`, `Packages/KoechoKit/Sources/KoechoCore/Script.swift`, `Koecho/ScriptManagementView.swift`, [Scripts / Replacements / History](scripts-replacements-history.md)。
 - replacement 設定: `Packages/KoechoKit/Sources/KoechoCore/ReplacementSettings.swift`, `Packages/KoechoKit/Sources/KoechoCore/ReplacementRule.swift`, `Koecho/ReplacementRuleManagementView.swift`。
 - voice input 設定: `Packages/KoechoKit/Sources/KoechoCore/VoiceInputSettings.swift`, `Koecho/VoiceInputSection.swift`, [Speech / Audio](speech-audio.md)。
+  `voiceInputMode` キーは `on` / `off` を保存し、旧 engine 値は読み込み時に有効へ移行する。

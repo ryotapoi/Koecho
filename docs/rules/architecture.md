@@ -40,7 +40,6 @@ Koecho → KoechoPlatform → KoechoCore
 - SwiftUI View（SettingsView, InputPanelContent 等）
 - AppKit カスタムビュー（InputPanel, VoiceInputTextView 等）
 - コントローラー（InputPanelController, PanelLifecycleManager 等）
-- DictationEngine（NSTextView 依存のため App target に配置）
 - アプリエントリポイント（KoechoApp）
 
 ## 責務境界

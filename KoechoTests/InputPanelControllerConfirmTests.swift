@@ -116,17 +116,9 @@ extension InputPanelControllerTests {
     #expect(engine.state == .idle)
   }
 
-  @Test func confirmCommitsMarkedJapaneseTextBeforeStoppingDictation() async throws {
-    var discardedTextViews: [VoiceInputTextView] = []
-    let engine = DictationEngine(
-      startDelay: { try await Task.sleep(for: .seconds(60)) },
-      markedTextDiscarder: { textView in
-        discardedTextViews.append(textView)
-        textView.inputContext?.discardMarkedText()
-      }
-    )
+  @Test func confirmCommitsMarkedJapaneseTextBeforeStoppingVoiceInput() async throws {
     let paster = MockPaster()
-    let ctx = makeController(paster: paster, makeEngine: { engine })
+    let ctx = makeController(paster: paster)
 
     ctx.controller.showPanel()
     await Task.yield()
@@ -141,9 +133,6 @@ extension InputPanelControllerTests {
 
     await ctx.controller.confirm()
 
-    // If commit moves after stop or is removed, this discarder clears the
-    // composition and the controller has no text to paste.
-    #expect(discardedTextViews.isEmpty)
     #expect(paster.pastedTexts == ["こんにちは"])
   }
 

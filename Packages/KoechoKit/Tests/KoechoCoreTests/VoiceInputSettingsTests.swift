@@ -10,29 +10,20 @@ struct VoiceInputSettingsTests {
     return UserDefaults(suiteName: suiteName)!
   }
 
-  @Test func defaultVoiceInputMode() {
+  @Test func voiceInputIsEnabledByDefaultAndStoredCanonically() {
     let settings = VoiceInputSettings(defaults: makeDefaults())
-    #expect(settings.voiceInputMode == .speechAnalyzer)
+    #expect(settings.isVoiceInputEnabled)
   }
 
-  @Test func voiceInputModeSemantics() {
-    #expect(!VoiceInputMode.off.isEnabled)
-    #expect(VoiceInputMode.dictation.isEnabled)
-    #expect(VoiceInputMode.speechAnalyzer.isEnabled)
-
-    #expect(!VoiceInputMode.off.usesSpeechAnalyzer)
-    #expect(!VoiceInputMode.dictation.usesSpeechAnalyzer)
-    #expect(VoiceInputMode.speechAnalyzer.usesSpeechAnalyzer)
-  }
-
-  @Test func persistsVoiceInputMode() {
+  @Test func persistsVoiceInputEnabled() {
     let defaults = makeDefaults()
 
     let settings = VoiceInputSettings(defaults: defaults)
-    settings.voiceInputMode = .speechAnalyzer
+    settings.isVoiceInputEnabled = false
 
     let reloaded = VoiceInputSettings(defaults: defaults)
-    #expect(reloaded.voiceInputMode == .speechAnalyzer)
+    #expect(!reloaded.isVoiceInputEnabled)
+    #expect(defaults.string(forKey: "voiceInputMode") == "off")
   }
 
   @Test func defaultSpeechAnalyzerLocale() {
@@ -109,28 +100,36 @@ struct VoiceInputSettingsTests {
     #expect(reloaded.audioInputDeviceName == nil)
   }
 
-  @Test func persistsOffMode() {
+  @Test(arguments: ["dictation", "speechAnalyzer", "on"])
+  func migratesEnabledValuesToOn(_ rawValue: String) {
     let defaults = makeDefaults()
+    defaults.set(rawValue, forKey: "voiceInputMode")
 
     let settings = VoiceInputSettings(defaults: defaults)
-    settings.voiceInputMode = .off
 
-    let reloaded = VoiceInputSettings(defaults: defaults)
-    #expect(reloaded.voiceInputMode == .off)
+    #expect(settings.isVoiceInputEnabled)
+    #expect(defaults.string(forKey: "voiceInputMode") == "on")
   }
 
-  @Test func offModeCycle() {
+  @Test func migratesOffValueToOff() {
     let defaults = makeDefaults()
+    defaults.set("off", forKey: "voiceInputMode")
+
     let settings = VoiceInputSettings(defaults: defaults)
 
-    settings.voiceInputMode = .off
-    #expect(settings.voiceInputMode == .off)
+    #expect(!settings.isVoiceInputEnabled)
+    #expect(defaults.string(forKey: "voiceInputMode") == "off")
+  }
 
-    settings.voiceInputMode = .dictation
-    #expect(settings.voiceInputMode == .dictation)
+  @Test(arguments: [nil, "unexpected"])
+  func migratesMissingAndUnknownValuesToOn(_ rawValue: String?) {
+    let defaults = makeDefaults()
+    if let rawValue { defaults.set(rawValue, forKey: "voiceInputMode") }
 
-    let reloaded = VoiceInputSettings(defaults: defaults)
-    #expect(reloaded.voiceInputMode == .dictation)
+    let settings = VoiceInputSettings(defaults: defaults)
+
+    #expect(settings.isVoiceInputEnabled)
+    #expect(defaults.string(forKey: "voiceInputMode") == "on")
   }
 
 }
