@@ -21,6 +21,11 @@
   - 目的・根拠: 対応 OS を macOS 27 以降へ固定し、現在の製品挙動を保ったまま旧 OS 向けの可用性分岐・フォールバックを必要な範囲で整理する。Dictation は選択可能な engine として維持する。
   - 作業・完了条件: deployment target と Package platform を macOS 27 に更新し、現在の正本・ユーザー向け文書を更新する。ADR 0023 の対応 OS 基準に関わる部分を supersede する新しい decision を記録し、既存 ADR 本文は書き換えない。旧 OS にのみ必要な availability / fallback 分岐だけを削除し、旧 OS 固有ではない製品挙動は保持する。`docs/rules/verification.md` の必須 gate と macOS 27 runtime 確認を実施する。旧 OS 向け test / CI は、これらの作業に必要な場合を除き追加しない。
 
+- [ ] M2 System Dictation を廃止し、音声入力をオン／オフへ一本化する
+  - 目的・根拠: ユーザーが engine を選ばず、音声入力を有効・無効にできるようにする。production の音声実装は `SpeechAnalyzer` のみとし、無効時は音声 engine を開始せずキーボード入力を維持する。
+  - 作業・完了条件: `DictationEngine`、`startDictation`、Dictation 固有の lifecycle・UI・test・現行文書を削除する。状態モデルを有効・無効の二状態にし、旧 enum / raw value は migration に必要な場合だけ残す。保存済みの `dictation` と `speechAnalyzer` は有効へ移行して canonical な値で再保存し、`off` は無効、欠損値・未知値は有効とする。入力パネルの Voice ボタンは有効・無効を切り替え、有効時は locale / model 管理・マイク・status を保つがユーザー向け表現は一般化する。
+  - ユーザー向け UI・概念には `Engine`、`System Dictation`、`SpeechAnalyzer` を表示せず、音声入力のオン／オフ（または有効／無効）だけを示す。仕様・rules・localization・README と関連 test を更新し、影響する既存 decision を supersede する新しい ADR を追加する（既存 ADR 本文は変更しない）。`docs/rules/verification.md` の必須 gate と macOS 27 runtime 確認を完了する。
+
 #### 信頼性改善
 
 - [ ] N1 音声変換失敗時の停止・復旧方法を決める
