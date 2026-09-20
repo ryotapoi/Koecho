@@ -47,65 +47,43 @@ struct InputPanelScriptStrip: View {
 
   @ViewBuilder
   private var scriptButtons: some View {
-    #if compiler(>=6.4)
-      if #available(macOS 27.0, *) {
-        if isReorderingDisabled {
-          fallbackScriptButtons
-        } else {
-          HStack(spacing: 8) {
-            ForEach(scripts) { script in
-              scriptButton(for: script)
-            }
-            .reorderable()
-          }
-          .reorderContainer(for: Script.self) { difference in
-            let destination: InputPanelScriptReorder.Destination
-            switch difference.destination.position {
-            case .before(let id):
-              destination = .before(id)
-            case .end:
-              destination = .end
-            }
-            onReorderScripts(
-              InputPanelScriptReorder.reordered(
-                scripts: scripts,
-                sourceIDs: difference.sources,
-                destination: destination
-              )
-            )
-          }
-          .padding(.vertical, 1)
-        }
-      } else {
-        fallbackScriptButtons
-      }
-    #else
-      fallbackScriptButtons
-    #endif
-  }
-
-  private var fallbackScriptButtons: some View {
     HStack(spacing: 8) {
       ForEach(scripts) { script in
         scriptButton(for: script)
       }
+      .reorderable()
+    }
+    .reorderContainer(for: Script.self, isEnabled: !isReorderingDisabled) { difference in
+      let destination: InputPanelScriptReorder.Destination
+      switch difference.destination.position {
+      case .before(let id):
+        destination = .before(id)
+      case .end:
+        destination = .end
+      }
+      onReorderScripts(
+        InputPanelScriptReorder.reordered(
+          scripts: scripts,
+          sourceIDs: difference.sources,
+          destination: destination
+        )
+      )
     }
     .padding(.vertical, 1)
   }
 
   private func scriptButton(for script: Script) -> some View {
     let label = ScriptPresentation.label(for: script)
+    let isBuiltin = script.kind == .builtin
     return Button {
       Task { await onExecuteScript(script) }
     } label: {
-      if script.kind == .builtin {
+      HStack(spacing: isBuiltin ? 0 : 4) {
         Image(systemName: ScriptPresentation.symbolName(for: script))
-      } else {
-        Label {
-          Text(label)
-        } icon: {
-          Image(systemName: ScriptPresentation.symbolName(for: script))
-        }
+        Text(label)
+          .frame(width: isBuiltin ? 0 : nil, alignment: .leading)
+          .opacity(isBuiltin ? 0 : 1)
+          .accessibilityHidden(isBuiltin)
       }
     }
     .buttonStyle(.koechoToolbar(isSelected: selectedScript?.id == script.id))

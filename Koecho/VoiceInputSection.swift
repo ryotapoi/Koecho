@@ -9,30 +9,21 @@ struct VoiceInputSection: View {
 
   var body: some View {
     Section("Voice Input") {
-      if #available(macOS 26, *) {
-        Picker("Engine", selection: $voiceInput.voiceInputMode) {
-          Text("Off").tag(VoiceInputMode.off)
-          Text("System Dictation").tag(VoiceInputMode.dictation)
-          Text("SpeechAnalyzer (On-device)").tag(VoiceInputMode.speechAnalyzer)
-        }
-        .pickerStyle(.segmented)
-        if voiceInput.voiceInputMode.usesSpeechAnalyzer {
-          SpeechAnalyzerLanguageSection(
-            selection: $voiceInput.speechAnalyzerLocale,
-            onSpeechLocalesChanged: onSpeechLocalesChanged
-          )
-          AudioInputDeviceSection(
-            deviceUID: $voiceInput.audioInputDeviceUID,
-            deviceName: $voiceInput.audioInputDeviceName
-          )
-        }
-      } else {
-        Toggle(
-          "Voice input",
-          isOn: Binding(
-            get: { voiceInput.voiceInputMode.isEnabled },
-            set: { voiceInput.voiceInputMode = $0 ? .dictation : .off }
-          ))
+      Picker("Engine", selection: $voiceInput.voiceInputMode) {
+        Text("Off").tag(VoiceInputMode.off)
+        Text("System Dictation").tag(VoiceInputMode.dictation)
+        Text("SpeechAnalyzer (On-device)").tag(VoiceInputMode.speechAnalyzer)
+      }
+      .pickerStyle(.segmented)
+      if voiceInput.voiceInputMode.usesSpeechAnalyzer {
+        SpeechAnalyzerLanguageSection(
+          selection: $voiceInput.speechAnalyzerLocale,
+          onSpeechLocalesChanged: onSpeechLocalesChanged
+        )
+        AudioInputDeviceSection(
+          deviceUID: $voiceInput.audioInputDeviceUID,
+          deviceName: $voiceInput.audioInputDeviceName
+        )
       }
     }
   }
@@ -40,7 +31,6 @@ struct VoiceInputSection: View {
 
 // MARK: - SpeechAnalyzerLanguageSection
 
-@available(macOS 26, *)
 private struct SpeechAnalyzerLanguageSection: View {
   @Binding var selection: String
   let onSpeechLocalesChanged: @MainActor () async -> Void
@@ -117,7 +107,6 @@ private struct SpeechAnalyzerLanguageSection: View {
 
 // MARK: - LanguageManagementSheet
 
-@available(macOS 26, *)
 private struct LanguageManagementSheet: View {
   let manager: SpeechAnalyzerLocaleManager
   let onSpeechLocalesChanged: @MainActor () async -> Void
@@ -187,7 +176,6 @@ private struct LanguageManagementSheet: View {
 
 // MARK: - AudioInputDeviceSection
 
-@available(macOS 26, *)
 private struct AudioInputDeviceSection: View {
   @Binding var deviceUID: String?
   @Binding var deviceName: String?

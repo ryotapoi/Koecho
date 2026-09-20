@@ -7,8 +7,7 @@ public enum VoiceInputMode: String, Codable, CaseIterable, Sendable {
   case speechAnalyzer
 
   public static func defaultEnabled() -> Self {
-    if #available(macOS 26, *) { return .speechAnalyzer }
-    return .dictation
+    .speechAnalyzer
   }
 
   public var isEnabled: Bool {
@@ -68,12 +67,6 @@ public final class VoiceInputSettings {
       _audioInputDeviceName = newValue
       save()
     }
-  }
-
-  public var effectiveVoiceInputMode: VoiceInputMode {
-    if #available(macOS 26, *) { return _voiceInputMode }
-    if !_voiceInputMode.isEnabled { return .off }
-    return .dictation
   }
 
   public init(defaults: UserDefaults) {

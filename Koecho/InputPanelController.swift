@@ -46,9 +46,7 @@ final class InputPanelController {
 
     let engineFactory =
       makeEngine ?? { () -> any VoiceInputEngine in
-        if #available(macOS 26, *),
-          appState.settings.voiceInput.effectiveVoiceInputMode.usesSpeechAnalyzer
-        {
+        if appState.settings.voiceInput.voiceInputMode.usesSpeechAnalyzer {
           let locale = Locale(identifier: appState.settings.voiceInput.speechAnalyzerLocale)
           return SpeechAnalyzerEngine(
             locale: locale,
@@ -114,7 +112,7 @@ final class InputPanelController {
       return
     }
 
-    let voiceEnabled = appState.settings.voiceInput.effectiveVoiceInputMode.isEnabled
+    let voiceEnabled = appState.settings.voiceInput.voiceInputMode.isEnabled
     lifecycleManager.show(duckVolume: voiceEnabled)
     if voiceEnabled {
       voiceCoordinator.prepareForShow()
@@ -285,11 +283,11 @@ final class InputPanelController {
   func toggleVoiceInput() async {
     guard appState.isInputPanelVisible, !isConfirming else { return }
 
-    if !appState.settings.voiceInput.effectiveVoiceInputMode.isEnabled {
+    if !appState.settings.voiceInput.voiceInputMode.isEnabled {
       appState.settings.voiceInput.voiceInputMode = lastEnabledVoiceInputMode
       await voiceCoordinator.switchEngine()
     } else {
-      lastEnabledVoiceInputMode = appState.settings.voiceInput.effectiveVoiceInputMode
+      lastEnabledVoiceInputMode = appState.settings.voiceInput.voiceInputMode
       await voiceCoordinator.disableEngine()
       appState.settings.voiceInput.voiceInputMode = .off
     }

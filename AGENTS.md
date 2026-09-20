@@ -1,6 +1,6 @@
 # Koecho
 
-Koecho は macOS 14.0+ 向けの軽量音声入力アプリ。詳細は `docs/rules/mission.md` を正とする。
+Koecho は macOS 27.0+ 向けの軽量音声入力アプリ。詳細は `docs/rules/mission.md` を正とする。
 
 ## タスク別の正本
 

@@ -27,7 +27,6 @@ public struct LocaleItem: Identifiable, Sendable, Equatable {
   }
 }
 
-@available(macOS 26, *)
 @MainActor @Observable
 public final class SpeechAnalyzerLocaleManager {
   private let logger = Logger(

@@ -233,7 +233,7 @@ struct InputPanelControllerTests {
 
     await ctx.controller.toggleVoiceInput()
 
-    #expect(ctx.appState.settings.voiceInput.effectiveVoiceInputMode != .off)
+    #expect(ctx.appState.settings.voiceInput.voiceInputMode != .off)
   }
 
   @Test func toggleVoiceInputRestoresPreviousEnabledMode() async {
@@ -244,6 +244,6 @@ struct InputPanelControllerTests {
     await ctx.controller.toggleVoiceInput()
     await ctx.controller.toggleVoiceInput()
 
-    #expect(ctx.appState.settings.voiceInput.effectiveVoiceInputMode == .dictation)
+    #expect(ctx.appState.settings.voiceInput.voiceInputMode == .dictation)
   }
 }

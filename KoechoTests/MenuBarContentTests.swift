@@ -6,7 +6,6 @@ import Testing
 
 @MainActor
 struct MenuBarContentTests {
-  @available(macOS 26, *)
   @Test
   func recognitionLanguageMenuVisibilityFollowsDownloadedLocaleCount() {
     let appState = makeTestAppState()
@@ -26,7 +25,6 @@ struct MenuBarContentTests {
     )
   }
 
-  @available(macOS 26, *)
   @Test
   func recognitionLanguageMenuIsHiddenOutsideSpeechAnalyzerMode() {
     let appState = makeTestAppState()

@@ -3,7 +3,6 @@ import KoechoCore
 import Speech
 import os
 
-@available(macOS 26, *)
 @MainActor
 public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartable {
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "SpeechAnalyzerEngine")

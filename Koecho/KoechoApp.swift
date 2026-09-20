@@ -35,13 +35,11 @@ struct KoechoApp: App {
         downloadedLocales: downloadedLocales,
         onTogglePanel: { togglePanel() },
         onSwitchLanguage: { newLocale in
-          if #available(macOS 26, *) {
-            let newKey = SpeechLocale.normalizationKey(newLocale)
-            let currentKey = SpeechLocale.normalizationKey(
-              appState.settings.voiceInput.speechAnalyzerLocale
-            )
-            guard newKey != currentKey else { return }
-          }
+          let newKey = SpeechLocale.normalizationKey(newLocale)
+          let currentKey = SpeechLocale.normalizationKey(
+            appState.settings.voiceInput.speechAnalyzerLocale
+          )
+          guard newKey != currentKey else { return }
           appState.settings.voiceInput.speechAnalyzerLocale = newLocale
           Task { @MainActor in
             await panelController?.switchEngine()
@@ -126,9 +124,7 @@ struct KoechoApp: App {
   }
 
   private func refreshDownloadedLocales() async {
-    guard #available(macOS 26, *),
-      appState.settings.voiceInput.effectiveVoiceInputMode.usesSpeechAnalyzer
-    else {
+    guard appState.settings.voiceInput.voiceInputMode.usesSpeechAnalyzer else {
       downloadedLocales = []
       return
     }

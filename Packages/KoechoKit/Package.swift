@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
   name: "KoechoKit",
-  platforms: [.macOS(.v14)],
+  platforms: [.macOS("27.0")],
   products: [
     .library(name: "KoechoCore", targets: ["KoechoCore"]),
     .library(name: "KoechoPlatform", targets: ["KoechoPlatform"]),

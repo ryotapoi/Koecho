@@ -7,7 +7,6 @@ import Testing
 @MainActor
 @Suite
 struct SpeechAnalyzerLocaleManagerTests {
-  @available(macOS 26, *)
   @Test func initialState() {
     let manager = SpeechAnalyzerLocaleManager()
     #expect(manager.allLocales.isEmpty)
@@ -17,14 +16,12 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(manager.reservedLocales.isEmpty)
   }
 
-  @available(macOS 26, *)
   @Test func clearDownloadError() {
     let manager = SpeechAnalyzerLocaleManager()
     manager.clearDownloadError()
     #expect(manager.downloadError == nil)
   }
 
-  @available(macOS 26, *)
   @Test func findNormalizedMatchExactMatch() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
@@ -39,7 +36,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(match?.identifier == "en-US")
   }
 
-  @available(macOS 26, *)
   @Test func findNormalizedMatchNormalized() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
@@ -51,7 +47,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(match?.identifier == "en_US")
   }
 
-  @available(macOS 26, *)
   @Test func findNormalizedMatchNoMatch() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
@@ -63,7 +58,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(match == nil)
   }
 
-  @available(macOS 26, *)
   @Test func reservedLocalesFiltersCorrectly() {
     let manager = SpeechAnalyzerLocaleManager()
     #expect(manager.reservedLocales.isEmpty)
@@ -71,7 +65,6 @@ struct SpeechAnalyzerLocaleManagerTests {
 
   // MARK: - correctSelection
 
-  @available(macOS 26, *)
   @Test func correctSelectionWhenSelectionInReserved() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
@@ -83,7 +76,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(result == nil)
   }
 
-  @available(macOS 26, *)
   @Test func correctSelectionWhenSelectionInAll() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
@@ -95,7 +87,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(result == nil)
   }
 
-  @available(macOS 26, *)
   @Test func correctSelectionNormalizedMatch() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
@@ -107,7 +98,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(result == "en_US")
   }
 
-  @available(macOS 26, *)
   @Test func correctSelectionJaJPFallback() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
@@ -122,7 +112,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(result == "ja-JP")
   }
 
-  @available(macOS 26, *)
   @Test func correctSelectionFirstItemFallback() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
@@ -137,14 +126,12 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(result == "fr-FR")
   }
 
-  @available(macOS 26, *)
   @Test func correctSelectionEmptyItems() {
     let manager = SpeechAnalyzerLocaleManager()
     let result = manager.correctSelection(currentSelection: "en-US", items: [])
     #expect(result == nil)
   }
 
-  @available(macOS 26, *)
   @Test func correctSelectionNormalizedPriorityOverJaJP() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [

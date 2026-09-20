@@ -7,13 +7,11 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct SpeechAnalyzerEngineTests {
-  @available(macOS 26, *)
   @Test func initialStateIsIdle() {
     let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
     #expect(engine.state == .idle)
   }
 
-  @available(macOS 26, *)
   @Test func startWhenAlreadyListeningIsNoop() {
     let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
     engine.start()
@@ -23,14 +21,12 @@ struct SpeechAnalyzerEngineTests {
     engine.cancel()
   }
 
-  @available(macOS 26, *)
   @Test func cancelFromIdleRemainsIdle() {
     let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
     engine.cancel()
     #expect(engine.state == .idle)
   }
 
-  @available(macOS 26, *)
   @Test func cancelFromListeningGoesToIdle() {
     let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
     engine.start()
@@ -38,14 +34,12 @@ struct SpeechAnalyzerEngineTests {
     #expect(engine.state == .idle)
   }
 
-  @available(macOS 26, *)
   @Test func stopFromIdleRemainsIdle() async {
     let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
     await engine.stop()
     #expect(engine.state == .idle)
   }
 
-  @available(macOS 26, *)
   @Test func delegateIsRetained() {
     let engine = SpeechAnalyzerEngine(locale: Locale(identifier: "ja-JP"))
     let mockDelegate = MockVoiceInputDelegate()

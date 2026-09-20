@@ -2,7 +2,7 @@
 
 ## 技術スタック
 
-- Swift / SwiftUI / macOS 14.0+
+- Swift / SwiftUI / macOS 27.0+
 - NSPanel（フローティングウィンドウ）
 - NSEvent（グローバルホットキー）
 - Process + Pipe（シェルスクリプト実行）
@@ -11,12 +11,12 @@
 - MenuBarExtra（メニューバー常駐）
 - UserDefaults（設定保存）
 - os.Logger（ロギング）
-- Speech framework / SpeechAnalyzer（macOS 26+ オンデバイス音声認識）
+- Speech framework / SpeechAnalyzer（オンデバイス音声認識）
   - transcriber は `DictationTranscriber` を使う（`SpeechTranscriber` ではない）。句読点が自動で入るため
 - AVAudioEngine（マイク入力取得。SpeechAnalyzerEngine が使用）
 - AUHAL AudioUnit（入力レベルメーター。CoreAudio を直接使用し、AVAudioEngine の tap は使わない）
 - Swift Package Manager: `Packages/KoechoKit`、`swift-tools-version: 6.0`（`nonisolated(unsafe)` を使うため）
-- 開発基準は Xcode 27.0 / macOS SDK 27 / Swift compiler 6.4。runtime 下限は macOS 14.0
+- 開発基準は Xcode 27.0 / macOS SDK 27 / Swift compiler 6.4。runtime 下限は macOS 27.0
 - Swift 言語モードは `SWIFT_VERSION = 6.0`。Xcode の全 target で `SWIFT_APPROACHABLE_CONCURRENCY = YES`、app target では `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` を使う
 
 検出: Xcode プロジェクト設定・import 文で確認

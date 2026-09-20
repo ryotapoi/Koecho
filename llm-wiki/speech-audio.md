@@ -20,9 +20,9 @@ sources:
 
 ## SpeechAnalyzer
 
-- SpeechAnalyzer は macOS 26 以降のみ。関連コードは availability guard と `KoechoPlatform` 内に閉じる。
-- ソースから復元しづらい macOS 26 SpeechAnalyzer の実測メモは [SpeechAnalyzer 外部知見](speechanalyzer-external-notes.md) に分ける。
-- Speech framework は Foundation ではなく `import Speech` が必要。API 確認時は OS バージョン差も見る。
+- SpeechAnalyzer は macOS 27 を下限とするため、関連コードは availability guard を要しない。実装は `KoechoPlatform` に閉じる。
+- ソースから復元しづらい SpeechAnalyzer の実測メモは [SpeechAnalyzer 外部知見](speechanalyzer-external-notes.md) に分ける。
+- Speech framework は Foundation ではなく `import Speech` が必要。
 - locale は `SpeechLocale.normalizationKey` で正規化して比較する。表示名や生 identifier の文字列比較に寄せると、`en_US` / `en-US` などでずれる。
 - model install と status 更新は非同期で競合しやすい。モデル解放や切替の変更では、ダウンロード中・利用中・削除後の状態遷移を確認する。
 - transcriber restart では、古い stream からの重複結果を受けないように世代管理や cancellation の扱いを確認する。

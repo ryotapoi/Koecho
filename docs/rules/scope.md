@@ -178,13 +178,13 @@
 ### VoiceInputEngine プロトコル
 音声入力の抽象化レイヤー。DictationEngine と SpeechAnalyzerEngine の2つの実装がある。
 
-### DictationEngine（macOS 14+）
+### DictationEngine
 - macOS 標準の Dictation（`startDictation:` セレクタ）を使用
 - NSTextView の marked text / insertText 経路でテキストを受け取る
 - 0.3 秒遅延付き開始（パネル表示直後の不安定さ対策）
 - `restart()` メソッドでフォーカス遷移後の再送信が可能（DictationEngine 固有）
 
-### SpeechAnalyzerEngine（macOS 26+）
+### SpeechAnalyzerEngine
 - Speech フレームワークの SpeechAnalyzer / DictationTranscriber を使用
 - AVAudioEngine でマイク入力を取得し、オンデバイスで音声認識
 - volatile（未確定）テキストをグレー + 薄い背景色で表示する。下線は使わない（置換ルールの preview が下線を使うため、両者を見分けられなくなる）
@@ -194,8 +194,8 @@
 - 初回使用時にモデルの自動ダウンロードが発生する場合がある
 
 ### 設定
-- Settings の Voice Input セクション（全 macOS バージョンで表示）でエンジンを選択
-- `effectiveVoiceInputMode` で OS 可用性を考慮した実効モードを返す
+- Settings の Voice Input セクションで Off / Dictation / SpeechAnalyzer を選択
+- `voiceInputMode` は保存した選択をそのまま表す
 - SpeechAnalyzer の locale は Settings で指定（デフォルト: macOS の優先言語設定から自動判定、フォールバック en-US）
 - パネル表示時にエンジンが生成される（設定変更は次回パネル表示時に反映）
 - メニューバーからの認識言語切り替え時は、パネル表示中でも即時反映（switchEngine で再生成）

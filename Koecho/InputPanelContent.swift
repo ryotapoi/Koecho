@@ -38,7 +38,7 @@ struct InputPanelContent: View {
       .padding(.bottom, 8)
 
       InputPanelToolbar(
-        voiceInputMode: appState.settings.voiceInput.effectiveVoiceInputMode,
+        voiceInputMode: appState.settings.voiceInput.voiceInputMode,
         replacementRules: appState.settings.replacement.replacementRules,
         scriptSettings: appState.settings.script,
         isRunningScript: appState.isRunningScript,

@@ -12,13 +12,7 @@ struct VoiceInputSettingsTests {
 
   @Test func defaultVoiceInputMode() {
     let settings = VoiceInputSettings(defaults: makeDefaults())
-    #expect(settings.voiceInputMode == .defaultEnabled())
-
-    if #available(macOS 26, *) {
-      #expect(settings.voiceInputMode == .speechAnalyzer)
-    } else {
-      #expect(settings.voiceInputMode == .dictation)
-    }
+    #expect(settings.voiceInputMode == .speechAnalyzer)
   }
 
   @Test func voiceInputModeSemantics() {
@@ -130,29 +124,13 @@ struct VoiceInputSettingsTests {
     let settings = VoiceInputSettings(defaults: defaults)
 
     settings.voiceInputMode = .off
-    #expect(settings.effectiveVoiceInputMode == .off)
+    #expect(settings.voiceInputMode == .off)
 
     settings.voiceInputMode = .dictation
-    #expect(settings.effectiveVoiceInputMode == .dictation)
+    #expect(settings.voiceInputMode == .dictation)
 
     let reloaded = VoiceInputSettings(defaults: defaults)
     #expect(reloaded.voiceInputMode == .dictation)
   }
 
-  @Test func effectiveVoiceInputModeOffPreserved() {
-    let settings = VoiceInputSettings(defaults: makeDefaults())
-    settings.voiceInputMode = .off
-    #expect(settings.effectiveVoiceInputMode == .off)
-  }
-
-  @Test func effectiveVoiceInputModeFallsToDictation() {
-    let settings = VoiceInputSettings(defaults: makeDefaults())
-    settings.voiceInputMode = .speechAnalyzer
-
-    if #available(macOS 26, *) {
-      #expect(settings.effectiveVoiceInputMode == .speechAnalyzer)
-    } else {
-      #expect(settings.effectiveVoiceInputMode == .dictation)
-    }
-  }
 }

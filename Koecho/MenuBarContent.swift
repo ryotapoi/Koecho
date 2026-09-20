@@ -86,8 +86,7 @@ struct MenuBarContent: View {
     appState: AppState,
     downloadedLocales: [LocaleItem]
   ) -> Bool {
-    guard #available(macOS 26, *) else { return false }
-    return appState.settings.voiceInput.effectiveVoiceInputMode.usesSpeechAnalyzer
+    return appState.settings.voiceInput.voiceInputMode.usesSpeechAnalyzer
       && downloadedLocales.count >= 2
   }
 }

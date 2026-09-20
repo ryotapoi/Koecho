@@ -2,8 +2,8 @@
 
 ## プロダクト
 
-Koecho（こえこ / Ko-echo）はmacOS 14.0+向けの軽量音声入力アプリ。
-macOS標準のDictationまたはSpeechフレームワーク（macOS 26+）で音声を認識し、
+Koecho（こえこ / Ko-echo）はmacOS 27.0+向けの軽量音声入力アプリ。
+macOS標準のDictationまたはSpeechフレームワークで音声を認識し、
 フローティングウィンドウでテキストを受け取り、
 シェルスクリプトで加工してフォアグラウンドアプリにペーストする。
 

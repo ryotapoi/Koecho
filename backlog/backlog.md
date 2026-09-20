@@ -17,7 +17,7 @@
 
 #### macOS 27 専用化
 
-- [ ] M1 macOS 27-only へ移行する
+- [x] M1 macOS 27-only へ移行する
   - 目的・根拠: 対応 OS を macOS 27 以降へ固定し、現在の製品挙動を保ったまま旧 OS 向けの可用性分岐・フォールバックを必要な範囲で整理する。Dictation は選択可能な engine として維持する。
   - 作業・完了条件: deployment target と Package platform を macOS 27 に更新し、現在の正本・ユーザー向け文書を更新する。ADR 0023 の対応 OS 基準に関わる部分を supersede する新しい decision を記録し、既存 ADR 本文は書き換えない。旧 OS にのみ必要な availability / fallback 分岐だけを削除し、旧 OS 固有ではない製品挙動は保持する。`docs/rules/verification.md` の必須 gate と macOS 27 runtime 確認を実施する。旧 OS 向け test / CI は、これらの作業に必要な場合を除き追加しない。
 
@@ -55,7 +55,7 @@
 - [ ] D1 同じ言葉を意図して繰り返した発話を入力できるようにする
   - 背景・根拠: `SpeechAnalyzer` が別々に返す確定結果でも、蓄積済みテキストの末尾と新しい結果の先頭が重なると、現在は重複として後者から除去する。これはキーボード入力・カーソル移動の割り込み後に前セグメントが再配信される既知の問題への防御であり、ユーザーが同じ言葉を繰り返して入力したい意図を削除するためではない。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) の `stripOverlappingPrefix`、[`voice-input-text.md`](../docs/specs/voice-input-text.md)、[ADR 0016](../docs/decisions/0016-accumulated-text-overlap-removal-for-speechanalyzer.md)
   - 例: 独立した確定結果が「あい」「あい」と続くと、現在は後者が除去される。将来は、認識結果の再配信と意図した反復発話を区別できるかを調査する。
-  - 実装時の判断・確認: 実際の SDK・対応 runtime で `SpeechAnalyzer` の挙動を確認し、重複除去を外せるか、または対象を狭められるかを判断する。macOS 27 専用化や対応下限の変更、およびライブラリ側で解消済みとの判断は未決定とする。採用する範囲で必要な場合だけ仕様と確認項目を更新し、既存の手段で確認する。新しいテスト基盤は要求しない。
+  - 実装時の判断・確認: 実際の SDK・対応 runtime で `SpeechAnalyzer` の挙動を確認し、重複除去を外せるか、または対象を狭められるかを判断する。macOS 27 専用化および対応下限の変更は決定済みとし、ライブラリ側で解消済みかどうかは未決定とする。採用する範囲で必要な場合だけ仕様と確認項目を更新し、既存の手段で確認する。新しいテスト基盤は要求しない。
   - 補足: 現在の比較は最大 512 UTF-16 code units で、仕様には上限が明記されていない。この契約差は、反復発話と重複除去の振る舞いを決める際に併せて扱う。
 
 - [ ] D2 非ブロッキングの注意 UI を検討する（低優先度）

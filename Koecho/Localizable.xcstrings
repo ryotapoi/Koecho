@@ -1347,6 +1347,7 @@
       }
     },
     "Voice input" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {

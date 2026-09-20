@@ -11,7 +11,7 @@ sources:
 
 # SpeechAnalyzer 外部知見
 
-このページは macOS 26 SpeechAnalyzer 周辺の実測・外部 API 罠を残す。ソースから完全には復元できないため `regen: none` とする。
+このページは macOS 26 で得た SpeechAnalyzer 周辺の実測・外部 API 罠を残す。現在の対応下限は macOS 27.0 であり、ここにある旧 availability 対処は現在の実装規則ではない。ソースから完全には復元できないため `regen: none` とする。
 
 ## AssetInventory / モデル状態
 
@@ -36,7 +36,7 @@ sources:
 
 ## Swift / Testing の罠
 
-- Swift Testing の `@available(macOS 26, *)` と `@Test` macro は相性が悪く、suite に `@available` を付けると `@Test` が compile error になることがある。テストでは runtime `guard #available(macOS 26, *) else { return }` を使う。
+- macOS 26 時代には Swift Testing の `@available(macOS 26, *)` と `@Test` macro の相性問題があり、テストで runtime guard を使っていた。macOS 27.0 を下限とする現在のテストには不要である。
 - `import Speech` すると `Speech.Settings` と Koecho の `Settings` model が名前衝突しうる。曖昧な場所では `KoechoCore.Settings` など module 修飾を使う。
 
 ## AVAudioEngine / audio callback
