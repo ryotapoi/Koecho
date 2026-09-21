@@ -32,13 +32,13 @@
 
 #### 信頼性改善
 
-- [ ] N2 設定読み込み失敗時に説明を表示する
-  - 目的・根拠: Script / Replacement の設定を読み込めなかった場合に、利用できない理由をユーザーへ説明する。[`ScriptSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptSettings.swift) と [`ReplacementSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementSettings.swift) の読み込み経路。
-  - 作業・完了条件: 設定の読み込みに失敗した場合に、「設定の読み込みに失敗したため、スクリプト／置換を利用できません」程度の説明を表示する。
+- [ ] N2 設定読み込み失敗を起動時に通知し、読めない一覧データを保護する
+  - 目的・根拠: Script / Replacement の保存値を読み込めなかった場合に、起動時の警告を1回だけ表示する。単一値は安全な既定値で継続し、読めない一覧データは空データとして自動保存せず、既存内容を失わないようにする。[`ScriptSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptSettings.swift) と [`ReplacementSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementSettings.swift) の読み込み・保存経路。
+  - 作業・完了条件: 読み込み失敗を項目ごとの通知にせず、影響を受けた設定をまとめたアラートを起動時に1回表示する。単一値は既定値で動作し、ユーザーが変更した値を通常どおり保存できる。`scripts` / `replacementRules` を読み込めない場合は実行時に安全な空または利用不可として扱い、保存済みデータを保持したまま該当一覧だけ編集・書き込みを禁止する。他の設定変更による一括保存でも保護中の一覧を上書きしない。ユーザーが明示的に一覧を初期化した後は編集・保存を再開できる。正常時、単一値失敗、各一覧失敗、両一覧失敗、明示的な初期化を検証する。
 
-- [ ] N3 履歴読み込み失敗時に説明を表示する
-  - 目的・根拠: 履歴を読み込めなかった場合に、履歴を表示できない理由をユーザーへ説明する。[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift) と [`KoechoApp.swift`](../Koecho/KoechoApp.swift) の読み込み経路。
-  - 作業・完了条件: 履歴の読み込みに失敗した場合に、「履歴の読み込みに失敗したため、履歴を表示できません」程度の説明を表示する。
+- [ ] N3 履歴読み込み失敗を起動時の集約通知へ含め、保存データを保護する
+  - 目的・根拠: 履歴を読み込めなかった場合に、空履歴として自動保存せず既存内容を失わないようにし、N2で用意する起動時の集約通知から理由を説明する。[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift) と [`KoechoApp.swift`](../Koecho/KoechoApp.swift) の読み込み・保存経路。
+  - 作業・完了条件: 履歴の読み込み失敗をN2と同じ起動時アラートへ含め、設定と履歴が同時に失敗してもアラートは1回だけ表示する。読み込めない履歴は表示上利用不可として扱い、保存済みファイルを保持したまま履歴への書き込みを禁止する。ユーザーが明示的に履歴を初期化した後は記録を再開できる。正常時、履歴だけの失敗、設定との同時失敗、明示的な初期化を検証する。
 
 - [ ] N4 マウスによるキャレット移動を音声挿入位置へ同期する
   - 目的・根拠: 実環境で再現を確認した。音声入力中にマウスでキャレットを移動してから発話を続けると、後続の音声テキストは移動前のキャレット位置へ挿入される一方、キーボードでの移動は正しい新しい位置へ挿入される。[`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift)、[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift)、[`InputPanelController.swift`](../Koecho/InputPanelController.swift)。
