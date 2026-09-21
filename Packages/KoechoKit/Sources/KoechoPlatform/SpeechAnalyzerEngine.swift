@@ -194,26 +194,27 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
     if let deviceUID {
       let resolvedID = AudioDeviceListing.resolveDeviceID(forUID: deviceUID)
-      let audioUnit = audioEngine.inputNode.audioUnit
-      if let deviceID = AudioDeviceSelection.engineDeviceID(
-        requestedUID: deviceUID,
-        resolvedID: resolvedID,
-        hasAudioUnit: audioUnit != nil
-      ), let audioUnit {
-        var id = deviceID
-        let status = AudioUnitSetProperty(
-          audioUnit,
-          kAudioOutputUnitProperty_CurrentDevice,
-          kAudioUnitScope_Global, 0,
-          &id, UInt32(MemoryLayout<AudioDeviceID>.size)
-        )
-        if status != noErr {
-          logger.warning("Failed to set audio device (status: \(status)), using system default")
+      audioEngine.inputNode.withAudioUnit { audioUnit in
+        if let deviceID = AudioDeviceSelection.engineDeviceID(
+          requestedUID: deviceUID,
+          resolvedID: resolvedID,
+          hasAudioUnit: audioUnit != nil
+        ), let audioUnit {
+          var id = deviceID
+          let status = AudioUnitSetProperty(
+            audioUnit,
+            kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global, 0,
+            &id, UInt32(MemoryLayout<AudioDeviceID>.size)
+          )
+          if status != noErr {
+            logger.warning("Failed to set audio device (status: \(status)), using system default")
+          }
+        } else {
+          logger.warning(
+            "Audio device UID '\(deviceUID, privacy: .public)' not found or audioUnit unavailable, using system default"
+          )
         }
-      } else {
-        logger.warning(
-          "Audio device UID '\(deviceUID, privacy: .public)' not found or audioUnit unavailable, using system default"
-        )
       }
     }
 
@@ -251,14 +252,12 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     audioInputExclusiveAccess.acquire()
     acquiredAudioInput = true
 
-    installAudioTap()
-
     do {
+      try installAudioTap()
       try audioEngine.start()
       logger.info("Audio engine started, listening...")
     } catch {
       reportError(.audioEngineStartFailed(description: error.localizedDescription))
-      tearDown()
     }
   }
 
@@ -328,7 +327,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     DictationTranscriber(locale: locale, preset: preset)
   }
 
-  private func installAudioTap() {
+  private func installAudioTap() throws {
     guard let audioEngine, let analyzerFormat,
       let localContinuation = inputContinuation
     else { return }
@@ -351,12 +350,13 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
     let localConverter = converter
     let localAnalyzerFormat = analyzerFormat
-    inputNode.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { @Sendable buffer, _ in
+    try inputNode.installAudioTap(onBus: 0, bufferSize: 4096, format: inputFormat) { @Sendable buffer, _ in
       // This runs on the audio thread — do not access self
+      let copiedBuffer = AVAudioPCMBuffer(copying: buffer)
       let inputBuffer: AVAudioPCMBuffer
       if let localConverter {
         let frameCapacity = AVAudioFrameCount(
-          Double(buffer.frameLength) * localAnalyzerFormat.sampleRate / inputFormat.sampleRate
+          Double(copiedBuffer.frameLength) * localAnalyzerFormat.sampleRate / inputFormat.sampleRate
         )
         guard
           let convertedBuffer = AVAudioPCMBuffer(
@@ -367,12 +367,12 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
         var error: NSError?
         localConverter.convert(to: convertedBuffer, error: &error) { _, outStatus in
           outStatus.pointee = .haveData
-          return buffer
+          return copiedBuffer
         }
         if error != nil { return }
         inputBuffer = convertedBuffer
       } else {
-        inputBuffer = buffer
+        inputBuffer = copiedBuffer
       }
       localContinuation.yield(AnalyzerInput(buffer: inputBuffer))
     }
@@ -418,10 +418,9 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     activate(session)
 
     // 4. Re-install audio tap and restart audio engine
-    installAudioTap()
-    guard state == .listening else { return false }
-
     do {
+      try installAudioTap()
+      guard state == .listening else { return false }
       try audioEngine.start()
     } catch {
       resultTask?.cancel()

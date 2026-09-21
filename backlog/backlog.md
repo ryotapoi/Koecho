@@ -26,7 +26,7 @@
   - 作業・完了条件: `DictationEngine`、`startDictation`、Dictation 固有の lifecycle・UI・test・現行文書を削除する。状態モデルを有効・無効の二状態にし、旧 enum / raw value は migration に必要な場合だけ残す。保存済みの `dictation` と `speechAnalyzer` は有効へ移行して canonical な値で再保存し、`off` は無効、欠損値・未知値は有効とする。入力パネルの Voice ボタンは有効・無効を切り替え、有効時は locale / model 管理・マイク・status を保つがユーザー向け表現は一般化する。
   - ユーザー向け UI・概念には `Engine`、`System Dictation`、`SpeechAnalyzer` を表示せず、音声入力のオン／オフ（または有効／無効）だけを示す。仕様・rules・localization・README と関連 test を更新し、影響する既存 decision を supersede する新しい ADR を追加する（既存 ADR 本文は変更しない）。`docs/rules/verification.md` の必須 gate と macOS 27 runtime 確認を完了する。
 
-- [ ] M3 SpeechAnalyzerEngine の macOS 27 deprecated audio API を移行する
+- [x] M3 SpeechAnalyzerEngine の macOS 27 deprecated audio API を移行する
   - 目的・根拠: [`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) で使う `inputNode.audioUnit` と `installTap(onBus:bufferSize:format:block:)` は macOS 27 で deprecated となる。macOS 27 専用化後も現在の音声入力経路を維持しつつ、deprecated 警告を解消する。
   - 作業・完了条件: `inputNode.audioUnit` は `withAudioUnit` を使う macOS 27 API へ移行し、`installTap(onBus:bufferSize:format:block:)` は macOS 27 API へ移行する。選択した入力デバイス設定、system default fallback、音声 buffer の受け渡し、format conversion の既存挙動を維持し、該当する deprecated 警告が消えることを確認する。`docs/rules/verification.md` の Packages production / audio device の必須 gate（`swift test`、`build_macos`、`build_run_macos` と実環境確認）を実施する。
 
@@ -46,6 +46,10 @@
   - 目的・根拠: read / decode 失敗を空履歴として起動時 purge が上書きするのを防ぐ。[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift) と [`KoechoApp.swift`](../Koecho/KoechoApp.swift)。
   - ユーザー確認: この問題には対処する。
   - 作業・完了条件: 「空」と「読取失敗」を区別し、自動 purge / save が元ファイルを変更しないことを回帰テストで確認する。通知と手動 reset は決めない。
+
+- [ ] N4 マウスによるキャレット移動を音声挿入位置へ同期する
+  - 目的・根拠: 実環境で再現を確認した。音声入力中にマウスでキャレットを移動してから発話を続けると、後続の音声テキストは移動前のキャレット位置へ挿入される一方、キーボードでの移動は正しい新しい位置へ挿入される。[`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift)、[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift)、[`InputPanelController.swift`](../Koecho/InputPanelController.swift)。
+  - 作業・完了条件: マウスによるキャレット移動で音声挿入位置を更新する。実環境で移動後の継続音声入力が新しい位置へ挿入されることを確認し、既存のキーボード移動、volatile text の確定、transcriber restart・replay suppression が退行しないことを関連テストと実操作で確認する。
 
 #### 追加検証・内部整理
 
