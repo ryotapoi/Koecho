@@ -32,20 +32,13 @@
 
 #### 信頼性改善
 
-- [ ] N1 音声変換失敗時の停止・復旧方法を決める
-  - 目的・根拠: format / device 変更時に音声だけ落ちて listening 表示が残るのを防ぐ。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) の変換失敗分岐が return のみ。
-  - 決めること: 失敗時に認識をどの状態で停止するか、自動再試行・手動再試行・アプリ再起動のどれで復旧できるか、失敗後にユーザーへ示す次の操作、確定済みテキストと認識途中のテキストをどう扱い、保持したまま再試行できるかを決める。
-  - 作業・完了条件: 決定した振る舞いを記録し、必要な実装・回帰テストを起票または更新する。通知だけを追加して完了とはしない。
+- [ ] N2 設定読み込み失敗時に説明を表示する
+  - 目的・根拠: Script / Replacement の設定を読み込めなかった場合に、利用できない理由をユーザーへ説明する。[`ScriptSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptSettings.swift) と [`ReplacementSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementSettings.swift) の読み込み経路。
+  - 作業・完了条件: 設定の読み込みに失敗した場合に、「設定の読み込みに失敗したため、スクリプト／置換を利用できません」程度の説明を表示する。
 
-- [ ] N2 設定 decode 失敗時の保持目的と継続方法を決める
-  - 目的・根拠: 読み込めなかった Script / Replacement の元 Data が init 時の空配列保存で失われるのを防ぐ。[`ScriptSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptSettings.swift) と [`ReplacementSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementSettings.swift) の decode・save 経路。
-  - 決めること: 設定を残す目的に対して、関連機能を使えるフォールバックを提供するか制限するか、アプリを継続使用できるか、元 Data の保持と復旧・reset の経路、ユーザー編集・保存・上書きを許す条件を決める。
-  - 作業・完了条件: 決定した振る舞いを記録し、必要な実装・回帰テストを起票または更新する。元 Data の保持だけで完了とはしない。
-
-- [ ] N3 履歴読取失敗後の起動時 purge を非破壊にする
-  - 目的・根拠: read / decode 失敗を空履歴として起動時 purge が上書きするのを防ぐ。[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift) と [`KoechoApp.swift`](../Koecho/KoechoApp.swift)。
-  - ユーザー確認: この問題には対処する。
-  - 作業・完了条件: 「空」と「読取失敗」を区別し、自動 purge / save が元ファイルを変更しないことを回帰テストで確認する。通知と手動 reset は決めない。
+- [ ] N3 履歴読み込み失敗時に説明を表示する
+  - 目的・根拠: 履歴を読み込めなかった場合に、履歴を表示できない理由をユーザーへ説明する。[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift) と [`KoechoApp.swift`](../Koecho/KoechoApp.swift) の読み込み経路。
+  - 作業・完了条件: 履歴の読み込みに失敗した場合に、「履歴の読み込みに失敗したため、履歴を表示できません」程度の説明を表示する。
 
 - [ ] N4 マウスによるキャレット移動を音声挿入位置へ同期する
   - 目的・根拠: 実環境で再現を確認した。音声入力中にマウスでキャレットを移動してから発話を続けると、後続の音声テキストは移動前のキャレット位置へ挿入される一方、キーボードでの移動は正しい新しい位置へ挿入される。[`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift)、[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift)、[`InputPanelController.swift`](../Koecho/InputPanelController.swift)。
@@ -64,6 +57,11 @@
   - 実装時の判断・確認: 振る舞いを変えない最小の簡約を判断し、既存の switch / replay 検証を再利用する。OFF は必要な観測可能な差分だけを確認し、包括的な test scaffold や新しい型を追加しない。
 
 ### 将来の改善（低優先度）
+
+- [ ] N1 音声変換失敗時の対応要否を判断する
+  - 目的・根拠: format / device 変更時に音声だけ落ちて listening 表示が残る可能性がある。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) の変換失敗分岐が return のみ。
+  - 候補方針: 音声変換に失敗した場合は音声入力をオフにし、失敗したことと、再度オンにすれば続けられる旨を説明する。ただし、この対応自体を採用するかは未決とする。
+  - 作業・完了条件: 実環境と必要なテストで失敗の発生条件と頻度を確認し、その結果に基づいて候補方針を正式に採用するか見送るかを判断して記録する。
 
 - [ ] D1 同じ言葉を意図して繰り返した発話を入力できるようにする
   - 背景・根拠: `SpeechAnalyzer` が別々に返す確定結果でも、蓄積済みテキストの末尾と新しい結果の先頭が重なると、現在は重複として後者から除去する。これはキーボード入力・カーソル移動の割り込み後に前セグメントが再配信される既知の問題への防御であり、ユーザーが同じ言葉を繰り返して入力したい意図を削除するためではない。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) の `stripOverlappingPrefix`、[`voice-input-text.md`](../docs/specs/voice-input-text.md)、[ADR 0016](../docs/decisions/0016-accumulated-text-overlap-removal-for-speechanalyzer.md)
