@@ -20,6 +20,7 @@ public final class AudioDeviceManager {
 
   private var monitoringDeviceUID: String?
   private var monitoredDeviceID: AudioDeviceID = kAudioObjectUnknown
+  private var isInputLevelMonitoringEnabled = false
   private var isUpdatingVolume = false
 
   // CoreAudio listener blocks (retained for removal in deinit).
@@ -88,8 +89,9 @@ public final class AudioDeviceManager {
     inputDevices = AudioDeviceListing.enumerateInputDevices()
   }
 
-  public func startMonitoring(deviceUID: String?) {
+  public func startMonitoring(deviceUID: String?, monitorInputLevel: Bool = true) {
     stopMonitoring()
+    isInputLevelMonitoringEnabled = monitorInputLevel
 
     let resolvedID = deviceUID.flatMap(AudioDeviceListing.resolveDeviceID(forUID:))
     let systemDefaultID = AudioDeviceListing.defaultInputDeviceID()
@@ -112,14 +114,29 @@ public final class AudioDeviceManager {
     monitoringDeviceUID = target.effectiveUID
     monitoredDeviceID = target.deviceID
     setupVolumeMonitoring(for: target.deviceID)
-    levelMonitor.start(deviceID: target.explicitDeviceID)
     isMonitoring = true
+    if monitorInputLevel {
+      levelMonitor.start(deviceID: target.explicitDeviceID)
+    }
+  }
+
+  public func setInputLevelMonitoring(_ enabled: Bool) {
+    isInputLevelMonitoringEnabled = enabled
+
+    guard isMonitoring else { return }
+    if enabled {
+      levelMonitor.start(deviceID: monitoringDeviceUID == nil ? nil : monitoredDeviceID)
+    } else {
+      levelMonitor.stop()
+    }
   }
 
   public func stopMonitoring() {
     levelMonitor.stop()
     removeVolumeListener()
+    monitoringDeviceUID = nil
     monitoredDeviceID = kAudioObjectUnknown
+    isInputLevelMonitoringEnabled = false
     monitoredDeviceSupportsVolume = false
     inputVolume = 0
     isMonitoring = false
@@ -218,7 +235,10 @@ public final class AudioDeviceManager {
     let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
       Task { @MainActor [weak self] in
         guard let self, self.isMonitoring, self.monitoringDeviceUID == nil else { return }
-        self.startMonitoring(deviceUID: nil)
+        self.startMonitoring(
+          deviceUID: nil,
+          monitorInputLevel: self.isInputLevelMonitoringEnabled
+        )
       }
     }
     defaultDeviceListenerBlock = block

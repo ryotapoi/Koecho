@@ -16,7 +16,8 @@ struct VoiceInputSection: View {
       )
       AudioInputDeviceSection(
         deviceUID: $voiceInput.audioInputDeviceUID,
-        deviceName: $voiceInput.audioInputDeviceName
+        deviceName: $voiceInput.audioInputDeviceName,
+        isVoiceInputEnabled: voiceInput.isVoiceInputEnabled
       )
     }
   }
@@ -172,6 +173,7 @@ private struct LanguageManagementSheet: View {
 private struct AudioInputDeviceSection: View {
   @Binding var deviceUID: String?
   @Binding var deviceName: String?
+  let isVoiceInputEnabled: Bool
   @State private var deviceManager = AudioDeviceManager()
 
   private var isSelectedDeviceDisconnected: Bool {
@@ -199,7 +201,10 @@ private struct AudioInputDeviceSection: View {
       } else if newUID == nil {
         deviceName = nil
       }
-      deviceManager.startMonitoring(deviceUID: newUID)
+      deviceManager.startMonitoring(
+        deviceUID: newUID,
+        monitorInputLevel: isVoiceInputEnabled
+      )
     }
 
     if isSelectedDeviceDisconnected {
@@ -225,7 +230,15 @@ private struct AudioInputDeviceSection: View {
     }
 
     InputLevelMeter(level: deviceManager.inputLevel)
-      .onAppear { deviceManager.startMonitoring(deviceUID: deviceUID) }
+      .onAppear {
+        deviceManager.startMonitoring(
+          deviceUID: deviceUID,
+          monitorInputLevel: isVoiceInputEnabled
+        )
+      }
+      .onChange(of: isVoiceInputEnabled) { _, isEnabled in
+        deviceManager.setInputLevelMonitoring(isEnabled)
+      }
       .onDisappear { deviceManager.stopMonitoring() }
   }
 }
