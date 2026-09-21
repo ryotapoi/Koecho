@@ -26,6 +26,10 @@
   - 作業・完了条件: `DictationEngine`、`startDictation`、Dictation 固有の lifecycle・UI・test・現行文書を削除する。状態モデルを有効・無効の二状態にし、旧 enum / raw value は migration に必要な場合だけ残す。保存済みの `dictation` と `speechAnalyzer` は有効へ移行して canonical な値で再保存し、`off` は無効、欠損値・未知値は有効とする。入力パネルの Voice ボタンは有効・無効を切り替え、有効時は locale / model 管理・マイク・status を保つがユーザー向け表現は一般化する。
   - ユーザー向け UI・概念には `Engine`、`System Dictation`、`SpeechAnalyzer` を表示せず、音声入力のオン／オフ（または有効／無効）だけを示す。仕様・rules・localization・README と関連 test を更新し、影響する既存 decision を supersede する新しい ADR を追加する（既存 ADR 本文は変更しない）。`docs/rules/verification.md` の必須 gate と macOS 27 runtime 確認を完了する。
 
+- [ ] M3 SpeechAnalyzerEngine の macOS 27 deprecated audio API を移行する
+  - 目的・根拠: [`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) で使う `inputNode.audioUnit` と `installTap(onBus:bufferSize:format:block:)` は macOS 27 で deprecated となる。macOS 27 専用化後も現在の音声入力経路を維持しつつ、deprecated 警告を解消する。
+  - 作業・完了条件: `inputNode.audioUnit` は `withAudioUnit` を使う macOS 27 API へ移行し、`installTap(onBus:bufferSize:format:block:)` は macOS 27 API へ移行する。選択した入力デバイス設定、system default fallback、音声 buffer の受け渡し、format conversion の既存挙動を維持し、該当する deprecated 警告が消えることを確認する。`docs/rules/verification.md` の Packages production / audio device の必須 gate（`swift test`、`build_macos`、`build_run_macos` と実環境確認）を実施する。
+
 #### 信頼性改善
 
 - [ ] N1 音声変換失敗時の停止・復旧方法を決める
