@@ -9,10 +9,14 @@ public final class ReplacementSettings {
   private let defaults: UserDefaults
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ReplacementSettings")
 
+  public private(set) var loadFailures: Set<SettingsLoadFailure> = []
+  public private(set) var isReplacementRulesProtected = false
+
   private var _replacementRules: [ReplacementRule]
   public var replacementRules: [ReplacementRule] {
     get { _replacementRules }
     set {
+      guard !isReplacementRulesProtected else { return }
       _replacementRules = newValue
       save()
     }
@@ -38,59 +42,96 @@ public final class ReplacementSettings {
 
   public init(defaults: UserDefaults) {
     self.defaults = defaults
+    _replacementRules = []
+    _replacementShortcutKey = Self.defaultReplacementShortcutKey
+    _isAutoReplacementEnabled = true
 
-    if let data = defaults.data(forKey: "replacementRules") {
-      do {
-        _replacementRules = try JSONDecoder().decode([ReplacementRule].self, from: data)
-      } catch {
-        logger.warning(
-          "Failed to decode replacement rules, using defaults: \(error.localizedDescription)")
+    if let storedRules = defaults.object(forKey: "replacementRules") {
+      if let data = storedRules as? Data {
+        do {
+          _replacementRules = try JSONDecoder().decode([ReplacementRule].self, from: data)
+        } catch {
+          logger.warning("Failed to decode replacement rules: \(error.localizedDescription)")
+          loadFailures.insert(.replacementRules)
+          isReplacementRulesProtected = true
+          _replacementRules = []
+        }
+      } else {
+        loadFailures.insert(.replacementRules)
+        isReplacementRulesProtected = true
         _replacementRules = []
       }
     } else {
       _replacementRules = []
     }
 
-    if let data = defaults.data(forKey: "replacementShortcut") {
-      do {
-        _replacementShortcutKey = try ShortcutKey.decodeOptional(from: data)
-      } catch {
-        logger.warning("Failed to decode replacementShortcut, using default")
+    if let storedShortcut = defaults.object(forKey: "replacementShortcut") {
+      if let data = storedShortcut as? Data {
+        do {
+          _replacementShortcutKey = try ShortcutKey.decodeOptional(from: data)
+        } catch {
+          logger.warning("Failed to decode replacementShortcut, using default")
+          loadFailures.insert(.replacementShortcut)
+          _replacementShortcutKey = Self.defaultReplacementShortcutKey
+        }
+      } else {
+        loadFailures.insert(.replacementShortcut)
         _replacementShortcutKey = Self.defaultReplacementShortcutKey
       }
     } else {
       _replacementShortcutKey = Self.defaultReplacementShortcutKey
     }
 
-    _isAutoReplacementEnabled = defaults.object(forKey: "isAutoReplacementEnabled") as? Bool ?? true
+    if let enabled = defaults.object(forKey: "isAutoReplacementEnabled") {
+      if let enabled = enabled as? Bool {
+        _isAutoReplacementEnabled = enabled
+      } else {
+        loadFailures.insert(.isAutoReplacementEnabled)
+        _isAutoReplacementEnabled = true
+      }
+    } else {
+      _isAutoReplacementEnabled = true
+    }
 
     save()
   }
 
   public func addReplacementRule(_ rule: ReplacementRule) {
+    guard !isReplacementRulesProtected else { return }
     replacementRules.append(rule)
   }
 
   public func updateReplacementRule(_ rule: ReplacementRule) {
+    guard !isReplacementRulesProtected else { return }
     guard let index = replacementRules.firstIndex(where: { $0.id == rule.id }) else { return }
     replacementRules[index] = rule
   }
 
   public func deleteReplacementRule(id: UUID) {
+    guard !isReplacementRulesProtected else { return }
     replacementRules.removeAll { $0.id == id }
   }
 
   public func moveReplacementRules(from source: IndexSet, to destination: Int) {
+    guard !isReplacementRulesProtected else { return }
     _replacementRules.moveElements(fromOffsets: source, toOffset: destination)
     save()
   }
 
+  public func resetReplacementRules() {
+    _replacementRules = []
+    isReplacementRulesProtected = false
+    save()
+  }
+
   private func save() {
-    do {
-      let data = try JSONEncoder().encode(_replacementRules)
-      defaults.set(data, forKey: "replacementRules")
-    } catch {
-      logger.error("Failed to encode replacement rules: \(error.localizedDescription)")
+    if !isReplacementRulesProtected {
+      do {
+        let data = try JSONEncoder().encode(_replacementRules)
+        defaults.set(data, forKey: "replacementRules")
+      } catch {
+        logger.error("Failed to encode replacement rules: \(error.localizedDescription)")
+      }
     }
     do {
       let data = try ShortcutKey.encodeOptional(_replacementShortcutKey)

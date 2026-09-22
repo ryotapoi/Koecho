@@ -4,14 +4,34 @@ import SwiftUI
 struct ScriptManagementView: View {
   @Bindable var settings: ScriptSettings
   @State private var selection: UUID?
+  @State private var isResetConfirmationPresented = false
 
   var body: some View {
-    HStack(spacing: 0) {
-      scriptList
-        .frame(width: 200)
-      Divider()
-      scriptDetail
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    VStack(spacing: 0) {
+      if settings.isScriptsProtected {
+        ScriptListProtectionNotice {
+          isResetConfirmationPresented = true
+        }
+      }
+      HStack(spacing: 0) {
+        scriptList
+          .frame(width: 200)
+        Divider()
+        scriptDetail
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
+    }
+    .confirmationDialog(
+      "Reset Scripts?",
+      isPresented: $isResetConfirmationPresented,
+      titleVisibility: .visible
+    ) {
+      Button("Reset Scripts", role: .destructive) {
+        selection = nil
+        settings.resetScripts()
+      }
+    } message: {
+      Text("This permanently discards the unreadable saved scripts and starts with an empty list.")
     }
   }
 
@@ -55,11 +75,16 @@ struct ScriptManagementView: View {
       .labelStyle(.iconOnly)
       .padding(8)
     }
+    .disabled(settings.isScriptsProtected)
   }
 
   @ViewBuilder
   private var scriptDetail: some View {
-    if let id = selection, let binding = scriptBinding(for: id) {
+    if settings.isScriptsProtected {
+      Text("Scripts are protected until you reset them.")
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    } else if let id = selection, let binding = scriptBinding(for: id) {
       ScriptEditView(script: binding)
     } else {
       Text("Select a script to edit")
@@ -109,6 +134,21 @@ struct ScriptManagementView: View {
     guard let id = selection else { return }
     selection = nil
     settings.deleteScript(id: id)
+  }
+}
+
+private struct ScriptListProtectionNotice: View {
+  let reset: () -> Void
+
+  var body: some View {
+    HStack {
+      Label("Saved scripts could not be read. Editing is disabled to protect the saved data.", systemImage: "exclamationmark.triangle.fill")
+        .foregroundStyle(.orange)
+      Spacer()
+      Button("Reset Scripts", role: .destructive, action: reset)
+    }
+    .padding()
+    .background(.quaternary)
   }
 }
 

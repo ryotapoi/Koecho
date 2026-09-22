@@ -13,6 +13,7 @@ struct KoechoApp: App {
   @State private var panelController: InputPanelController?
   @State private var hotkeyService: HotkeyService?
   @State private var didPurge = false
+  @State private var didShowSettingsLoadAlert = false
   @State private var downloadedLocales: [LocaleItem] = []
 
   init() {
@@ -59,6 +60,7 @@ struct KoechoApp: App {
           retentionDays: appState.settings.history.historyRetentionDays
         )
       }
+      presentSettingsLoadAlertIfNeeded()
     }
     .onChange(of: appState.settings.hotkey.hotkeyConfig) { _, newConfig in
       guard !Self.isTesting else { return }
@@ -94,6 +96,31 @@ struct KoechoApp: App {
     )
     service.start()
     hotkeyService = service
+  }
+
+  private func presentSettingsLoadAlertIfNeeded() {
+    guard !Self.isTesting, !didShowSettingsLoadAlert else { return }
+    let failures = appState.settings.orderedLoadFailures
+    guard !failures.isEmpty else { return }
+
+    didShowSettingsLoadAlert = true
+    let alert = NSAlert()
+    alert.messageText = String(localized: "Some settings could not be loaded")
+    alert.informativeText = failures.map(settingsLoadFailureDescription).joined(separator: "\n")
+    alert.addButton(withTitle: String(localized: "OK"))
+    alert.runModal()
+  }
+
+  private func settingsLoadFailureDescription(_ failure: SettingsLoadFailure) -> String {
+    switch failure {
+    case .scripts: String(localized: "Scripts")
+    case .autoRunScriptId: String(localized: "Auto-run script")
+    case .autoRunShortcut: String(localized: "Auto-run shortcut")
+    case .scriptTimeout: String(localized: "Script timeout")
+    case .replacementRules: String(localized: "Replacement rules")
+    case .replacementShortcut: String(localized: "Replacement shortcut")
+    case .isAutoReplacementEnabled: String(localized: "Auto-replace")
+    }
   }
 
   private func ensurePanelController() -> InputPanelController {

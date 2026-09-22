@@ -5,6 +5,7 @@ struct ReplacementRuleManagementView: View {
   @Bindable var settings: ReplacementSettings
   @State private var selection: UUID?
   @State private var duplicatePatterns: Set<String>
+  @State private var isResetConfirmationPresented = false
 
   init(settings: ReplacementSettings) {
     self.settings = settings
@@ -16,16 +17,35 @@ struct ReplacementRuleManagementView: View {
   }
 
   var body: some View {
-    HStack(spacing: 0) {
-      ruleList
-        .frame(width: 200)
-      Divider()
-      ruleDetail
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    VStack(spacing: 0) {
+      if settings.isReplacementRulesProtected {
+        ReplacementRulesProtectionNotice {
+          isResetConfirmationPresented = true
+        }
+      }
+      HStack(spacing: 0) {
+        ruleList
+          .frame(width: 200)
+        Divider()
+        ruleDetail
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
     }
     .onAppear(perform: updateDuplicatePatterns)
     .onChange(of: settings.replacementRules) {
       updateDuplicatePatterns()
+    }
+    .confirmationDialog(
+      "Reset Replacement Rules?",
+      isPresented: $isResetConfirmationPresented,
+      titleVisibility: .visible
+    ) {
+      Button("Reset Replacement Rules", role: .destructive) {
+        selection = nil
+        settings.resetReplacementRules()
+      }
+    } message: {
+      Text("This permanently discards the unreadable saved replacement rules and starts with an empty list.")
     }
   }
 
@@ -67,6 +87,7 @@ struct ReplacementRuleManagementView: View {
       .labelStyle(.iconOnly)
       .padding(8)
     }
+    .disabled(settings.isReplacementRulesProtected)
   }
 
   private func updateDuplicatePatterns() {
@@ -77,7 +98,11 @@ struct ReplacementRuleManagementView: View {
 
   @ViewBuilder
   private var ruleDetail: some View {
-    if let id = selection, let binding = ruleBinding(for: id) {
+    if settings.isReplacementRulesProtected {
+      Text("Replacement rules are protected until you reset them.")
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    } else if let id = selection, let binding = ruleBinding(for: id) {
       ReplacementRuleEditView(rule: binding)
     } else {
       Text("Select a rule to edit")
@@ -107,6 +132,21 @@ struct ReplacementRuleManagementView: View {
 
   private func localizedDisplayName(for rule: ReplacementRule) -> String {
     rule.displayName ?? String(localized: "New Rule")
+  }
+}
+
+private struct ReplacementRulesProtectionNotice: View {
+  let reset: () -> Void
+
+  var body: some View {
+    HStack {
+      Label("Saved replacement rules could not be read. Editing is disabled to protect the saved data.", systemImage: "exclamationmark.triangle.fill")
+        .foregroundStyle(.orange)
+      Spacer()
+      Button("Reset Replacement Rules", role: .destructive, action: reset)
+    }
+    .padding()
+    .background(.quaternary)
   }
 }
 

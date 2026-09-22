@@ -5,6 +5,17 @@ import Testing
 
 @MainActor
 struct SettingsTests {
+
+  @Test @MainActor func aggregatesLoadFailuresInStableKeyOrder() {
+    let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+    defaults.set(Data("invalid json".utf8), forKey: "scripts")
+    defaults.set("not a boolean", forKey: "isAutoReplacementEnabled")
+    defaults.set(Data("invalid json".utf8), forKey: "replacementRules")
+
+    let settings = Settings(defaults: defaults)
+
+    #expect(settings.orderedLoadFailures == [.scripts, .replacementRules, .isAutoReplacementEnabled])
+  }
   private func makeDefaults() -> UserDefaults {
     let suiteName = "test-\(UUID().uuidString)"
     return UserDefaults(suiteName: suiteName)!

@@ -9,10 +9,14 @@ public final class ScriptSettings {
   private let defaults: UserDefaults
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ScriptSettings")
 
+  public private(set) var loadFailures: Set<SettingsLoadFailure> = []
+  public private(set) var isScriptsProtected = false
+
   private var _scripts: [Script]
   public var scripts: [Script] {
     get { _scripts }
     set {
+      guard !isScriptsProtected else { return }
       _scripts = Self.deduplicatingBuiltinScripts(newValue)
       save()
     }
@@ -56,36 +60,74 @@ public final class ScriptSettings {
 
   public init(defaults: UserDefaults) {
     self.defaults = defaults
+    _scripts = []
+    _autoRunScriptId = nil
+    _autoRunShortcutKey = nil
+    _scriptTimeout = 30.0
 
-    _scriptTimeout = max(1, defaults.object(forKey: "scriptTimeout") as? TimeInterval ?? 30.0)
+    if let timeout = defaults.object(forKey: "scriptTimeout") {
+      if let timeout = timeout as? TimeInterval {
+        _scriptTimeout = max(1, timeout)
+      } else {
+        loadFailures.insert(.scriptTimeout)
+        _scriptTimeout = 30.0
+      }
+    } else {
+      _scriptTimeout = 30.0
+    }
 
-    if let data = defaults.data(forKey: "scripts") {
-      do {
-        _scripts = try JSONDecoder().decode([Script].self, from: data)
-      } catch {
-        logger.warning("Failed to decode scripts, using defaults: \(error.localizedDescription)")
+    if let storedScripts = defaults.object(forKey: "scripts") {
+      if let data = storedScripts as? Data {
+        do {
+          _scripts = try JSONDecoder().decode([Script].self, from: data)
+        } catch {
+          logger.warning("Failed to decode scripts: \(error.localizedDescription)")
+          loadFailures.insert(.scripts)
+          isScriptsProtected = true
+          _scripts = []
+        }
+      } else {
+        loadFailures.insert(.scripts)
+        isScriptsProtected = true
         _scripts = []
       }
     } else {
       _scripts = []
     }
 
-    if !defaults.bool(forKey: Self.builtinScriptsRegisteredKey) {
+    if !isScriptsProtected && !defaults.bool(forKey: Self.builtinScriptsRegisteredKey) {
       _scripts.append(contentsOf: Script.defaultBuiltins)
       defaults.set(true, forKey: Self.builtinScriptsRegisteredKey)
     }
-    _scripts = Self.deduplicatingBuiltinScripts(_scripts)
+    if !isScriptsProtected {
+      _scripts = Self.deduplicatingBuiltinScripts(_scripts)
+    }
 
-    if let uuidString = defaults.string(forKey: "autoRunScriptId") {
-      _autoRunScriptId = UUID(uuidString: uuidString)
+    if let storedID = defaults.object(forKey: "autoRunScriptId") {
+      if let uuidString = storedID as? String, let id = UUID(uuidString: uuidString) {
+        _autoRunScriptId = id
+      } else {
+        loadFailures.insert(.autoRunScriptId)
+        _autoRunScriptId = nil
+      }
     } else {
       _autoRunScriptId = nil
     }
 
-    do {
-      _autoRunShortcutKey = try ShortcutKey.decodeOptional(from: defaults.data(forKey: "autoRunShortcut"))
-    } catch {
-      logger.warning("Failed to decode autoRunShortcut, using nil")
+    if let storedShortcut = defaults.object(forKey: "autoRunShortcut") {
+      if let data = storedShortcut as? Data {
+        do {
+          _autoRunShortcutKey = try ShortcutKey.decodeOptional(from: data)
+        } catch {
+          logger.warning("Failed to decode autoRunShortcut, using nil")
+          loadFailures.insert(.autoRunShortcut)
+          _autoRunShortcutKey = nil
+        }
+      } else {
+        loadFailures.insert(.autoRunShortcut)
+        _autoRunShortcutKey = nil
+      }
+    } else {
       _autoRunShortcutKey = nil
     }
 
@@ -93,10 +135,12 @@ public final class ScriptSettings {
   }
 
   public func addScript(_ script: Script) {
+    guard !isScriptsProtected else { return }
     scripts.append(script)
   }
 
   public func updateScript(_ script: Script) {
+    guard !isScriptsProtected else { return }
     guard let index = _scripts.firstIndex(where: { $0.id == script.id }) else { return }
     guard !containsBuiltinConfiguration(of: script, excluding: script.id) else { return }
     var updated = _scripts
@@ -105,6 +149,7 @@ public final class ScriptSettings {
   }
 
   public func deleteScript(id: UUID) {
+    guard !isScriptsProtected else { return }
     scripts.removeAll { $0.id == id }
     if _autoRunScriptId == id {
       _autoRunScriptId = nil
@@ -113,18 +158,28 @@ public final class ScriptSettings {
   }
 
   public func moveScripts(from source: IndexSet, to destination: Int) {
+    guard !isScriptsProtected else { return }
     var reordered = _scripts
     reordered.moveElements(fromOffsets: source, toOffset: destination)
     scripts = reordered
   }
 
+  public func resetScripts() {
+    _scripts = []
+    isScriptsProtected = false
+    defaults.set(true, forKey: Self.builtinScriptsRegisteredKey)
+    save()
+  }
+
   private func save() {
     defaults.set(_scriptTimeout, forKey: "scriptTimeout")
-    do {
-      let data = try JSONEncoder().encode(_scripts)
-      defaults.set(data, forKey: "scripts")
-    } catch {
-      logger.error("Failed to encode scripts: \(error.localizedDescription)")
+    if !isScriptsProtected {
+      do {
+        let data = try JSONEncoder().encode(_scripts)
+        defaults.set(data, forKey: "scripts")
+      } catch {
+        logger.error("Failed to encode scripts: \(error.localizedDescription)")
+      }
     }
     if let id = _autoRunScriptId {
       defaults.set(id.uuidString, forKey: "autoRunScriptId")

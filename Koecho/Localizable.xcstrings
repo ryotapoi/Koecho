@@ -225,6 +225,26 @@
         }
       }
     },
+    "Auto-run script" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動実行スクリプト"
+          }
+        }
+      }
+    },
+    "Auto-run shortcut" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動実行ショートカット"
+          }
+        }
+      }
+    },
     "Avoid shortcuts used by other apps or the system" : {
       "localizations" : {
         "ja" : {
@@ -845,6 +865,9 @@
         }
       }
     },
+    "OK" : {
+
+    },
     "Open Input Panel" : {
       "localizations" : {
         "ja" : {
@@ -953,6 +976,16 @@
         }
       }
     },
+    "Replacement rules" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換ルール"
+          }
+        }
+      }
+    },
     "Replacement Rules" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -960,6 +993,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "置換ルール"
+          }
+        }
+      }
+    },
+    "Replacement rules are protected until you reset them." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "初期化するまで置換ルールは保護されています。"
+          }
+        }
+      }
+    },
+    "Replacement shortcut" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換ショートカット"
           }
         }
       }
@@ -1002,6 +1055,46 @@
         }
       }
     },
+    "Reset Replacement Rules" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換ルールを初期化"
+          }
+        }
+      }
+    },
+    "Reset Replacement Rules?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換ルールを初期化しますか？"
+          }
+        }
+      }
+    },
+    "Reset Scripts" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリプトを初期化"
+          }
+        }
+      }
+    },
+    "Reset Scripts?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリプトを初期化しますか？"
+          }
+        }
+      }
+    },
     "Retention days" : {
       "localizations" : {
         "ja" : {
@@ -1029,6 +1122,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "実行"
+          }
+        }
+      }
+    },
+    "Saved replacement rules could not be read. Editing is disabled to protect the saved data." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存済みの置換ルールを読み込めませんでした。データを保護するため編集は無効です。"
+          }
+        }
+      }
+    },
+    "Saved scripts could not be read. Editing is disabled to protect the saved data." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存済みのスクリプトを読み込めませんでした。データを保護するため編集は無効です。"
           }
         }
       }
@@ -1086,6 +1199,16 @@
         }
       }
     },
+    "Script timeout" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリプトのタイムアウト"
+          }
+        }
+      }
+    },
     "Scripts" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1099,6 +1222,16 @@
     },
     "SCRIPTS" : {
 
+    },
+    "Scripts are protected until you reset them." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "初期化するまでスクリプトは保護されています。"
+          }
+        }
+      }
     },
     "Search history" : {
       "localizations" : {
@@ -1222,6 +1355,16 @@
         }
       }
     },
+    "Some settings could not be loaded" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一部の設定を読み込めませんでした"
+          }
+        }
+      }
+    },
     "Speech recognition error: %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1280,6 +1423,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ターゲット音量"
+          }
+        }
+      }
+    },
+    "This permanently discards the unreadable saved replacement rules and starts with an empty list." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み込めない保存済み置換ルールを完全に破棄し、空の一覧で開始します。"
+          }
+        }
+      }
+    },
+    "This permanently discards the unreadable saved scripts and starts with an empty list." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み込めない保存済みスクリプトを完全に破棄し、空の一覧で開始します。"
           }
         }
       }

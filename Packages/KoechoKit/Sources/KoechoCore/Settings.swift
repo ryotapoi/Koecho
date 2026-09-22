@@ -13,6 +13,14 @@ public final class Settings {
   public let volumeDucking: VolumeDuckingSettings
   public let appIcon: AppIconSettings
 
+  public var loadFailures: Set<SettingsLoadFailure> {
+    script.loadFailures.union(replacement.loadFailures)
+  }
+
+  public var orderedLoadFailures: [SettingsLoadFailure] {
+    SettingsLoadFailure.allCases.filter { loadFailures.contains($0) }
+  }
+
   public init(defaults: UserDefaults = .standard) {
     voiceInput = VoiceInputSettings(defaults: defaults)
     hotkey = HotkeySettings(defaults: defaults)

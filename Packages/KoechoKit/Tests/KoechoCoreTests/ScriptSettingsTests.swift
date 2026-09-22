@@ -121,12 +121,74 @@ struct ScriptSettingsTests {
     #expect(loaded.requiresPrompt == true)
   }
 
-  @Test func corruptedDataFallsBackToDefaults() {
+  @Test func corruptedScriptsRemainProtectedUntilExplicitReset() {
     let defaults = makeDefaults()
-    defaults.set(Data("invalid json".utf8), forKey: "scripts")
+    let original = Data("invalid json".utf8)
+    defaults.set(original, forKey: "scripts")
 
     let settings = ScriptSettings(defaults: defaults)
-    #expect(settings.scripts == Script.defaultBuiltins)
+    #expect(settings.scripts.isEmpty)
+    #expect(settings.isScriptsProtected)
+    #expect(settings.loadFailures == [.scripts])
+    #expect(defaults.object(forKey: "scripts") as? Data == original)
+    #expect(defaults.object(forKey: "builtinScriptsRegistered") == nil)
+
+    settings.scriptTimeout = 42
+    settings.addScript(Script(name: "Ignored", scriptPath: "/bin/ignored"))
+    settings.moveScripts(from: IndexSet(), to: 0)
+    #expect(defaults.object(forKey: "scripts") as? Data == original)
+
+    let reloaded = ScriptSettings(defaults: defaults)
+    #expect(reloaded.isScriptsProtected)
+    #expect(reloaded.scripts.isEmpty)
+    #expect(defaults.object(forKey: "scripts") as? Data == original)
+  }
+
+  @Test func resetScriptsDiscardsProtectedDataAndPreventsBuiltinReregistration() throws {
+    let defaults = makeDefaults()
+    defaults.set(Data("invalid json".utf8), forKey: "scripts")
+    let settings = ScriptSettings(defaults: defaults)
+
+    settings.resetScripts()
+
+    #expect(!settings.isScriptsProtected)
+    #expect(settings.scripts.isEmpty)
+    #expect(defaults.bool(forKey: "builtinScriptsRegistered"))
+    let data = try #require(defaults.data(forKey: "scripts"))
+    #expect(try JSONDecoder().decode([Script].self, from: data).isEmpty)
+    let reloaded = ScriptSettings(defaults: defaults)
+    #expect(reloaded.scripts.isEmpty)
+  }
+
+  @Test func nonDataScriptsRemainProtectedWhenOtherSettingsChange() {
+    let defaults = makeDefaults()
+    let original = "not script data"
+    defaults.set(original, forKey: "scripts")
+    let settings = ScriptSettings(defaults: defaults)
+
+    settings.autoRunScriptId = UUID()
+
+    #expect(settings.isScriptsProtected)
+    #expect(defaults.object(forKey: "scripts") as? String == original)
+    #expect(defaults.string(forKey: "autoRunScriptId") != nil)
+  }
+
+  @Test func malformedScriptScalarsAreRecordedAndDefaulted() {
+    let defaults = makeDefaults()
+    defaults.set("not a timeout", forKey: "scriptTimeout")
+    defaults.set("not a UUID", forKey: "autoRunScriptId")
+    defaults.set("not shortcut data", forKey: "autoRunShortcut")
+
+    let settings = ScriptSettings(defaults: defaults)
+
+    #expect(settings.scriptTimeout == 30)
+    #expect(settings.autoRunScriptId == nil)
+    #expect(settings.autoRunShortcutKey == nil)
+    #expect(settings.loadFailures == [.scriptTimeout, .autoRunScriptId, .autoRunShortcut])
+
+    settings.scriptTimeout = 45
+    let reloaded = ScriptSettings(defaults: defaults)
+    #expect(reloaded.scriptTimeout == 45)
   }
 
   @Test func persistsMultipleScripts() {

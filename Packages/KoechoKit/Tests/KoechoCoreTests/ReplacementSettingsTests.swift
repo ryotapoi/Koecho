@@ -102,12 +102,69 @@ struct ReplacementSettingsTests {
     #expect(loaded.matchesWholeWord == false)
   }
 
-  @Test func corruptedReplacementRulesFallsBack() {
+  @Test func corruptedReplacementRulesRemainProtectedUntilExplicitReset() {
     let defaults = makeDefaults()
-    defaults.set(Data("invalid json".utf8), forKey: "replacementRules")
+    let original = Data("invalid json".utf8)
+    defaults.set(original, forKey: "replacementRules")
 
     let settings = ReplacementSettings(defaults: defaults)
     #expect(settings.replacementRules.isEmpty)
+    #expect(settings.isReplacementRulesProtected)
+    #expect(settings.loadFailures == [.replacementRules])
+    #expect(defaults.object(forKey: "replacementRules") as? Data == original)
+
+    settings.isAutoReplacementEnabled = false
+    settings.addReplacementRule(ReplacementRule(pattern: "ignored"))
+    settings.moveReplacementRules(from: IndexSet(), to: 0)
+    #expect(defaults.object(forKey: "replacementRules") as? Data == original)
+
+    let reloaded = ReplacementSettings(defaults: defaults)
+    #expect(reloaded.isReplacementRulesProtected)
+    #expect(reloaded.replacementRules.isEmpty)
+    #expect(defaults.object(forKey: "replacementRules") as? Data == original)
+  }
+
+  @Test func resetReplacementRulesDiscardsProtectedData() throws {
+    let defaults = makeDefaults()
+    defaults.set(Data("invalid json".utf8), forKey: "replacementRules")
+    let settings = ReplacementSettings(defaults: defaults)
+
+    settings.resetReplacementRules()
+
+    #expect(!settings.isReplacementRulesProtected)
+    let data = try #require(defaults.data(forKey: "replacementRules"))
+    #expect(try JSONDecoder().decode([ReplacementRule].self, from: data).isEmpty)
+    let reloaded = ReplacementSettings(defaults: defaults)
+    #expect(reloaded.replacementRules.isEmpty)
+  }
+
+  @Test func nonDataReplacementRulesRemainProtectedWhenOtherSettingsChange() {
+    let defaults = makeDefaults()
+    let original = "not rule data"
+    defaults.set(original, forKey: "replacementRules")
+    let settings = ReplacementSettings(defaults: defaults)
+
+    settings.isAutoReplacementEnabled = false
+
+    #expect(settings.isReplacementRulesProtected)
+    #expect(defaults.object(forKey: "replacementRules") as? String == original)
+    #expect(defaults.object(forKey: "isAutoReplacementEnabled") as? Bool == false)
+  }
+
+  @Test func malformedReplacementScalarsAreRecordedAndDefaulted() {
+    let defaults = makeDefaults()
+    defaults.set("not shortcut data", forKey: "replacementShortcut")
+    defaults.set("not a boolean", forKey: "isAutoReplacementEnabled")
+
+    let settings = ReplacementSettings(defaults: defaults)
+
+    #expect(settings.replacementShortcutKey == ReplacementSettings.defaultReplacementShortcutKey)
+    #expect(settings.isAutoReplacementEnabled)
+    #expect(settings.loadFailures == [.replacementShortcut, .isAutoReplacementEnabled])
+
+    settings.isAutoReplacementEnabled = false
+    let reloaded = ReplacementSettings(defaults: defaults)
+    #expect(!reloaded.isAutoReplacementEnabled)
   }
 
   @Test func defaultReplacementShortcutKey() {
@@ -201,12 +258,12 @@ struct ReplacementSettingsTests {
       """.data(using: .utf8)!
     defaults.set(legacyJSON, forKey: "replacementRules")
 
-    // Loading an unsupported format follows the existing invalid-data fallback.
-    _ = ReplacementSettings(defaults: defaults)
+    let settings = ReplacementSettings(defaults: defaults)
 
-    // It must not convert the legacy singular value into a current rule.
+    #expect(settings.isReplacementRulesProtected)
+
+    // Loading an unsupported format must retain its original bytes.
     let data = defaults.data(forKey: "replacementRules")!
-    let array = try JSONSerialization.jsonObject(with: data) as! [[String: Any]]
-    #expect(array.isEmpty)
+    #expect(data == legacyJSON)
   }
 }

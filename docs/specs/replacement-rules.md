@@ -43,3 +43,5 @@ Confirm は `Auto-replace` の設定にかかわらず、音声入力を finaliz
 - preview は表示専用であり、入力テキストを変更しない。Confirm で volatile テキストを finalize した後は、前節の確定時適用により置換される。
 
 この非破壊性は、marked text や volatile text の管理中に入力テキストを変更して認識状態を壊さないためのものである。実装上の安全なテキストライフサイクルは [ADR 0011](../decisions/0011-debounced-auto-replacement.md) を判断根拠とする。
+
+保存済みルールを読み込めない場合の一覧保護と初期化は、[設定読み込み失敗時の保護](settings-load-protection.md) を正とする。

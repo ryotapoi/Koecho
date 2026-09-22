@@ -16,3 +16,5 @@
 - Input Panel の内蔵機能は icon-only button とし、Decrease Indent / Increase Indent / Block Quote にそれぞれ decrease.indent / increase.indent / text.quote を使う。設定込みラベルは tooltip と accessibility label に使う。
 - 内蔵機能はカスタムスクリプトと同じボタン・ショートカット実行導線を使うが、Auto-run の候補にはならない。
 - カスタムスクリプトの名前、prompt icon、実行中の無効化、prompt 遷移、ショートカットの既存挙動は変わらない。
+
+保存済みスクリプトを読み込めない場合の一覧保護と初期化は、[設定読み込み失敗時の保護](settings-load-protection.md) を正とする。
