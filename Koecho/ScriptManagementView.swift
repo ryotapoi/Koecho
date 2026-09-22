@@ -61,9 +61,9 @@ struct ScriptManagementView: View {
   }
 
   private func scriptBinding(for id: UUID) -> Binding<Script>? {
-    guard let index = settings.scripts.firstIndex(where: { $0.id == id }) else { return nil }
+    guard let script = settings.scripts.first(where: { $0.id == id }) else { return nil }
     return Binding(
-      get: { settings.scripts[index] },
+      get: { settings.scripts.first(where: { $0.id == id }) ?? script },
       set: { settings.updateScript($0) }
     )
   }
