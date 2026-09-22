@@ -9,6 +9,8 @@ struct HistoryView: View {
   @State private var copiedEntryID: UUID?
   @State private var resetCopiedTask: Task<Void, Never>?
   @State private var popoverEntryID: UUID?
+  @State private var isShowingResetConfirmation = false
+  @State private var isShowingResetError = false
 
   init(historyStore: HistoryStore) {
     self.historyStore = historyStore
@@ -21,6 +23,36 @@ struct HistoryView: View {
   }
 
   var body: some View {
+    Group {
+      if historyStore.isUnavailable {
+        HistoryUnavailableContent(
+          onReset: { isShowingResetConfirmation = true }
+        )
+      } else {
+        historyContent
+      }
+    }
+    .confirmationDialog(
+      "Reset History?",
+      isPresented: $isShowingResetConfirmation,
+      titleVisibility: .visible
+    ) {
+      Button("Reset History", role: .destructive) {
+        if !historyStore.initializeUnavailableHistory() {
+          isShowingResetError = true
+        }
+      }
+    } message: {
+      Text("This permanently replaces the unreadable history with an empty history.")
+    }
+    .alert("History Could Not Be Reset", isPresented: $isShowingResetError) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("The unreadable history is still protected. Check available disk space and try again.")
+    }
+  }
+
+  private var historyContent: some View {
     VStack(spacing: 0) {
       List {
         ForEach(filteredEntries) { entry in
@@ -88,6 +120,23 @@ struct HistoryView: View {
       searchText: searchText,
       entries: historyStore.entries
     )
+  }
+}
+
+private struct HistoryUnavailableContent: View {
+  let onReset: () -> Void
+
+  var body: some View {
+    ContentUnavailableView {
+      Label("History Unavailable", systemImage: "exclamationmark.triangle")
+    } description: {
+      Text("Koecho could not read your history. It is protected and new entries are not being recorded.")
+    } actions: {
+      Button("Reset History", role: .destructive, action: onReset)
+      Text("Resetting replaces the unreadable history with an empty history.")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
   }
 }
 

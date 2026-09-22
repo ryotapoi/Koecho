@@ -599,6 +599,46 @@
         }
       }
     },
+    "History Could Not Be Reset" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴を初期化できませんでした"
+          }
+        }
+      }
+    },
+    "History Unavailable" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴を利用できません"
+          }
+        }
+      }
+    },
+    "History could not be loaded. It is protected, and new entries are not being recorded. Reset it from the History settings page to resume recording." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴を読み込めませんでした。ファイルは保護され、新しい履歴は記録されていません。記録を再開するには履歴設定画面から初期化してください。"
+          }
+        }
+      }
+    },
+    "Koecho could not read your history. It is protected and new entries are not being recorded." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koecho は履歴を読み込めませんでした。ファイルは保護され、新しい履歴は記録されていません。"
+          }
+        }
+      }
+    },
     "Hotkey" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1095,6 +1135,36 @@
         }
       }
     },
+    "Reset History" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴を初期化"
+          }
+        }
+      }
+    },
+    "Reset History?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴を初期化しますか？"
+          }
+        }
+      }
+    },
+    "Resetting replaces the unreadable history with an empty history." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "初期化すると、読み込めない履歴は空の履歴に置き換わります。"
+          }
+        }
+      }
+    },
     "Retention days" : {
       "localizations" : {
         "ja" : {
@@ -1361,6 +1431,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "一部の設定を読み込めませんでした"
+          }
+        }
+      }
+    },
+    "Some data could not be loaded" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一部のデータを読み込めませんでした"
+          }
+        }
+      }
+    },
+    "The unreadable history is still protected. Check available disk space and try again." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み込めない履歴は引き続き保護されています。ディスク空き容量を確認してからもう一度お試しください。"
+          }
+        }
+      }
+    },
+    "This permanently replaces the unreadable history with an empty history." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み込めない履歴を空の履歴で完全に置き換えます。"
           }
         }
       }

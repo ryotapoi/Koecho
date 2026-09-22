@@ -47,6 +47,38 @@ struct ViewPureLogicTests {
     #expect(filtered == [entries[1]])
   }
 
+  @Test func loadFailureDescriptionsAreEmptyWhenNothingFailed() {
+    let descriptions = KoechoApp.loadFailureDescriptions(
+      settingsFailures: [],
+      historyIsUnavailable: false
+    )
+
+    #expect(descriptions.isEmpty)
+  }
+
+  @Test func loadFailureDescriptionsIncludeHistoryWhenOnlyHistoryFailed() {
+    let descriptions = KoechoApp.loadFailureDescriptions(
+      settingsFailures: [],
+      historyIsUnavailable: true
+    )
+
+    #expect(descriptions == [
+      "History could not be loaded. It is protected, and new entries are not being recorded. Reset it from the History settings page to resume recording."
+    ])
+  }
+
+  @Test func loadFailureDescriptionsCombineSettingsAndHistoryFailures() {
+    let descriptions = KoechoApp.loadFailureDescriptions(
+      settingsFailures: [.scripts],
+      historyIsUnavailable: true
+    )
+
+    #expect(descriptions == [
+      "Scripts",
+      "History could not be loaded. It is protected, and new entries are not being recorded. Reset it from the History settings page to resume recording.",
+    ])
+  }
+
   @Test func levelColorUsesExpectedThresholds() {
     #expect(InputLevelMeterLogic.levelColor(for: 0.0) == .green)
     #expect(InputLevelMeterLogic.levelColor(for: 0.7) == .green)

@@ -100,18 +100,32 @@ struct KoechoApp: App {
 
   private func presentSettingsLoadAlertIfNeeded() {
     guard !Self.isTesting, !didShowSettingsLoadAlert else { return }
-    let failures = appState.settings.orderedLoadFailures
-    guard !failures.isEmpty else { return }
+    let descriptions = Self.loadFailureDescriptions(
+      settingsFailures: appState.settings.orderedLoadFailures,
+      historyIsUnavailable: historyStore.isUnavailable
+    )
+    guard !descriptions.isEmpty else { return }
 
     didShowSettingsLoadAlert = true
     let alert = NSAlert()
-    alert.messageText = String(localized: "Some settings could not be loaded")
-    alert.informativeText = failures.map(settingsLoadFailureDescription).joined(separator: "\n")
+    alert.messageText = String(localized: "Some data could not be loaded")
+    alert.informativeText = descriptions.joined(separator: "\n")
     alert.addButton(withTitle: String(localized: "OK"))
     alert.runModal()
   }
 
-  private func settingsLoadFailureDescription(_ failure: SettingsLoadFailure) -> String {
+  static func loadFailureDescriptions(
+    settingsFailures: [SettingsLoadFailure],
+    historyIsUnavailable: Bool
+  ) -> [String] {
+    var descriptions = settingsFailures.map(settingsLoadFailureDescription)
+    if historyIsUnavailable {
+      descriptions.append(String(localized: "History could not be loaded. It is protected, and new entries are not being recorded. Reset it from the History settings page to resume recording."))
+    }
+    return descriptions
+  }
+
+  private static func settingsLoadFailureDescription(_ failure: SettingsLoadFailure) -> String {
     switch failure {
     case .scripts: String(localized: "Scripts")
     case .autoRunScriptId: String(localized: "Auto-run script")

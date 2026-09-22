@@ -32,6 +32,7 @@ struct HistoryStoreTests {
     let dir = makeTempDirectory()
     let store = HistoryStore(directoryURL: dir)
     let settings = makeSettings()
+    #expect(!store.isUnavailable)
     store.add(text: "hello", settings: settings)
     #expect(store.entries.count == 1)
     #expect(store.entries[0].text == "hello")
@@ -121,18 +122,61 @@ struct HistoryStoreTests {
     #expect(store.entries[0].text == "keep")
   }
 
-  @Test func corruptedJSONFallsBackToEmpty() {
+  @Test func corruptedJSONProtectsOriginalFileFromAllMutations() {
+    let dir = makeTempDirectory()
+    let fileURL = dir.appendingPathComponent("history.json")
+    let original = Data("invalid json".utf8)
+    try! original.write(to: fileURL, options: .atomic)
+    let store = HistoryStore(directoryURL: dir)
+    let settings = makeSettings()
+
+    #expect(store.entries.isEmpty)
+    #expect(store.isUnavailable)
+
+    store.purge(maxCount: settings.historyMaxCount, retentionDays: settings.historyRetentionDays)
+    store.add(text: "new entry", settings: settings)
+    store.clear()
+    store.deleteEntry(id: UUID())
+
+    #expect(store.entries.isEmpty)
+    #expect(try! Data(contentsOf: fileURL) == original)
+  }
+
+  @Test func initializingUnavailableHistoryRestoresRecording() {
     let dir = makeTempDirectory()
     let fileURL = dir.appendingPathComponent("history.json")
     try! Data("invalid json".utf8).write(to: fileURL, options: .atomic)
     let store = HistoryStore(directoryURL: dir)
+    let settings = makeSettings()
+
+    #expect(store.isUnavailable)
+    #expect(store.initializeUnavailableHistory())
+    #expect(!store.isUnavailable)
     #expect(store.entries.isEmpty)
+
+    store.add(text: "recovered", settings: settings)
+    let reloaded = HistoryStore(directoryURL: dir)
+    #expect(!reloaded.isUnavailable)
+    #expect(reloaded.entries.map(\.text) == ["recovered"])
+  }
+
+  @Test func failedInitializationKeepsHistoryUnavailable() {
+    let dir = makeTempDirectory()
+    let fileURL = dir.appendingPathComponent("history.json")
+    try! FileManager.default.createDirectory(at: fileURL, withIntermediateDirectories: true)
+    let store = HistoryStore(directoryURL: dir)
+
+    #expect(store.isUnavailable)
+    #expect(!store.initializeUnavailableHistory())
+    #expect(store.isUnavailable)
+    #expect(FileManager.default.fileExists(atPath: fileURL.path))
   }
 
   @Test func emptyDirectoryLoadsEmpty() {
     let dir = makeTempDirectory()
     let store = HistoryStore(directoryURL: dir)
     #expect(store.entries.isEmpty)
+    #expect(!store.isUnavailable)
   }
 
   private func makeTestPasteboard() -> NSPasteboard {
