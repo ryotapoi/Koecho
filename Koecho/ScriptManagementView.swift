@@ -32,7 +32,15 @@ struct ScriptManagementView: View {
       HStack {
         Menu {
           Button("Custom Script", action: addCustomScript)
-          Button("Built-in Feature", action: addBuiltinScript)
+          Menu("Built-in Feature") {
+            ForEach(builtinScriptCandidates.indices, id: \.self) { index in
+              let builtin = builtinScriptCandidates[index]
+              Button(builtin.displayName) {
+                addBuiltinScript(builtin)
+              }
+              .disabled(isBuiltinScriptRegistered(builtin))
+            }
+          }
         } label: {
           Label("Add Script", systemImage: "plus")
             .frame(width: 16, height: 16)
@@ -74,8 +82,8 @@ struct ScriptManagementView: View {
     selection = script.id
   }
 
-  private func addBuiltinScript() {
-    let candidates = BuiltinScriptFeature.allCases.flatMap { feature in
+  private var builtinScriptCandidates: [BuiltinScript] {
+    BuiltinScriptFeature.allCases.flatMap { feature in
       feature.supportsIndentationWidth
         ? [
           BuiltinScript(feature: feature, indentationWidth: .two)!,
@@ -83,13 +91,18 @@ struct ScriptManagementView: View {
         ]
         : [BuiltinScript(feature: feature)!]
     }
-    guard let builtin = candidates.first(where: { candidate in
-      !settings.scripts.contains { $0.builtin == candidate }
-    }) else { return }
+  }
+
+  private func addBuiltinScript(_ builtin: BuiltinScript) {
+    guard !isBuiltinScriptRegistered(builtin) else { return }
 
     let script = Script(id: UUID(), builtin: builtin)
     settings.addScript(script)
     selection = script.id
+  }
+
+  private func isBuiltinScriptRegistered(_ builtin: BuiltinScript) -> Bool {
+    settings.scripts.contains { $0.builtin == builtin }
   }
 
   private func deleteSelectedScript() {
