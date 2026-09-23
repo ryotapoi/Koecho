@@ -52,17 +52,35 @@
   - 目的・根拠: 実環境で再現を確認した。音声入力中にマウスでキャレットを移動してから発話を続けると、後続の音声テキストは移動前のキャレット位置へ挿入される一方、キーボードでの移動は正しい新しい位置へ挿入される。[`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift)、[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift)、[`InputPanelController.swift`](../Koecho/InputPanelController.swift)。
   - 作業・完了条件: マウスによるキャレット移動で音声挿入位置を更新する。実環境で移動後の継続音声入力が新しい位置へ挿入されることを確認し、既存のキーボード移動、volatile text の確定、transcriber restart・replay suppression が退行しないことを関連テストと実操作で確認する。
 
-#### 追加検証・内部整理
+- [ ] B1 ClipboardPasterTests にクリップボード復元の UnitTests を追加する
+  - 目的・根拠: [`ClipboardPaster.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/ClipboardPaster.swift) の保存・復元とエラー伝播には既存 UnitTests があるが、貼り付け失敗後の明示復元、遅延復元、連続貼り付け後に元の内容へ戻ることは未確認。
+  - 作業・完了条件: 既存の `ClipboardPasterTests` を拡張し、失敗後の明示復元、遅延復元、連続貼り付け後に最終的なクリップボード内容が元へ戻ることを確認する UnitTests を追加する。テストで復元不具合が見つかった場合は必要な修正を行う。コード整理自体は目的とせず、専用検証 skill・新しい検証基盤・過剰な DI や scaffold は追加しない。
 
-以下の候補は、実装時に[Change Scope](/Users/ryota/dotfiles/agents/.config/agents/change-scope.md)に従って、望む観測可能な結果と「変更しない」案を含む minimum coherent change を決める。[テスト・検証方針](/Users/ryota/dotfiles/agents/.config/agents/test-verification-policy.md)と既存の証拠から必要な確認を選び、プロジェクト必須 check を実施する。完了は、採用した今回の範囲の作業を検証すること、または不要とする理由と証拠を記録することとする。対応を defer する場合は、未解決の問題と追跡先を記録する。
+- [ ] B6 認識言語変更・音声入力オフ時の UnitTests 追加と停止後同期の整理（低優先度）
+  - 目的・根拠: [`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) には、停止 → 未確定テキストの除去 → 確定本文の同期 → 認識状態の reset という順序を保った局所的な重複がある。この重複を整理する価値を判断し、必要な場合だけ振る舞いを変えずに簡約する。
+  - 作業・完了条件: 既存の認識言語変更・再開側の UnitTests を再利用し、音声入力オフ時の停止から未確定テキスト除去、確定本文同期、認識状態 reset までを確認する UnitTests を既存 suite に追加する。エンジン再生成・挿入位置更新・再開は認識言語変更・再開側の処理とし、その既存テストを維持する。包括的な test scaffold や新しい型は追加せず、低優先度を維持する。
 
-- [ ] B1 クリップボード復元を絞って検証する
-  - 目的・根拠: [`ClipboardPaster.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/ClipboardPaster.swift) の保存・復元とエラー伝播には既存 unit test があるが、明示的な復元を伴う error、遅延、連続 paste の後に元クリップボードを失わないことは既存自動テストで未確認。既存の clipboard / target / CGEvent 注入を参照する。
-  - 実装時の判断・確認: 失敗時の明示復元、遅延復元、連続貼り付け後の復元から必要なケースを選び、最終的なクリップボード内容を確認する。汎用的な production rewrite、時間 DI、新しい復元動作はこのために追加しない。
+#### 機能改善
 
-- [ ] B6 engine 切替・OFF の停止後同期を低優先度で絞って整理する
-  - 目的・根拠: [`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) の stop → volatile text の clear → finalized text の同期と reset に、順序を保った局所的な重複がある。処理順序を維持し、engine の再生成・挿入位置更新・開始は切替側に残す。switch / replay には既存検証がある。
-  - 実装時の判断・確認: 振る舞いを変えない最小の簡約を判断し、既存の switch / replay 検証を再利用する。OFF は必要な観測可能な差分だけを確認し、包括的な test scaffold や新しい型を追加しない。
+- [ ] D3 直近の手動スクリプト実行前の入力本文へ戻す一時 Undo を追加する
+  - 目的・根拠: 手動スクリプトを誤実行した場合に、実行前の入力パネル本文へ戻して救済できるようにする。汎用 Undo や履歴への常設保存は求めず、復帰先として保持するのは直近に成功した手動スクリプト1回分だけとする。
+  - 動作: スクリプト実行成功直後に限り、入力パネル下部の Voice・Replace の右、中央の余白の前に「スクリプトを元に戻す」を表示する。対象はユーザーが手動実行したスクリプト（手動実行できる組み込みスクリプトを含む）とし、ボタンを押すと実行直前の本文へ戻して Undo を消費する。実行後の本文編集、確定、キャンセルで Undo を失効させる。確定時に実行される auto-run は対象外とする。
+  - 作業・完了条件: 直近の手動スクリプト成功後に指定位置へボタンが表示され、押すと実行直前の本文へ戻ること、実行後の編集・確定・キャンセルで利用できなくなることを確認する。auto-run では表示されないこと、履歴には従来どおり paste 成功後の最終結果のみが記録されることも確認する。
+
+- [ ] D4 置換ルールのショートカット注意表示を削除する
+  - 目的・根拠: General 設定の置換ルールにある Shortcut key 直下の「他のアプリやシステムが使用するショートカットは避けてください」という注意文と、その注意文専用の表示領域を削除する。変更は表示のみとし、設定とショートカット処理は維持する。
+  - 作業・完了条件: General 設定で注意文と専用の表示領域が表示されなくなり、置換ルールの Shortcut key の設定・保存・発火が従来どおり動作することを確認する。共通 localized 文字列は `ScriptEditView` にも使われているため、スクリプト側の表示を維持する場合はそのリソースキーを削除しない。D5 で設定配置が変わる可能性はあるが、現時点の作業方針としてこの表示を削除する。
+
+- [ ] D5 ショートカット設定を整理し、音声入力の切替を追加する
+  - 目的・根拠: ホットキーと入力パネル内のショートカットを「ショートカット」設定ページにまとめ、音声入力のオン／オフを入力パネル内のショートカットからも切り替えられるようにする。既存の設定値と操作の意味は維持する。
+  - 動作・配置: 既存の「ホットキー」設定ページを「ショートカット」に改め、「ホットキー」と「入力パネル内のショートカット」のグループを設ける。「ホットキー」には既存のパネル表示・確定 modifier tap を置く。「入力パネル内のショートカット」には新しい音声入力オン／オフ、既存の置換、既存の auto-run 選択切替を置き、後二者は General 設定から移す。新しい音声入力ショートカットは入力パネル内で発火し、Voice ボタンと設定からの操作と同じ音声入力オン／オフ状態を切り替える。個別 script shortcut は各 `ScriptEditView` に残す。D4 は現在の General 配置で注意表示を削除し、D5 で置換 shortcut を移す際も注意表示を復活させない。
+  - 実装時の判断: キー衝突時の扱いと、同一キーが選択された場合の対処を決める。作用範囲と設定配置は変更しない。
+  - 作業・完了条件: 設定ページの名称とグループ、各 shortcut の配置、および各操作の意味が上記どおりであることを確認する。音声入力 shortcut が入力パネル内で Voice ボタン・設定と同じオン／オフ状態を切り替え、General から移す置換・auto-run shortcut の保存済み設定値、パネル表示・確定、個別 script shortcut が維持されることを確認する。
+
+- [ ] D6 Claude の整形サンプルを Apple の `fm` を使う例へ置き換える
+  - 目的・根拠: Claude 依存の整形サンプルを、Apple macOS 27 の `/usr/bin/fm` を使う単一の例に置き換える。stdin → 整形 → stdout の流れは維持する。
+  - 実装方針・動作: `examples/fm-textfmt.sh` に整形指示を置き、`default` / `e` 等のプリセット引数と外部 Markdown 指示ファイルは設けない。空白だけの stdin はそのまま stdout へ返す。非空白入力は `<transcript>…</transcript>` で囲み、`fm respond --no-stream --instructions` に渡して、stdout には整形本文だけを出す。初回の `sudo fm license` は利用者が手動実行するようスクリプト冒頭のコメントで案内し、スクリプトからは実行しない。
+  - 作業・完了条件: `examples/claude-fmt.sh` と `examples/claude-textfmt/{default,e}.md` を fm 用例へ置き換え、不要なファイルを削除する。英語・日本語 README は新サンプル名と簡単な使い方へ更新し、ライセンス手順を重複記載しない。空白入力の透過、非空白入力の整形、stdout が整形本文のみであること、および Claude 固有の環境変数・オプションの除去を確認する。
 
 ### 将来の改善（低優先度）
 
