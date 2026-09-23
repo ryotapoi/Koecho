@@ -109,6 +109,82 @@ import Testing
     #expect(coordinator.voiceInsertionPoint == 11)
   }
 
+  // MARK: - disableEngine
+
+  @Test func disableEngineWaitsForStopThenClearsVolatileAndSyncsFinalizedText() async {
+    let (coordinator, appState, mockTV, engine) = makeCoordinator(inputText: "old")
+    mockTV.string = "confirmed draft"
+    mockTV.finalizedString = "confirmed"
+    mockTV.volatileRange = NSRange(location: 9, length: 6)
+    coordinator.replayState = .restartInProgress(localText: "draft")
+
+    let stopStarted = AsyncStream<Void>.makeStream()
+    let finishStop = AsyncStream<Void>.makeStream()
+    engine.onStop = {
+      stopStarted.continuation.yield(())
+      for await _ in finishStop.stream { break }
+    }
+    var clearedBeforeRead = false
+    mockTV.onClearVolatileText = { [weak coordinator, weak appState, weak engine] in
+      guard let coordinator, let appState, let engine else { return }
+      #expect(engine.state == .idle)
+      #expect(appState.inputText == "old")
+      #expect(coordinator.replayState == .restartInProgress(localText: "draft"))
+      clearedBeforeRead = true
+    }
+    mockTV.onReadFinalizedString = { [weak coordinator, weak appState, weak mockTV] in
+      guard let coordinator, let appState, let mockTV else { return }
+      #expect(clearedBeforeRead)
+      #expect(mockTV.clearVolatileTextCallCount == 1)
+      #expect(appState.inputText == "old")
+      #expect(coordinator.replayState == .restartInProgress(localText: "draft"))
+    }
+
+    let disableTask = Task { await coordinator.disableEngine() }
+    for await _ in stopStarted.stream { break }
+
+    #expect(engine.state == .stopping)
+    #expect(mockTV.clearVolatileTextCallCount == 0)
+    #expect(mockTV.volatileRange != nil)
+    #expect(appState.inputText == "old")
+    #expect(coordinator.replayState == .restartInProgress(localText: "draft"))
+
+    finishStop.continuation.yield(())
+    await disableTask.value
+
+    #expect(engine.stopCallCount == 1)
+    #expect(clearedBeforeRead)
+    #expect(mockTV.volatileRange == nil)
+    #expect(appState.inputText == "confirmed")
+    #expect(coordinator.replayState == .idle)
+  }
+
+  @Test func disableEngineClearsAccumulatedFinalizedText() async {
+    let (coordinator, _, mockTV, _) = makeCoordinator()
+    coordinator.voiceInput(didFinalize: "hello.")
+    #expect(mockTV.insertFinalizedTextCalls.count == 1)
+
+    await coordinator.disableEngine()
+    coordinator.voiceInput(didFinalize: "hello.")
+
+    #expect(mockTV.insertFinalizedTextCalls.count == 2)
+    #expect(mockTV.insertFinalizedTextCalls[1].text == "hello.")
+  }
+
+  @Test func disableEngineAllowsNextTranscriberRestart() async {
+    let (coordinator, _, _, engine) = makeRestartableCoordinator()
+    coordinator.handleTextChanged()
+    await coordinator.restartTranscriberTask?.value
+    #expect(engine.restartTranscriberCallCount == 1)
+
+    await coordinator.disableEngine()
+    coordinator.handleTextChanged()
+    await coordinator.restartTranscriberTask?.value
+
+    #expect(engine.stopCallCount == 1)
+    #expect(engine.restartTranscriberCallCount == 2)
+  }
+
   // MARK: - resetState
 
   @Test func resetStateClearsReplayFlags() {

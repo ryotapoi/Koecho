@@ -11,6 +11,7 @@ final class MockVoiceInputEngine: VoiceInputEngine {
   var startCallCount = 0
   var stopCallCount = 0
   var cancelCallCount = 0
+  var onStop: (() async -> Void)?
 
   func start() {
     startCallCount += 1
@@ -20,6 +21,7 @@ final class MockVoiceInputEngine: VoiceInputEngine {
   func stop() async {
     stopCallCount += 1
     state = .stopping
+    await onStop?()
     state = .idle
   }
 

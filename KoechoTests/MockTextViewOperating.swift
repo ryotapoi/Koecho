@@ -6,7 +6,15 @@ import KoechoCore
 @MainActor
 final class MockTextViewOperating: TextViewOperating {
   var string: String = ""
-  var finalizedString: String = ""
+  var finalizedString: String {
+    get {
+      onReadFinalizedString?()
+      return storedFinalizedString
+    }
+    set { storedFinalizedString = newValue }
+  }
+  private var storedFinalizedString = ""
+  var onReadFinalizedString: (() -> Void)?
   var volatileRange: NSRange?
 
   var markedText = false
@@ -46,9 +54,11 @@ final class MockTextViewOperating: TextViewOperating {
   }
 
   var clearVolatileTextCallCount = 0
+  var onClearVolatileText: (() -> Void)?
   func clearVolatileText() {
     clearVolatileTextCallCount += 1
     volatileRange = nil
+    onClearVolatileText?()
   }
 
   var finalizeVolatileTextCallCount = 0
