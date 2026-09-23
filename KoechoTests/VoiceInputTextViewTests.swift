@@ -56,6 +56,32 @@ struct VoiceInputTextViewTests {
     #expect(cursorMoved == 0)
   }
 
+  @Test func completedSelectionRangesNotifyCursorOnceAfterDrag() {
+    let textView = makeTextView()
+    textView.string = "😀hello"
+    var positions: [Int] = []
+    textView.onCursorMoved = { positions.append($0) }
+    let selection = NSValue(range: NSRange(location: 2, length: 0))
+
+    textView.setSelectedRanges([selection], affinity: .downstream, stillSelecting: true)
+    #expect(positions.isEmpty)
+
+    textView.setSelectedRanges([selection], affinity: .downstream, stillSelecting: false)
+    #expect(positions == [2])
+  }
+
+  @Test func singleSelectionRangeStillNotifiesCursorOnce() {
+    let textView = makeTextView()
+    textView.string = "hello"
+    var positions: [Int] = []
+    textView.onCursorMoved = { positions.append($0) }
+
+    textView.setSelectedRange(
+      NSRange(location: 3, length: 0), affinity: .downstream, stillSelecting: false)
+
+    #expect(positions == [3])
+  }
+
   @Test func insertTextFiresOnTextCommitted() {
     let textView = makeTextView()
     textView.textContainer?.widthTracksTextView = true

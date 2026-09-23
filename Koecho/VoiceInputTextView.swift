@@ -350,12 +350,12 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   // MARK: - Cursor movement
 
-  override func setSelectedRange(
-    _ charRange: NSRange, affinity: NSSelectionAffinity, stillSelecting stillSelectingFlag: Bool
+  override func setSelectedRanges(
+    _ ranges: [NSValue], affinity: NSSelectionAffinity, stillSelecting stillSelectingFlag: Bool
   ) {
-    super.setSelectedRange(charRange, affinity: affinity, stillSelecting: stillSelectingFlag)
+    super.setSelectedRanges(ranges, affinity: affinity, stillSelecting: stillSelectingFlag)
     if !stillSelectingFlag, !isSuppressingCallbacks {
-      onCursorMoved?(charRange.location)
+      onCursorMoved?(selectedRange().location)
     }
   }
 

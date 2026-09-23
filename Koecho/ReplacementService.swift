@@ -56,7 +56,8 @@ final class ReplacementService {
 
       appState.setInputText(result)
       appState.errorMessage = nil
-      textView?.replaceText(result)
+      textView?.replaceText(
+        result, selecting: NSRange(location: voiceInsertionPoint, length: 0))
     }
   }
 

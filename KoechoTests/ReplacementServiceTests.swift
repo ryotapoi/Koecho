@@ -40,7 +40,7 @@ import Testing
     service.applyOrPreview()
 
     #expect(appState.inputText == "天気")
-    #expect(mockTV.replaceTextCalls.last == "天気")
+    #expect(mockTV.replaceTextSelectingCalls.last?.text == "天気")
   }
 
   @Test func applyOrPreviewAdjustsVoiceInsertionPoint() {

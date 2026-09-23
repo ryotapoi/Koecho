@@ -48,7 +48,7 @@
   - 目的・根拠: 履歴を読み込めなかった場合に、空履歴として自動保存せず既存内容を失わないようにし、N2で用意する起動時の集約通知から理由を説明する。[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift) と [`KoechoApp.swift`](../Koecho/KoechoApp.swift) の読み込み・保存経路。
   - 作業・完了条件: 履歴の読み込み失敗をN2と同じ起動時アラートへ含め、設定と履歴が同時に失敗してもアラートは1回だけ表示する。読み込めない履歴は表示上利用不可として扱い、保存済みファイルを保持したまま履歴への書き込みを禁止する。ユーザーが明示的に履歴を初期化した後は記録を再開できる。正常時、履歴だけの失敗、設定との同時失敗、明示的な初期化を検証する。
 
-- [ ] N4 マウスによるキャレット移動を音声挿入位置へ同期する
+- [x] N4 マウスによるキャレット移動を音声挿入位置へ同期する
   - 目的・根拠: 実環境で再現を確認した。音声入力中にマウスでキャレットを移動してから発話を続けると、後続の音声テキストは移動前のキャレット位置へ挿入される一方、キーボードでの移動は正しい新しい位置へ挿入される。[`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift)、[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift)、[`InputPanelController.swift`](../Koecho/InputPanelController.swift)。
   - 作業・完了条件: マウスによるキャレット移動で音声挿入位置を更新する。実環境で移動後の継続音声入力が新しい位置へ挿入されることを確認し、既存のキーボード移動、volatile text の確定、transcriber restart・replay suppression が退行しないことを関連テストと実操作で確認する。
 

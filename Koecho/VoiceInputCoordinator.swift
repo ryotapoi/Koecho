@@ -177,6 +177,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   // MARK: - Text editing hooks
 
   func handleCursorMoved(_ position: Int) {
+    voiceInsertionPoint = position
     if let textView, textView.volatileRange != nil {
       if let range = textView.volatileRange,
         range.location + range.length <= (textView.string as NSString).length
@@ -191,7 +192,6 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
       onCursorAutoReplacement?()
       restartTranscriberIfNeeded()
     }
-    voiceInsertionPoint = position
   }
 
   func handleTextChanged() {
