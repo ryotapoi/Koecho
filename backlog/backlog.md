@@ -52,7 +52,7 @@
   - 目的・根拠: 実環境で再現を確認した。音声入力中にマウスでキャレットを移動してから発話を続けると、後続の音声テキストは移動前のキャレット位置へ挿入される一方、キーボードでの移動は正しい新しい位置へ挿入される。[`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift)、[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift)、[`InputPanelController.swift`](../Koecho/InputPanelController.swift)。
   - 作業・完了条件: マウスによるキャレット移動で音声挿入位置を更新する。実環境で移動後の継続音声入力が新しい位置へ挿入されることを確認し、既存のキーボード移動、volatile text の確定、transcriber restart・replay suppression が退行しないことを関連テストと実操作で確認する。
 
-- [ ] B1 ClipboardPasterTests にクリップボード復元の UnitTests を追加する
+- [x] B1 ClipboardPasterTests にクリップボード復元の UnitTests を追加する
   - 目的・根拠: [`ClipboardPaster.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/ClipboardPaster.swift) の保存・復元とエラー伝播には既存 UnitTests があるが、貼り付け失敗後の明示復元、遅延復元、連続貼り付け後に元の内容へ戻ることは未確認。
   - 作業・完了条件: 既存の `ClipboardPasterTests` を拡張し、失敗後の明示復元、遅延復元、連続貼り付け後に最終的なクリップボード内容が元へ戻ることを確認する UnitTests を追加する。テストで復元不具合が見つかった場合は必要な修正を行う。コード整理自体は目的とせず、専用検証 skill・新しい検証基盤・過剰な DI や scaffold は追加しない。
 
