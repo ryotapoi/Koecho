@@ -12,7 +12,7 @@ Invoke with a hotkey, edit text by voice and keyboard, process it with shell scr
 - Voice + keyboard: dictate and edit with the keyboard at the same time. Recognition results update in real time
 - On-device speech recognition with spoken punctuation and line breaks
 - Built-in text operations: increase or decrease indentation and add block quotes to selected lines without configuring external scripts
-- Script integration: transform text with shell scripts. Combine with Claude Code headless mode to auto-format or translate voice transcriptions
+- Script integration: transform text with shell scripts, including the Apple Foundation Models voice formatting example
 
 ## Requirements
 
@@ -69,19 +69,15 @@ Context is also passed via environment variables:
 
 Use `examples/echo-env.sh` to verify. Register and run it to see stdin contents and environment variable values.
 
-### Voice text formatting with Claude Code
+### Voice text formatting with Apple Foundation Models
 
-`examples/claude-fmt.sh` formats voice transcriptions using Claude Code headless mode (`claude -p`). It uses the Haiku model for speed, with prompts tuned for stable results.
+`examples/fm-textfmt.sh` formats voice transcriptions with macOS 27's `/usr/bin/fm`. It reads text from stdin and writes the formatted text to stdout.
 
 ```bash
-# Default (Japanese formatting)
-examples/claude-fmt.sh
-
-# English translation preset
-examples/claude-fmt.sh e
+printf '%s\n' 'えー次の会議は明日ですよろしく' | examples/fm-textfmt.sh
 ```
 
-Copy preset files from `examples/claude-textfmt/*.md` to `~/.config/claude-textfmt/`. Add presets to switch between different processing patterns.
+Edit `examples/fm-textfmt-prompt.md` to customize the formatting instructions. See the script's opening comment for the first-use license step.
 
 ## License
 

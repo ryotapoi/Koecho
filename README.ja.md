@@ -10,7 +10,7 @@ macOS 向けの音声入力+キーボード入力アプリ。
 - 音声入力+キーボード: 音声で入力しながらキーボードで修正できる。認識結果はリアルタイムに反映
 - オンデバイス音声認識: 句読点や改行も音声で入力できる
 - 内蔵テキスト操作: 外部スクリプトを設定せずに、選択行のインデント増減や引用化ができる
-- スクリプト連携: 入力テキストをシェルスクリプトで自由に加工。Claude Code のヘッドレスモードと組み合わせて、音声書き起こしの整形や翻訳を自動化できる
+- スクリプト連携: 入力テキストをシェルスクリプトで加工。Apple Foundation Models を使う音声書き起こし整形の例も利用できる
 
 ## 動作環境
 
@@ -67,19 +67,15 @@ Xcode でビルドしてください。
 
 動作確認には `examples/echo-env.sh` を使ってください。登録して実行すると、stdin の内容と環境変数の値が表示されます。
 
-### Claude Code による音声テキスト整形
+### Apple Foundation Models による音声テキスト整形
 
-`examples/claude-fmt.sh` は、Claude Code のヘッドレスモード（`claude -p`）で音声書き起こしを整形するサンプルスクリプトです。実行速度を優先して Haiku モデルを使用しており、Haiku でも結果が安定するようプロンプトを調整しています。
+`examples/fm-textfmt.sh` は、macOS 27 の `/usr/bin/fm` で音声書き起こしを整形するサンプルスクリプトです。stdin からテキストを読み、整形した本文を stdout に返します。
 
 ```bash
-# デフォルト（日本語整形）
-examples/claude-fmt.sh
-
-# 英訳プリセット
-examples/claude-fmt.sh e
+printf '%s\n' 'えー次の会議は明日ですよろしく' | examples/fm-textfmt.sh
 ```
 
-プリセットファイル（`examples/claude-textfmt/*.md`）を `~/.config/claude-textfmt/` にコピーして使います。プリセットを追加すれば、用途に応じた加工パターンを切り替えられます。
+整形指示は `examples/fm-textfmt-prompt.md` で編集できます。初回のライセンス手順はスクリプト冒頭のコメントを参照してください。
 
 ## ライセンス
 

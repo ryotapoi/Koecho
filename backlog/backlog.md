@@ -77,10 +77,10 @@
   - 実装時の判断: キー衝突時の扱いと、同一キーが選択された場合の対処を決める。作用範囲と設定配置は変更しない。
   - 作業・完了条件: 設定ページの名称とグループ、各 shortcut の配置、および各操作の意味が上記どおりであることを確認する。音声入力 shortcut が入力パネル内で Voice ボタン・設定と同じオン／オフ状態を切り替え、General から移す置換・auto-run shortcut の保存済み設定値、パネル表示・確定、個別 script shortcut が維持されることを確認する。
 
-- [ ] D6 Claude の整形サンプルを Apple の `fm` を使う例へ置き換える
+- [x] D6 Claude の整形サンプルを Apple の `fm` を使う例へ置き換える
   - 目的・根拠: Claude 依存の整形サンプルを、Apple macOS 27 の `/usr/bin/fm` を使う単一の例に置き換える。stdin → 整形 → stdout の流れは維持する。
-  - 実装方針・動作: `examples/fm-textfmt.sh` に整形指示を置き、`default` / `e` 等のプリセット引数と外部 Markdown 指示ファイルは設けない。空白だけの stdin はそのまま stdout へ返す。非空白入力は `<transcript>…</transcript>` で囲み、`fm respond --no-stream --instructions` に渡して、stdout には整形本文だけを出す。初回の `sudo fm license` は利用者が手動実行するようスクリプト冒頭のコメントで案内し、スクリプトからは実行しない。
-  - 作業・完了条件: `examples/claude-fmt.sh` と `examples/claude-textfmt/{default,e}.md` を fm 用例へ置き換え、不要なファイルを削除する。英語・日本語 README は新サンプル名と簡単な使い方へ更新し、ライセンス手順を重複記載しない。空白入力の透過、非空白入力の整形、stdout が整形本文のみであること、および Claude 固有の環境変数・オプションの除去を確認する。
+  - 実装方針・動作: `examples/fm-textfmt.sh` は同じディレクトリの固定指示ファイル `fm-textfmt-prompt.md` を読み、`default` / `e` 等のプリセット切替、引数、設定は設けない。空白だけの stdin はそのまま stdout へ返す。非空白入力は `<transcript>…</transcript>` で囲み、`fm respond --no-stream --instructions` に渡して、stdout には整形本文だけを出す。初回の `sudo fm license` は利用者が手動実行するようスクリプト冒頭のコメントで案内し、スクリプトからは実行しない。
+  - 作業・完了条件: `examples/claude-fmt.sh` と `examples/claude-textfmt/{default,e}.md` を fm 用例へ置き換え、不要なファイルを削除する。英語・日本語 README は新サンプル名と簡単な使い方へ更新し、固定指示ファイルの編集場所を案内する。ライセンス手順を重複記載しない。空白入力の透過、非空白入力の整形、stdout が整形本文のみであること、および Claude 固有の環境変数・オプションの除去を確認する。
 
 - [ ] D7 Auto-replace が有効なときは入力パネルの Replace ボタンを隠す
   - 目的・根拠: Auto-replace の設定状態と入力パネルで選べる操作を一致させる。
