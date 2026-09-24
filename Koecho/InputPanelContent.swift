@@ -11,6 +11,7 @@ struct InputPanelContent: View {
   var onSwitchEngine: () async -> Void
   var onCancelPrompt: () -> Void
   var onApplyReplacementRules: () -> Void = {}
+  var onUndoScript: () -> Void = {}
   var onPromptFocused: () -> Void = {}
   var onAddReplacementRule: (ReplacementRule) -> Void = { _ in }
   var onTextChanged: (String) -> Void = { _ in }
@@ -43,9 +44,11 @@ struct InputPanelContent: View {
         scriptSettings: appState.settings.script,
         isRunningScript: appState.isRunningScript,
         hasPromptScript: hasPromptScript,
+        canUndoScript: appState.scriptUndoText != nil,
         hotkeyConfig: appState.settings.hotkey.hotkeyConfig,
         onSwitchEngine: onSwitchEngine,
         onApplyReplacementRules: onApplyReplacementRules,
+        onUndoScript: onUndoScript,
         onConfirm: onConfirm,
         replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
       )

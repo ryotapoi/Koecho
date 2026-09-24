@@ -37,6 +37,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   func replaceText(_ text: String) {
     suppressCallbacks {
+      clearVolatileText()
       string = text
     }
   }
@@ -44,6 +45,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   /// Replace the document and its selected result as one suppressed UI update.
   func replaceText(_ text: String, selecting range: NSRange) {
     suppressCallbacks {
+      clearVolatileText()
       string = text
       let length = (text as NSString).length
       let location = max(0, min(range.location, length))

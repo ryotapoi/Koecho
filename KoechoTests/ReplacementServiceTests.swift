@@ -43,6 +43,19 @@ import Testing
     #expect(mockTV.replaceTextSelectingCalls.last?.text == "天気")
   }
 
+  @Test func replacementEditInvalidatesScriptUndo() {
+    let (service, appState, _, _) = makeService(inputText: "after")
+    appState.settings.replacement.addReplacementRule(
+      ReplacementRule(pattern: "after", replacement: "changed")
+    )
+    appState.offerScriptUndo(restoring: "before")
+
+    service.applyOrPreview()
+
+    #expect(appState.inputText == "changed")
+    #expect(appState.scriptUndoText == nil)
+  }
+
   @Test func applyOrPreviewAdjustsVoiceInsertionPoint() {
     let (service, appState, _, coordinator) = makeService(inputText: "えーと天気")
     coordinator.handleCursorMoved(5)  // after "えーと天気" = 5 UTF-16 units

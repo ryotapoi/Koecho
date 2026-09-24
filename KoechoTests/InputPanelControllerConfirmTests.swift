@@ -183,12 +183,14 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("hello")
+    ctx.appState.offerScriptUndo(restoring: "before")
     ctx.appState.frontmostApplication = nil
 
     await ctx.controller.confirm()
 
     #expect(ctx.appState.errorMessage == String(localized: "No target application"))
     #expect(ctx.appState.isInputPanelVisible == true)
+    #expect(ctx.appState.scriptUndoText == nil)
   }
 
   @Test func cancelDuringConfirmIsIgnored() async throws {
@@ -287,11 +289,13 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("hello")
+    ctx.appState.offerScriptUndo(restoring: "before")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
 
     #expect(ctx.historyStore.entries.isEmpty)
+    #expect(ctx.appState.scriptUndoText == nil)
   }
 
   @Test func confirmDoesNotRecordEmptyText() async {

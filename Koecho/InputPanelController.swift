@@ -119,6 +119,7 @@ final class InputPanelController {
 
   func confirm() async {
     guard appState.isInputPanelVisible, !isConfirming, !appState.isRunningScript else { return }
+    appState.discardScriptUndo()
 
     let rawText = await finalizeVoiceInput()
     let text = replacementService.applyRules(to: rawText)
@@ -290,6 +291,8 @@ final class InputPanelController {
   func handleTextChanged(_ text: String) {
     if let textView, !textView.hasMarkedText() {
       appState.setInputText(text)
+    } else if textView?.hasMarkedText() == true {
+      appState.discardScriptUndo()
     }
     appState.errorMessage = nil
     if appState.settings.replacement.isAutoReplacementEnabled {
@@ -301,6 +304,10 @@ final class InputPanelController {
   func cancelPrompt() {
     voiceCoordinator.currentVoiceTarget = .textEditor
     scriptService.cancelPrompt()
+  }
+
+  func undoLastScript() {
+    scriptService.undoLastScript()
   }
 
   // MARK: - Private
@@ -323,6 +330,9 @@ final class InputPanelController {
         },
         onApplyReplacementRules: { [weak self] in
           self?.replacementService.applyOrPreview()
+        },
+        onUndoScript: { [weak self] in
+          self?.undoLastScript()
         },
         onPromptFocused: { [weak self] in
           guard let self else { return }

@@ -151,6 +151,55 @@ import Testing
     #expect(appState.errorMessage == nil)
   }
 
+  @Test func customUndoRestoresLatestInputOnceIncludingPromptExecution() async {
+    let (service, appState, textView, coordinator) = makeService(inputText: "first")
+    let upper = Script(name: "Upper", scriptPath: "tr a-z A-Z", requiresPrompt: true)
+    await service.execute(upper)
+    #expect(appState.scriptUndoText == nil)
+    await service.execute(upper)
+    #expect(appState.scriptUndoText == "first")
+
+    textView.string = "FIRST"
+    textView.finalizedString = "FIRST"
+    let suffix = Script(name: "Suffix", scriptPath: "sed 's/$/!/'")
+    await service.execute(suffix)
+    #expect(appState.inputText == "FIRST!")
+    #expect(appState.scriptUndoText == "FIRST")
+
+    service.undoLastScript()
+    #expect(appState.inputText == "FIRST")
+    #expect(textView.replaceTextCalls.last == "FIRST")
+    #expect(coordinator.voiceInsertionPoint == 5)
+    #expect(appState.scriptUndoText == nil)
+    service.undoLastScript()
+    #expect(appState.inputText == "FIRST")
+  }
+
+  @Test func builtinUndoRestoresFinalizedVolatileText() async {
+    let (service, appState, textView, coordinator) = makeService(inputText: "one")
+    textView.string = "one two"
+    textView.finalizedString = "one"
+    textView.volatileRange = NSRange(location: 3, length: 4)
+    let script = Script(id: UUID(), builtin: BuiltinScript(feature: .blockQuote)!)
+
+    await service.execute(script)
+    #expect(appState.scriptUndoText == "one two")
+    service.undoLastScript()
+    #expect(appState.inputText == "one two")
+    #expect(textView.replaceTextCalls.last == "one two")
+    #expect(coordinator.voiceInsertionPoint == 7)
+  }
+
+  @Test func failedAndAutoRunScriptsDoNotOfferUndo() async throws {
+    let (service, appState, _, _) = makeService(inputText: "original")
+    await service.execute(Script(name: "Fail", scriptPath: "exit 1"))
+    #expect(appState.scriptUndoText == nil)
+    await service.execute(Script(name: "Empty", scriptPath: "printf ''"))
+    #expect(appState.scriptUndoText == nil)
+    _ = try await service.runAutoScript(Script(name: "Auto", scriptPath: "tr a-z A-Z"), on: "original")
+    #expect(appState.scriptUndoText == nil)
+  }
+
   // MARK: - Concurrent execution guard
 
   @Test func executeSkipsWhenAlreadyRunning() async {

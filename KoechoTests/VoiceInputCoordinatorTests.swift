@@ -56,6 +56,17 @@ import Testing
 
   // MARK: - Engine lifecycle
 
+  @Test func finalizedVoiceEditInvalidatesScriptUndo() {
+    let (coordinator, appState, _, _) = makeCoordinator(inputText: "after")
+    coordinator.moveVoiceInsertionPoint(toEndOf: "after")
+    appState.offerScriptUndo(restoring: "before")
+
+    coordinator.voiceInput(didFinalize: " voice")
+
+    #expect(appState.inputText == "after voice")
+    #expect(appState.scriptUndoText == nil)
+  }
+
   @Test func startEngineCallsEngineStart() {
     let (coordinator, _, _, mockEngine) = makeCoordinator()
 
@@ -300,6 +311,22 @@ import Testing
 
     #expect(mockTV.setVolatileTextCalls.count == 1)
     #expect(mockTV.setVolatileTextCalls[0].text == " world")
+  }
+
+  @Test func visibleVolatileVoiceTextInvalidatesScriptUndoBeforeFinalization() {
+    let (coordinator, appState, _, _) = makeCoordinator(inputText: "after")
+    let textView = VoiceInputTextView()
+    textView.replaceText("after")
+    coordinator.textView = textView
+    coordinator.moveVoiceInsertionPoint(toEndOf: "after")
+    appState.offerScriptUndo(restoring: "before")
+
+    coordinator.voiceInput(didUpdateVolatile: " voice")
+
+    #expect(textView.string == "after voice")
+    #expect(textView.volatileRange == NSRange(location: 5, length: 6))
+    #expect(appState.inputText == "after")
+    #expect(appState.scriptUndoText == nil)
   }
 
   @Test func didUpdateVolatileSuppressesReplayWithinDeadline() {

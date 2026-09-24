@@ -72,6 +72,7 @@ final class ScriptExecutionService {
       guard appState.isInputPanelVisible else { return }
       appState.setInputText(result.output)
       voiceCoordinator.moveVoiceInsertionPoint(toEndOf: result.output)
+      appState.offerScriptUndo(restoring: originalText)
     } catch {
       guard appState.isInputPanelVisible else { return }
       appState.setInputText(originalText)
@@ -83,6 +84,16 @@ final class ScriptExecutionService {
     appState.promptScript = nil
     appState.promptText = ""
     appState.volatilePromptText = ""
+  }
+
+  func undoLastScript() {
+    guard appState.isInputPanelVisible, !isConfirming(), !appState.isRunningScript,
+      appState.promptScript == nil,
+      let originalText = appState.consumeScriptUndo()
+    else { return }
+    textView?.clearReplacementPreviews()
+    textView?.replaceText(originalText)
+    voiceCoordinator.moveVoiceInsertionPoint(toEndOf: originalText)
   }
 
   func cycleAutoRunScript() {
@@ -132,6 +143,7 @@ final class ScriptExecutionService {
       to: result.selection.location + result.selection.length,
       in: result.text
     )
+    appState.offerScriptUndo(restoring: currentText)
   }
 
   private func makeScriptContext(prompt: String) -> ScriptRunnerContext {

@@ -10,6 +10,7 @@ public final class AppState {
   public let settings: Settings
 
   public private(set) var inputText: String = ""
+  public private(set) var scriptUndoText: String?
   public var isInputPanelVisible: Bool = false
   public var frontmostApplication: NSRunningApplication?
   public var errorMessage: String?
@@ -29,6 +30,24 @@ public final class AppState {
   }
 
   public func setInputText(_ text: String) {
+    if text != inputText {
+      scriptUndoText = nil
+    }
     inputText = text
+  }
+
+  public func offerScriptUndo(restoring text: String) {
+    scriptUndoText = text
+  }
+
+  public func discardScriptUndo() {
+    scriptUndoText = nil
+  }
+
+  public func consumeScriptUndo() -> String? {
+    guard let text = scriptUndoText else { return nil }
+    scriptUndoText = nil
+    inputText = text
+    return text
   }
 }

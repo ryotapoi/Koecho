@@ -273,6 +273,9 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     case .textEditor:
       transcriberAlreadyRestarted = false
       textView?.setVolatileText(text, at: voiceInsertionPoint)
+      if textView?.volatileRange != nil {
+        appState.discardScriptUndo()
+      }
     }
   }
 

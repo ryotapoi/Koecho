@@ -22,6 +22,7 @@ final class PanelLifecycleManager {
   }
 
   func show(duckVolume: Bool = true) {
+    appState.discardScriptUndo()
     appState.isRunningScript = false
     appState.frontmostApplication = NSWorkspace.shared.frontmostApplication
 
@@ -41,6 +42,7 @@ final class PanelLifecycleManager {
   }
 
   func clearState() {
+    appState.discardScriptUndo()
     ducker.restore()
     appState.setInputText("")
     appState.isInputPanelVisible = false

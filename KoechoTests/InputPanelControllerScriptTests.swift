@@ -16,12 +16,53 @@ extension InputPanelControllerTests {
     ctx.appState.isRunningScript = true
     ctx.appState.promptScript = Script(name: "Test", scriptPath: "/tmp/test.sh")
     ctx.appState.promptText = "prompt"
+    ctx.appState.offerScriptUndo(restoring: "before")
 
     ctx.controller.cancel()
 
     #expect(ctx.appState.isRunningScript == false)
     #expect(ctx.appState.promptScript == nil)
     #expect(ctx.appState.promptText == "")
+    #expect(ctx.appState.scriptUndoText == nil)
+  }
+
+  @Test func confirmedTextEditInvalidatesScriptUndo() {
+    let ctx = makeController()
+    ctx.controller.showPanel()
+    ctx.appState.setInputText("after")
+    ctx.appState.offerScriptUndo(restoring: "before")
+
+    ctx.controller.handleTextChanged("edited")
+
+    #expect(ctx.appState.scriptUndoText == nil)
+  }
+
+  @Test func markedTextEditInvalidatesScriptUndo() async throws {
+    let ctx = makeController()
+    ctx.controller.showPanel()
+    await Task.yield()
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller))
+    ctx.appState.setInputText("after")
+    textView.replaceText("after")
+    ctx.appState.offerScriptUndo(restoring: "before")
+
+    textView.setMarkedText(
+      "あ",
+      selectedRange: NSRange(location: 1, length: 0),
+      replacementRange: NSRange(location: NSNotFound, length: 0)
+    )
+
+    #expect(textView.hasMarkedText())
+    #expect(ctx.appState.scriptUndoText == nil)
+  }
+
+  @Test func showPanelDiscardsPreviousScriptUndo() {
+    let ctx = makeController()
+    ctx.appState.offerScriptUndo(restoring: "before")
+
+    ctx.controller.showPanel()
+
+    #expect(ctx.appState.scriptUndoText == nil)
   }
 
   @Test func confirmWhileRunningScriptIsNoop() async {
@@ -105,6 +146,37 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "cmd-shift output")
   }
 
+  @Test func manualUndoRestoresEditorAndRecordsOnlyConfirmedResult() async throws {
+    let shortcut = ShortcutKey(modifiers: [.control], character: "u")
+    let script = Script(name: "Upper", scriptPath: "tr a-z A-Z", shortcutKey: shortcut)
+    let paster = MockPaster()
+    let ctx = makeController(paster: paster)
+    ctx.appState.settings.script.scripts = [script]
+
+    ctx.controller.showPanel()
+    await Task.yield()
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller))
+    textView.replaceText("hello")
+    ctx.appState.setInputText("hello")
+    #expect(ctx.controller.panel.onShortcutKey?(shortcut) == true)
+    await ctx.controller.shortcutScriptTask?.value
+    #expect(ctx.appState.inputText == "HELLO")
+    #expect(ctx.appState.scriptUndoText == "hello")
+    #expect(ctx.historyStore.entries.isEmpty)
+
+    ctx.controller.undoLastScript()
+    #expect(ctx.appState.inputText == "hello")
+    #expect(textView.string == "hello")
+    #expect(ctx.appState.scriptUndoText == nil)
+    #expect(ctx.controller.voiceCoordinator.voiceInsertionPoint == 5)
+    #expect(ctx.historyStore.entries.isEmpty)
+
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+    await ctx.controller.confirm()
+    #expect(paster.pastedTexts == ["hello"])
+    #expect(ctx.historyStore.entries.map(\.text) == ["hello"])
+  }
+
   @Test func modifierMismatchDoesNotExecuteScript() {
     let cmdC = ShortcutKey(modifiers: [.command], character: "c")
     let cmdShiftC = ShortcutKey(modifiers: [.command, .shift], character: "c")
@@ -142,6 +214,7 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.isInputPanelVisible == false)
     #expect(ctx.historyStore.entries.count == 1)
     #expect(ctx.historyStore.entries[0].text == "HELLO")
+    #expect(ctx.appState.scriptUndoText == nil)
   }
 
   @Test func confirmAutoRunScriptError() async throws {
@@ -155,6 +228,7 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("hello")
+    ctx.appState.offerScriptUndo(restoring: "before")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -163,6 +237,7 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.errorMessage != nil)
     #expect(paster.pastedTexts.isEmpty)
     #expect(ctx.appState.inputText == "hello")
+    #expect(ctx.appState.scriptUndoText == nil)
   }
 
   @Test func confirmAutoRunScriptEmptyOutput() async throws {

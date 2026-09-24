@@ -41,6 +41,18 @@ struct VoiceInputTextViewTests {
     #expect(callCount == 0)
   }
 
+  @Test func replaceTextClearsPreviousVolatileRange() {
+    let textView = makeTextView()
+    textView.replaceText("after")
+    textView.setVolatileText(" voice", at: 5)
+
+    textView.replaceText("restored")
+
+    #expect(textView.string == "restored")
+    #expect(textView.volatileRange == nil)
+    #expect(textView.finalizedString == "restored")
+  }
+
   @Test func replaceTextSelectingUpdatesTextSelectionAndScrollWithoutCallbacks() {
     let textView = makeTextView()
     var textChanged = 0
@@ -54,6 +66,19 @@ struct VoiceInputTextViewTests {
     #expect(textView.selectedRange() == NSRange(location: 2, length: 3))
     #expect(textChanged == 0)
     #expect(cursorMoved == 0)
+  }
+
+  @Test func replaceTextSelectingClearsPreviousVolatileRange() {
+    let textView = makeTextView()
+    textView.replaceText("after")
+    textView.setVolatileText(" voice", at: 5)
+
+    textView.replaceText("restored", selecting: NSRange(location: 3, length: 0))
+
+    #expect(textView.string == "restored")
+    #expect(textView.volatileRange == nil)
+    #expect(textView.finalizedString == "restored")
+    #expect(textView.selectedRange() == NSRange(location: 3, length: 0))
   }
 
   @Test func completedSelectionRangesNotifyCursorOnceAfterDrag() {

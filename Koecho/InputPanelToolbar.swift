@@ -7,9 +7,11 @@ struct InputPanelToolbar: View {
   @Bindable var scriptSettings: ScriptSettings
   let isRunningScript: Bool
   let hasPromptScript: Bool
+  let canUndoScript: Bool
   let hotkeyConfig: HotkeyConfig
   var onSwitchEngine: () async -> Void
   var onApplyReplacementRules: () -> Void
+  var onUndoScript: () -> Void
   var onConfirm: () async -> Void
   let replacementShortcutKey: ShortcutKey?
 
@@ -54,6 +56,14 @@ struct InputPanelToolbar: View {
             String(localized: "Apply replacement rules"), shortcut: replacementShortcutKey)
         )
         .disabled(isRunningScript)
+      }
+
+      if canUndoScript {
+        Button("Undo Script", systemImage: "arrow.uturn.backward") {
+          onUndoScript()
+        }
+        .buttonStyle(.koechoToolbar(isEmphasized: true))
+        .disabled(isRunningScript || hasPromptScript)
       }
 
       Spacer(minLength: 8)
@@ -154,13 +164,15 @@ extension HotkeyConfig {
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: false,
+    canUndoScript: true,
     hotkeyConfig: .default,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
+    onUndoScript: {},
     onConfirm: {},
     replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
   )
-  .frame(width: 350, height: 40)
+  .frame(width: 560, height: 40)
 }
 
 #Preview("Running Script") {
@@ -172,9 +184,11 @@ extension HotkeyConfig {
     scriptSettings: scriptSettings,
     isRunningScript: true,
     hasPromptScript: false,
+    canUndoScript: false,
     hotkeyConfig: .default,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
+    onUndoScript: {},
     onConfirm: {},
     replacementShortcutKey: nil
   )
@@ -194,9 +208,11 @@ extension HotkeyConfig {
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: false,
+    canUndoScript: false,
     hotkeyConfig: .default,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
+    onUndoScript: {},
     onConfirm: {},
     replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
   )
@@ -217,9 +233,11 @@ extension HotkeyConfig {
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: true,
+    canUndoScript: false,
     hotkeyConfig: .default,
     onSwitchEngine: {},
     onApplyReplacementRules: {},
+    onUndoScript: {},
     onConfirm: {},
     replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
   )

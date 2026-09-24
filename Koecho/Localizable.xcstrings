@@ -1560,6 +1560,17 @@
     "Type" : {
 
     },
+    "Undo Script" : {
+      "comment" : "Button that restores the input text from before the most recent manually run script.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリプトを元に戻す"
+          }
+        }
+      }
+    },
     "Use $1, $2 to reference capture groups" : {
       "localizations" : {
         "ja" : {
