@@ -246,4 +246,32 @@ struct InputPanelControllerTests {
 
     #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
   }
+
+  @Test func voiceShortcutTogglesOnlyInsidePanel() async {
+    let ctx = makeController()
+    let key = ShortcutKey(modifiers: [.control], character: "v")
+    ctx.appState.settings.voiceInput.voiceInputShortcutKey = key
+    #expect(ctx.controller.panel.onShortcutKey?(key) == false)
+
+    ctx.controller.showPanel()
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    await ctx.controller.voiceShortcutTask?.value
+    #expect(!ctx.appState.settings.voiceInput.isVoiceInputEnabled)
+
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    await ctx.controller.voiceShortcutTask?.value
+    #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
+
+    ctx.controller.cancel()
+    #expect(ctx.controller.panel.onShortcutKey?(key) == false)
+  }
+
+  @Test func voiceShortcutDoesNotHandleUnassignedOrDifferentKey() {
+    let ctx = makeController()
+    let key = ShortcutKey(modifiers: [.control], character: "v")
+    ctx.controller.showPanel()
+    #expect(ctx.controller.panel.onShortcutKey?(key) == false)
+    ctx.appState.settings.voiceInput.voiceInputShortcutKey = key
+    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.option], character: "v")) == false)
+  }
 }

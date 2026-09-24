@@ -629,6 +629,26 @@
         }
       }
     },
+    "Shortcuts" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショートカット"
+          }
+        }
+      }
+    },
+    "Input panel shortcuts" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入力パネル内のショートカット"
+          }
+        }
+      }
+    },
     "Hotkey" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1608,6 +1628,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "音声入力"
+          }
+        }
+      }
+    },
+    "Voice input shortcut" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声入力切替ショートカット"
           }
         }
       }

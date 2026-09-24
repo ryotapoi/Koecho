@@ -302,6 +302,7 @@ extension InputPanelControllerTests {
     let ctx = makeController()
     let ctrlA = ShortcutKey(modifiers: [.control], character: "a")
     ctx.appState.settings.script.autoRunShortcutKey = ctrlA
+    ctx.appState.settings.voiceInput.voiceInputShortcutKey = ctrlA
     ctx.appState.settings.replacement.replacementShortcutKey = ctrlA
     ctx.appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "hello", replacement: "bye")
@@ -319,5 +320,31 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.settings.script.autoRunScriptId == script.id)
     // Text should NOT have been replaced by replacement rules
     #expect(ctx.appState.inputText == "hello")
+    #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
+  }
+
+  @Test func replacementAndScriptTakePriorityOverVoiceShortcut() async throws {
+    let ctx = makeController()
+    let key = ShortcutKey(modifiers: [.control], character: "v")
+    ctx.appState.settings.voiceInput.voiceInputShortcutKey = key
+    ctx.appState.settings.replacement.replacementShortcutKey = key
+    ctx.appState.settings.replacement.addReplacementRule(
+      ReplacementRule(pattern: "hello", replacement: "bye")
+    )
+    ctx.controller.showPanel()
+    ctx.appState.setInputText("hello")
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    #expect(ctx.appState.inputText == "bye")
+    #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
+
+    ctx.appState.settings.replacement.replacementRules = []
+    let scriptPath = try makeScript("echo 'script output'")
+    ctx.appState.settings.script.scripts = [
+      Script(name: "Voice Collision", scriptPath: scriptPath, shortcutKey: key)
+    ]
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    await ctx.controller.shortcutScriptTask?.value
+    #expect(ctx.appState.inputText == "script output")
+    #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
   }
 }

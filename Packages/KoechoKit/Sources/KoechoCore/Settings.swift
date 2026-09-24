@@ -14,7 +14,7 @@ public final class Settings {
   public let appIcon: AppIconSettings
 
   public var loadFailures: Set<SettingsLoadFailure> {
-    script.loadFailures.union(replacement.loadFailures)
+    script.loadFailures.union(replacement.loadFailures).union(voiceInput.loadFailures)
   }
 
   public var orderedLoadFailures: [SettingsLoadFailure] {

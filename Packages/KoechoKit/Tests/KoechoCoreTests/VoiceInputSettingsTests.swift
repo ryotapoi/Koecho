@@ -15,6 +15,26 @@ struct VoiceInputSettingsTests {
     #expect(settings.isVoiceInputEnabled)
   }
 
+  @Test func voiceShortcutDefaultsToNilAndRoundTripsClearing() {
+    let defaults = makeDefaults()
+    let key = ShortcutKey(modifiers: [.control], character: "v")
+    let settings = VoiceInputSettings(defaults: defaults)
+    #expect(settings.voiceInputShortcutKey == nil)
+    settings.voiceInputShortcutKey = key
+    #expect(VoiceInputSettings(defaults: defaults).voiceInputShortcutKey == key)
+    settings.voiceInputShortcutKey = nil
+    #expect(VoiceInputSettings(defaults: defaults).voiceInputShortcutKey == nil)
+  }
+
+  @Test func malformedVoiceShortcutIsReportedAndReset() {
+    let defaults = makeDefaults()
+    defaults.set(Data("invalid".utf8), forKey: "voiceInputShortcut")
+    let settings = Settings(defaults: defaults)
+    #expect(settings.voiceInput.voiceInputShortcutKey == nil)
+    #expect(settings.loadFailures.contains(.voiceInputShortcut))
+    #expect(defaults.data(forKey: "voiceInputShortcut") == Data())
+  }
+
   @Test func persistsVoiceInputEnabled() {
     let defaults = makeDefaults()
 

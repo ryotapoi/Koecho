@@ -1,9 +1,21 @@
 import Foundation
 import Observation
+import os
 
 @MainActor @Observable
 public final class VoiceInputSettings {
   private let defaults: UserDefaults
+  private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "VoiceInputSettings")
+  public private(set) var loadFailures: Set<SettingsLoadFailure> = []
+
+  private var _voiceInputShortcutKey: ShortcutKey?
+  public var voiceInputShortcutKey: ShortcutKey? {
+    get { _voiceInputShortcutKey }
+    set {
+      _voiceInputShortcutKey = newValue
+      save()
+    }
+  }
 
   private var _isVoiceInputEnabled: Bool
   public var isVoiceInputEnabled: Bool {
@@ -43,6 +55,7 @@ public final class VoiceInputSettings {
 
   public init(defaults: UserDefaults) {
     self.defaults = defaults
+    _voiceInputShortcutKey = nil
 
     _isVoiceInputEnabled = Self.voiceInputEnabled(
       from: defaults.string(forKey: "voiceInputMode")
@@ -53,6 +66,19 @@ public final class VoiceInputSettings {
       ?? Self.systemSpeechAnalyzerLocale()
     _audioInputDeviceUID = defaults.string(forKey: "audioInputDeviceUID")
     _audioInputDeviceName = defaults.string(forKey: "audioInputDeviceName")
+
+    if let storedShortcut = defaults.object(forKey: "voiceInputShortcut") {
+      if let data = storedShortcut as? Data {
+        do {
+          _voiceInputShortcutKey = try ShortcutKey.decodeOptional(from: data)
+        } catch {
+          logger.warning("Failed to decode voiceInputShortcut, using nil")
+          loadFailures.insert(.voiceInputShortcut)
+        }
+      } else {
+        loadFailures.insert(.voiceInputShortcut)
+      }
+    }
 
     save()
   }
@@ -75,6 +101,11 @@ public final class VoiceInputSettings {
   }
 
   private func save() {
+    do {
+      defaults.set(try ShortcutKey.encodeOptional(_voiceInputShortcutKey), forKey: "voiceInputShortcut")
+    } catch {
+      logger.error("Failed to encode voiceInputShortcut: \(error.localizedDescription)")
+    }
     defaults.set(_isVoiceInputEnabled ? "on" : "off", forKey: "voiceInputMode")
     defaults.set(_speechAnalyzerLocale, forKey: "speechAnalyzerLocale")
     if let uid = _audioInputDeviceUID {

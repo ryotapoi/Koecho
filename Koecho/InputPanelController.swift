@@ -16,6 +16,7 @@ final class InputPanelController {
   private var replacementService: ReplacementService!
   private var scriptService: ScriptExecutionService!
   private(set) var shortcutScriptTask: Task<Void, Never>?
+  private(set) var voiceShortcutTask: Task<Void, Never>?
   // Internal getter so tests can reach replay state directly instead of
   // production-unused forwarding properties on the controller.
   private(set) var voiceCoordinator: VoiceInputCoordinator!
@@ -385,15 +386,23 @@ final class InputPanelController {
         self.replacementService.applyOrPreview()
         return true
       }
-      guard
-        let script = self.appState.settings.script.scripts.first(where: {
-          $0.shortcutKey == shortcut
-        })
-      else { return false }
-      self.shortcutScriptTask = Task { @MainActor in
-        await self.scriptService.execute(script)
+      if let script = self.appState.settings.script.scripts.first(where: {
+        $0.shortcutKey == shortcut
+      }) {
+        self.shortcutScriptTask = Task { @MainActor in
+          await self.scriptService.execute(script)
+        }
+        return true
       }
-      return true
+      if self.appState.settings.voiceInput.voiceInputShortcutKey == shortcut,
+        self.appState.isInputPanelVisible, !self.isConfirming
+      {
+        self.voiceShortcutTask = Task { @MainActor in
+          await self.toggleVoiceInput()
+        }
+        return true
+      }
+      return false
     }
   }
 

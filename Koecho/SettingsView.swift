@@ -39,8 +39,13 @@ struct SettingsView: View {
           appIcon: settings.appIcon,
           onSpeechLocalesChanged: onSpeechLocalesChanged
         )
-      case .hotkey:
-        HotkeySettingsView(settings: settings.hotkey)
+      case .shortcuts:
+        HotkeySettingsView(
+          settings: settings.hotkey,
+          voiceInput: settings.voiceInput,
+          replacement: settings.replacement,
+          script: settings.script
+        )
       case .replacementRules:
         ReplacementRuleManagementView(settings: settings.replacement)
       case .scripts:
@@ -55,7 +60,7 @@ struct SettingsView: View {
 
 enum SettingsPage: String, CaseIterable, Identifiable {
   case general
-  case hotkey
+  case shortcuts
   case replacementRules
   case scripts
   case history
@@ -65,7 +70,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
   var title: String {
     switch self {
     case .general: String(localized: "General")
-    case .hotkey: String(localized: "Hotkey")
+    case .shortcuts: String(localized: "Shortcuts")
     case .replacementRules: String(localized: "Replacement.sidebar", defaultValue: "Replacement")
     case .scripts: String(localized: "Scripts")
     case .history: String(localized: "History")
@@ -75,7 +80,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
   var icon: String {
     switch self {
     case .general: "gear"
-    case .hotkey: "keyboard"
+    case .shortcuts: "keyboard"
     case .replacementRules: "arrow.2.squarepath"
     case .scripts: "applescript"
     case .history: "clock.arrow.circlepath"
