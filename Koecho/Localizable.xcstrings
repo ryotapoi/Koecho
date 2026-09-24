@@ -245,16 +245,6 @@
         }
       }
     },
-    "Avoid shortcuts used by other apps or the system" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "他のアプリやシステムが使用するショートカットは避けてください"
-          }
-        }
-      }
-    },
     "Built-in Feature" : {
 
     },

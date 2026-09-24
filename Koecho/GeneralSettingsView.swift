@@ -38,16 +38,11 @@ struct GeneralSettingsView: View {
       }
       Section("Replacement Rules") {
         Toggle("Auto-replace", isOn: $replacement.isAutoReplacementEnabled)
-        VStack(alignment: .leading, spacing: 4) {
-          HStack {
-            Text("Shortcut key")
-            Spacer()
-            ShortcutKeyRecorder(shortcutKey: $replacement.replacementShortcutKey)
-              .frame(width: 120)
-          }
-          Text("Avoid shortcuts used by other apps or the system")
-            .font(.caption)
-            .foregroundStyle(.secondary)
+        HStack {
+          Text("Shortcut key")
+          Spacer()
+          ShortcutKeyRecorder(shortcutKey: $replacement.replacementShortcutKey)
+            .frame(width: 120)
         }
       }
       Section("History") {

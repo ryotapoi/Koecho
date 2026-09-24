@@ -62,16 +62,11 @@ struct ScriptEditView: View {
   }
 
   private var shortcutControl: some View {
-    VStack(alignment: .leading, spacing: 4) {
-      HStack {
-        Text("Shortcut Key")
-        Spacer()
-        ShortcutKeyRecorder(shortcutKey: $script.shortcutKey)
-          .frame(width: 120)
-      }
-      Text("Avoid shortcuts used by other apps or the system")
-        .font(.caption)
-        .foregroundStyle(.secondary)
+    HStack {
+      Text("Shortcut Key")
+      Spacer()
+      ShortcutKeyRecorder(shortcutKey: $script.shortcutKey)
+        .frame(width: 120)
     }
   }
 
