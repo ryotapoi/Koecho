@@ -589,6 +589,16 @@
         }
       }
     },
+    "History could not be loaded. It is protected, and new entries are not being recorded. Reset it from the History settings page to resume recording." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴を読み込めませんでした。ファイルは保護され、新しい履歴は記録されていません。記録を再開するには履歴設定画面から初期化してください。"
+          }
+        }
+      }
+    },
     "History Could Not Be Reset" : {
       "localizations" : {
         "ja" : {
@@ -605,46 +615,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "履歴を利用できません"
-          }
-        }
-      }
-    },
-    "History could not be loaded. It is protected, and new entries are not being recorded. Reset it from the History settings page to resume recording." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "履歴を読み込めませんでした。ファイルは保護され、新しい履歴は記録されていません。記録を再開するには履歴設定画面から初期化してください。"
-          }
-        }
-      }
-    },
-    "Koecho could not read your history. It is protected and new entries are not being recorded." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Koecho は履歴を読み込めませんでした。ファイルは保護され、新しい履歴は記録されていません。"
-          }
-        }
-      }
-    },
-    "Shortcuts" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ショートカット"
-          }
-        }
-      }
-    },
-    "Input panel shortcuts" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "入力パネル内のショートカット"
           }
         }
       }
@@ -673,7 +643,18 @@
         }
       }
     },
+    "Input panel shortcuts" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入力パネル内のショートカット"
+          }
+        }
+      }
+    },
     "Key" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -685,6 +666,16 @@
     },
     "Koecho" : {
 
+    },
+    "Koecho could not read your history. It is protected and new entries are not being recorded." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koecho は履歴を読み込めませんでした。ファイルは保護され、新しい履歴は記録されていません。"
+          }
+        }
+      }
     },
     "Language" : {
       "localizations" : {
@@ -799,6 +790,7 @@
       }
     },
     "Mode" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1105,6 +1097,26 @@
         }
       }
     },
+    "Reset History" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴を初期化"
+          }
+        }
+      }
+    },
+    "Reset History?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴を初期化しますか？"
+          }
+        }
+      }
+    },
     "Reset Replacement Rules" : {
       "localizations" : {
         "ja" : {
@@ -1141,26 +1153,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "スクリプトを初期化しますか？"
-          }
-        }
-      }
-    },
-    "Reset History" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "履歴を初期化"
-          }
-        }
-      }
-    },
-    "Reset History?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "履歴を初期化しますか？"
           }
         }
       }
@@ -1395,6 +1387,7 @@
       }
     },
     "Shortcut key" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -1410,6 +1403,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ショートカットキー"
+          }
+        }
+      }
+    },
+    "Shortcuts" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショートカット"
           }
         }
       }
@@ -1435,16 +1438,6 @@
         }
       }
     },
-    "Some settings could not be loaded" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "一部の設定を読み込めませんでした"
-          }
-        }
-      }
-    },
     "Some data could not be loaded" : {
       "localizations" : {
         "ja" : {
@@ -1455,22 +1448,13 @@
         }
       }
     },
-    "The unreadable history is still protected. Check available disk space and try again." : {
+    "Some settings could not be loaded" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "読み込めない履歴は引き続き保護されています。ディスク空き容量を確認してからもう一度お試しください。"
-          }
-        }
-      }
-    },
-    "This permanently replaces the unreadable history with an empty history." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "読み込めない履歴を空の履歴で完全に置き換えます。"
+            "value" : "一部の設定を読み込めませんでした"
           }
         }
       }
@@ -1537,6 +1521,16 @@
         }
       }
     },
+    "The unreadable history is still protected. Check available disk space and try again." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み込めない履歴は引き続き保護されています。ディスク空き容量を確認してからもう一度お試しください。"
+          }
+        }
+      }
+    },
     "This permanently discards the unreadable saved replacement rules and starts with an empty list." : {
       "localizations" : {
         "ja" : {
@@ -1553,6 +1547,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "読み込めない保存済みスクリプトを完全に破棄し、空の一覧で開始します。"
+          }
+        }
+      }
+    },
+    "This permanently replaces the unreadable history with an empty history." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み込めない履歴を空の履歴で完全に置き換えます。"
           }
         }
       }
@@ -1632,22 +1636,22 @@
         }
       }
     },
-    "Voice input shortcut" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "音声入力切替ショートカット"
-          }
-        }
-      }
-    },
     "Voice input is off" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "音声入力がオフです"
+          }
+        }
+      }
+    },
+    "Voice input shortcut" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声入力切替ショートカット"
           }
         }
       }
