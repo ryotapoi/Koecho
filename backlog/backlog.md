@@ -90,10 +90,18 @@
   - 目的・根拠: 追加時に決まる Script の種別を編集時に切り替えられないようにし、種別ごとの編集内容を保つ。
   - 作業・完了条件: 編集画面の Type 切替 UI を削除し、追加時に決まった custom / builtin の種別を編集・保存後も固定する。既存の追加経路と、各種別に固有の編集項目を維持する。
 
-- [ ] D9 Script ごとに SF Symbol アイコンを設定できるようにする
-  - 目的・根拠: スクリプトの用途に沿ったアイコンを付け、設定一覧と入力パネルで見分けやすくする。
-  - 動作: custom / builtin の各 Script に個別のアイコンを設定できる。代表的な候補はシンボルの絵を見て選べ、候補外は SF Symbol 名を直接入力できる。入力中のシンボルをプレビューし、無効な名前は保存できない。未設定の場合は現在どおり、custom の prompt 有無または builtin feature に応じた既定アイコンを使う。設定一覧と Input Panel の script strip に同じアイコン設定を反映する。
-  - 作業・完了条件: 選択・入力したアイコンが設定一覧と Input Panel の script strip の両方に表示される。未設定時は現行の既定アイコンが表示され、アイコン設定のない既存保存データも読み込める。現行仕様との差分に応じて、実装時に関連仕様を更新する。
+- [ ] D9 Script ごとに SF Symbol と表示名を設定できるようにする
+  - 目的・根拠: スクリプトの用途に沿ったアイコンと表示名を設定し、Settings 一覧と入力パネルで見分けやすくする。
+  - 動作:
+    - custom / builtin の各 Script に SF Symbol 名と表示名を設定する。代表候補は絵を見て選択でき、候補外は SF Symbols app 等で調べた名前を手入力できる。全カタログの検索 UI は設けず、実行中 macOS で利用できるシンボルを候補制限なく受け付けてプレビューする。利用できない名前は明示的なエラーを表示し、保存不可とする。
+    - SF Symbol 名と表示名は別の値として扱い、両方が空（空白のみを含む）は不可、片方だけ空は許容する。両方あれば両方を表示し、片方だけなら指定された方だけを表示する。明示的に空のアイコンへ既定アイコンを補わない。
+    - プリセット（5グループ・29種）:
+      - 数字: `1.square`, `2.square`, `3.square`, `4.square`, `5.square`, `6.square`, `7.square`, `8.square`, `9.square`, `0.square`
+      - 図形・記号: `circle`, `triangle`, `square`, `star`, `heart`, `sparkles`, `bolt`, `checkmark.rectangle`
+      - 矢印: `arrow.up`, `arrow.down`, `arrow.left`, `arrow.right`
+      - テキスト: `text.alignleft`, `text.aligncenter`, `text.alignright`, `list.bullet`
+      - 操作: `doc.on.clipboard`, `paperplane`, `terminal`
+  - 作業・完了条件: 選択・入力した SF Symbol と表示名を Settings 一覧と Input Panel の script strip に反映する。既存保存データの読込時は現在の表示を維持し、SF Symbol と表示名が両方空にならないよう扱う。builtin の stable feature ID を維持する。実装に合わせて [`docs/rules/scope.md`](../docs/rules/scope.md) と [`docs/specs/builtin-script-ui.md`](../docs/specs/builtin-script-ui.md) を更新し、既存の builtin icon-only 表示と名前非表示の仕様との差分を定める。選択、任意名の入力・プレビュー、無効名のエラーと保存不可、片方のみ・両方指定の表示、既存データ読込、builtin ID 維持を確認する。
 
 ### 将来の改善（低優先度）
 
