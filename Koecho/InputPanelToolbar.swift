@@ -4,6 +4,7 @@ import SwiftUI
 struct InputPanelToolbar: View {
   let isVoiceInputEnabled: Bool
   let replacementRules: [ReplacementRule]
+  let isAutoReplacementEnabled: Bool
   @Bindable var scriptSettings: ScriptSettings
   let isRunningScript: Bool
   let hasPromptScript: Bool
@@ -44,7 +45,7 @@ struct InputPanelToolbar: View {
         !isVoiceInputEnabled ? String(localized: "Voice input is off") : String(localized: "Voice")
       )
 
-      if !replacementRules.isEmpty {
+      if !replacementRules.isEmpty && !isAutoReplacementEnabled {
         Button {
           onApplyReplacementRules()
         } label: {
@@ -161,6 +162,7 @@ extension HotkeyConfig {
   return InputPanelToolbar(
     isVoiceInputEnabled: true,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
+    isAutoReplacementEnabled: false,
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: false,
@@ -180,7 +182,8 @@ extension HotkeyConfig {
   let scriptSettings = ScriptSettings(defaults: defaults)
   return InputPanelToolbar(
     isVoiceInputEnabled: false,
-    replacementRules: [],
+    replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
+    isAutoReplacementEnabled: false,
     scriptSettings: scriptSettings,
     isRunningScript: true,
     hasPromptScript: false,
@@ -205,6 +208,7 @@ extension HotkeyConfig {
   return InputPanelToolbar(
     isVoiceInputEnabled: true,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
+    isAutoReplacementEnabled: true,
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: false,
@@ -230,6 +234,7 @@ extension HotkeyConfig {
   return InputPanelToolbar(
     isVoiceInputEnabled: true,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
+    isAutoReplacementEnabled: false,
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: true,
@@ -243,4 +248,25 @@ extension HotkeyConfig {
   )
   .frame(width: 350, height: 40)
   .opacity(0.45)
+}
+
+#Preview("No Rules") {
+  let defaults = UserDefaults(suiteName: "preview-toolbar-no-rules")!
+  let scriptSettings = ScriptSettings(defaults: defaults)
+  return InputPanelToolbar(
+    isVoiceInputEnabled: true,
+    replacementRules: [],
+    isAutoReplacementEnabled: false,
+    scriptSettings: scriptSettings,
+    isRunningScript: false,
+    hasPromptScript: false,
+    canUndoScript: false,
+    hotkeyConfig: .default,
+    onSwitchEngine: {},
+    onApplyReplacementRules: {},
+    onUndoScript: {},
+    onConfirm: {},
+    replacementShortcutKey: nil
+  )
+  .frame(width: 350, height: 40)
 }

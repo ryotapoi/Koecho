@@ -82,7 +82,7 @@
   - 実装方針・動作: `examples/fm-textfmt.sh` は同じディレクトリの固定指示ファイル `fm-textfmt-prompt.md` を読み、`default` / `e` 等のプリセット切替、引数、設定は設けない。空白だけの stdin はそのまま stdout へ返す。非空白入力は `<transcript>…</transcript>` で囲み、`fm respond --no-stream --instructions` に渡して、stdout には整形本文だけを出す。初回の `sudo fm license` は利用者が手動実行するようスクリプト冒頭のコメントで案内し、スクリプトからは実行しない。
   - 作業・完了条件: `examples/claude-fmt.sh` と `examples/claude-textfmt/{default,e}.md` を fm 用例へ置き換え、不要なファイルを削除する。英語・日本語 README は新サンプル名と簡単な使い方へ更新し、固定指示ファイルの編集場所を案内する。ライセンス手順を重複記載しない。空白入力の透過、非空白入力の整形、stdout が整形本文のみであること、および Claude 固有の環境変数・オプションの除去を確認する。
 
-- [ ] D7 Auto-replace が有効なときは入力パネルの Replace ボタンを隠す
+- [x] D7 Auto-replace が有効なときは入力パネルの Replace ボタンを隠す
   - 目的・根拠: Auto-replace の設定状態と入力パネルで選べる操作を一致させる。
   - 作業・完了条件: 置換ルールが1件以上あり Auto-replace がオフの場合だけ Replace ボタンを表示し、オンの場合は表示しない。ボタンからの置換と、実行中にボタンを無効化する既存挙動を維持する。
 

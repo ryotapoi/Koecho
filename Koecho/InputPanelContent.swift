@@ -41,6 +41,7 @@ struct InputPanelContent: View {
       InputPanelToolbar(
         isVoiceInputEnabled: appState.settings.voiceInput.isVoiceInputEnabled,
         replacementRules: appState.settings.replacement.replacementRules,
+        isAutoReplacementEnabled: appState.settings.replacement.isAutoReplacementEnabled,
         scriptSettings: appState.settings.script,
         isRunningScript: appState.isRunningScript,
         hasPromptScript: hasPromptScript,
