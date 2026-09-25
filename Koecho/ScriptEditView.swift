@@ -6,9 +6,12 @@ struct ScriptEditView: View {
 
   var body: some View {
     Form {
-      Picker("Type", selection: kindRawValueBinding) {
-        Text("Custom Script").tag(ScriptKind.custom.rawValue)
-        Text("Built-in Feature").tag(ScriptKind.builtin.rawValue)
+      LabeledContent("Type") {
+        if script.kind == .custom {
+          Text("Custom Script")
+        } else {
+          Text("Built-in Feature")
+        }
       }
 
       if script.kind == .custom {
@@ -33,16 +36,6 @@ struct ScriptEditView: View {
     }
     .formStyle(.grouped)
     .frame(maxHeight: .infinity, alignment: .top)
-  }
-
-  private var kindRawValueBinding: Binding<String> {
-    Binding(
-      get: { script.kind.rawValue },
-      set: { rawValue in
-        guard let kind = ScriptKind(rawValue: rawValue) else { return }
-        replaceKind(kind)
-      }
-    )
   }
 
   @ViewBuilder
@@ -92,22 +85,6 @@ struct ScriptEditView: View {
         replaceBuiltin(feature: builtinFeature, indentationWidth: width)
       }
     )
-  }
-
-  private func replaceKind(_ kind: ScriptKind) {
-    guard kind != script.kind else { return }
-
-    switch kind {
-    case .custom:
-      script = Script(
-        id: script.id,
-        name: String(localized: "New Script"),
-        scriptPath: "",
-        shortcutKey: script.shortcutKey
-      )
-    case .builtin:
-      replaceBuiltin(feature: .decreaseIndent, indentationWidth: .two)
-    }
   }
 
   private func replaceBuiltin(
