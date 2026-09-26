@@ -20,9 +20,9 @@ struct AutoRunScriptMenuContent: View {
         scriptSettings.autoRunScriptId = script.id
       } label: {
         if scriptSettings.autoRunScriptId == script.id {
-          Text("✓ \(script.name)")
+          Text("✓ \(ScriptPresentation.identification(for: script))")
         } else {
-          Text("  \(script.name)")
+          Text("  \(ScriptPresentation.identification(for: script))")
         }
       }
     }

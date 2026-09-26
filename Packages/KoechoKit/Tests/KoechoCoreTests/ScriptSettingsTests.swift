@@ -25,6 +25,40 @@ struct ScriptSettingsTests {
     #expect(settings.autoRunScript == nil)
   }
 
+  @Test func legacyDisplayRemainsUnsetAcrossAutomaticSave() throws {
+    let defaults = makeDefaults()
+    let id = UUID()
+    let legacyJSON = """
+      [{"id":"\(id.uuidString)","kind":"builtin","builtinFeature":"blockQuote"},
+       {"id":"\(UUID().uuidString)","name":"Old","scriptPath":"cat","requiresPrompt":false}]
+      """
+    defaults.set(Data(legacyJSON.utf8), forKey: "scripts")
+    defaults.set(true, forKey: "builtinScriptsRegistered")
+
+    let settings = ScriptSettings(defaults: defaults)
+    let reloaded = ScriptSettings(defaults: defaults)
+    #expect(settings.scripts == reloaded.scripts)
+    #expect(reloaded.scripts.allSatisfy { $0.display == nil })
+    #expect(reloaded.scripts[0].id == id)
+    #expect(reloaded.scripts[0].builtin?.feature == .blockQuote)
+    #expect(reloaded.scripts[1].displayName == "Old")
+  }
+
+  @Test func explicitDisplayRoundTripsIncludingEmptyElement() throws {
+    let defaults = makeDefaults()
+    let settings = ScriptSettings(defaults: defaults)
+    var builtin = try #require(settings.scripts.first)
+    let id = builtin.id
+    builtin.display = .init(name: "", symbolName: "star")
+    settings.updateScript(builtin)
+
+    let reloaded = ScriptSettings(defaults: defaults)
+    let saved = try #require(reloaded.scripts.first)
+    #expect(saved.id == id)
+    #expect(saved.builtin?.feature == .decreaseIndent)
+    #expect(saved.display == .init(name: "", symbolName: "star"))
+  }
+
   @Test func registersBuiltinsOnceInFeatureOrder() {
     let defaults = makeDefaults()
     let first = ScriptSettings(defaults: defaults)

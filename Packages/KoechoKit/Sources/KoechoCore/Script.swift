@@ -48,6 +48,16 @@ public struct BuiltinScript: Codable, Equatable, Sendable {
 }
 
 public struct Script: Codable, Identifiable, Equatable, Sendable {
+  public struct Display: Codable, Equatable, Sendable {
+    public var name: String
+    public var symbolName: String
+
+    public init(name: String, symbolName: String) {
+      self.name = name
+      self.symbolName = symbolName
+    }
+  }
+
   private enum Content: Equatable, Sendable {
     case custom(name: String, scriptPath: String, requiresPrompt: Bool)
     case builtin(BuiltinScript)
@@ -55,6 +65,7 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
 
   public var id: UUID
   private var content: Content
+  public var display: Display?
 
   public var kind: ScriptKind {
     switch content {
@@ -86,7 +97,8 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
   }
 
   public var displayName: String {
-    switch content {
+    if let display { return display.name }
+    return switch content {
     case let .custom(name, _, _):
       name
     case let .builtin(builtin):
@@ -126,12 +138,14 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
   ) {
     self.id = id
     content = .custom(name: name, scriptPath: scriptPath, requiresPrompt: requiresPrompt)
+    display = nil
     self.shortcutKey = shortcutKey
   }
 
-  public init(id: UUID, builtin: BuiltinScript, shortcutKey: ShortcutKey? = nil) {
+  public init(id: UUID, builtin: BuiltinScript, shortcutKey: ShortcutKey? = nil, display: Display? = nil) {
     self.id = id
     content = .builtin(builtin)
+    self.display = display
     self.shortcutKey = shortcutKey
   }
 
@@ -159,6 +173,7 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
     case requiresPrompt
     case builtinFeature
     case indentationWidth
+    case display
   }
 
   public init(from decoder: Decoder) throws {
@@ -166,6 +181,7 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
     id = try container.decode(UUID.self, forKey: .id)
     let kind = try container.decodeIfPresent(ScriptKind.self, forKey: .kind) ?? .custom
     shortcutKey = try container.decodeIfPresent(ShortcutKey.self, forKey: .shortcutKey)
+    display = try container.decodeIfPresent(Display.self, forKey: .display)
 
     switch kind {
     case .custom:
@@ -196,6 +212,7 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
     try container.encode(id, forKey: .id)
     try container.encode(kind, forKey: .kind)
     try container.encodeIfPresent(shortcutKey, forKey: .shortcutKey)
+    try container.encodeIfPresent(display, forKey: .display)
 
     switch content {
     case let .custom(name, scriptPath, requiresPrompt):

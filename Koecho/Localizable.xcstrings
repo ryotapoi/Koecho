@@ -99,6 +99,16 @@
         }
       }
     },
+    "Actions" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "操作"
+          }
+        }
+      }
+    },
     "Add" : {
       "localizations" : {
         "ja" : {
@@ -184,6 +194,16 @@
         }
       }
     },
+    "Arrows" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "矢印"
+          }
+        }
+      }
+    },
     "Audio format conversion not supported." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -254,6 +274,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "キャンセル"
+          }
+        }
+      }
+    },
+    "Choose Icon" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アイコンを選択"
           }
         }
       }
@@ -380,6 +410,16 @@
         }
       }
     },
+    "Custom" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カスタム"
+          }
+        }
+      }
+    },
     "Custom Script" : {
 
     },
@@ -420,6 +460,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "スクリプトを削除"
+          }
+        }
+      }
+    },
+    "Display Name" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表示名"
           }
         }
       }
@@ -516,6 +566,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "音声入力を有効にする"
+          }
+        }
+      }
+    },
+    "Enter a display name or SF Symbol. Your display changes have not been saved." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表示名または SF Symbol を入力してください。表示の変更は保存されていません。"
+          }
+        }
+      }
+    },
+    "Enter a display name before choosing None." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アイコンをなしにするには表示名を入力してください。"
           }
         }
       }
@@ -626,6 +696,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ホットキー"
+          }
+        }
+      }
+    },
+    "Icon" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アイコン"
+          }
+        }
+      }
+    },
+    "Icon: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アイコン: %@"
           }
         }
       }
@@ -811,6 +901,7 @@
       }
     },
     "Name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -874,6 +965,16 @@
         }
       }
     },
+    "No matching or available icons." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一致する利用可能なアイコンはありません。"
+          }
+        }
+      }
+    },
     "No target application" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -892,6 +993,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "なし"
+          }
+        }
+      }
+    },
+    "Numbers" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "数字"
           }
         }
       }
@@ -1315,6 +1426,16 @@
         }
       }
     },
+    "Search or enter symbol name" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シンボル名を検索または入力"
+          }
+        }
+      }
+    },
     "Select a rule to edit" : {
       "localizations" : {
         "ja" : {
@@ -1361,6 +1482,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "設定..."
+          }
+        }
+      }
+    },
+    "Shapes & Symbols" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "図形・記号"
           }
         }
       }
@@ -1517,6 +1648,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ターゲット音量"
+          }
+        }
+      }
+    },
+    "Text" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テキスト"
           }
         }
       }

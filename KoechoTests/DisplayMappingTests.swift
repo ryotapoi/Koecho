@@ -50,6 +50,44 @@ import Testing
     #expect(ScriptPresentation.symbolName(for: custom) == "text.bubble.fill")
   }
 
+  @Test func explicitScriptDisplayUsesOnlySpecifiedElements() {
+    var builtin = Script(id: UUID(), builtin: BuiltinScript(feature: .blockQuote)!)
+    #expect(!ScriptPresentation.showsLabelInStrip(for: builtin))
+    builtin.display = .init(name: "", symbolName: "star")
+    #expect(ScriptPresentation.label(for: builtin).isEmpty)
+    #expect(ScriptPresentation.symbolName(for: builtin) == "star")
+    #expect(ScriptPresentation.identification(for: builtin) == "star")
+    builtin.display = .init(name: "Quote", symbolName: "")
+    #expect(ScriptPresentation.showsLabelInStrip(for: builtin))
+    #expect(ScriptPresentation.symbolName(for: builtin).isEmpty)
+    #expect(ScriptPresentation.label(for: builtin) == "Quote")
+  }
+
+  @Test func displayValidationAcceptsAvailableSymbolAndRejectsInvalidPairs() {
+    #expect(ScriptPresentation.validatedDisplay(name: "  Title  ", symbolName: "  ") == .init(name: "Title", symbolName: ""))
+    #expect(ScriptPresentation.validatedDisplay(name: "  ", symbolName: "  ") == nil)
+    #expect(ScriptPresentation.validatedDisplay(name: "Title", symbolName: "not.a.real.symbol.d9") == nil)
+    #expect(ScriptPresentation.validatedDisplay(name: "", symbolName: "moon.stars.fill") == .init(name: "", symbolName: "moon.stars.fill"))
+  }
+
+  @Test func iconPickerFiltersPresetsAndOffersOneExactCustomSymbol() {
+    let all = ScriptSymbolPresets.matchingGroups(query: "", selectedSymbol: "moon.stars.fill")
+    #expect(all.count == 6)
+    #expect(all.last?.id == "custom")
+    #expect(all.last?.symbols == ["moon.stars.fill"])
+    #expect(all.dropLast().flatMap(\.symbols).count == 29)
+
+    let filtered = ScriptSymbolPresets.matchingGroups(query: "  arrow. ", selectedSymbol: "moon.stars.fill")
+    #expect(filtered.count == 1)
+    #expect(filtered[0].symbols == ["arrow.up", "arrow.down", "arrow.left", "arrow.right"])
+
+    let exactPreset = ScriptSymbolPresets.matchingGroups(query: "star", selectedSymbol: "star")
+    #expect(!exactPreset.contains { $0.id == "custom" })
+    let exactCustom = ScriptSymbolPresets.matchingGroups(query: "  moon.stars.fill  ", selectedSymbol: "star")
+    #expect(exactCustom.last?.symbols == ["moon.stars.fill"])
+    #expect(ScriptSymbolPresets.matchingGroups(query: "invalid.symbol.d9", selectedSymbol: "star").isEmpty)
+  }
+
   @Test func voiceInputErrorDisplayMessagesCoverAllCases() {
     let appState = makeTestAppState()
     let coordinator = makeTestVoiceCoordinator(

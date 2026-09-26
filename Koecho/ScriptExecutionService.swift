@@ -169,13 +169,13 @@ final class ScriptExecutionService {
     case ScriptRunnerError.emptyScript:
       String(localized: "Script command is empty.")
     case ScriptRunnerError.timeout:
-      String(localized: "Script '\(script.name)' timed out.")
+      String(localized: "Script '\(ScriptPresentation.identification(for: script))' timed out.")
     case ScriptRunnerError.nonZeroExit(let code, let stderr):
       String(
         localized:
-          "Script '\(script.name)' failed (exit \(code))\(stderr.isEmpty ? "" : ": \(stderr)")")
+          "Script '\(ScriptPresentation.identification(for: script))' failed (exit \(code))\(stderr.isEmpty ? "" : ": \(stderr)")")
     case ScriptRunnerError.emptyOutput:
-      String(localized: "Script '\(script.name)' produced empty output.")
+      String(localized: "Script '\(ScriptPresentation.identification(for: script))' produced empty output.")
     default:
       String(describing: error)
     }

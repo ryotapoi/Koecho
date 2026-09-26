@@ -24,7 +24,7 @@ struct PromptInputView: View {
     HStack(spacing: 10) {
       if let promptScript {
         Label {
-          Text(promptScript.name)
+          Text(ScriptPresentation.identification(for: promptScript))
         } icon: {
           Image(systemName: "text.bubble.fill")
         }

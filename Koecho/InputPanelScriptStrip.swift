@@ -74,21 +74,20 @@ struct InputPanelScriptStrip: View {
 
   private func scriptButton(for script: Script) -> some View {
     let label = ScriptPresentation.label(for: script)
-    let isBuiltin = script.kind == .builtin
+    let symbol = ScriptPresentation.symbolName(for: script)
+    let showsLabel = ScriptPresentation.showsLabelInStrip(for: script) && !label.isEmpty
+    let identification = ScriptPresentation.identification(for: script)
     return Button {
       Task { await onExecuteScript(script) }
     } label: {
-      HStack(spacing: isBuiltin ? 0 : 4) {
-        Image(systemName: ScriptPresentation.symbolName(for: script))
-        Text(label)
-          .frame(width: isBuiltin ? 0 : nil, alignment: .leading)
-          .opacity(isBuiltin ? 0 : 1)
-          .accessibilityHidden(isBuiltin)
+      HStack(spacing: 4) {
+        if !symbol.isEmpty { Image(systemName: symbol) }
+        if showsLabel { Text(label) }
       }
     }
     .buttonStyle(.koechoToolbar(isSelected: selectedScript?.id == script.id))
-    .help(label)
-    .accessibilityLabel(label)
+    .help(identification)
+    .accessibilityLabel(identification)
     .disabled(
       Self.isExecutionDisabled(
         isRunningScript: isRunningScript,

@@ -1,3 +1,4 @@
+import AppKit
 import KoechoCore
 
 enum ScriptPresentation {
@@ -6,6 +7,7 @@ enum ScriptPresentation {
   }
 
   static func symbolName(for script: Script) -> String {
+    if let display = script.display { return display.symbolName }
     guard let feature = script.builtin?.feature else {
       return script.requiresPrompt ? "text.bubble.fill" : "play.fill"
     }
@@ -18,5 +20,31 @@ enum ScriptPresentation {
     case .blockQuote:
       return "text.quote"
     }
+  }
+
+  static func showsLabelInStrip(for script: Script) -> Bool {
+    script.display != nil || script.kind == .custom
+  }
+
+  static func identification(for script: Script) -> String {
+    let label = label(for: script)
+    if !label.isEmpty { return label }
+    let symbol = symbolName(for: script)
+    if !symbol.isEmpty { return symbol }
+    return script.builtin?.displayName ?? script.name
+  }
+
+  static func validatedDisplay(name: String, symbolName: String) -> Script.Display? {
+    let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    let symbolName = symbolName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !name.isEmpty || !symbolName.isEmpty else { return nil }
+    guard symbolName.isEmpty || isAvailableSymbol(symbolName) else {
+      return nil
+    }
+    return Script.Display(name: name, symbolName: symbolName)
+  }
+
+  static func isAvailableSymbol(_ name: String) -> Bool {
+    NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil
   }
 }

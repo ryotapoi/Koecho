@@ -38,11 +38,14 @@ struct ScriptManagementView: View {
   private var scriptList: some View {
     List(selection: $selection) {
       ForEach(settings.scripts) { script in
-        Label(
-          ScriptPresentation.label(for: script),
-          systemImage: ScriptPresentation.symbolName(for: script)
-        )
-          .tag(script.id)
+        HStack(spacing: 6) {
+          let symbol = ScriptPresentation.symbolName(for: script)
+          let name = ScriptPresentation.label(for: script)
+          if !symbol.isEmpty { Image(systemName: symbol) }
+          if !name.isEmpty { Text(name) }
+        }
+        .accessibilityLabel(ScriptPresentation.identification(for: script))
+        .tag(script.id)
       }
       .onMove { source, destination in
         settings.moveScripts(from: source, to: destination)
@@ -86,6 +89,7 @@ struct ScriptManagementView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     } else if let id = selection, let binding = scriptBinding(for: id) {
       ScriptEditView(script: binding)
+        .id(id)
     } else {
       Text("Select a script to edit")
         .foregroundStyle(.secondary)

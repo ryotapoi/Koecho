@@ -110,7 +110,7 @@ struct InputPanelToolbar: View {
         AutoRunScriptMenuContent(scriptSettings: scriptSettings)
       } label: {
         Label {
-          Text(scriptSettings.autoRunScript?.name ?? String(localized: "None"))
+          Text(scriptSettings.autoRunScript.map(ScriptPresentation.identification(for:)) ?? String(localized: "None"))
         } icon: {
           Image(systemName: "wand.and.stars")
         }
