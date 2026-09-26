@@ -56,8 +56,8 @@
 - スクリプトは**複数登録**できる
 - 各スクリプトは「表示名」「SF Symbol」「コマンド」「ショートカットキー（修飾キーの組み合わせ + 文字キー、任意）」「追加入力の有無」を持つ。表示名と SF Symbol は片方だけでもよいが、両方空にはできない。
 - スクリプトはユーザー定義の custom と内蔵操作を区別する。内蔵操作は stable feature ID で識別し、表示名・実行コマンド・bundle 内 path を永続化契約にしない。
-- Settings では custom / 内蔵機能を選択して登録する。内蔵機能では feature、必要な indent width、表示名、SF Symbol、ショートカットを編集し、コマンド・path・追加プロンプトは表示しない。
-- 表示設定が未設定の内蔵機能は Settings で既定 icon と設定込みラベル、Input Panel で icon-only button を表示し、設定込みラベルを tooltip と accessibility label に使う。表示設定を変更すると両画面で明示した要素を表示する。custom の未設定時の名前・prompt icon と prompt 操作は従来どおり維持する。
+- Settings では custom / 内蔵機能を選択して登録する。内蔵機能の feature と必要な indent width は追加時に固定し、編集画面の Feature 行に幅を含めて表示する。表示名、SF Symbol、ショートカットは編集でき、コマンド・path・追加プロンプトは表示しない。
+- 表示設定が未設定の内蔵機能は空の表示名と既定 icon で扱い、Settings 一覧と Input Panel の両方で icon のみを表示する。表示設定があれば両画面で指定された要素だけを表示し、少なくとも表示名か icon の一方を必須とする。custom の未設定時の名前・prompt icon と prompt 操作は従来どおり維持する。
 - feature 導入時には既存 scripts の末尾へ Decrease Indent（2 spaces）、Increase Indent（2 spaces）、Block Quote を一度だけ登録する。ユーザーが削除した内蔵操作は復元しない。
 - 「コマンド」はシェルコマンド文字列（`/bin/sh -c` に渡される）。引数・パイプ・リダイレクト等をそのまま記述可能。スペースを含むパスはシングルクォートで囲む（例: `'/path/to/my script.sh' arg1`）
 - 実行するとウィンドウ内のテキストが結果で**その場で置き換わる**

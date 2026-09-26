@@ -142,7 +142,6 @@ public final class ScriptSettings {
   public func updateScript(_ script: Script) {
     guard !isScriptsProtected else { return }
     guard let index = _scripts.firstIndex(where: { $0.id == script.id }) else { return }
-    guard !containsBuiltinConfiguration(of: script, excluding: script.id) else { return }
     var updated = _scripts
     updated[index] = script
     scripts = updated
@@ -211,8 +210,4 @@ public final class ScriptSettings {
     return accepted
   }
 
-  private func containsBuiltinConfiguration(of script: Script, excluding id: UUID) -> Bool {
-    guard let builtin = script.builtin else { return false }
-    return _scripts.contains { $0.id != id && $0.builtin == builtin }
-  }
 }

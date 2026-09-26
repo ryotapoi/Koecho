@@ -22,10 +22,6 @@ enum ScriptPresentation {
     }
   }
 
-  static func showsLabelInStrip(for script: Script) -> Bool {
-    script.display != nil || script.kind == .custom
-  }
-
   static func identification(for script: Script) -> String {
     let label = label(for: script)
     if !label.isEmpty { return label }

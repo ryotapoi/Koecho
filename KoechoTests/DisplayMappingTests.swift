@@ -19,7 +19,7 @@ import Testing
           id: UUID(),
           builtin: BuiltinScript(feature: .decreaseIndent, indentationWidth: .two)!
         ),
-        "Decrease Indent (2 spaces)",
+        "",
         "decrease.indent"
       ),
       (
@@ -27,12 +27,12 @@ import Testing
           id: UUID(),
           builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .four)!
         ),
-        "Increase Indent (4 spaces)",
+        "",
         "increase.indent"
       ),
       (
         Script(id: UUID(), builtin: BuiltinScript(feature: .blockQuote)!),
-        "Block Quote",
+        "",
         "text.quote"
       ),
     ]
@@ -52,15 +52,16 @@ import Testing
 
   @Test func explicitScriptDisplayUsesOnlySpecifiedElements() {
     var builtin = Script(id: UUID(), builtin: BuiltinScript(feature: .blockQuote)!)
-    #expect(!ScriptPresentation.showsLabelInStrip(for: builtin))
     builtin.display = .init(name: "", symbolName: "star")
     #expect(ScriptPresentation.label(for: builtin).isEmpty)
     #expect(ScriptPresentation.symbolName(for: builtin) == "star")
     #expect(ScriptPresentation.identification(for: builtin) == "star")
     builtin.display = .init(name: "Quote", symbolName: "")
-    #expect(ScriptPresentation.showsLabelInStrip(for: builtin))
     #expect(ScriptPresentation.symbolName(for: builtin).isEmpty)
     #expect(ScriptPresentation.label(for: builtin) == "Quote")
+    builtin.display = .init(name: "Quote", symbolName: "star")
+    #expect(ScriptPresentation.label(for: builtin) == "Quote")
+    #expect(ScriptPresentation.symbolName(for: builtin) == "star")
   }
 
   @Test func displayValidationAcceptsAvailableSymbolAndRejectsInvalidPairs() {

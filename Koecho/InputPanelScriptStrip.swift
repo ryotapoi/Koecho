@@ -75,14 +75,13 @@ struct InputPanelScriptStrip: View {
   private func scriptButton(for script: Script) -> some View {
     let label = ScriptPresentation.label(for: script)
     let symbol = ScriptPresentation.symbolName(for: script)
-    let showsLabel = ScriptPresentation.showsLabelInStrip(for: script) && !label.isEmpty
     let identification = ScriptPresentation.identification(for: script)
     return Button {
       Task { await onExecuteScript(script) }
     } label: {
       HStack(spacing: 4) {
         if !symbol.isEmpty { Image(systemName: symbol) }
-        if showsLabel { Text(label) }
+        if !label.isEmpty { Text(label) }
       }
     }
     .buttonStyle(.koechoToolbar(isSelected: selectedScript?.id == script.id))
@@ -126,4 +125,28 @@ enum InputPanelScriptReorder {
     }
     return remaining
   }
+}
+
+#Preview("Built-in Displays") {
+  InputPanelScriptStrip(
+    scripts: [
+      Script(id: UUID(), builtin: BuiltinScript(feature: .decreaseIndent, indentationWidth: .two)!),
+      Script(
+        id: UUID(),
+        builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .four)!,
+        display: .init(name: "More indent", symbolName: "")
+      ),
+      Script(
+        id: UUID(),
+        builtin: BuiltinScript(feature: .blockQuote)!,
+        display: .init(name: "Quote", symbolName: "star")
+      ),
+    ],
+    selectedScript: nil,
+    isRunningScript: false,
+    hasPromptScript: false,
+    onExecuteScript: { _ in },
+    onReorderScripts: { _ in }
+  )
+  .frame(width: 600)
 }

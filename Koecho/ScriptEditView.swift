@@ -43,7 +43,15 @@ struct ScriptEditView: View {
 
         Toggle("Requires Prompt", isOn: $script.requiresPrompt)
       } else {
-        builtinControls
+        if let builtin = script.builtin {
+          LabeledContent("Feature") {
+            if let width = builtin.indentationWidth {
+              Text("\(builtin.feature.displayName) (\(width.rawValue))")
+            } else {
+              Text(builtin.feature.displayName)
+            }
+          }
+        }
       }
 
       TextField("Display Name", text: $displayName)
@@ -81,65 +89,12 @@ struct ScriptEditView: View {
     .frame(maxHeight: .infinity, alignment: .top)
   }
 
-  @ViewBuilder
-  private var builtinControls: some View {
-    Picker("Feature", selection: builtinFeatureRawValueBinding) {
-      ForEach(BuiltinScriptFeature.allCases, id: \.self) { feature in
-        Text(feature.displayName).tag(feature.rawValue)
-      }
-    }
-
-    if builtinFeature.supportsIndentationWidth {
-      Picker("Indent Width", selection: builtinWidthRawValueBinding) {
-        Text("2 spaces").tag(BuiltinScriptIndentationWidth.two.rawValue)
-        Text("4 spaces").tag(BuiltinScriptIndentationWidth.four.rawValue)
-      }
-    }
-  }
-
   private var shortcutControl: some View {
     HStack {
       Text("Shortcut Key")
       Spacer()
       ShortcutKeyRecorder(shortcutKey: $script.shortcutKey)
         .frame(width: 120)
-    }
-  }
-
-  private var builtinFeature: BuiltinScriptFeature {
-    script.builtin?.feature ?? .decreaseIndent
-  }
-
-  private var builtinFeatureRawValueBinding: Binding<String> {
-    Binding(
-      get: { builtinFeature.rawValue },
-      set: { rawValue in
-        guard let feature = BuiltinScriptFeature(rawValue: rawValue) else { return }
-        replaceBuiltin(feature: feature, indentationWidth: defaultWidth(for: feature))
-      }
-    )
-  }
-
-  private var builtinWidthRawValueBinding: Binding<Int> {
-    Binding(
-      get: { script.builtin?.indentationWidth?.rawValue ?? BuiltinScriptIndentationWidth.two.rawValue },
-      set: { rawValue in
-        guard let width = BuiltinScriptIndentationWidth(rawValue: rawValue) else { return }
-        replaceBuiltin(feature: builtinFeature, indentationWidth: width)
-      }
-    )
-  }
-
-  private func replaceBuiltin(
-    feature: BuiltinScriptFeature,
-    indentationWidth: BuiltinScriptIndentationWidth?
-  ) {
-    let width = feature.supportsIndentationWidth ? indentationWidth ?? .two : nil
-    guard let builtin = BuiltinScript(feature: feature, indentationWidth: width) else { return }
-    script = Script(id: script.id, builtin: builtin, shortcutKey: script.shortcutKey, display: script.display)
-    if script.display == nil {
-      displayName = ScriptPresentation.label(for: script)
-      symbolName = ScriptPresentation.symbolName(for: script)
     }
   }
 
@@ -151,10 +106,6 @@ struct ScriptEditView: View {
     let currentSymbol = ScriptPresentation.symbolName(for: script)
     guard name != currentName || symbol != currentSymbol else { return }
     script.display = display
-  }
-
-  private func defaultWidth(for feature: BuiltinScriptFeature) -> BuiltinScriptIndentationWidth? {
-    feature.supportsIndentationWidth ? script.builtin?.indentationWidth ?? .two : nil
   }
 
   private func chooseFile() {

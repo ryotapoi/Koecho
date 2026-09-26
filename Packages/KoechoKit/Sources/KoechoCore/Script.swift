@@ -101,8 +101,8 @@ public struct Script: Codable, Identifiable, Equatable, Sendable {
     return switch content {
     case let .custom(name, _, _):
       name
-    case let .builtin(builtin):
-      builtin.displayName
+    case .builtin:
+      ""
     }
   }
 

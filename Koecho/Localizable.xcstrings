@@ -32,6 +32,16 @@
         }
       }
     },
+    "%@ (%lld)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$lld)"
+          }
+        }
+      }
+    },
     "%@ (not connected)" : {
       "localizations" : {
         "ja" : {
@@ -81,12 +91,6 @@
           }
         }
       }
-    },
-    "2 spaces" : {
-
-    },
-    "4 spaces" : {
-
     },
     "Accessibility permission required. Open System Settings > Privacy & Security > Accessibility." : {
       "extractionState" : "manual",
@@ -570,22 +574,22 @@
         }
       }
     },
-    "Enter a display name or SF Symbol. Your display changes have not been saved." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "表示名または SF Symbol を入力してください。表示の変更は保存されていません。"
-          }
-        }
-      }
-    },
     "Enter a display name before choosing None." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "アイコンをなしにするには表示名を入力してください。"
+          }
+        }
+      }
+    },
+    "Enter a display name or SF Symbol. Your display changes have not been saved." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表示名または SF Symbol を入力してください。表示の変更は保存されていません。"
           }
         }
       }
@@ -719,9 +723,6 @@
           }
         }
       }
-    },
-    "Indent Width" : {
-
     },
     "Input Level" : {
       "localizations" : {

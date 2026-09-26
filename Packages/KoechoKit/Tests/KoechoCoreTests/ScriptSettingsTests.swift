@@ -41,6 +41,7 @@ struct ScriptSettingsTests {
     #expect(reloaded.scripts.allSatisfy { $0.display == nil })
     #expect(reloaded.scripts[0].id == id)
     #expect(reloaded.scripts[0].builtin?.feature == .blockQuote)
+    #expect(reloaded.scripts[0].displayName.isEmpty)
     #expect(reloaded.scripts[1].displayName == "Old")
   }
 
@@ -57,6 +58,17 @@ struct ScriptSettingsTests {
     #expect(saved.id == id)
     #expect(saved.builtin?.feature == .decreaseIndent)
     #expect(saved.display == .init(name: "", symbolName: "star"))
+  }
+
+  @Test func explicitDefaultDisplayRemainsExplicitAfterReload() throws {
+    let defaults = makeDefaults()
+    let settings = ScriptSettings(defaults: defaults)
+    var builtin = try #require(settings.scripts.first)
+    builtin.display = .init(name: "", symbolName: "decrease.indent")
+    settings.updateScript(builtin)
+
+    let reloaded = ScriptSettings(defaults: defaults)
+    #expect(reloaded.scripts.first?.display == builtin.display)
   }
 
   @Test func registersBuiltinsOnceInFeatureOrder() {
@@ -314,37 +326,26 @@ struct ScriptSettingsTests {
   @Test func canReAddDeletedBuiltinThroughTheSharedAddAPI() {
     let defaults = makeDefaults()
     let settings = ScriptSettings(defaults: defaults)
-    let deleted = settings.scripts[0]
+    var deleted = settings.scripts[0]
+    deleted.display = .init(name: "Previous", symbolName: "star")
+    deleted.shortcutKey = ShortcutKey(modifiers: [.control], character: "d")
+    settings.updateScript(deleted)
 
     settings.deleteScript(id: deleted.id)
-    settings.addScript(Script(id: UUID(), builtin: deleted.builtin!))
+    let replacement = Script(id: UUID(), builtin: deleted.builtin!)
+    settings.addScript(replacement)
 
     let reloaded = ScriptSettings(defaults: defaults)
     #expect(reloaded.scripts.count == Script.defaultBuiltins.count)
     #expect(reloaded.scripts.filter { $0.builtin == deleted.builtin }.count == 1)
     #expect(reloaded.scripts.last?.builtin == deleted.builtin)
+    #expect(reloaded.scripts.last?.id == replacement.id)
+    #expect(reloaded.scripts.last?.display == nil)
+    #expect(reloaded.scripts.last?.displayName == "")
+    #expect(reloaded.scripts.last?.shortcutKey == nil)
   }
 
-  @Test func rejectsEditingBuiltinIntoAnExistingConfiguration() {
-    let settings = makeEmptySettings()
-    let twoSpaces = Script(
-      id: UUID(),
-      builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .two)!
-    )
-    let fourSpaces = Script(
-      id: UUID(),
-      builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .four)!
-    )
-    settings.scripts = [twoSpaces, fourSpaces]
-
-    settings.updateScript(
-      Script(id: fourSpaces.id, builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .two)!)
-    )
-
-    #expect(settings.scripts == [twoSpaces, fourSpaces])
-  }
-
-  @Test func persistsBuiltinConfigurationAndShortcutThroughEditing() {
+  @Test func persistsBuiltinConfigurationAndCustomizationThroughEditing() {
     let defaults = makeDefaults()
     let settings = ScriptSettings(defaults: defaults)
     settings.scripts = []
@@ -355,10 +356,17 @@ struct ScriptSettingsTests {
     )
 
     settings.addScript(script)
+    var edited = script
+    edited.display = .init(name: "More indent", symbolName: "star")
+    edited.shortcutKey = ShortcutKey(modifiers: [.control], character: "m")
+    settings.updateScript(edited)
 
     let reloaded = ScriptSettings(defaults: defaults)
-    #expect(reloaded.scripts == [script])
-    #expect(reloaded.scripts[0].displayName == "Increase Indent (4 spaces)")
+    #expect(reloaded.scripts == [edited])
+    #expect(reloaded.scripts[0].id == script.id)
+    #expect(reloaded.scripts[0].builtin == script.builtin)
+    #expect(reloaded.scripts[0].display == edited.display)
+    #expect(reloaded.scripts[0].shortcutKey == edited.shortcutKey)
   }
 
   @Test func updateScript() {

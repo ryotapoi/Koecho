@@ -176,3 +176,23 @@ private struct ScriptListProtectionNotice: View {
   return ScriptManagementView(settings: settings)
     .frame(width: 600, height: 400)
 }
+
+#Preview("Built-in Displays") {
+  let defaults = UserDefaults(suiteName: "preview-scriptMgmt-builtinDisplays")!
+  let settings = ScriptSettings(defaults: defaults)
+  settings.scripts = [
+    Script(id: UUID(), builtin: BuiltinScript(feature: .decreaseIndent, indentationWidth: .two)!),
+    Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .increaseIndent, indentationWidth: .four)!,
+      display: .init(name: "More indent", symbolName: "")
+    ),
+    Script(
+      id: UUID(),
+      builtin: BuiltinScript(feature: .blockQuote)!,
+      display: .init(name: "Quote", symbolName: "star")
+    ),
+  ]
+  return ScriptManagementView(settings: settings)
+    .frame(width: 600, height: 400)
+}
