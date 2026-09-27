@@ -112,7 +112,7 @@
 - [x] D11 Settings の Scripts 一覧の並べ替えを SwiftUI 27 API で試し、採否を決める
   - 目的・根拠: `ScriptManagementView` の `.onMove` を `ForEach.reorderable` と `reorderContainer` で置き換え、明示的な並べ替え API が現在の実装と体験に適するか判断する。入力パネルの script strip は既に新 API を使用しているため対象外とする。
   - 作業・完了条件: Settings の Scripts 一覧で新 API への置き換えを試し、並べ替え結果の保存と一覧・入力パネルへの順序反映、選択状態、既存の操作無効化条件を保つ。その後、変更前後のコードの複雑さと実際の操作感を比較して採否を記録し、採用する実装で仕上げる。複雑さと挙動が同等なら、並べ替えを明示する API 名と今後の方向性を理由に新 API を採用する。明確な退行や追加コストがあれば `.onMove` を維持する。
-  - 採否: 選択の退行と実装の追加コストを確認し、`.onMove` を維持する（[ADR 0026](../docs/decisions/0026-settings-script-list-reordering.md)）。
+  - 採否: 新 API の採用を見送り、`.onMove` を維持して完了。macOS 27.0 の `List` に `.reorderContainer` を付けるとクリック選択が更新されない挙動を最小構成でも確認した。SwiftUI の不具合の可能性があるが、原因は未特定（[ADR 0026](../docs/decisions/0026-settings-script-list-reordering.md)）。
 
 ### 将来の改善（低優先度）
 
