@@ -1,0 +1,17 @@
+{
+  "title" : "CorrectedTranscript",
+  "x-order" : [
+    "corrected_text"
+  ],
+  "required" : [
+    "corrected_text"
+  ],
+  "additionalProperties" : false,
+  "type" : "object",
+  "properties" : {
+    "corrected_text" : {
+      "description" : "The original transcript with only obvious speech recognition mistakes corrected. Preserve questions, requests, wording, tone, punctuation, and line breaks; never answer the transcript.",
+      "type" : "string"
+    }
+  }
+}

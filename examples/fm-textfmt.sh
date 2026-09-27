@@ -1,22 +1,22 @@
-#!/bin/sh
+#!/bin/zsh
 # Before first use, run `sudo fm license` manually to accept Apple's license.
 
-set -eu
+set -euo pipefail
 
-input_file=$(mktemp "${TMPDIR:-/tmp}/koecho-fm-textfmt.XXXXXX")
-trap 'rm -f "$input_file"' EXIT
 script_dir=$(CDPATH= cd -P "$(dirname "$0")" && pwd)
-cat > "$input_file"
+rules_file="$script_dir/fm-textfmt-prompt.md"
+schema_file="$script_dir/fm-textfmt.schema.json"
 
-if ! grep -q '[^[:space:]]' "$input_file"; then
-  cat "$input_file"
+# Sentinel preserves trailing newlines while reading stdin.
+input="$(cat; printf '\036')"
+input="${input%$'\036'}"
+
+if [[ -z "$input" ]] || [[ -z "${input//[[:space:]]/}" ]]; then
+  printf "%s" "$input"
   exit 0
 fi
 
-instructions=$(cat "$script_dir/fm-textfmt-prompt.md")
-
-{
-  printf '<transcript>'
-  cat "$input_file"
-  printf '</transcript>'
-} | /usr/bin/fm respond --no-stream --instructions "$instructions"
+printf "%s" "$input" |
+  /usr/bin/python3 -c 'import json, sys; sys.stdout.write(json.dumps({"transcript": sys.stdin.read()}, ensure_ascii=False))' |
+  /usr/bin/fm respond --no-stream --greedy --instructions "$(cat "$rules_file")" --schema "$schema_file" |
+  /usr/bin/python3 -c 'import json, sys; value = json.load(sys.stdin)["corrected_text"]; assert isinstance(value, str); sys.stdout.write(value)'

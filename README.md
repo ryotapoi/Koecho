@@ -69,15 +69,15 @@ Context is also passed via environment variables:
 
 Use `examples/echo-env.sh` to verify. Register and run it to see stdin contents and environment variable values.
 
-### Voice text formatting with Apple Foundation Models
+### Voice transcription correction with Apple Foundation Models
 
-`examples/fm-textfmt.sh` formats voice transcriptions with macOS 27's `/usr/bin/fm`. It reads text from stdin and writes the formatted text to stdout.
+`examples/fm-textfmt.sh` corrects speech recognition mistakes with macOS 27's `/usr/bin/fm`. It reads text from stdin and writes the corrected text to stdout.
 
 ```bash
-printf '%s\n' 'えー次の会議は明日ですよろしく' | examples/fm-textfmt.sh
+printf '%s\n' '来週の会議は木用日です。' | examples/fm-textfmt.sh
 ```
 
-Edit `examples/fm-textfmt-prompt.md` to customize the formatting instructions. See the script's opening comment for the first-use license step.
+Edit `examples/fm-textfmt-prompt.md` to customize the correction instructions. The output format is defined in `examples/fm-textfmt.schema.json`. See the script's opening comment for the first-use license step.
 
 ## License
 

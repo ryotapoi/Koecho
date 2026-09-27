@@ -67,15 +67,15 @@ Xcode でビルドしてください。
 
 動作確認には `examples/echo-env.sh` を使ってください。登録して実行すると、stdin の内容と環境変数の値が表示されます。
 
-### Apple Foundation Models による音声テキスト整形
+### Apple Foundation Models による音声認識テキストの校正
 
-`examples/fm-textfmt.sh` は、macOS 27 の `/usr/bin/fm` で音声書き起こしを整形するサンプルスクリプトです。stdin からテキストを読み、整形した本文を stdout に返します。
+`examples/fm-textfmt.sh` は、macOS 27 の `/usr/bin/fm` で音声認識の誤変換を校正するサンプルスクリプトです。stdin からテキストを読み、校正した本文を stdout に返します。
 
 ```bash
-printf '%s\n' 'えー次の会議は明日ですよろしく' | examples/fm-textfmt.sh
+printf '%s\n' '来週の会議は木用日です。' | examples/fm-textfmt.sh
 ```
 
-整形指示は `examples/fm-textfmt-prompt.md` で編集できます。初回のライセンス手順はスクリプト冒頭のコメントを参照してください。
+校正指示は `examples/fm-textfmt-prompt.md` で編集できます。出力形式は `examples/fm-textfmt.schema.json` で定義しています。初回のライセンス手順はスクリプト冒頭のコメントを参照してください。
 
 ## ライセンス
 
