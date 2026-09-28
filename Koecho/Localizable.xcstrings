@@ -12,6 +12,7 @@
       }
     },
     "  None" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -83,6 +84,7 @@
       }
     },
     "✓ None" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -244,7 +246,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "確定時に自動実行"
+            "value" : "確定時自動実行"
           }
         }
       }

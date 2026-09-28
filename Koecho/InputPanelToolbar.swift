@@ -107,14 +107,12 @@ struct InputPanelToolbar: View {
   private var autoRunMenu: some View {
     if hasAutoRunScripts {
       Menu {
+        Text("Auto-run on Confirm")
         AutoRunScriptMenuContent(scriptSettings: scriptSettings)
       } label: {
-        Label {
-          Text(scriptSettings.autoRunScript.map(ScriptPresentation.identification(for:)) ?? String(localized: "None"))
-        } icon: {
-          Image(systemName: "wand.and.stars")
-        }
+        AutoRunScriptLabel(script: scriptSettings.autoRunScript)
       }
+      .labelStyle(.titleAndIcon)
       .menuStyle(.borderlessButton)
       .buttonStyle(.koechoToolbar())
       .fixedSize()
@@ -126,11 +124,7 @@ struct InputPanelToolbar: View {
     } else {
       Button {
       } label: {
-        Label {
-          Text("None")
-        } icon: {
-          Image(systemName: "wand.and.stars")
-        }
+        AutoRunScriptLabel(script: nil)
       }
       .buttonStyle(.koechoToolbar())
       .disabled(true)
@@ -155,10 +149,14 @@ extension HotkeyConfig {
 #Preview("Full") {
   let defaults = UserDefaults(suiteName: "preview-toolbar-full")!
   let scriptSettings = ScriptSettings(defaults: defaults)
-  scriptSettings.scripts = [
-    Script(name: "Format", scriptPath: "format.sh"),
-    Script(name: "AI", scriptPath: "ai.sh"),
-  ]
+  var both = Script(name: "Format", scriptPath: "format.sh")
+  both.display = .init(name: "Format", symbolName: "text.alignleft")
+  var symbolOnly = Script(name: "Symbol only", scriptPath: "symbol.sh")
+  symbolOnly.display = .init(name: "", symbolName: "star")
+  var titleOnly = Script(name: "Title only", scriptPath: "title.sh")
+  titleOnly.display = .init(name: "Title only", symbolName: "")
+  scriptSettings.scripts = [both, symbolOnly, titleOnly]
+  scriptSettings.autoRunScriptId = both.id
   return InputPanelToolbar(
     isVoiceInputEnabled: true,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],

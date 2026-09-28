@@ -5,25 +5,19 @@ struct AutoRunScriptMenuContent: View {
   @Bindable var scriptSettings: ScriptSettings
 
   var body: some View {
-    Button {
-      scriptSettings.autoRunScriptId = nil
-    } label: {
-      if scriptSettings.autoRunScriptId == nil {
-        Text("✓ None")
-      } else {
-        Text("  None")
-      }
+    Toggle(isOn: Binding(
+      get: { scriptSettings.autoRunScriptId == nil },
+      set: { _ in scriptSettings.autoRunScriptId = nil }
+    )) {
+      AutoRunScriptLabel(script: nil)
     }
     Divider()
     ForEach(scriptSettings.eligibleAutoRunScripts) { script in
-      Button {
-        scriptSettings.autoRunScriptId = script.id
-      } label: {
-        if scriptSettings.autoRunScriptId == script.id {
-          Text("✓ \(ScriptPresentation.identification(for: script))")
-        } else {
-          Text("  \(ScriptPresentation.identification(for: script))")
-        }
+      Toggle(isOn: Binding(
+        get: { scriptSettings.autoRunScriptId == script.id },
+        set: { _ in scriptSettings.autoRunScriptId = script.id }
+      )) {
+        AutoRunScriptLabel(script: script)
       }
     }
   }
@@ -34,10 +28,13 @@ struct AutoRunScriptMenuContent: View {
 #Preview("With Scripts") {
   let defaults = UserDefaults(suiteName: "preview-autoRun-withScripts")!
   let settings = ScriptSettings(defaults: defaults)
-  settings.scripts = [
-    Script(name: "Format", scriptPath: "format.sh"),
-    Script(name: "Summarize", scriptPath: "sum.sh"),
-  ]
+  var both = Script(name: "Format", scriptPath: "format.sh")
+  both.display = .init(name: "Format", symbolName: "text.alignleft")
+  var symbolOnly = Script(name: "Symbol only", scriptPath: "symbol.sh")
+  symbolOnly.display = .init(name: "", symbolName: "star")
+  var titleOnly = Script(name: "Title only", scriptPath: "title.sh")
+  titleOnly.display = .init(name: "Title only", symbolName: "")
+  settings.scripts = [both, symbolOnly, titleOnly]
   return Menu("Auto-run") {
     AutoRunScriptMenuContent(scriptSettings: settings)
   }

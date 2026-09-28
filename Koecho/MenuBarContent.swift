@@ -19,6 +19,7 @@ struct MenuBarContent: View {
     Menu("Auto-run on Confirm") {
       AutoRunScriptMenuContent(scriptSettings: appState.settings.script)
     }
+    .labelStyle(.titleAndIcon)
     .disabled(appState.settings.script.eligibleAutoRunScripts.isEmpty)
 
     recognitionLanguageMenu
