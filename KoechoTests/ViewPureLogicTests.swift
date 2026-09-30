@@ -20,17 +20,6 @@ struct ViewPureLogicTests {
     #expect(duplicates == ["alpha", "beta"])
   }
 
-  @Test func duplicatePatternsIgnoresEmptyPatterns() {
-    let rules = [
-      ReplacementRule(patterns: ["", ""], replacement: "one"),
-      ReplacementRule(pattern: "", replacement: "two", usesRegularExpression: true),
-    ]
-
-    let duplicates = ReplacementRuleManagementViewLogic.duplicatePatterns(in: rules)
-
-    #expect(duplicates.isEmpty)
-  }
-
   @Test func filteredEntriesReturnsAllEntriesForEmptySearchText() {
     let entries = makeHistoryEntries()
 

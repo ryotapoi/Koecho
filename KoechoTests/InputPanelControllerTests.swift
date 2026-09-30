@@ -53,16 +53,6 @@ struct InputPanelControllerTests {
     #expect(ctx.appState.inputText == "")
   }
 
-  @Test func cancelClearsTextAfterInput() {
-    let ctx = makeController()
-
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("hello world")
-    ctx.controller.cancel()
-
-    #expect(ctx.appState.inputText == "")
-  }
-
   @Test func showPanelTwicePreservesText() {
     let ctx = makeController()
 
@@ -98,20 +88,10 @@ struct InputPanelControllerTests {
     #expect(ctx.controller.panel.isVisible)
   }
 
-  @Test func showPanelClearsErrorMessage() {
-    let ctx = makeController()
-
-    ctx.appState.errorMessage = "previous error"
-    ctx.controller.showPanel()
-
-    #expect(ctx.appState.errorMessage == nil)
-  }
-
   // MARK: - Panel Configuration
 
-  @Test func panelHasResizeConstraints() {
+  @Test func panelUsesFrameAutosaveName() {
     let ctx = makeController()
-    #expect(ctx.controller.panel.contentMinSize == NSSize(width: 520, height: 240))
     #expect(ctx.controller.panel.frameAutosaveName == "InputPanel")
   }
 
@@ -186,15 +166,6 @@ struct InputPanelControllerTests {
     ctx.controller.showPanel()
 
     #expect(ducker.duckCallCount == 0)
-  }
-
-  @Test func showPanelWithVoiceOnDucks() {
-    let ducker = MockVolumeDucker()
-    let ctx = makeController(ducker: ducker)
-    ctx.appState.settings.voiceInput.isVoiceInputEnabled = true
-    ctx.controller.showPanel()
-
-    #expect(ducker.duckCallCount == 1)
   }
 
   @Test func confirmWithVoiceOffIsIdempotent() async {

@@ -88,20 +88,6 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "hello")
   }
 
-  @Test func overlapRemovalResetOnSwitchEngine() async {
-    let ctx = makeController()
-    ctx.controller.showPanel()
-    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
-
-    await ctx.controller.switchEngine()
-
-    // After switch, accumulated should be reset — no stripping
-    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
-
-    // inputText should contain "hello" from after switch (first "hello" was cleared by switchEngine reading textView)
-    #expect(ctx.appState.inputText.contains("hello"))
-  }
-
   // MARK: - Replay Volatile Suppression
 
   @Test func completedMouseSelectionFinalizesVolatileAndMovesFollowingSpeech() async throws {

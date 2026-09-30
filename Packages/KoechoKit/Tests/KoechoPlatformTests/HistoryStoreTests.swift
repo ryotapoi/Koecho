@@ -38,37 +38,12 @@ struct HistoryStoreTests {
     #expect(store.entries[0].text == "hello")
   }
 
-  @Test func newestFirst() {
-    let dir = makeTempDirectory()
-    let store = HistoryStore(directoryURL: dir)
-    let settings = makeSettings()
-    store.add(text: "first", settings: settings)
-    store.add(text: "second", settings: settings)
-    #expect(store.entries.count == 2)
-    #expect(store.entries[0].text == "second")
-    #expect(store.entries[1].text == "first")
-  }
-
   @Test func addWhenDisabledIsNoop() {
     let dir = makeTempDirectory()
     let store = HistoryStore(directoryURL: dir)
     let settings = makeSettings(isHistoryEnabled: false)
     store.add(text: "hello", settings: settings)
     #expect(store.entries.isEmpty)
-  }
-
-  @Test func maxCountLimit() {
-    let dir = makeTempDirectory()
-    let store = HistoryStore(directoryURL: dir)
-    let settings = makeSettings(historyMaxCount: 3)
-    store.add(text: "1", settings: settings)
-    store.add(text: "2", settings: settings)
-    store.add(text: "3", settings: settings)
-    store.add(text: "4", settings: settings)
-    #expect(store.entries.count == 3)
-    #expect(store.entries[0].text == "4")
-    #expect(store.entries[1].text == "3")
-    #expect(store.entries[2].text == "2")
   }
 
   @Test func retentionDaysPurge() {

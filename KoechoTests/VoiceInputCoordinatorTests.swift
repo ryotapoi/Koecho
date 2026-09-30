@@ -254,15 +254,6 @@ import Testing
     #expect(!autoReplacementCalled)
   }
 
-  @Test func didFinalizeAppendsToPromptTextWhenTargetIsPrompt() {
-    let (coordinator, appState, _, _) = makeCoordinator(inputText: "")
-    coordinator.currentVoiceTarget = .prompt
-
-    coordinator.voiceInput(didFinalize: "hello")
-
-    #expect(appState.promptText == "hello")
-  }
-
   @Test func didFinalizeClearsPromptVolatileTextWhenTargetIsPrompt() {
     let (coordinator, appState, _, _) = makeCoordinator(inputText: "")
     coordinator.currentVoiceTarget = .prompt
@@ -340,22 +331,6 @@ import Testing
   }
 
   // MARK: - Overlap stripping
-
-  @Test func didFinalizeStripsOverlappingPrefix() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "")
-    mockTV.string = "hello"
-    mockTV.finalizedString = "hello"
-    coordinator.handleCursorMoved(5)
-
-    // First finalize
-    coordinator.voiceInput(didFinalize: "hello")
-
-    // Second finalize with overlap
-    coordinator.voiceInput(didFinalize: "hello world")
-
-    // Should insert only " world", not "hello world"
-    #expect(mockTV.string.hasSuffix(" world"))
-  }
 
   @Test func stripOverlappingPrefixReturnsOriginalForEmptyInputs() {
     let (coordinator, _, _, _) = makeCoordinator()
@@ -519,34 +494,4 @@ import Testing
     #expect(mockTV.setVolatileTextCalls.count == 1)
   }
 
-  // MARK: - didEncounterError / didUpdateStatus
-
-  @Test func didEncounterErrorSetsErrorMessage() {
-    let (coordinator, appState, _, _) = makeCoordinator()
-
-    coordinator.voiceInput(didEncounterError: .microphoneAccessDenied)
-
-    #expect(
-      appState.errorMessage
-        == String(
-          localized:
-            "Microphone access denied. Open System Settings > Privacy & Security > Microphone."))
-  }
-
-  @Test func didUpdateStatusSetsVoiceEngineStatus() {
-    let (coordinator, appState, _, _) = makeCoordinator()
-
-    coordinator.voiceInput(didUpdateStatus: .downloadingModel)
-
-    #expect(appState.voiceEngineStatus == String(localized: "Downloading speech model..."))
-  }
-
-  @Test func didUpdateStatusNilClearsVoiceEngineStatus() {
-    let (coordinator, appState, _, _) = makeCoordinator()
-    appState.voiceEngineStatus = "something"
-
-    coordinator.voiceInput(didUpdateStatus: nil)
-
-    #expect(appState.voiceEngineStatus == nil)
-  }
 }

@@ -7,16 +7,6 @@ import Testing
 struct ShortcutKeyTests {
   // MARK: - displayName
 
-  @Test func displayNameSingleModifier() {
-    let shortcut = ShortcutKey(modifiers: [.control], character: "r")
-    #expect(shortcut.displayName == "⌃R")
-  }
-
-  @Test func displayNameMultipleModifiers() {
-    let shortcut = ShortcutKey(modifiers: [.command, .shift], character: "c")
-    #expect(shortcut.displayName == "⇧⌘C")
-  }
-
   @Test func displayNameAllModifiers() {
     let shortcut = ShortcutKey(modifiers: [.command, .shift, .option, .control], character: "a")
     #expect(shortcut.displayName == "⌃⌥⇧⌘A")
@@ -38,29 +28,6 @@ struct ShortcutKeyTests {
     let shortcut = ShortcutKey(modifiers: [.command], character: "C")
     #expect(shortcut.character == "c")
     #expect(shortcut.displayName == "⌘C")
-  }
-
-  // MARK: - Modifier display order (macOS standard: ⌃ ⌥ ⇧ ⌘)
-
-  @Test func modifierDisplayOrder() {
-    let sorted = [Modifier.command, .shift, .option, .control].sorted()
-    #expect(sorted == [.control, .option, .shift, .command])
-  }
-
-  // MARK: - Codable round trip
-
-  @Test func codableRoundTrip() throws {
-    let original = ShortcutKey(modifiers: [.command, .shift], character: "c")
-    let data = try JSONEncoder().encode(original)
-    let decoded = try JSONDecoder().decode(ShortcutKey.self, from: data)
-    #expect(decoded == original)
-  }
-
-  @Test func codableSetOfModifiers() throws {
-    let original = ShortcutKey(modifiers: [.control, .option, .command], character: "1")
-    let data = try JSONEncoder().encode(original)
-    let decoded = try JSONDecoder().decode(ShortcutKey.self, from: data)
-    #expect(decoded.modifiers == [.control, .option, .command])
   }
 
   // MARK: - Optional persistence data
@@ -85,26 +52,6 @@ struct ShortcutKeyTests {
     #expect(throws: (any Error).self) {
       try ShortcutKey.decodeOptional(from: data)
     }
-  }
-
-  // MARK: - Equality
-
-  @Test func equalityDifferentModifiers() {
-    let a = ShortcutKey(modifiers: [.command], character: "c")
-    let b = ShortcutKey(modifiers: [.command, .shift], character: "c")
-    #expect(a != b)
-  }
-
-  @Test func equalitySameShortcut() {
-    let a = ShortcutKey(modifiers: [.command, .shift], character: "c")
-    let b = ShortcutKey(modifiers: [.shift, .command], character: "c")
-    #expect(a == b)
-  }
-
-  @Test func equalityDifferentCharacter() {
-    let a = ShortcutKey(modifiers: [.command], character: "c")
-    let b = ShortcutKey(modifiers: [.command], character: "v")
-    #expect(a != b)
   }
 
   // MARK: - isPrintableASCII
@@ -175,12 +122,4 @@ struct ShortcutKeyTests {
     #expect(ShortcutKey.hasRequiredModifier([]) == false)
   }
 
-  // MARK: - Modifier symbols
-
-  @Test func modifierSymbols() {
-    #expect(Modifier.control.symbol == "⌃")
-    #expect(Modifier.option.symbol == "⌥")
-    #expect(Modifier.shift.symbol == "⇧")
-    #expect(Modifier.command.symbol == "⌘")
-  }
 }

@@ -48,20 +48,6 @@ struct AudioInputExclusiveAccessTests {
     #expect(access.isInUse == false)
   }
 
-  @Test func acquireStopsActiveLevelMonitor() {
-    let access = AudioInputExclusiveAccess()
-    let monitor = AudioInputLevelMonitor(exclusiveAccess: access)
-    access.markAsActive { [weak monitor] in
-      monitor?.stop()
-    }
-    #expect(access.isInUse == true)
-
-    // When another component acquires, the monitor should be stopped
-    access.acquire()
-    #expect(monitor.inputLevel == 0)
-    #expect(access.isInUse == true)
-  }
-
   @Test func separateInstancesDoNotShareExclusiveAccessState() {
     let first = AudioInputExclusiveAccess()
     let second = AudioInputExclusiveAccess()

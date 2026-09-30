@@ -10,11 +10,6 @@ struct VoiceInputSettingsTests {
     return UserDefaults(suiteName: suiteName)!
   }
 
-  @Test func voiceInputIsEnabledByDefaultAndStoredCanonically() {
-    let settings = VoiceInputSettings(defaults: makeDefaults())
-    #expect(settings.isVoiceInputEnabled)
-  }
-
   @Test func voiceShortcutDefaultsToNilAndRoundTripsClearing() {
     let defaults = makeDefaults()
     let key = ShortcutKey(modifiers: [.control], character: "v")

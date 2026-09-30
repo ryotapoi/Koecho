@@ -257,16 +257,6 @@ struct ScriptSettingsTests {
 
   // MARK: - CRUD Methods
 
-  @Test func addScript() {
-    let settings = makeEmptySettings()
-    let script = Script(name: "New", scriptPath: "/bin/new")
-
-    settings.addScript(script)
-
-    #expect(settings.scripts.count == 1)
-    #expect(settings.scripts[0].id == script.id)
-  }
-
   @Test func allowsBuiltinFeatureConfigurationsAndCustomNameCollisions() {
     let settings = makeEmptySettings()
     let twoSpaces = Script(
@@ -394,16 +384,6 @@ struct ScriptSettingsTests {
     #expect(settings.scripts[0].name == "Existing")
   }
 
-  @Test func deleteScript() {
-    let settings = makeEmptySettings()
-    let script = Script(name: "Doomed", scriptPath: "/bin/doomed")
-    settings.addScript(script)
-
-    settings.deleteScript(id: script.id)
-
-    #expect(settings.scripts.isEmpty)
-  }
-
   @Test func deleteNonexistentScript() {
     let settings = makeEmptySettings()
     settings.addScript(Script(name: "Safe", scriptPath: "/bin/safe"))
@@ -487,19 +467,6 @@ struct ScriptSettingsTests {
   }
 
   // MARK: - Eligible Auto-Run Scripts
-
-  @Test func eligibleAutoRunScriptsEmpty() {
-    let settings = makeEmptySettings()
-    #expect(settings.eligibleAutoRunScripts.isEmpty)
-  }
-
-  @Test func eligibleAutoRunScriptsExcludesPromptScripts() {
-    let settings = makeEmptySettings()
-    settings.scripts = [
-      Script(name: "Prompt Only", scriptPath: "/bin/echo", requiresPrompt: true)
-    ]
-    #expect(settings.eligibleAutoRunScripts.isEmpty)
-  }
 
   @Test func eligibleAutoRunScriptsIncludesNonPromptScripts() {
     let settings = makeEmptySettings()

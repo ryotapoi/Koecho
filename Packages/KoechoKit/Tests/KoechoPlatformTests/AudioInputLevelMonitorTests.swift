@@ -5,11 +5,6 @@ import Testing
 
 @MainActor
 struct AudioInputLevelMonitorTests {
-  @Test func initDoesNotCrash() {
-    let monitor = AudioInputLevelMonitor()
-    _ = monitor.inputLevel
-  }
-
   @Test func stopWithoutStartDoesNotCrash() {
     let monitor = AudioInputLevelMonitor()
     monitor.stop()

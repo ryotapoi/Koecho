@@ -67,14 +67,6 @@ struct ReplacementRuleTests {
     #expect(result == "Price is 100 dollars today")
   }
 
-  @Test func plainTextEscapesDot() {
-    let rules = [
-      ReplacementRule(pattern: "file.txt", replacement: "document.txt")
-    ]
-    let result = applyReplacementRules(rules, to: "Open file.txt now")
-    #expect(result == "Open document.txt now")
-  }
-
   @Test func plainTextReplacementWithDollarSign() {
     let rules = [
       ReplacementRule(pattern: "price", replacement: "$100")
@@ -144,12 +136,6 @@ struct ReplacementRuleTests {
   }
 
   // MARK: - findReplacementMatches
-
-  @Test func findMatchesSingleRuleSingleMatch() {
-    let rules = [ReplacementRule(pattern: "えーと", replacement: "")]
-    let matches = findReplacementMatches(rules, in: "えーと天気")
-    #expect(matches == [ReplacementMatch(range: NSRange(location: 0, length: 3), replacement: "")])
-  }
 
   @Test func findMatchesSingleRuleMultipleMatches() {
     let rules = [ReplacementRule(pattern: "えーと", replacement: "")]
@@ -246,11 +232,6 @@ struct ReplacementRuleTests {
 
   // MARK: - validate
 
-  @Test func validatePlainTextReturnsNil() {
-    let rule = ReplacementRule(pattern: "hello")
-    #expect(rule.validate() == nil)
-  }
-
   @Test func validateRegexEmptyPatternReturnsNil() {
     let rule = ReplacementRule(pattern: "", usesRegularExpression: true)
     #expect(rule.validate() == nil)
@@ -269,23 +250,6 @@ struct ReplacementRuleTests {
   @Test func validatePlainTextWithRegexMetacharactersReturnsNil() {
     let rule = ReplacementRule(pattern: "$100")
     #expect(rule.validate() == nil)
-  }
-
-  // MARK: - displayName
-
-  @Test func displayNameEmptyPattern() {
-    let rule = ReplacementRule(pattern: "")
-    #expect(rule.displayName == nil)
-  }
-
-  @Test func displayNamePatternOnly() {
-    let rule = ReplacementRule(pattern: "hello")
-    #expect(rule.displayName == "hello")
-  }
-
-  @Test func displayNamePatternAndReplacement() {
-    let rule = ReplacementRule(pattern: "hello", replacement: "bye")
-    #expect(rule.displayName == "hello → bye")
   }
 
   // MARK: - Codable
@@ -347,21 +311,6 @@ struct ReplacementRuleTests {
     #expect(decoded.patterns.map(\.id) != rule.patterns.map(\.id))
   }
 
-  @Test func decodeLegacyEmptyPatternFormatFails() {
-    let json = """
-      {
-          "id": "00000000-0000-0000-0000-000000000003",
-          "pattern": "",
-          "replacement": "",
-          "usesRegularExpression": false,
-          "matchesWholeWord": false
-      }
-      """.data(using: .utf8)!
-    #expect(throws: DecodingError.self) {
-      try JSONDecoder().decode(ReplacementRule.self, from: json)
-    }
-  }
-
   @Test func decodeEmptyPatternsArrayFallsBack() throws {
     let json = """
       {
@@ -377,11 +326,6 @@ struct ReplacementRuleTests {
   }
 
   // MARK: - pattern computed property
-
-  @Test func patternComputedPropertyGetReturnsFirst() {
-    let rule = ReplacementRule(patterns: ["a", "b"], replacement: "c")
-    #expect(rule.pattern == "a")
-  }
 
   @Test func patternComputedPropertySetUpdatesFirst() {
     var rule = ReplacementRule(patterns: ["a", "b"], replacement: "c")

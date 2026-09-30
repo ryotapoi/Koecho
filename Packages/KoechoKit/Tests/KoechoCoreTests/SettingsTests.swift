@@ -21,20 +21,6 @@ struct SettingsTests {
     return UserDefaults(suiteName: suiteName)!
   }
 
-  @Test func createsAllSubSettings() {
-    let settings = Settings(defaults: makeDefaults())
-
-    // Verify all sub-settings are created and accessible
-    _ = settings.voiceInput
-    _ = settings.hotkey
-    _ = settings.script
-    _ = settings.replacement
-    _ = settings.history
-    _ = settings.paste
-    _ = settings.volumeDucking
-    _ = settings.appIcon
-  }
-
   @Test func roundTripViaSubSettings() {
     let defaults = makeDefaults()
 

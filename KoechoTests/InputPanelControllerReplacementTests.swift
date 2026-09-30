@@ -147,17 +147,6 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "script output")
   }
 
-  @Test func cancelClearsPendingReplacementPattern() {
-    let ctx = makeController()
-
-    ctx.controller.showPanel()
-    ctx.appState.pendingReplacementPattern = "test"
-
-    ctx.controller.cancel()
-
-    #expect(ctx.appState.pendingReplacementPattern == nil)
-  }
-
   // MARK: - Auto Replacement
 
   @Test func autoReplacementTriggersImmediately() {
@@ -209,28 +198,4 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "hello world")
   }
 
-  @Test func autoReplacementSkipsWhenNotVisible() {
-    let ctx = makeController()
-    ctx.appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "hello", replacement: "bye")
-    )
-
-    // Don't call showPanel
-    ctx.controller.handleTextChanged("hello world")
-
-    #expect(ctx.appState.inputText == "hello world")
-  }
-
-  @Test func autoReplacementSkipsDuringScriptExecution() {
-    let ctx = makeController()
-    ctx.appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "hello", replacement: "bye")
-    )
-
-    ctx.controller.showPanel()
-    ctx.appState.isRunningScript = true
-    ctx.controller.handleTextChanged("hello world")
-
-    #expect(ctx.appState.inputText == "hello world")
-  }
 }

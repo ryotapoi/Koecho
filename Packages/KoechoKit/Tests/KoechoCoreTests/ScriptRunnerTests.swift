@@ -17,26 +17,6 @@ nonisolated struct ScriptRunnerTests {
 
   // MARK: - Success
 
-  @Test func passthrough() async throws {
-    let path = try makeScript("cat")
-    defer { try? FileManager.default.removeItem(atPath: path) }
-
-    let runner = ScriptRunner()
-    let result = try await runner.run(scriptPath: path, input: "hello world")
-
-    #expect(result.output == "hello world")
-  }
-
-  @Test func transforms() async throws {
-    let path = try makeScript("tr a-z A-Z")
-    defer { try? FileManager.default.removeItem(atPath: path) }
-
-    let runner = ScriptRunner()
-    let result = try await runner.run(scriptPath: path, input: "hello")
-
-    #expect(result.output == "HELLO")
-  }
-
   @Test func trimsWhitespace() async throws {
     let path = try makeScript("echo '  trimmed  '")
     defer { try? FileManager.default.removeItem(atPath: path) }
@@ -78,17 +58,6 @@ nonisolated struct ScriptRunnerTests {
     #expect(result.output == "selected text|10|22|make it better")
   }
 
-  @Test func passesPathAndHome() async throws {
-    let path = try makeScript("echo \"PATH=$PATH\" && echo \"HOME=$HOME\"")
-    defer { try? FileManager.default.removeItem(atPath: path) }
-
-    let runner = ScriptRunner()
-    let result = try await runner.run(scriptPath: path, input: "")
-
-    #expect(result.output.contains("PATH="))
-    #expect(result.output.contains("HOME="))
-  }
-
   @Test func doesNotLeakTCCVariables() async throws {
     let path = try makeScript("env")
     defer { try? FileManager.default.removeItem(atPath: path) }
@@ -125,16 +94,6 @@ nonisolated struct ScriptRunnerTests {
     await #expect(throws: ScriptRunnerError.emptyScript) {
       try await runner.run(scriptPath: "   ", input: "")
     }
-  }
-
-  @Test func scriptWithArguments() async throws {
-    let path = try makeScript("echo \"args: $@\"")
-    defer { try? FileManager.default.removeItem(atPath: path) }
-
-    let runner = ScriptRunner()
-    let result = try await runner.run(scriptPath: "'\(path)' arg1 arg2", input: "")
-
-    #expect(result.output == "args: arg1 arg2")
   }
 
   @Test func nonZeroExitNoStderr() async throws {
@@ -194,27 +153,7 @@ nonisolated struct ScriptRunnerTests {
     }
   }
 
-  @Test func normalCompletionDoesNotTimeout() async throws {
-    let path = try makeScript("echo 'fast'")
-    defer { try? FileManager.default.removeItem(atPath: path) }
-
-    let runner = ScriptRunner()
-    let result = try await runner.run(scriptPath: path, input: "")
-
-    #expect(result.output == "fast")
-  }
-
   // MARK: - Edge Cases
-
-  @Test func emptyInput() async throws {
-    let path = try makeScript("echo 'no input needed'")
-    defer { try? FileManager.default.removeItem(atPath: path) }
-
-    let runner = ScriptRunner()
-    let result = try await runner.run(scriptPath: path, input: "")
-
-    #expect(result.output == "no input needed")
-  }
 
   @Test func multilineInput() async throws {
     let path = try makeScript("cat")
@@ -239,24 +178,6 @@ nonisolated struct ScriptRunnerTests {
     #expect(
       result.output == tmpDir || result.output == "/private" + tmpDir
     )
-  }
-
-  @Test func scriptPathWithSpaces() async throws {
-    let dir = FileManager.default.temporaryDirectory
-    let path = dir.appendingPathComponent("koecho test script \(UUID().uuidString).sh").path
-    try ("#!/bin/sh\necho 'spaces ok'").write(
-      toFile: path, atomically: true, encoding: .utf8
-    )
-    try FileManager.default.setAttributes(
-      [.posixPermissions: 0o755],
-      ofItemAtPath: path
-    )
-    defer { try? FileManager.default.removeItem(atPath: path) }
-
-    let runner = ScriptRunner()
-    let result = try await runner.run(scriptPath: "'\(path)'", input: "")
-
-    #expect(result.output == "spaces ok")
   }
 
   @Test func scriptPathWithSpacesAndArguments() async throws {

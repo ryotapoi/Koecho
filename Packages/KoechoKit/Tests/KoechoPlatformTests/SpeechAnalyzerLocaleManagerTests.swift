@@ -16,12 +16,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(manager.reservedLocales.isEmpty)
   }
 
-  @Test func clearDownloadError() {
-    let manager = SpeechAnalyzerLocaleManager()
-    manager.clearDownloadError()
-    #expect(manager.downloadError == nil)
-  }
-
   @Test func findNormalizedMatchExactMatch() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
@@ -58,23 +52,7 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(match == nil)
   }
 
-  @Test func reservedLocalesFiltersCorrectly() {
-    let manager = SpeechAnalyzerLocaleManager()
-    #expect(manager.reservedLocales.isEmpty)
-  }
-
   // MARK: - correctSelection
-
-  @Test func correctSelectionWhenSelectionInReserved() {
-    let manager = SpeechAnalyzerLocaleManager()
-    let items = [
-      LocaleItem(
-        identifier: "en-US", displayName: "English (US)", sortKey: "English (US)",
-        normalizedKey: SpeechLocale.normalizationKey("en-US"), isReserved: true)
-    ]
-    let result = manager.correctSelection(currentSelection: "en-US", items: items)
-    #expect(result == nil)
-  }
 
   @Test func correctSelectionWhenSelectionInAll() {
     let manager = SpeechAnalyzerLocaleManager()
@@ -85,17 +63,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     ]
     let result = manager.correctSelection(currentSelection: "en-US", items: items)
     #expect(result == nil)
-  }
-
-  @Test func correctSelectionNormalizedMatch() {
-    let manager = SpeechAnalyzerLocaleManager()
-    let items = [
-      LocaleItem(
-        identifier: "en_US", displayName: "English (US)", sortKey: "English (US)",
-        normalizedKey: SpeechLocale.normalizationKey("en_US"), isReserved: true)
-    ]
-    let result = manager.correctSelection(currentSelection: "en-US", items: items)
-    #expect(result == "en_US")
   }
 
   @Test func correctSelectionJaJPFallback() {

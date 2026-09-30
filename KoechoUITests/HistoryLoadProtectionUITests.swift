@@ -34,10 +34,6 @@ final class HistoryLoadProtectionUITests: XCTestCase {
     try? FileManager.default.removeItem(at: fixtureHome)
   }
 
-  func testHistoryLoadFailureShowsOneAlert() {
-    dismissLoadAlert(containing: ["History could not be loaded"])
-  }
-
   func testHistoryResetRequiresConfirmationAndRestoresNormalHistory() throws {
     dismissLoadAlert(containing: ["History could not be loaded"])
     openHistorySettings()

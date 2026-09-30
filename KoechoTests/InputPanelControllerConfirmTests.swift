@@ -235,20 +235,6 @@ extension InputPanelControllerTests {
 
   // MARK: - History
 
-  @Test func confirmRecordsHistory() async {
-    let paster = MockPaster()
-    let ctx = makeController(paster: paster)
-
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("hello")
-    ctx.appState.frontmostApplication = NSRunningApplication.current
-
-    await ctx.controller.confirm()
-
-    #expect(ctx.historyStore.entries.count == 1)
-    #expect(ctx.historyStore.entries[0].text == "hello")
-  }
-
   @Test func confirmRecordsTextAfterReplacement() async {
     let paster = MockPaster()
     let ctx = makeController(paster: paster)

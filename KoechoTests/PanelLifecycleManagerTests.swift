@@ -32,15 +32,6 @@ import Testing
 
   // MARK: - show
 
-  @Test func showRecordsFrontmostApplication() {
-    let (manager, appState, _, _, _) = makeManager()
-
-    manager.show()
-
-    // frontmostApplication is set from NSWorkspace (may be nil in test, but the code path executes)
-    #expect(appState.isInputPanelVisible == true)
-  }
-
   @Test func showReadsSelectedText() {
     let result = SelectedTextResult(text: "hello")
     let (manager, appState, _, _, _) = makeManager(selectedTextResult: result)

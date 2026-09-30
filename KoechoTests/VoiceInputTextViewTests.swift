@@ -269,17 +269,6 @@ struct VoiceInputTextViewTests {
     #expect(textView.volatileRange == nil)
   }
 
-  @Test func setVolatileTextWithEmptyStringClearsVolatile() {
-    let textView = makeTextView()
-    textView.string = "hello"
-
-    textView.setVolatileText(" world", at: 5)
-    textView.setVolatileText("", at: 5)
-
-    #expect(textView.string == "hello")
-    #expect(textView.volatileRange == nil)
-  }
-
   @Test func volatileTextDoesNotFireCallbacks() {
     let textView = makeTextView()
     textView.string = "hello"

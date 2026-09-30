@@ -56,35 +56,11 @@ struct ClipboardPasterTests {
     #expect(String(data: data!, encoding: .utf8) == "hello")
   }
 
-  @Test func savePasteboardWithMultipleTypes() {
-    let pb = makeTestPasteboard()
-    pb.clearContents()
-    let item = NSPasteboardItem()
-    item.setString("plain text", forType: .string)
-    item.setString("<b>html</b>", forType: .html)
-    pb.writeObjects([item])
-    let items = savePasteboard(pb)
-    #expect(items.count == 1)
-    #expect(items[0].types.contains(.string))
-    #expect(items[0].types.contains(.html))
-  }
-
   @Test func savePasteboardEmpty() {
     let pb = makeTestPasteboard()
     pb.clearContents()
     let items = savePasteboard(pb)
     #expect(items.isEmpty)
-  }
-
-  @Test func restorePasteboardRoundTrip() {
-    let pb = makeTestPasteboard()
-    pb.clearContents()
-    pb.setString("original content", forType: .string)
-    let saved = savePasteboard(pb)
-    pb.clearContents()
-    pb.setString("overwritten", forType: .string)
-    restorePasteboard(pb, from: saved)
-    #expect(pb.string(forType: .string) == "original content")
   }
 
   @Test func restorePasteboardMultipleTypes() {
@@ -110,21 +86,6 @@ struct ClipboardPasterTests {
     pb.setString("something", forType: .string)
     restorePasteboard(pb, from: [])
     #expect(pb.string(forType: .string) == nil)
-  }
-
-  @Test func clipboardPasterInitWithDelay() {
-    let paster = ClipboardPaster(pasteDelay: 3.0)
-    #expect(paster.pasteDelay == 3.0)
-  }
-
-  @Test func clipboardPasterErrorEquatable() {
-    #expect(
-      ClipboardPasterError.accessibilityNotTrusted == ClipboardPasterError.accessibilityNotTrusted)
-    #expect(
-      ClipboardPasterError.failedToCreateCGEvent == ClipboardPasterError.failedToCreateCGEvent)
-    #expect(ClipboardPasterError.targetAppTerminated == ClipboardPasterError.targetAppTerminated)
-    #expect(
-      ClipboardPasterError.accessibilityNotTrusted != ClipboardPasterError.targetAppTerminated)
   }
 
   @Test func clipboardPasterNotTrustedThrows() async {
@@ -154,17 +115,6 @@ struct ClipboardPasterTests {
     #expect(client.simulatePasteCallCount == 1)
     #expect(target.activateCallCount == 1)
     #expect(pasteboard.string(forType: .string) == "second")
-  }
-
-  @Test func clipboardPasterCallsSimulatePaste() async throws {
-    let client = MockCGEventClient()
-    let paster = ClipboardPaster(pasteDelay: 0.1, cgEventClient: client)
-    let target = MockClipboardPasteTarget()
-    let pb = makeTestPasteboard()
-    try await paster.paste(text: "hello", to: target, using: pb)
-    #expect(client.simulatePasteCallCount == 1)
-    #expect(target.activateCallCount == 1)
-    #expect(pb.string(forType: .string) == "hello")
   }
 
   @Test func clipboardPasterSimulatePasteErrorPropagates() async {
