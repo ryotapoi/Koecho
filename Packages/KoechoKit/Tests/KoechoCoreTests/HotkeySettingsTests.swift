@@ -12,7 +12,6 @@ struct HotkeySettingsTests {
 
   @Test func defaultHotkeyConfig() {
     let settings = HotkeySettings(defaults: makeDefaults())
-    #expect(settings.hotkeyConfig == .default)
     #expect(settings.hotkeyConfig.modifierKey == .fn)
     #expect(settings.hotkeyConfig.side == .left)
     #expect(settings.hotkeyConfig.tapMode == .singleToggle)

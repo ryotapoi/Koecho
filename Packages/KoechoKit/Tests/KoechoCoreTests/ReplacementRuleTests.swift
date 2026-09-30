@@ -248,7 +248,7 @@ struct ReplacementRuleTests {
   }
 
   @Test func validatePlainTextWithRegexMetacharactersReturnsNil() {
-    let rule = ReplacementRule(pattern: "$100")
+    let rule = ReplacementRule(pattern: "[invalid")
     #expect(rule.validate() == nil)
   }
 

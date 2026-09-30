@@ -424,9 +424,11 @@ struct ScriptSettingsTests {
     let script = Script(name: "Persistent", scriptPath: "/bin/persist")
 
     settings.addScript(script)
+    #expect(settings.scripts == [script])
 
     let reloaded = ScriptSettings(defaults: defaults)
     #expect(reloaded.scripts.count == 1)
+    #expect(reloaded.scripts[0].id == script.id)
     #expect(reloaded.scripts[0].name == "Persistent")
   }
 
@@ -437,6 +439,7 @@ struct ScriptSettingsTests {
     let script = Script(name: "Temporary", scriptPath: "/bin/temp")
     settings.addScript(script)
     settings.deleteScript(id: script.id)
+    #expect(settings.scripts.isEmpty)
 
     let reloaded = ScriptSettings(defaults: defaults)
     #expect(reloaded.scripts.isEmpty)

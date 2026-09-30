@@ -59,7 +59,8 @@ nonisolated struct ScriptRunnerTests {
   }
 
   @Test func doesNotLeakTCCVariables() async throws {
-    let path = try makeScript("env")
+    let parentEnvironment = ProcessInfo.processInfo.environment
+    let path = try makeScript("/usr/bin/env")
     defer { try? FileManager.default.removeItem(atPath: path) }
 
     let runner = ScriptRunner()
@@ -68,6 +69,11 @@ nonisolated struct ScriptRunnerTests {
     let lines = result.output.components(separatedBy: "\n")
     let cfVars = lines.filter { $0.hasPrefix("__CF_") }
     #expect(cfVars.isEmpty)
+    for key in ["PATH", "HOME"] {
+      if let expected = parentEnvironment[key] {
+        #expect(lines.contains("\(key)=\(expected)"), "Child must inherit \(key)")
+      }
+    }
   }
 
   // MARK: - Errors

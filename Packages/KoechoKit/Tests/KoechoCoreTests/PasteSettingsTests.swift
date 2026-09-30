@@ -26,9 +26,13 @@ struct PasteSettingsTests {
   }
 
   @Test func clampsPasteDelayToZero() {
-    let settings = PasteSettings(defaults: makeDefaults())
+    let defaults = makeDefaults()
+    let settings = PasteSettings(defaults: defaults)
     settings.pasteDelay = -1.0
     #expect(settings.pasteDelay == 0.0)
+
+    let reloaded = PasteSettings(defaults: defaults)
+    #expect(reloaded.pasteDelay == 0.0)
   }
 
   @Test func clampsNegativeValuesOnInit() {
@@ -37,14 +41,5 @@ struct PasteSettingsTests {
 
     let settings = PasteSettings(defaults: defaults)
     #expect(settings.pasteDelay == 0.0)
-  }
-
-  @Test func clampsPersistedValues() {
-    let defaults = makeDefaults()
-    let settings = PasteSettings(defaults: defaults)
-    settings.pasteDelay = -1.0
-
-    let reloaded = PasteSettings(defaults: defaults)
-    #expect(reloaded.pasteDelay == 0.0)
   }
 }

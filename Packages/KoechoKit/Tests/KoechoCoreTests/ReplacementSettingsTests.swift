@@ -227,24 +227,6 @@ struct ReplacementSettingsTests {
 
   // MARK: - Legacy format rejection
 
-  @Test func rejectsLegacySinglePatternFormat() throws {
-    let defaults = makeDefaults()
-    // Simulate old format data with "pattern" key
-    let legacyJSON = """
-      [{
-          "id": "00000000-0000-0000-0000-000000000001",
-          "pattern": "えーと",
-          "replacement": "",
-          "usesRegularExpression": false,
-          "matchesWholeWord": false
-      }]
-      """.data(using: .utf8)!
-    defaults.set(legacyJSON, forKey: "replacementRules")
-
-    let settings = ReplacementSettings(defaults: defaults)
-    #expect(settings.replacementRules.isEmpty)
-  }
-
   @Test func doesNotMigrateLegacyFormatToPatterns() throws {
     let defaults = makeDefaults()
     let legacyJSON = """
@@ -260,6 +242,7 @@ struct ReplacementSettingsTests {
 
     let settings = ReplacementSettings(defaults: defaults)
 
+    #expect(settings.replacementRules.isEmpty)
     #expect(settings.isReplacementRulesProtected)
 
     // Loading an unsupported format must retain its original bytes.

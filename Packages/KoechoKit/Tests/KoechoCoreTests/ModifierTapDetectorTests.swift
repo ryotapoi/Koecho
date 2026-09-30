@@ -19,15 +19,17 @@ struct ModifierTapDetectorTests {
 
   @Test func otherModifierKeyDoesNotFire() {
     var detector = ModifierTapDetector()
-    let commandKeyCode: UInt16 = 55
+    detector.targetKeyCode = 55  // Left Command
+    let rightCommandKeyCode: UInt16 = 54
 
     let press = detector.handleFlagsChanged(
-      keyCode: commandKeyCode, targetFlagIsSet: false, now: 1.0)
+      keyCode: rightCommandKeyCode, targetFlagIsSet: true, now: 1.0)
     #expect(press == .none)
 
     let release = detector.handleFlagsChanged(
-      keyCode: commandKeyCode, targetFlagIsSet: false, now: 1.1)
+      keyCode: rightCommandKeyCode, targetFlagIsSet: false, now: 1.1)
     #expect(release == .none)
+    #expect(detector.expireDoubleTapWindow() == .none)
   }
 
   @Test func otherModifierDuringWaitCancels() {
@@ -38,6 +40,7 @@ struct ModifierTapDetectorTests {
     _ = detector.handleFlagsChanged(keyCode: shiftKeyCode, targetFlagIsSet: true, now: 1.1)
     let release = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: false, now: 1.15)
     #expect(release == .none)
+    #expect(detector.expireDoubleTapWindow() == .none)
   }
 
   @Test func releaseWithoutPressDoesNotFire() {
@@ -73,13 +76,6 @@ struct ModifierTapDetectorTests {
     #expect(detector.state == .idle)
   }
 
-  @Test func handleKeyDownInIdleIsNoop() {
-    var detector = ModifierTapDetector()
-
-    detector.handleKeyDown()
-    #expect(detector.state == .idle)
-  }
-
   @Test func handleKeyDownThenReleaseDoesNotFire() {
     var detector = ModifierTapDetector()
 
@@ -101,6 +97,10 @@ struct ModifierTapDetectorTests {
     let dup = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: true, now: 1.01)
     #expect(dup == .none)
     #expect(detector.state == .waitingForRelease(pressTime: 1.0))
+
+    _ = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: false, now: 1.1)
+    _ = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: false, now: 1.11)
+    #expect(detector.expireDoubleTapWindow() == .singleTap)
   }
 
   // MARK: - Double Tap
@@ -127,7 +127,8 @@ struct ModifierTapDetectorTests {
 
     let press = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: true, now: 1.0)
     #expect(press == .none)
-    _ = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: false, now: 1.1)
+    let release = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: false, now: 1.1)
+    #expect(release == .none)
     #expect(detector.state == .waitingForSecondTap(firstTapTime: 1.1))
 
     let result = detector.expireDoubleTapWindow()
@@ -137,6 +138,8 @@ struct ModifierTapDetectorTests {
 
   @Test func expireInIdleReturnsNone() {
     var detector = ModifierTapDetector()
+    #expect(detector.state == .idle)
+    detector.handleKeyDown()
 
     let result = detector.expireDoubleTapWindow()
     #expect(result == .none)
@@ -154,6 +157,8 @@ struct ModifierTapDetectorTests {
     // Second press after doubleTapInterval
     _ = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: true, now: 1.5)
     #expect(detector.state == .waitingForRelease(pressTime: 1.5))
+    _ = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: false, now: 1.6)
+    #expect(detector.expireDoubleTapWindow() == .singleTap)
   }
 
   @Test func secondReleaseToSlowFailsDoubleTap() {
@@ -182,6 +187,7 @@ struct ModifierTapDetectorTests {
 
     detector.handleKeyDown()
     #expect(detector.state == .idle)
+    #expect(detector.expireDoubleTapWindow() == .none)
   }
 
   @Test func otherModifierDuringWaitingForSecondTapCancels() {
@@ -195,6 +201,7 @@ struct ModifierTapDetectorTests {
       keyCode: shiftKeyCode, targetFlagIsSet: true, now: 1.15)
     #expect(result == .none)
     #expect(detector.state == .idle)
+    #expect(detector.expireDoubleTapWindow() == .none)
   }
 
   @Test func duplicatePressInWaitingForSecondRelease() {
@@ -229,5 +236,4 @@ struct ModifierTapDetectorTests {
     #expect(result == .none)
     #expect(detector.state == .waitingForSecondTap(firstTapTime: 1.1))
   }
-
 }
