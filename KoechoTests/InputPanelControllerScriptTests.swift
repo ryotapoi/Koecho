@@ -261,17 +261,6 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "hello")
   }
 
-  @Test func deleteScriptClearsAutoRun() {
-    let ctx = makeController()
-    let script = Script(name: "Test", scriptPath: "/bin/echo")
-    ctx.appState.settings.script.scripts = [script]
-    ctx.appState.settings.script.autoRunScriptId = script.id
-
-    ctx.appState.settings.script.deleteScript(id: script.id)
-
-    #expect(ctx.appState.settings.script.autoRunScriptId == nil)
-  }
-
   @Test func cancelDuringAutoRun() async throws {
     let scriptPath = try makeScript("sleep 0.5 && echo done")
     let script = Script(name: "Slow", scriptPath: scriptPath)

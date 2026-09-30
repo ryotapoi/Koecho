@@ -36,16 +36,14 @@ final class MockTextViewOperating: TextViewOperating {
   }
 
   var insertFinalizedTextCalls: [(text: String, position: Int)] = []
-  var insertFinalizedTextResult: String?
   func insertFinalizedText(_ text: String, at position: Int) -> String {
     insertFinalizedTextCalls.append((text, position))
-    let insertedText = insertFinalizedTextResult ?? text
     let mutableString = NSMutableString(string: string)
     let clampedPosition = min(position, mutableString.length)
-    mutableString.insert(insertedText, at: clampedPosition)
+    mutableString.insert(text, at: clampedPosition)
     string = mutableString as String
     finalizedString = string
-    return insertedText
+    return text
   }
 
   var setVolatileTextCalls: [(text: String, position: Int)] = []
@@ -77,21 +75,12 @@ final class MockTextViewOperating: TextViewOperating {
     clearReplacementPreviewsCallCount += 1
   }
 
-  var makeFirstResponderCallCount = 0
-  func makeFirstResponder(in panel: InputPanel) {
-    makeFirstResponderCallCount += 1
-  }
+  func makeFirstResponder(in panel: InputPanel) {}
 
-  var setSelectedRangeCalls: [NSRange] = []
-  func setSelectedRange(_ range: NSRange) {
-    setSelectedRangeCalls.append(range)
-  }
+  func setSelectedRange(_ range: NSRange) {}
 
   var selectedRangeValue = NSRange(location: 0, length: 0)
   func selectedRange() -> NSRange { selectedRangeValue }
 
-  var scrollRangeToVisibleCalls: [NSRange] = []
-  func scrollRangeToVisible(_ range: NSRange) {
-    scrollRangeToVisibleCalls.append(range)
-  }
+  func scrollRangeToVisible(_ range: NSRange) {}
 }

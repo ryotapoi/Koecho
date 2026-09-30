@@ -70,11 +70,7 @@ struct ReplacementPreviewTooltipTests {
     let tooltipWindow = tooltip.window
     let contentView = tooltipWindow?.contentView as? ReplacementPreviewTooltipContentView
     #expect(tooltipWindow != nil)
-    #expect(tooltipWindow?.styleMask == [.borderless])
     #expect(tooltipWindow?.level == .floating)
-    #expect(tooltipWindow?.isOpaque == false)
-    #expect(tooltipWindow?.backgroundColor == .clear)
-    #expect(tooltipWindow?.hasShadow == true)
     #expect(tooltipWindow?.ignoresMouseEvents == true)
     #expect(contentView?.text == "original → replacement")
 

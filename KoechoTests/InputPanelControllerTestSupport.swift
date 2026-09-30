@@ -13,20 +13,17 @@ final class TestContext {
   let appState: AppState
   let paster: MockPaster
   let historyStore: HistoryStore
-  let ducker: MockVolumeDucker
 
   init(
     controller: InputPanelController,
     appState: AppState,
     paster: MockPaster,
-    historyStore: HistoryStore,
-    ducker: MockVolumeDucker
+    historyStore: HistoryStore
   ) {
     self.controller = controller
     self.appState = appState
     self.paster = paster
     self.historyStore = historyStore
-    self.ducker = ducker
   }
 
   isolated deinit {
@@ -38,7 +35,6 @@ final class TestContext {
 func makeController(
   paster: MockPaster? = nil,
   selectedTextReader: (any SelectedTextReading)? = nil,
-  makeScriptRunner: (() -> ScriptRunner)? = nil,
   makeEngine: (() -> any VoiceInputEngine)? = nil,
   ducker: MockVolumeDucker? = nil
 ) -> TestContext {
@@ -55,7 +51,7 @@ func makeController(
     appState: appState,
     selectedTextReader: reader,
     paster: p,
-    makeScriptRunner: makeScriptRunner ?? {
+    makeScriptRunner: {
       ScriptRunner(timeout: appState.settings.script.scriptTimeout)
     },
     makeEngine: makeEngine ?? { MockVoiceInputEngine() },
@@ -66,8 +62,7 @@ func makeController(
     controller: controller,
     appState: appState,
     paster: p,
-    historyStore: historyStore,
-    ducker: d
+    historyStore: historyStore
   )
 }
 

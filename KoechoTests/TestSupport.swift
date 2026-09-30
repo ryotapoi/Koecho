@@ -13,8 +13,8 @@ func makeTestAppState() -> AppState {
   return AppState(settings: Settings(defaults: defaults))
 }
 
-/// Creates a VoiceInputCoordinator wired to a fresh InputPanel, mirroring
-/// the production wiring but with a mock engine by default.
+/// Creates a VoiceInputCoordinator with an injectable engine factory,
+/// using a mock engine by default.
 @MainActor
 func makeTestVoiceCoordinator(
   appState: AppState,

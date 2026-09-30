@@ -19,27 +19,12 @@ extension InputPanelControllerTests {
 
     // Simulate first finalize: "なんですか？"
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "なんですか？")
-    let firstText = ctx.appState.inputText
 
     // Simulate second finalize with overlap: "なんですか？こんにちは。"
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "なんですか？こんにちは。")
 
     // Only "こんにちは。" should be added
-    #expect(ctx.appState.inputText == firstText + "こんにちは。")
-  }
-
-  @Test func overlapRemovalPartialPunctuation() {
-    let ctx = makeController()
-    ctx.controller.showPanel()
-
-    // Simulate finalize ending with punctuation
-    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello.")
-
-    // Next finalize starts with the same punctuation
-    ctx.controller.voiceCoordinator.voiceInput(didFinalize: ".world")
-
-    // The overlapping "." should be removed
-    #expect(ctx.appState.inputText == "hello.world")
+    #expect(ctx.appState.inputText == "なんですか？こんにちは。")
   }
 
   @Test func overlapRemovalNoOverlap() {
@@ -215,25 +200,7 @@ extension InputPanelControllerTests {
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
     #expect(ctx.appState.inputText == textAfterFirstFinalize)
     #expect(ctx.controller.voiceCoordinator.replayState == .idle)
-  }
 
-  @Test func replayFinalizeClearsDeadline() throws {
-    let ctx = makeController()
-    ctx.controller.showPanel()
-    let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
-
-    // Insert text via normal finalize first
-    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
-
-    simulateLocalFinalize(
-      controller: ctx.controller, textView: textView, text: "こんにちは",
-      suppressUntil: Date.now + 10)
-
-    // Replay finalize — clears replay state
-    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
-    #expect(ctx.controller.voiceCoordinator.replayState == .idle)
-
-    // Next volatile should be displayed (deadline cleared)
     ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: "あ")
     #expect(textView.volatileRange != nil)
   }

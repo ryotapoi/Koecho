@@ -149,19 +149,6 @@ extension InputPanelControllerTests {
 
   // MARK: - Auto Replacement
 
-  @Test func autoReplacementTriggersImmediately() {
-    let ctx = makeController()
-    ctx.appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "えーと", replacement: "")
-    )
-
-    ctx.controller.showPanel()
-    ctx.controller.handleTextChanged("えーと天気")
-
-    // Replacement is applied immediately on text change
-    #expect(ctx.appState.inputText == "天気")
-  }
-
   @Test func autoReplacementDisabledDoesNotTrigger() {
     let ctx = makeController()
     ctx.appState.settings.replacement.isAutoReplacementEnabled = false

@@ -75,12 +75,34 @@ import Testing
     #expect(mockEngine.startCallCount == 1)
   }
 
-  @Test func stopEngineResetsIsStoppingFlag() async {
-    let (coordinator, _, _, _) = makeCoordinator()
+  @Test func stopEngineSuppressesAutoReplacementUntilStopCompletes() async throws {
+    let (coordinator, appState, _, engine) = makeCoordinator()
+    appState.settings.replacement.isAutoReplacementEnabled = true
+    var replacementCalls = 0
+    coordinator.onAutoReplacement = { replacementCalls += 1 }
+    let finishStop = AsyncStream<Void>.makeStream()
+    engine.onStop = {
+      for await _ in finishStop.stream { break }
+    }
 
-    #expect(coordinator.isStoppingEngine == false)
-    await coordinator.stopEngine()
-    #expect(coordinator.isStoppingEngine == false)
+    let stopTask = Task { await coordinator.stopEngine() }
+    defer { finishStop.continuation.finish() }
+    for _ in 0..<100 where engine.stopCallCount == 0 {
+      await Task.yield()
+    }
+    try #require(engine.stopCallCount == 1, "Engine stop request did not start")
+
+    #expect(coordinator.isStoppingEngine)
+    #expect(engine.stopCallCount == 1)
+    coordinator.voiceInput(didFinalize: "first")
+    #expect(appState.inputText == "first")
+    #expect(replacementCalls == 0)
+
+    finishStop.continuation.yield(())
+    await stopTask.value
+    #expect(!coordinator.isStoppingEngine)
+    coordinator.voiceInput(didFinalize: " second")
+    #expect(replacementCalls == 1)
   }
 
   @Test func cancelEngineCallsEngineCancel() {

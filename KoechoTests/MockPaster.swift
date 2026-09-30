@@ -10,7 +10,6 @@ final class MockPaster: Pasting {
   var errorToThrow: (any Error)?
   var restoreClipboardCallCount = 0
   var onPasteAttempt: (() -> Void)?
-  var onPaste: (() async -> Void)?
   var suspendsPaste = false
   private var pasteStartedWaiter: CheckedContinuation<Void, Never>?
   private var pasteContinuation: CheckedContinuation<Void, Never>?
@@ -25,9 +24,6 @@ final class MockPaster: Pasting {
     }
     pasteStartedWaiter?.resume()
     pasteStartedWaiter = nil
-    if let onPaste {
-      await onPaste()
-    }
     if suspendsPaste {
       await withCheckedContinuation { pasteContinuation = $0 }
     }

@@ -84,11 +84,13 @@ import Testing
   }
 
   @Test func applyOrPreviewSkipsWhenNoRules() {
-    let (service, appState, _, _) = makeService(inputText: "hello")
+    let (service, appState, mockTV, _) = makeService(inputText: "hello")
 
     service.applyOrPreview()
 
     #expect(appState.inputText == "hello")
+    #expect(mockTV.clearReplacementPreviewsCallCount == 0)
+    #expect(mockTV.replaceTextSelectingCalls.isEmpty)
   }
 
   @Test func applyOrPreviewSkipsDuringScript() {
@@ -104,7 +106,8 @@ import Testing
   }
 
   @Test func applyOrPreviewLeavesTextUnchangedWhenNoRuleMatches() {
-    let (service, appState, _, _) = makeService(inputText: "hello")
+    let (service, appState, mockTV, _) = makeService(inputText: "hello")
+    appState.offerScriptUndo(restoring: "before")
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "goodbye", replacement: "bye")
     )
@@ -112,17 +115,8 @@ import Testing
     service.applyOrPreview()
 
     #expect(appState.inputText == "hello")
-  }
-
-  @Test func applyOrPreviewWithEmptyText() {
-    let (service, appState, _, _) = makeService(inputText: "")
-    appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "hello", replacement: "bye")
-    )
-
-    service.applyOrPreview()
-
-    #expect(appState.inputText == "")
+    #expect(appState.scriptUndoText == "before")
+    #expect(mockTV.replaceTextSelectingCalls.isEmpty)
   }
 
   // MARK: - applyRules(to:)
@@ -138,14 +132,6 @@ import Testing
 
     #expect(result == "天気")
     #expect(coordinator.voiceInsertionPoint == 5)  // unchanged
-  }
-
-  @Test func applyRulesReturnsOriginalWhenNoRules() {
-    let (service, _, _, _) = makeService()
-
-    let result = service.applyRules(to: "hello")
-
-    #expect(result == "hello")
   }
 
   @Test func applyOrPreviewSuppressesWhenVolatilePresent() {

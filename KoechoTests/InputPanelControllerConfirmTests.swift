@@ -172,10 +172,14 @@ extension InputPanelControllerTests {
   @Test func confirmWhenNotVisibleIsNoop() async {
     let paster = MockPaster()
     let ctx = makeController(paster: paster)
+    ctx.appState.setInputText("retained")
+    ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
 
     #expect(paster.pastedTexts.isEmpty)
+    #expect(ctx.appState.inputText == "retained")
+    #expect(paster.restoreClipboardCallCount == 0)
   }
 
   @Test func confirmWithNoTargetAppSetsError() async {
@@ -213,6 +217,7 @@ extension InputPanelControllerTests {
     // Panel should be hidden (confirm hides it before paste) but isConfirming is true
     // cancel() should be ignored because isConfirming is true
     ctx.controller.cancel()
+    #expect(paster.restoreClipboardCallCount == 0)
 
     paster.finishPaste()
     await confirmTask.value

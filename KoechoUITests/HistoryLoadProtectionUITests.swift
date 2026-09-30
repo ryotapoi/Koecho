@@ -113,10 +113,32 @@ final class HistoryLoadProtectionUITests: XCTestCase {
   }
 
   private func openHistorySettings() {
-    app.statusItems["MenuBarIcon"].click()
+    let statusItem = app.statusItems["MenuBarIcon"]
+    statusItem.hover()
+    statusItem.click()
     let settingsItem = app.menuItems["Settings..."]
     XCTAssertTrue(settingsItem.waitForExistence(timeout: 2))
-    settingsItem.click()
+    // Closed menu items can exist with an empty frame, so wait for the visible menu.
+    let visibleSettingsItem = XCTNSPredicateExpectation(
+      predicate: NSPredicate { _, _ in
+        let frame = settingsItem.frame
+        return settingsItem.exists && settingsItem.isHittable
+          && !frame.isEmpty && frame.origin.x.isFinite && frame.origin.y.isFinite
+          && frame.size.width.isFinite && frame.size.height.isFinite
+      },
+      object: settingsItem
+    )
+    guard XCTWaiter.wait(for: [visibleSettingsItem], timeout: 5) == .completed else {
+      let hierarchy = XCTAttachment(string: app.debugDescription)
+      hierarchy.name = "Settings menu did not open UI hierarchy"
+      hierarchy.lifetime = .keepAlways
+      add(hierarchy)
+      addScreenshot(named: "Settings menu did not open")
+      XCTFail("The Settings menu item did not become visible and hittable")
+      return
+    }
+    // Click the visible item directly to avoid XCTest reopening the already open menu.
+    settingsItem.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
 
     let settingsWindow = app.windows["Settings"]
     XCTAssertTrue(settingsWindow.waitForExistence(timeout: 5))

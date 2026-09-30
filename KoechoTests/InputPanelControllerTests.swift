@@ -66,11 +66,13 @@ struct InputPanelControllerTests {
 
   @Test func cancelWhenNotVisibleIsNoop() {
     let ctx = makeController()
+    ctx.appState.setInputText("retained")
 
     ctx.controller.cancel()
 
     #expect(ctx.appState.isInputPanelVisible == false)
-    #expect(ctx.appState.inputText == "")
+    #expect(ctx.appState.inputText == "retained")
+    #expect(ctx.paster.restoreClipboardCallCount == 0)
   }
 
   @Test func showCancelShowCycle() {
@@ -97,14 +99,17 @@ struct InputPanelControllerTests {
 
   // MARK: - Selected Text as Initial Input
 
-  @Test func showPanelWithSelectedTextSetsInputText() {
+  @Test func showPanelWithSelectedTextSetsInputText() async throws {
     let mockReader = MockSelectedTextReader()
     mockReader.resultToReturn = SelectedTextResult(text: "selected text")
     let ctx = makeController(selectedTextReader: mockReader)
 
     ctx.controller.showPanel()
 
+    await Task.yield()
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller))
     #expect(ctx.appState.inputText == "selected text")
+    #expect(textView.string == "selected text")
   }
 
   @Test func confirmWithSelectedTextOnly() async {

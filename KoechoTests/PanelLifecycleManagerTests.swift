@@ -46,6 +46,7 @@ import Testing
   @Test func showSetsEmptyInputWhenReaderReturnsNil() {
     let (manager, appState, _, _, _) = makeManager(selectedTextResult: nil)
     appState.frontmostApplication = NSRunningApplication.current
+    appState.setInputText("previous input")
 
     manager.show()
 
@@ -97,6 +98,7 @@ import Testing
     appState.errorMessage = "error"
     appState.voiceEngineStatus = "Listening"
     appState.isRunningScript = true
+    appState.promptScript = Script(name: "Prompt", scriptPath: "cat", requiresPrompt: true)
     appState.promptText = "prompt"
     appState.volatilePromptText = "volatile"
     appState.pendingReplacementPattern = "pattern"
@@ -122,7 +124,5 @@ import Testing
 
     #expect(ducker.restoreCallCount == 1)
   }
-
-  // MARK: - hide
 
 }
