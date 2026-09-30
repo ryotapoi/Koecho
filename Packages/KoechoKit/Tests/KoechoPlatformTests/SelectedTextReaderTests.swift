@@ -17,6 +17,12 @@ private struct MockAccessibilityClient: AccessibilityClient {
 
 @MainActor
 struct SelectedTextReaderTests {
+  @Test func readReturnsNilWhenNotTrusted() {
+    let client = MockAccessibilityClient(trusted: false, text: "must not be read")
+    let reader = SelectedTextReader(accessibilityClient: client)
+    #expect(reader.read(from: 1) == nil)
+  }
+
   @Test func readReturnsNilWhenNoFocusedElement() {
     let client = MockAccessibilityClient(element: nil)
     let reader = SelectedTextReader(accessibilityClient: client)
@@ -37,5 +43,4 @@ struct SelectedTextReaderTests {
     let result = reader.read(from: 1)
     #expect(result == SelectedTextResult(text: "hello"))
   }
-
 }

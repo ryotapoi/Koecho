@@ -5,13 +5,9 @@ import Testing
 
 @MainActor
 struct AudioInputLevelMonitorTests {
-  @Test func stopWithoutStartDoesNotCrash() {
+  @Test func stopWithoutStartKeepsInputLevelZero() {
     let monitor = AudioInputLevelMonitor()
     monitor.stop()
-  }
-
-  @Test func initialInputLevelIsZero() {
-    let monitor = AudioInputLevelMonitor()
     #expect(monitor.inputLevel == 0)
   }
 
@@ -49,11 +45,11 @@ struct AudioInputLevelMonitorTests {
   }
 
   @Test func inputLevelAveragesAcrossChannels() {
-    withAudioBufferList(channels: [[1, 0], [0, 1]]) { buffers in
+    withAudioBufferList(channels: [[1, 0], [0, 0]]) { buffers in
       let level = AudioInputLevelMonitor.inputLevel(buffers: buffers, frameCount: 2)
 
       #expect(level != nil)
-      #expect(isApproximately(level!, 0.9498, tolerance: 0.0001))
+      #expect(isApproximately(level!, 0.8997, tolerance: 0.0001))
     }
   }
 

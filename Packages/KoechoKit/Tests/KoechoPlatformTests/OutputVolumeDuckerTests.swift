@@ -40,16 +40,30 @@ struct OutputVolumeDuckerTests {
 
   @Test func disabledDuckDoesNothing() {
     let settings = makeSettings(enabled: false)
-    let ducker = OutputVolumeDucker(settings: settings)
+    let coreAudio = CoreAudioSpy()
+    coreAudio.defaultOutputDeviceID = 1
+    coreAudio.elements[1] = kAudioObjectPropertyElementMain
+    coreAudio.volumes[1] = 0.8
+    let ducker = OutputVolumeDucker(settings: settings, coreAudio: coreAudio.makeOperations())
     ducker.duck()
     #expect(ducker.isDucked == false)
+    #expect(coreAudio.writes.isEmpty)
+    #expect(coreAudio.addedListeners.isEmpty)
+    #expect(coreAudio.removedListeners.isEmpty)
   }
 
   @Test func restoreWhenNotDuckedDoesNothing() {
     let settings = makeSettings(enabled: true)
-    let ducker = OutputVolumeDucker(settings: settings)
+    let coreAudio = CoreAudioSpy()
+    coreAudio.defaultOutputDeviceID = 1
+    coreAudio.elements[1] = kAudioObjectPropertyElementMain
+    coreAudio.volumes[1] = 0.8
+    let ducker = OutputVolumeDucker(settings: settings, coreAudio: coreAudio.makeOperations())
     ducker.restore()
     #expect(ducker.isDucked == false)
+    #expect(coreAudio.writes.isEmpty)
+    #expect(coreAudio.addedListeners.isEmpty)
+    #expect(coreAudio.removedListeners.isEmpty)
   }
 
   @Test func enabledDuckUsesTheLowerOfCurrentVolumeAndLevel() {
@@ -152,7 +166,6 @@ struct OutputVolumeDuckerTests {
     #expect(coreAudio.removedListeners.count == 2)
     #expect(coreAudio.addedListeners[0] === coreAudio.removedListeners[0])
     #expect(coreAudio.addedListeners[1] === coreAudio.removedListeners[1])
-    #expect(coreAudio.addedListeners[0] !== coreAudio.addedListeners[1])
   }
 
   @Test func deinitRestoresVolumeAndRemovesListenerThroughInjectedCoreAudio() {

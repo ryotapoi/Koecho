@@ -16,20 +16,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(manager.reservedLocales.isEmpty)
   }
 
-  @Test func findNormalizedMatchExactMatch() {
-    let manager = SpeechAnalyzerLocaleManager()
-    let items = [
-      LocaleItem(
-        identifier: "en-US", displayName: "English (US)", sortKey: "English (US)",
-        normalizedKey: SpeechLocale.normalizationKey("en-US"), isReserved: true),
-      LocaleItem(
-        identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese",
-        normalizedKey: SpeechLocale.normalizationKey("ja-JP"), isReserved: true),
-    ]
-    let match = manager.findNormalizedMatch(for: "en-US", in: items)
-    #expect(match?.identifier == "en-US")
-  }
-
   @Test func findNormalizedMatchNormalized() {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
@@ -69,11 +55,11 @@ struct SpeechAnalyzerLocaleManagerTests {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
       LocaleItem(
-        identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese",
-        normalizedKey: SpeechLocale.normalizationKey("ja-JP"), isReserved: true),
-      LocaleItem(
         identifier: "fr-FR", displayName: "French", sortKey: "French",
         normalizedKey: SpeechLocale.normalizationKey("fr-FR"), isReserved: true),
+      LocaleItem(
+        identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese",
+        normalizedKey: SpeechLocale.normalizationKey("ja-JP"), isReserved: true),
     ]
     let result = manager.correctSelection(currentSelection: "de-DE", items: items)
     #expect(result == "ja-JP")

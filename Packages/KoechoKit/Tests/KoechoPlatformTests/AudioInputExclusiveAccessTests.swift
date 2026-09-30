@@ -4,26 +4,13 @@ import Testing
 
 @MainActor
 struct AudioInputExclusiveAccessTests {
-  @Test func initialStateIsNotInUse() {
+  @Test func acquireAndReleaseUpdateUsage() {
     let access = AudioInputExclusiveAccess()
 
     #expect(access.isInUse == false)
-  }
-
-  @Test func acquireSetsInUse() {
-    let access = AudioInputExclusiveAccess()
-
     access.acquire()
-
     #expect(access.isInUse == true)
-  }
-
-  @Test func releaseClearsInUse() {
-    let access = AudioInputExclusiveAccess()
-    access.acquire()
-
     access.release()
-
     #expect(access.isInUse == false)
   }
 
@@ -41,11 +28,14 @@ struct AudioInputExclusiveAccessTests {
 
   @Test func clearActiveResetsState() {
     let access = AudioInputExclusiveAccess()
-    access.markAsActive {}
+    var called = false
+    access.markAsActive { called = true }
     #expect(access.isInUse == true)
 
     access.clearActive()
     #expect(access.isInUse == false)
+    access.acquire()
+    #expect(!called)
   }
 
   @Test func separateInstancesDoNotShareExclusiveAccessState() {

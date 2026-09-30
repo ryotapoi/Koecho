@@ -27,6 +27,7 @@ struct HotkeyServiceTests {
   @Test func singleToggleModeImmediateSingleTap() {
     var singleTapCount = 0
     let service = makeService(tapMode: .singleToggle, onSingleTap: { singleTapCount += 1 })
+    defer { service.stop() }
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
     #expect(singleTapCount == 0)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
@@ -36,6 +37,7 @@ struct HotkeyServiceTests {
   @Test func singleToggleModeNoDoubleTapCallback() {
     var doubleTapCount = 0
     let service = makeService(tapMode: .singleToggle, onDoubleTap: { doubleTapCount += 1 })
+    defer { service.stop() }
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.2)
@@ -46,6 +48,7 @@ struct HotkeyServiceTests {
   @Test func doubleTapModeDoubleTapCallsOnDoubleTap() {
     var doubleTapCount = 0
     let service = makeService(tapMode: .doubleTapToShow, onDoubleTap: { doubleTapCount += 1 })
+    defer { service.stop() }
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
     #expect(doubleTapCount == 0)
@@ -58,6 +61,7 @@ struct HotkeyServiceTests {
     var singleTapCount = 0
     let service = makeService(
       tapMode: .doubleTapToShow, isPanelVisible: { true }, onSingleTap: { singleTapCount += 1 })
+    defer { service.stop() }
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
     #expect(singleTapCount == 1)
@@ -66,6 +70,7 @@ struct HotkeyServiceTests {
   @Test func doubleTapModeExpiryCallsSingleTap() {
     var singleTapCount = 0
     let service = makeService(tapMode: .doubleTapToShow, onSingleTap: { singleTapCount += 1 })
+    defer { service.stop() }
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
     #expect(singleTapCount == 0)
@@ -76,11 +81,12 @@ struct HotkeyServiceTests {
   @Test func updateConfigResetsState() {
     var singleTapCount = 0
     let service = makeService(tapMode: .doubleTapToShow, onSingleTap: { singleTapCount += 1 })
+    defer { service.stop() }
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
-    let newConfig = HotkeyConfig(modifierKey: .command, side: .left, tapMode: .singleToggle)
+    let newConfig = HotkeyConfig(modifierKey: .fn, side: .left, tapMode: .doubleTapToShow)
     service.updateConfig(newConfig)
-    #expect(service.detector.state == .idle)
+    service.expireDoubleTapWindow()
     #expect(singleTapCount == 0)
   }
 
@@ -88,6 +94,7 @@ struct HotkeyServiceTests {
     var singleTapCount = 0
     let leftCommandKeyCode = UInt16(kVK_Command)
     let service = makeService(tapMode: .singleToggle, onSingleTap: { singleTapCount += 1 })
+    defer { service.stop() }
     let newConfig = HotkeyConfig(modifierKey: .command, side: .left, tapMode: .singleToggle)
     service.updateConfig(newConfig)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
@@ -100,9 +107,10 @@ struct HotkeyServiceTests {
     #expect(singleTapCount == 1)
   }
 
-  @Test func keyDownCancelsDoubleTapTimer() {
+  @Test func keyDownPreventsSingleTapOnExplicitExpiry() {
     var singleTapCount = 0
     let service = makeService(tapMode: .doubleTapToShow, onSingleTap: { singleTapCount += 1 })
+    defer { service.stop() }
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
     service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
     service.processEvent(type: .keyDown, keyCode: 0, flags: [], timestamp: 1.15)
