@@ -32,7 +32,7 @@
 
 #### 信頼性改善
 
-- [ ] N9 simplify-code skill を実行する
+- [x] N9 simplify-code skill を実行する
 
 - [ ] N10 Swift 6.4 対応
 

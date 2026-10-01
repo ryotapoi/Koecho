@@ -15,7 +15,7 @@ public struct ModifierTapDetector: Sendable {
     case idle
     case waitingForRelease(pressTime: TimeInterval)
     case waitingForSecondTap(firstTapTime: TimeInterval)
-    case waitingForSecondRelease(firstTapTime: TimeInterval, pressTime: TimeInterval)
+    case waitingForSecondRelease(pressTime: TimeInterval)
   }
 
   public var state: State = .idle
@@ -70,14 +70,14 @@ public struct ModifierTapDetector: Sendable {
       }
       // Second press
       if now - firstTapTime <= doubleTapInterval {
-        state = .waitingForSecondRelease(firstTapTime: firstTapTime, pressTime: now)
+        state = .waitingForSecondRelease(pressTime: now)
       } else {
         // Too slow — start a new single tap attempt
         state = .waitingForRelease(pressTime: now)
       }
       return .none
 
-    case .waitingForSecondRelease(_, let pressTime):
+    case .waitingForSecondRelease(let pressTime):
       if targetFlagIsSet {
         // Duplicate press (global + local) — ignore
         return .none

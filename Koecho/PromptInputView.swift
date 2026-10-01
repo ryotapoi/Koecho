@@ -4,7 +4,7 @@ import SwiftUI
 struct PromptInputView: View {
   @Binding var promptText: String
   @Binding var volatilePromptText: String
-  let promptScript: Script?
+  let promptScript: Script
   let isRunningScript: Bool
   var onExecuteScript: (Script) async -> Void
   var onCancelPrompt: () -> Void
@@ -22,18 +22,16 @@ struct PromptInputView: View {
 
   var body: some View {
     HStack(spacing: 10) {
-      if let promptScript {
-        Label {
-          Text(ScriptPresentation.identification(for: promptScript))
-        } icon: {
-          Image(systemName: "text.bubble.fill")
-        }
-        .font(.caption.weight(.bold))
-        .foregroundStyle(Color(nsColor: .windowBackgroundColor))
-        .padding(.horizontal, 10)
-        .frame(height: 30)
-        .background(Color.primary.opacity(0.88), in: RoundedRectangle(cornerRadius: 8))
+      Label {
+        Text(ScriptPresentation.identification(for: promptScript))
+      } icon: {
+        Image(systemName: "text.bubble.fill")
       }
+      .font(.caption.weight(.bold))
+      .foregroundStyle(Color(nsColor: .windowBackgroundColor))
+      .padding(.horizontal, 10)
+      .frame(height: 30)
+      .background(Color.primary.opacity(0.88), in: RoundedRectangle(cornerRadius: 8))
 
       TextField("Prompt", text: displayedPromptText)
         .focused(isFocused)
@@ -51,7 +49,7 @@ struct PromptInputView: View {
         }
       }
       .buttonStyle(.koechoToolbar(isPrimary: true))
-      .disabled(isRunningScript || promptScript == nil)
+      .disabled(isRunningScript)
 
       Button {
         onCancelPrompt()
@@ -82,9 +80,7 @@ struct PromptInputView: View {
   }
 
   private func executePrompt() {
-    if let script = promptScript {
-      Task { await onExecuteScript(script) }
-    }
+    Task { await onExecuteScript(promptScript) }
   }
 }
 

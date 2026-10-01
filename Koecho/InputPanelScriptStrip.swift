@@ -5,21 +5,19 @@ struct InputPanelScriptStrip: View {
   let scripts: [Script]
   let selectedScript: Script?
   let isRunningScript: Bool
-  let hasPromptScript: Bool
   var onExecuteScript: (Script) async -> Void
   var onReorderScripts: ([Script]) -> Void
 
   private var isReorderingDisabled: Bool {
-    isRunningScript || hasPromptScript
+    isRunningScript || selectedScript != nil
   }
 
   static func isExecutionDisabled(
     isRunningScript: Bool,
-    hasPromptScript: Bool,
     selectedScriptID: UUID?,
     scriptID: UUID
   ) -> Bool {
-    isRunningScript || (hasPromptScript && selectedScriptID != scriptID)
+    isRunningScript || (selectedScriptID != nil && selectedScriptID != scriptID)
   }
 
   var body: some View {
@@ -90,7 +88,6 @@ struct InputPanelScriptStrip: View {
     .disabled(
       Self.isExecutionDisabled(
         isRunningScript: isRunningScript,
-        hasPromptScript: hasPromptScript,
         selectedScriptID: selectedScript?.id,
         scriptID: script.id
       )
@@ -144,7 +141,6 @@ enum InputPanelScriptReorder {
     ],
     selectedScript: nil,
     isRunningScript: false,
-    hasPromptScript: false,
     onExecuteScript: { _ in },
     onReorderScripts: { _ in }
   )

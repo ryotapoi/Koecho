@@ -115,7 +115,7 @@ struct ModifierTapDetectorTests {
 
     // Second tap within doubleTapInterval
     _ = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: true, now: 1.2)
-    #expect(detector.state == .waitingForSecondRelease(firstTapTime: 1.1, pressTime: 1.2))
+    #expect(detector.state == .waitingForSecondRelease(pressTime: 1.2))
 
     let result = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: false, now: 1.25)
     #expect(result == .doubleTap)
@@ -170,7 +170,7 @@ struct ModifierTapDetectorTests {
 
     // Second press
     _ = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: true, now: 1.2)
-    #expect(detector.state == .waitingForSecondRelease(firstTapTime: 1.1, pressTime: 1.2))
+    #expect(detector.state == .waitingForSecondRelease(pressTime: 1.2))
 
     // Release after maxHold
     let result = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: false, now: 1.7)
@@ -217,7 +217,7 @@ struct ModifierTapDetectorTests {
     // Duplicate second press (local) — should be ignored
     let dup = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: true, now: 1.2)
     #expect(dup == .none)
-    #expect(detector.state == .waitingForSecondRelease(firstTapTime: 1.1, pressTime: 1.2))
+    #expect(detector.state == .waitingForSecondRelease(pressTime: 1.2))
 
     // Release should still yield doubleTap
     let result = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: false, now: 1.25)

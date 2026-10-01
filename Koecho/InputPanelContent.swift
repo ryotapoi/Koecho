@@ -116,11 +116,11 @@ struct InputPanelContent: View {
 
   @ViewBuilder
   private var promptInput: some View {
-    if appState.promptScript != nil {
+    if let promptScript = appState.promptScript {
       PromptInputView(
         promptText: $appState.promptText,
         volatilePromptText: $appState.volatilePromptText,
-        promptScript: appState.promptScript,
+        promptScript: promptScript,
         isRunningScript: appState.isRunningScript,
         onExecuteScript: onExecuteScript,
         onCancelPrompt: onCancelPrompt,
@@ -155,7 +155,6 @@ struct InputPanelContent: View {
       scripts: appState.settings.script.scripts,
       selectedScript: appState.promptScript,
       isRunningScript: appState.isRunningScript,
-      hasPromptScript: hasPromptScript,
       onExecuteScript: onExecuteScript,
       onReorderScripts: { reordered in
         appState.settings.script.scripts = reordered

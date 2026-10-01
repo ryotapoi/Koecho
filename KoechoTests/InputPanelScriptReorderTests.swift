@@ -26,7 +26,6 @@ struct InputPanelScriptReorderTests {
     #expect(
       !InputPanelScriptStrip.isExecutionDisabled(
         isRunningScript: false,
-        hasPromptScript: true,
         selectedScriptID: selectedScript.id,
         scriptID: selectedScript.id
       )
@@ -34,7 +33,6 @@ struct InputPanelScriptReorderTests {
     #expect(
       InputPanelScriptStrip.isExecutionDisabled(
         isRunningScript: false,
-        hasPromptScript: true,
         selectedScriptID: selectedScript.id,
         scriptID: otherScript.id
       )
@@ -42,7 +40,6 @@ struct InputPanelScriptReorderTests {
     #expect(
       InputPanelScriptStrip.isExecutionDisabled(
         isRunningScript: true,
-        hasPromptScript: true,
         selectedScriptID: selectedScript.id,
         scriptID: selectedScript.id
       )
