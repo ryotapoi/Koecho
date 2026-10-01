@@ -19,5 +19,6 @@ Koecho の横断的な技術知見を、変更時に参照しやすい地図と�
 | [音声入力テキストライフサイクル](voice-input-text-lifecycle.md) | compiled | NSTextView、volatile テキスト、ディクテーション、InputPanelController 周辺 | `Koecho/VoiceInputTextView.swift`, `Koecho/VoiceInputCoordinator.swift` |
 | [Speech / Audio](speech-audio.md) | compiled | SpeechAnalyzer、AVAudioEngine、CoreAudio デバイス管理 | `Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift`, `Packages/KoechoKit/Sources/KoechoPlatform/AudioDeviceManager.swift` |
 | [SpeechAnalyzer 外部知見](speechanalyzer-external-notes.md) | none | macOS 26 時代の SpeechAnalyzer 実測、API 罠、テスト上の回避策 | `Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift`, `Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerLocaleManager.swift` |
+| [カスタム語彙・発音の実験](speech-custom-vocabulary-experiments.md) | none | macOS 27 の context／CustomPronunciation、新旧 API と初期化経路の実測・限界 | Apple Speech API 文書、WWDC2023/10101、2026-10-01 実測 |
 | [Testing](testing.md) | compiled | TEST_HOST、UserDefaults 分離、OS 連携テストの避け方 | `KoechoTests/`, `Packages/KoechoKit/Tests/` |
 | [Swift / Settings / Modules](swift-settings-modules.md) | compiled | Observation、設定モデル、モジュール境界、Swift 言語上の罠 | `Packages/KoechoKit/Sources/KoechoCore/`, `docs/decisions/0018-spm-module-separation.md` |
