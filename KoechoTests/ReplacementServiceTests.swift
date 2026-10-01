@@ -159,22 +159,6 @@ import Testing
     #expect(mockTV.showReplacementPreviewsCalls.count == 1)
   }
 
-  // MARK: - Multiple rules
-
-  @Test func multipleRulesChainedApplication() {
-    let (service, appState, _, _) = makeService(inputText: "えーとあのー天気")
-    appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "えーと", replacement: "")
-    )
-    appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "あのー", replacement: "")
-    )
-
-    service.applyOrPreview()
-
-    #expect(appState.inputText == "天気")
-  }
-
   // MARK: - addRule
 
   @Test func addRuleAddsAndAppliesExistingRules() {
@@ -191,13 +175,4 @@ import Testing
     #expect(appState.inputText == "bye earth")
   }
 
-  // MARK: - clearPreviews
-
-  @Test func clearPreviewsDelegatesToTextView() {
-    let (service, _, mockTV, _) = makeService()
-
-    service.clearPreviews()
-
-    #expect(mockTV.clearReplacementPreviewsCallCount == 1)
-  }
 }

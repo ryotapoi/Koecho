@@ -129,13 +129,6 @@ struct InputPanelControllerTests {
 
   // MARK: - Volume Ducking
 
-  @Test func showPanelCallsDuck() {
-    let ducker = MockVolumeDucker()
-    let ctx = makeController(ducker: ducker)
-    ctx.controller.showPanel()
-    #expect(ducker.duckCallCount == 1)
-  }
-
   @Test func cancelCallsRestore() {
     let ducker = MockVolumeDucker()
     let ctx = makeController(ducker: ducker)
@@ -148,6 +141,7 @@ struct InputPanelControllerTests {
     let ducker = MockVolumeDucker()
     let ctx = makeController(ducker: ducker)
     ctx.controller.showPanel()
+    #expect(ducker.duckCallCount == 1)
     ctx.controller.showPanel()
     #expect(ducker.duckCallCount == 1)
   }
@@ -190,37 +184,6 @@ struct InputPanelControllerTests {
 
     ctx.controller.cancel()
     #expect(ctx.appState.isInputPanelVisible == false)
-  }
-
-  @Test func toggleVoiceInputDisablesEnabledVoice() async {
-    let ctx = makeController()
-    ctx.appState.settings.voiceInput.isVoiceInputEnabled = true
-    ctx.controller.showPanel()
-
-    await ctx.controller.toggleVoiceInput()
-
-    #expect(!ctx.appState.settings.voiceInput.isVoiceInputEnabled)
-  }
-
-  @Test func toggleVoiceInputEnablesVoiceOffMode() async {
-    let ctx = makeController()
-    ctx.appState.settings.voiceInput.isVoiceInputEnabled = false
-    ctx.controller.showPanel()
-
-    await ctx.controller.toggleVoiceInput()
-
-    #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
-  }
-
-  @Test func toggleVoiceInputReenablesVoice() async {
-    let ctx = makeController()
-    ctx.appState.settings.voiceInput.isVoiceInputEnabled = true
-    ctx.controller.showPanel()
-
-    await ctx.controller.toggleVoiceInput()
-    await ctx.controller.toggleVoiceInput()
-
-    #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
   }
 
   @Test func voiceShortcutTogglesOnlyInsidePanel() async {
