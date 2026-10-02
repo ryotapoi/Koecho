@@ -10,7 +10,8 @@ public protocol VolumeDucking {
   func restore()
 }
 
-final class OutputVolumeDuckerListenerRegistration: @unchecked Sendable {
+@MainActor
+final class OutputVolumeDuckerListenerRegistration {
   let objectID: AudioObjectID
   let address: AudioObjectPropertyAddress
   let queue: DispatchQueue
@@ -29,13 +30,14 @@ final class OutputVolumeDuckerListenerRegistration: @unchecked Sendable {
   }
 }
 
+@MainActor
 struct OutputVolumeDuckerCoreAudio {
-  let defaultOutputDeviceID: @Sendable () -> AudioDeviceID?
-  let outputVolumeElement: @Sendable (AudioDeviceID) -> AudioObjectPropertyElement?
-  let readOutputVolume: @Sendable (AudioDeviceID, AudioObjectPropertyElement) -> Float?
-  let setOutputVolume: @Sendable (Float, AudioDeviceID, AudioObjectPropertyElement) -> Void
-  let addPropertyListener: @Sendable (OutputVolumeDuckerListenerRegistration) -> Void
-  let removePropertyListener: @Sendable (OutputVolumeDuckerListenerRegistration) -> Void
+  let defaultOutputDeviceID: @MainActor () -> AudioDeviceID?
+  let outputVolumeElement: @MainActor (AudioDeviceID) -> AudioObjectPropertyElement?
+  let readOutputVolume: @MainActor (AudioDeviceID, AudioObjectPropertyElement) -> Float?
+  let setOutputVolume: @MainActor (Float, AudioDeviceID, AudioObjectPropertyElement) -> Void
+  let addPropertyListener: @MainActor (OutputVolumeDuckerListenerRegistration) -> Void
+  let removePropertyListener: @MainActor (OutputVolumeDuckerListenerRegistration) -> Void
 }
 
 @MainActor @Observable
@@ -46,12 +48,12 @@ public final class OutputVolumeDucker: VolumeDucking {
 
   public private(set) var isDucked = false
 
-  @ObservationIgnored private nonisolated(unsafe) var savedVolume: Float?
-  @ObservationIgnored private nonisolated(unsafe) var duckedDeviceID: AudioDeviceID =
+  @ObservationIgnored private var savedVolume: Float?
+  @ObservationIgnored private var duckedDeviceID: AudioDeviceID =
     kAudioObjectUnknown
-  @ObservationIgnored private nonisolated(unsafe) var duckedElement: AudioObjectPropertyElement =
+  @ObservationIgnored private var duckedElement: AudioObjectPropertyElement =
     kAudioObjectPropertyElementMain
-  @ObservationIgnored private nonisolated(unsafe) var defaultOutputDeviceListener:
+  @ObservationIgnored private var defaultOutputDeviceListener:
     OutputVolumeDuckerListenerRegistration?
 
   public init(settings: VolumeDuckingSettings) {
@@ -64,9 +66,8 @@ public final class OutputVolumeDucker: VolumeDucking {
     self.coreAudio = coreAudio
   }
 
-  deinit {
-    restoreVolumeSync()
-    removeOutputDeviceListenerSync()
+  isolated deinit {
+    restore()
   }
 
   // MARK: - Public API
@@ -282,36 +283,12 @@ public final class OutputVolumeDucker: VolumeDucking {
   }
 
   private func removeOutputDeviceListener() {
-    removeOutputDeviceListenerSync()
-  }
-
-  // MARK: - Sync helpers for deinit
-
-  private nonisolated func removeOutputDeviceListenerSync() {
     guard let listener = defaultOutputDeviceListener else { return }
     removePropertyListener(listener)
     defaultOutputDeviceListener = nil
   }
 
-  private nonisolated func restoreVolumeSync() {
-    guard let volume = savedVolume, duckedDeviceID != kAudioObjectUnknown else { return }
-    if let coreAudio {
-      coreAudio.setOutputVolume(volume, duckedDeviceID, duckedElement)
-      return
-    }
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioDevicePropertyVolumeScalar,
-      mScope: kAudioObjectPropertyScopeOutput,
-      mElement: duckedElement
-    )
-    var value = volume
-    AudioObjectSetPropertyData(
-      duckedDeviceID, &address, 0, nil,
-      UInt32(MemoryLayout<Float32>.size), &value
-    )
-  }
-
-  private nonisolated func addPropertyListener(_ listener: OutputVolumeDuckerListenerRegistration) {
+  private func addPropertyListener(_ listener: OutputVolumeDuckerListenerRegistration) {
     if let coreAudio {
       coreAudio.addPropertyListener(listener)
       return
@@ -320,7 +297,7 @@ public final class OutputVolumeDucker: VolumeDucking {
     AudioObjectAddPropertyListenerBlock(listener.objectID, &address, listener.queue, listener.block)
   }
 
-  private nonisolated func removePropertyListener(_ listener: OutputVolumeDuckerListenerRegistration) {
+  private func removePropertyListener(_ listener: OutputVolumeDuckerListenerRegistration) {
     if let coreAudio {
       coreAudio.removePropertyListener(listener)
       return

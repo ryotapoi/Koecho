@@ -34,7 +34,8 @@
 
 - [x] N9 simplify-code skill を実行する
 
-- [ ] N10 Swift 6.4 対応
+- [x] N10 Swift 6.4 対応
+  - 採用内容: 同期共有状態を標準 `Mutex` へ移し、`isolated deinit` で MainActor の後処理と通常の復元・解除処理を共有した。件数専用の `filter` は `count(where:)` へ置換した。既存契約を保ち、Package / App の build・test と外部 script・音声入力・入力デバイス監視・音量復元の実操作を確認した。
 
 - [x] N7 検証方針に照らして不要なテストを削除する
   - 目的・根拠: テストの保守負荷を抑えつつ、重要な振る舞いの回帰検出を維持する。`principle-test-verification-policy` のテスト保持基準に沿って既存テストを見直す。

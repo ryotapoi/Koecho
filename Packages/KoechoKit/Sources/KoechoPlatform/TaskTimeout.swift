@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 enum TaskTimeout {
   /// Race a task against a timeout. Returns `true` if the timeout fires first.
@@ -24,11 +25,14 @@ enum TaskTimeout {
   }
 }
 
-private final class TimeoutRace: @unchecked Sendable {
-  private let lock = NSLock()
-  private var hasResumed = false
-  private var waiter: Task<Void, Never>?
-  private var timer: Task<Void, Never>?
+private final class TimeoutRace: Sendable {
+  private struct State {
+    var hasResumed = false
+    var waiter: Task<Void, Never>?
+    var timer: Task<Void, Never>?
+  }
+
+  private let state = Mutex(State())
 
   func setWaiter(_ task: Task<Void, Never>) {
     set(task: task, to: \.waiter)
@@ -42,31 +46,25 @@ private final class TimeoutRace: @unchecked Sendable {
     _ continuation: CheckedContinuation<Bool, Never>,
     returning value: Bool
   ) {
-    let taskToCancel: Task<Void, Never>?
-    lock.lock()
-    guard !hasResumed else {
-      lock.unlock()
-      return
+    let result = state.withLock { state -> (shouldResume: Bool, task: Task<Void, Never>?) in
+      guard !state.hasResumed else { return (false, nil) }
+      state.hasResumed = true
+      return (true, value ? state.waiter : state.timer)
     }
-    hasResumed = true
-    taskToCancel = value ? waiter : timer
-    lock.unlock()
-
-    taskToCancel?.cancel()
+    guard result.shouldResume else { return }
+    result.task?.cancel()
     continuation.resume(returning: value)
   }
 
   private func set(
     task: Task<Void, Never>,
-    to keyPath: ReferenceWritableKeyPath<TimeoutRace, Task<Void, Never>?>
+    to keyPath: WritableKeyPath<State, Task<Void, Never>?>
   ) {
-    lock.lock()
-    if hasResumed {
-      lock.unlock()
-      task.cancel()
-      return
+    let shouldCancel = state.withLock { state in
+      guard !state.hasResumed else { return true }
+      state[keyPath: keyPath] = task
+      return false
     }
-    self[keyPath: keyPath] = task
-    lock.unlock()
+    if shouldCancel { task.cancel() }
   }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import os
 
 public nonisolated enum ScriptRunnerError: Error, Equatable {
@@ -138,26 +139,16 @@ public nonisolated final class ScriptRunner: Sendable {
         try process.run()
 
         // Schedule timeout only after process is running (pid is valid)
-        let timeoutWork = DispatchWorkItem {
+        state.scheduleTimeout(after: timeout) {
           state.markTimedOut()
           let pid = process.processIdentifier
           process.terminate()
 
           // Schedule SIGKILL in case SIGTERM is ignored
-          let sigkillWork = DispatchWorkItem {
+          state.scheduleKill(after: killDelay) {
             Darwin.kill(pid, SIGKILL)
           }
-          state.setKillWork(sigkillWork)
-          DispatchQueue.global().asyncAfter(
-            deadline: .now() + killDelay,
-            execute: sigkillWork
-          )
         }
-        state.setTimeoutWork(timeoutWork)
-        DispatchQueue.global().asyncAfter(
-          deadline: .now() + timeout,
-          execute: timeoutWork
-        )
 
         // Write stdin after launch
         let inputData = input.data(using: .utf8) ?? Data()
@@ -198,62 +189,60 @@ public nonisolated final class ScriptRunner: Sendable {
 }
 
 /// Thread-safe mutable state shared between timeout and termination handlers.
-nonisolated private final class RunState: @unchecked Sendable {
-  private let lock = NSLock()
-  private var _didTimeout = false
-  private var _resumed = false
-  private var _timeoutWork: DispatchWorkItem?
-  private var _killWork: DispatchWorkItem?
+nonisolated private final class RunState: Sendable {
+  private struct State {
+    var didTimeout = false
+    var resumed = false
+    var timeoutWork: DispatchWorkItem?
+    var killWork: DispatchWorkItem?
+  }
+
+  private let state = Mutex(State())
 
   var isTimedOut: Bool {
-    lock.lock()
-    defer { lock.unlock() }
-    return _didTimeout
+    state.withLock { $0.didTimeout }
   }
 
   func markTimedOut() {
-    lock.lock()
-    _didTimeout = true
-    lock.unlock()
+    state.withLock { $0.didTimeout = true }
   }
 
   func tryResume() -> Bool {
-    lock.lock()
-    defer { lock.unlock() }
-    let shouldResume = !_resumed
-    _resumed = true
-    return shouldResume
+    state.withLock { state in
+      let shouldResume = !state.resumed
+      state.resumed = true
+      return shouldResume
+    }
   }
 
-  func setTimeoutWork(_ work: DispatchWorkItem) {
-    lock.lock()
-    _timeoutWork = work
-    lock.unlock()
+  func scheduleTimeout(after delay: TimeInterval, execute: @escaping @Sendable () -> Void) {
+    state.withLock { state in
+      let work = DispatchWorkItem(block: execute)
+      state.timeoutWork = work
+      DispatchQueue.global().asyncAfter(deadline: .now() + delay, execute: work)
+    }
   }
 
   func cancelTimeoutWork() {
-    lock.lock()
-    _timeoutWork?.cancel()
-    lock.unlock()
+    state.withLock { $0.timeoutWork?.cancel() }
   }
 
-  func setKillWork(_ work: DispatchWorkItem) {
-    lock.lock()
-    _killWork = work
-    lock.unlock()
+  func scheduleKill(after delay: TimeInterval, execute: @escaping @Sendable () -> Void) {
+    state.withLock { state in
+      let work = DispatchWorkItem(block: execute)
+      state.killWork = work
+      DispatchQueue.global().asyncAfter(deadline: .now() + delay, execute: work)
+    }
   }
 
   func cancelKillWork() {
-    lock.lock()
-    _killWork?.cancel()
-    lock.unlock()
+    state.withLock { $0.killWork?.cancel() }
   }
 }
 
 /// Collects data from a Pipe's readability handler without blocking.
-nonisolated private final class PipeCollector: @unchecked Sendable {
-  private let lock = NSLock()
-  private var chunks: [Data] = []
+nonisolated private final class PipeCollector: Sendable {
+  private let chunks = Mutex<[Data]>([])
   private let pipe: Pipe
 
   init(pipe: Pipe) {
@@ -262,9 +251,7 @@ nonisolated private final class PipeCollector: @unchecked Sendable {
     pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
       let data = handle.availableData
       guard !data.isEmpty, let self else { return }
-      self.lock.lock()
-      self.chunks.append(data)
-      self.lock.unlock()
+      self.chunks.withLock { $0.append(data) }
     }
   }
 
@@ -277,9 +264,7 @@ nonisolated private final class PipeCollector: @unchecked Sendable {
     pipe.fileHandleForReading.readabilityHandler = nil
     let remaining = pipe.fileHandleForReading.readDataToEndOfFile()
 
-    lock.lock()
-    var allData = chunks
-    lock.unlock()
+    var allData = chunks.withLock { $0 }
 
     if !remaining.isEmpty {
       allData.append(remaining)

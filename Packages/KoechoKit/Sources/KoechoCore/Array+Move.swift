@@ -6,7 +6,7 @@ extension Array {
     for index in source.sorted().reversed() {
       remove(at: index)
     }
-    let adjustedDestination = destination - source.filter { $0 < destination }.count
+    let adjustedDestination = destination - source.count { $0 < destination }
     insert(contentsOf: items, at: adjustedDestination)
   }
 }

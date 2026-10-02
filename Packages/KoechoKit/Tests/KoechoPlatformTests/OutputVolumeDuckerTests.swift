@@ -1,19 +1,22 @@
 import CoreAudio
 import Foundation
 import KoechoCore
+import Synchronization
 import Testing
 
 @testable import KoechoPlatform
 
 @MainActor
 struct OutputVolumeDuckerTests {
-  private final class CoreAudioSpy: @unchecked Sendable {
+  @MainActor
+  private final class CoreAudioSpy {
     var defaultOutputDeviceID: AudioDeviceID?
     var elements: [AudioDeviceID: AudioObjectPropertyElement] = [:]
     var volumes: [AudioDeviceID: Float] = [:]
     var writes: [(volume: Float, deviceID: AudioDeviceID, element: AudioObjectPropertyElement)] = []
     var addedListeners: [OutputVolumeDuckerListenerRegistration] = []
     var removedListeners: [OutputVolumeDuckerListenerRegistration] = []
+    var onRemoveListener: (() -> Void)?
 
     func makeOperations() -> OutputVolumeDuckerCoreAudio {
       OutputVolumeDuckerCoreAudio(
@@ -25,7 +28,10 @@ struct OutputVolumeDuckerTests {
           self.volumes[deviceID] = volume
         },
         addPropertyListener: { self.addedListeners.append($0) },
-        removePropertyListener: { self.removedListeners.append($0) }
+        removePropertyListener: {
+          self.removedListeners.append($0)
+          self.onRemoveListener?()
+        }
       )
     }
   }
@@ -189,4 +195,29 @@ struct OutputVolumeDuckerTests {
     #expect(coreAudio.removedListeners.count == 1)
     #expect(coreAudio.addedListeners.first === coreAudio.removedListeners.first)
   }
+
+  @Test func offActorReleaseRestoresVolumeAndRemovesTheRegisteredListener() async {
+    let settings = makeSettings(enabled: true, level: 0.3)
+    let coreAudio = CoreAudioSpy()
+    coreAudio.defaultOutputDeviceID = 1
+    coreAudio.elements[1] = kAudioObjectPropertyElementMain
+    coreAudio.volumes[1] = 0.8
+    var ducker: OutputVolumeDucker? = OutputVolumeDucker(
+      settings: settings, coreAudio: coreAudio.makeOperations())
+    ducker?.duck()
+    let owner = Mutex(ducker)
+    ducker = nil
+
+    await withCheckedContinuation { continuation in
+      coreAudio.onRemoveListener = { continuation.resume() }
+      Task.detached {
+        owner.withLock { $0 = nil }
+      }
+    }
+
+    #expect(coreAudio.volumes[1] == 0.8)
+    #expect(coreAudio.removedListeners.count == 1)
+    #expect(coreAudio.addedListeners.first === coreAudio.removedListeners.first)
+  }
+
 }

@@ -24,15 +24,15 @@ public final class AudioDeviceManager {
   private var isUpdatingVolume = false
 
   // CoreAudio listener blocks (retained for removal in deinit).
-  @ObservationIgnored private nonisolated(unsafe) var deviceListListenerBlock:
+  @ObservationIgnored private var deviceListListenerBlock:
     AudioObjectPropertyListenerBlock?
-  @ObservationIgnored private nonisolated(unsafe) var defaultDeviceListenerBlock:
+  @ObservationIgnored private var defaultDeviceListenerBlock:
     AudioObjectPropertyListenerBlock?
-  @ObservationIgnored private nonisolated(unsafe) var volumeListenerBlock:
+  @ObservationIgnored private var volumeListenerBlock:
     AudioObjectPropertyListenerBlock?
-  @ObservationIgnored private nonisolated(unsafe) var volumeListenerDeviceID: AudioDeviceID =
+  @ObservationIgnored private var volumeListenerDeviceID: AudioDeviceID =
     kAudioObjectUnknown
-  @ObservationIgnored private nonisolated(unsafe) var volumeListenerElement:
+  @ObservationIgnored private var volumeListenerElement:
     AudioObjectPropertyElement = kAudioObjectPropertyElementMain
 
   // MARK: - Init / Deinit
@@ -43,10 +43,7 @@ public final class AudioDeviceManager {
     installDefaultDeviceListener()
   }
 
-  deinit {
-    // deinit is nonisolated, so access nonisolated(unsafe) properties directly
-    // and call CoreAudio C functions (which are safe from any thread).
-
+  isolated deinit {
     // Remove property listener blocks
     if let block = deviceListListenerBlock {
       var address = AudioObjectPropertyAddress(
@@ -70,17 +67,7 @@ public final class AudioDeviceManager {
         DispatchQueue.main, block
       )
     }
-    if let block = volumeListenerBlock, volumeListenerDeviceID != kAudioObjectUnknown {
-      var address = AudioObjectPropertyAddress(
-        mSelector: kAudioDevicePropertyVolumeScalar,
-        mScope: kAudioObjectPropertyScopeInput,
-        mElement: volumeListenerElement
-      )
-      AudioObjectRemovePropertyListenerBlock(
-        volumeListenerDeviceID, &address,
-        DispatchQueue.main, block
-      )
-    }
+    removeVolumeListener()
   }
 
   // MARK: - Public API
