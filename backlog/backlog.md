@@ -157,9 +157,11 @@
   - 実環境検証（2026-10-03）: 同一署名・固定パスの `com.ryotapoi.Koecho.Verification` を再ビルド・起動（3.425秒）し、本人が日本語発話→Confirm→末尾貼付・パネル閉・次の認識開始を「バッチリ」と報告。所有PID49732の診断ログで00:36:13.023の末尾を含む確定結果、00:36:18.966のfinalize成功、00:36:18.967の停止完了、00:36:23.611の次の認識開始を確認。本人報告とOS診断ログを別の証拠として照合し、確認後は所有アプリとログ収集を終了した。
   - 限界: 本人操作の正確な時刻は不明（上記はログ時刻）。cancel・timeout・その他失敗の識別は下位層テストの証拠であり、実マイクの異常を人工的に発生させていない。実際の finalize 失敗頻度や過去のテキスト欠落の不存在、個別TCCエントリの対象・全権限の維持までは確認していない。
 
-- [ ] N14 ScriptRunner の環境変数除外テストを親環境に依存しない検証にする
+- [x] N14 ScriptRunner の環境変数除外テストを親環境に依存しない検証にする
   - 目的・根拠: `doesNotLeakTCCVariables` は親環境に禁止変数がないと除外漏れを検出できず、PATH / HOME の継承確認も親に存在する場合だけ実行する。production の除外処理は存在し、実際の変数漏れを確認したものではない。[`ScriptRunnerTests.swift`](../Packages/KoechoKit/Tests/KoechoCoreTests/ScriptRunnerTests.swift)。
   - 作業・完了条件: 禁止変数が存在する入力で子への除外と許可変数の継承を確認し、除外処理を欠く誤実装を検出できることを示す。既存 suite や並列実行の環境を汚染しない方法を使い、関連テストを検証する。
+  - 完了・検証（2026-10-03）: 共通の `makeProcess` に固定の親環境 fixture を渡し、構成済み環境と実子の出力で非空の `__CF_*`・許可外変数の除外、PATH / HOME の継承を無条件に確認。親環境を全継承する一時 mutation は実子の禁止キー不在 assertion で失敗し、ソース復元後の Package 217 テスト（通常の並列実行）、関連 16 テスト、XcodeBuildMCP `build_macos` / 専用署名 `build_run_macos` が成功。global environment は変更していない。証拠: `tmp/workflow/followups-20261002/n14/changes/n14/validation/`。
+  - 限界: アプリ起動と子プロセスの環境契約検証は別の証拠。UI・マイク・権限操作は追加せず、TCC 全体・未知の OS 追加変数・ユーザー固有 script は未検証。
 
 ### 将来の改善（低優先度）
 

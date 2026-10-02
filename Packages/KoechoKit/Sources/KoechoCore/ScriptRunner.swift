@@ -65,7 +65,11 @@ public nonisolated final class ScriptRunner: Sendable {
 
     logger.info("Running script: \(scriptPath)")
 
-    let process = makeProcess(scriptPath: scriptPath, context: context)
+    let process = makeProcess(
+      scriptPath: scriptPath,
+      context: context,
+      parentEnvironment: ProcessInfo.processInfo.environment
+    )
 
     let stdinPipe = Pipe()
     let stdoutPipe = Pipe()
@@ -164,9 +168,10 @@ public nonisolated final class ScriptRunner: Sendable {
     return result
   }
 
-  private func makeProcess(
+  func makeProcess(
     scriptPath: String,
-    context: ScriptRunnerContext
+    context: ScriptRunnerContext,
+    parentEnvironment: [String: String]
   ) -> Process {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/sh")
@@ -174,10 +179,9 @@ public nonisolated final class ScriptRunner: Sendable {
     // Avoid inheriting the app process cwd and private TCC-related variables.
     process.currentDirectoryURL = FileManager.default.temporaryDirectory
 
-    let parentEnv = ProcessInfo.processInfo.environment
     var env: [String: String] = [:]
-    if let path = parentEnv["PATH"] { env["PATH"] = path }
-    if let home = parentEnv["HOME"] { env["HOME"] = home }
+    if let path = parentEnvironment["PATH"] { env["PATH"] = path }
+    if let home = parentEnvironment["HOME"] { env["HOME"] = home }
     env["KOECHO_SELECTION"] = context.selection
     env["KOECHO_SELECTION_START"] = context.selectionStart
     env["KOECHO_SELECTION_END"] = context.selectionEnd

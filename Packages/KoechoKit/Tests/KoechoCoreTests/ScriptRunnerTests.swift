@@ -75,22 +75,46 @@ nonisolated struct ScriptRunnerTests {
     #expect(result.output == "selected text|10|22|make it better")
   }
 
-  @Test func doesNotLeakTCCVariables() async throws {
-    let parentEnvironment = ProcessInfo.processInfo.environment
-    let path = try makeScript("/usr/bin/env")
-    defer { try? FileManager.default.removeItem(atPath: path) }
+  @Test func doesNotLeakTCCVariables() throws {
+    let parentEnvironment = [
+      "PATH": "/koecho-test/path",
+      "HOME": "/koecho-test/home",
+      "__CF_USER_TEXT_ENCODING": "koecho-test-encoding",
+      "__CF_TEST_SENTINEL": "koecho-test-private",
+      "KOECHO_TEST_UNRELATED": "koecho-test-unrelated",
+    ]
+    let process = ScriptRunner().makeProcess(
+      scriptPath: "/usr/bin/env",
+      context: ScriptRunnerContext(),
+      parentEnvironment: parentEnvironment
+    )
+    #expect(process.environment == [
+      "PATH": "/koecho-test/path",
+      "HOME": "/koecho-test/home",
+      "KOECHO_SELECTION": "",
+      "KOECHO_SELECTION_START": "",
+      "KOECHO_SELECTION_END": "",
+      "KOECHO_PROMPT": "",
+    ])
 
-    let runner = ScriptRunner()
-    let result = try await runner.run(scriptPath: path, input: "")
+    let outputPipe = Pipe()
+    defer { try? outputPipe.fileHandleForReading.close() }
+    process.standardInput = FileHandle.nullDevice
+    process.standardOutput = outputPipe
+    try process.run()
+    let output = outputPipe.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+    #expect(process.terminationStatus == 0)
 
-    let lines = result.output.components(separatedBy: "\n")
-    let cfVars = lines.filter { $0.hasPrefix("__CF_") }
-    #expect(cfVars.isEmpty)
-    for key in ["PATH", "HOME"] {
-      if let expected = parentEnvironment[key] {
-        #expect(lines.contains("\(key)=\(expected)"), "Child must inherit \(key)")
-      }
-    }
+    let lines = try #require(String(data: output, encoding: .utf8)).split(separator: "\n")
+    let childEnvironment = Dictionary(uniqueKeysWithValues: lines.map { line in
+      let parts = line.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+      return (String(parts[0]), String(parts[1]))
+    })
+    #expect(childEnvironment.keys.filter { $0.hasPrefix("__CF_") }.isEmpty)
+    #expect(childEnvironment["KOECHO_TEST_UNRELATED"] == nil)
+    #expect(childEnvironment["PATH"] == "/koecho-test/path")
+    #expect(childEnvironment["HOME"] == "/koecho-test/home")
   }
 
   // MARK: - Errors
