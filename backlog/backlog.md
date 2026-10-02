@@ -151,8 +151,10 @@
   - 限界: 元 run の editor 書き込み・入力イベント・非同期処理の時系列記録はなく、過去 D13 試作との因果、focus / SwiftUI 同期 / test 間状態の原因特定は未完了。有限回の自然実行で schedule を強制していないため再発しない保証ではない。production / test は変更しておらず、N11 の本人 script 操作確認を N12 の focus / retry 実操作証拠へ転用していない。
 
 - [ ] N13 SpeechAnalyzer の finalize 失敗を診断記録で区別できるようにする
-  - 目的・根拠: stop の finalize が timeout 前に失敗すると、`TaskTimeout` の `try?` によりエラーが破棄され、成功と同じ終了記録になる。実際の失敗頻度や最終テキスト欠落は未確認だが、終了異常を切り分ける診断情報が欠けている。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift)、[`TaskTimeout.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/TaskTimeout.swift)。
+  - 目的・根拠: 従来は stop の finalize が timeout 前に失敗すると、`TaskTimeout` の `try?` によりエラーが破棄され、成功と同じ終了記録になっていた。実際の失敗頻度や最終テキスト欠落は未確認だが、終了異常を切り分ける診断情報が欠けていた。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift)、[`TaskTimeout.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/TaskTimeout.swift)。
   - 作業・完了条件: finalize の成功・cancel・timeout・その他の失敗を必要な診断情報で区別し、既存の stop 完了・結果収集契約を維持する。失敗経路と通常停止を `docs/rules/verification.md` の必須 gate に従って検証する。UI 通知や停止方針の変更は含めない。
+  - 実装・自動検証（2026-10-02）: `TaskTimeout.wait` が完了の `Result` または timeout を一度だけ返し、finalize の成功・`CancellationError`・timeout・その他失敗（error domain/code を含む）を既存 Logger で識別する。finalize timeout 時の cancel、resultTask の独立した1秒待機、tearDown、idle 到達は維持。成功・cancel・固有情報を持つ失敗・制御された未完了 task の timeout と遅い完了を下位層4テストで確認。`swift test --package-path Packages/KoechoKit` は217テスト成功（3.58秒）、XcodeBuildMCP `build_macos` 成功（5.3秒）、`build_run_macos` 成功（2.027秒）。
+  - 未完了: 修正後ビルドで本人の実音声入力→停止、最終結果回収、停止完了と診断ログの確認が残る。起動成功だけでは runtime gate を満たさないため未完了のまま保持する。実際の finalize 失敗頻度やテキスト欠落の不存在は未確認。
 
 - [ ] N14 ScriptRunner の環境変数除外テストを親環境に依存しない検証にする
   - 目的・根拠: `doesNotLeakTCCVariables` は親環境に禁止変数がないと除外漏れを検出できず、PATH / HOME の継承確認も親に存在する場合だけ実行する。production の除外処理は存在し、実際の変数漏れを確認したものではない。[`ScriptRunnerTests.swift`](../Packages/KoechoKit/Tests/KoechoCoreTests/ScriptRunnerTests.swift)。
