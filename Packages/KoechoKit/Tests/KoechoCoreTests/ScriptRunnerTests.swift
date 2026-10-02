@@ -38,6 +38,23 @@ nonisolated struct ScriptRunnerTests {
     #expect(result.stderr == "debug info")
   }
 
+  @Test func capturesShortLivedTransformation() async throws {
+    let result = try await ScriptRunner().run(scriptPath: "tr a-z A-Z", input: "original")
+
+    #expect(result.output == "ORIGINAL")
+  }
+
+  @Test func capturesOrderedOutputBeyondPipeCapacity() async throws {
+    let result = try await ScriptRunner().run(
+      scriptPath: "awk 'BEGIN { for (i = 0; i < 20000; i++) { print i; print i > \"/dev/stderr\" } }'",
+      input: ""
+    )
+    let expected = (0..<20000).map(String.init).joined(separator: "\n")
+
+    #expect(result.output == expected)
+    #expect(result.stderr == expected)
+  }
+
   // MARK: - Environment Variables
 
   @Test func passesKoechoEnvironmentVariables() async throws {

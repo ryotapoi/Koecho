@@ -136,9 +136,11 @@
 
 ### 実行結果のフォローアップ
 
-- [ ] N11 ScriptExecutionService の emptyOutput による App test 失敗の原因を調査する
+- [x] N11 ScriptExecutionService の emptyOutput による App test 失敗の原因を調査する
   - 目的・根拠: D4 と N10 の実行結果で、`failedAndAutoRunScriptsDoNotOfferUndo` が `.emptyOutput` により失敗し、再実行で成功した。同一ケースの失敗が検証の再試行を要している。製品の出力欠落や N10 差分との因果は未確定。[`ScriptExecutionServiceTests.swift`](../KoechoTests/ScriptExecutionServiceTests.swift)、[`ScriptRunner.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift)。
   - 作業・完了条件: 出力収集・プロセス終了・結果取得の順序と失敗条件を調べ、原因または再現条件を切り分けて対応要否を判断する。原因を確認できた場合は必要な修正と該当ケース・App tests の検証を行う。再現しない場合は試した条件と残る限界、対応判断を記録して完了とする。
+  - 調査・対応（2026-10-02）: `tr a-z A-Z` に `original` を渡す直接実行で、逐次200回は成功、16並行×50回は `.emptyOutput` が1回発生した。一時 instrumentation で、callback が8 bytesを読み取って保存する前に finalize が空の結果を確定する順序を確認した。共通 collector の読み取り・保存・終了時回収を同じ Mutex で同期し、修正後の同条件1000回は全成功。過去 D4 / N10 の失敗時の順序と N10 差分との因果は未確認。
+  - 検証: Package tests 332件・対象ケースを含む App tests 218件、`build_macos`、`build_run_macos` が成功。入力パネルからの `original` → `tr a-z A-Z` → `ORIGINAL` の反映はユーザー本人が確認した。stdout / stderr の pipe 容量を超える出力の全量・順序と既存の空出力・非0終了・timeout を検証した。詳細ログは一時 workflow artifacts に保存した。
 
 - [ ] N12 入力パネルの本文・選択・履歴を検証する App tests の初回失敗原因を調査する
   - 目的・根拠: D13 の初回 App tests は215件成功・3件失敗、コード変更なしの再実行は218件成功だった。`accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput`、`accessibilityFailureRetriesSameTargetWithoutRestartingVoiceInput`、`shortcutRFallsBackToScriptWhenNoRules` で本文・選択・履歴の不一致を観測した。製品不具合や D13 試作との因果は未確定。[`InputPanelControllerConfirmTests.swift`](../KoechoTests/InputPanelControllerConfirmTests.swift)、[`InputPanelControllerReplacementTests.swift`](../KoechoTests/InputPanelControllerReplacementTests.swift)。

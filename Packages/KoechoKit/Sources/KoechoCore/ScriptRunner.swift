@@ -242,33 +242,38 @@ nonisolated private final class RunState: Sendable {
 
 /// Collects data from a Pipe's readability handler without blocking.
 nonisolated private final class PipeCollector: Sendable {
-  private let chunks = Mutex<[Data]>([])
+  private struct State {
+    var chunks: [Data] = []
+    var finalized = false
+  }
+
+  private let state = Mutex(State())
   private let pipe: Pipe
 
   init(pipe: Pipe) {
     self.pipe = pipe
 
     pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
-      let data = handle.availableData
-      guard !data.isEmpty, let self else { return }
-      self.chunks.withLock { $0.append(data) }
+      guard let self else { return }
+      self.state.withLock { state in
+        guard !state.finalized else { return }
+        let data = handle.availableData
+        if !data.isEmpty { state.chunks.append(data) }
+      }
     }
   }
 
   /// Stop collecting and return all accumulated data.
   /// Called from terminationHandler after the process has exited,
-  /// so all output has been written and readabilityHandler callbacks
-  /// have been dispatched. Setting readabilityHandler = nil prevents
-  /// new callbacks; readDataToEndOfFile() drains any remaining buffered data.
+  /// so all output has been written. The lock joins any in-flight read and
+  /// append before draining the pipe; queued callbacks skip the finalized pipe.
   func finalize() -> Data {
     pipe.fileHandleForReading.readabilityHandler = nil
-    let remaining = pipe.fileHandleForReading.readDataToEndOfFile()
-
-    var allData = chunks.withLock { $0 }
-
-    if !remaining.isEmpty {
-      allData.append(remaining)
+    return state.withLock { state in
+      state.finalized = true
+      let remaining = pipe.fileHandleForReading.readDataToEndOfFile()
+      if !remaining.isEmpty { state.chunks.append(remaining) }
+      return state.chunks.reduce(Data(), +)
     }
-    return allData.reduce(Data(), +)
   }
 }

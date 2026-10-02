@@ -196,7 +196,10 @@ import Testing
     #expect(appState.scriptUndoText == nil)
     await service.execute(Script(name: "Empty", scriptPath: "printf ''"))
     #expect(appState.scriptUndoText == nil)
-    _ = try await service.runAutoScript(Script(name: "Auto", scriptPath: "tr a-z A-Z"), on: "original")
+    let output = try await service.runAutoScript(
+      Script(name: "Auto", scriptPath: "tr a-z A-Z"), on: "original"
+    )
+    #expect(output == "ORIGINAL")
     #expect(appState.scriptUndoText == nil)
   }
 
