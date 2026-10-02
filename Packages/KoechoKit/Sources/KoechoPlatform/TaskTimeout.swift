@@ -2,30 +2,35 @@ import Foundation
 import Synchronization
 
 enum TaskTimeout {
-  /// Race a task against a timeout. Returns `true` if the timeout fires first.
-  static func hasTimedOut<Failure: Error>(
+  enum Outcome<Failure: Error>: Sendable {
+    case completed(Result<Void, Failure>)
+    case timedOut
+  }
+
+  /// Race a task against a timeout, preserving the winning completion result.
+  static func wait<Failure: Error>(
     _ task: Task<Void, Failure>,
     seconds: Double
-  ) async -> Bool {
+  ) async -> Outcome<Failure> {
     await withCheckedContinuation { continuation in
-      let race = TimeoutRace()
+      let race = TimeoutRace<Failure>()
       let waiter = Task {
-        _ = try? await task.value
-        race.finish(continuation, returning: false)
+        let result = await task.result
+        race.finish(continuation, returning: .completed(result))
       }
       race.setWaiter(waiter)
 
       let timer = Task {
         try? await Task.sleep(for: .seconds(seconds))
         guard !Task.isCancelled else { return }
-        race.finish(continuation, returning: true)
+        race.finish(continuation, returning: .timedOut)
       }
       race.setTimer(timer)
     }
   }
 }
 
-private final class TimeoutRace: Sendable {
+private final class TimeoutRace<Failure: Error>: Sendable {
   private struct State {
     var hasResumed = false
     var waiter: Task<Void, Never>?
@@ -43,13 +48,16 @@ private final class TimeoutRace: Sendable {
   }
 
   func finish(
-    _ continuation: CheckedContinuation<Bool, Never>,
-    returning value: Bool
+    _ continuation: CheckedContinuation<TaskTimeout.Outcome<Failure>, Never>,
+    returning value: TaskTimeout.Outcome<Failure>
   ) {
     let result = state.withLock { state -> (shouldResume: Bool, task: Task<Void, Never>?) in
       guard !state.hasResumed else { return (false, nil) }
       state.hasResumed = true
-      return (true, value ? state.waiter : state.timer)
+      switch value {
+      case .timedOut: return (true, state.waiter)
+      case .completed: return (true, state.timer)
+      }
     }
     guard result.shouldResume else { return }
     result.task?.cancel()

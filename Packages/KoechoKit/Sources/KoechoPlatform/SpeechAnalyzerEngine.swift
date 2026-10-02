@@ -95,7 +95,17 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       let finalizeTask = Task {
         try await analyzer.finalizeAndFinishThroughEndOfInput()
       }
-      if await TaskTimeout.hasTimedOut(finalizeTask, seconds: 1) {
+      switch await TaskTimeout.wait(finalizeTask, seconds: 1) {
+      case .completed(.success):
+        logger.info("finalizeAndFinishThroughEndOfInput succeeded")
+      case .completed(.failure(let error)) where error is CancellationError:
+        logger.info("finalizeAndFinishThroughEndOfInput cancelled")
+      case .completed(.failure(let error)):
+        let nsError = error as NSError
+        logger.error(
+          "finalizeAndFinishThroughEndOfInput failed: domain=\(nsError.domain, privacy: .public) code=\(nsError.code) error=\(String(describing: error))"
+        )
+      case .timedOut:
         logger.warning("finalizeAndFinishThroughEndOfInput timed out")
         finalizeTask.cancel()
       }
@@ -103,7 +113,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
     // Wait for result task with timeout
     if let resultTask {
-      if await TaskTimeout.hasTimedOut(resultTask, seconds: 1) {
+      if case .timedOut = await TaskTimeout.wait(resultTask, seconds: 1) {
         logger.warning("Result task timed out during stop, cancelling")
         resultTask.cancel()
       }
@@ -397,7 +407,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     let oldResultTask = resultTask
     oldResultTask?.cancel()
     if let oldResultTask {
-      if await TaskTimeout.hasTimedOut(oldResultTask, seconds: 1) {
+      if case .timedOut = await TaskTimeout.wait(oldResultTask, seconds: 1) {
         logger.warning("Result task timed out during restart, cancelling")
         oldResultTask.cancel()
       }
