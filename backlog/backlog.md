@@ -134,6 +134,24 @@
   - 記録: [カスタム語彙・発音の実験](../llm-wiki/speech-custom-vocabulary-experiments.md) に、公開仕様・新旧 API／初期化経路の実測・実発話結果・原因未確認の限界を残した。
 
 
+### 実行結果のフォローアップ
+
+- [ ] N11 ScriptExecutionService の emptyOutput による App test 失敗の原因を調査する
+  - 目的・根拠: D4 と N10 の実行結果で、`failedAndAutoRunScriptsDoNotOfferUndo` が `.emptyOutput` により失敗し、再実行で成功した。同一ケースの失敗が検証の再試行を要している。製品の出力欠落や N10 差分との因果は未確定。[`ScriptExecutionServiceTests.swift`](../KoechoTests/ScriptExecutionServiceTests.swift)、[`ScriptRunner.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift)。
+  - 作業・完了条件: 出力収集・プロセス終了・結果取得の順序と失敗条件を調べ、原因または再現条件を切り分けて対応要否を判断する。原因を確認できた場合は必要な修正と該当ケース・App tests の検証を行う。再現しない場合は試した条件と残る限界、対応判断を記録して完了とする。
+
+- [ ] N12 入力パネルの本文・選択・履歴を検証する App tests の初回失敗原因を調査する
+  - 目的・根拠: D13 の初回 App tests は215件成功・3件失敗、コード変更なしの再実行は218件成功だった。`accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput`、`accessibilityFailureRetriesSameTargetWithoutRestartingVoiceInput`、`shortcutRFallsBackToScriptWhenNoRules` で本文・選択・履歴の不一致を観測した。製品不具合や D13 試作との因果は未確定。[`InputPanelControllerConfirmTests.swift`](../KoechoTests/InputPanelControllerConfirmTests.swift)、[`InputPanelControllerReplacementTests.swift`](../KoechoTests/InputPanelControllerReplacementTests.swift)。
+  - 作業・完了条件: focus、非同期処理完了、テスト間状態の関与を切り分け、原因または再現条件と対応要否を記録する。確認した原因に必要な対処だけを行い、対象ケースと App tests を検証する。再現しない場合は試した条件と残る限界を記録して完了とする。N11 と同じ原因が確認できた場合は作業を統合する。
+
+- [ ] N13 SpeechAnalyzer の finalize 失敗を診断記録で区別できるようにする
+  - 目的・根拠: stop の finalize が timeout 前に失敗すると、`TaskTimeout` の `try?` によりエラーが破棄され、成功と同じ終了記録になる。実際の失敗頻度や最終テキスト欠落は未確認だが、終了異常を切り分ける診断情報が欠けている。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift)、[`TaskTimeout.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/TaskTimeout.swift)。
+  - 作業・完了条件: finalize の成功・cancel・timeout・その他の失敗を必要な診断情報で区別し、既存の stop 完了・結果収集契約を維持する。失敗経路と通常停止を `docs/rules/verification.md` の必須 gate に従って検証する。UI 通知や停止方針の変更は含めない。
+
+- [ ] N14 ScriptRunner の環境変数除外テストを親環境に依存しない検証にする
+  - 目的・根拠: `doesNotLeakTCCVariables` は親環境に禁止変数がないと除外漏れを検出できず、PATH / HOME の継承確認も親に存在する場合だけ実行する。production の除外処理は存在し、実際の変数漏れを確認したものではない。[`ScriptRunnerTests.swift`](../Packages/KoechoKit/Tests/KoechoCoreTests/ScriptRunnerTests.swift)。
+  - 作業・完了条件: 禁止変数が存在する入力で子への除外と許可変数の継承を確認し、除外処理を欠く誤実装を検出できることを示す。既存 suite や並列実行の環境を汚染しない方法を使い、関連テストを検証する。
+
 ### 将来の改善（低優先度）
 
 [backlog/later.md](later.md)
