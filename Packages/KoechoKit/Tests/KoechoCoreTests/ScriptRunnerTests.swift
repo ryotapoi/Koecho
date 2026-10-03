@@ -44,6 +44,27 @@ nonisolated struct ScriptRunnerTests {
     #expect(result.output == "ORIGINAL")
   }
 
+  @Test func repeatsShortLivedCustomScripts() async throws {
+    let runner = ScriptRunner(timeout: 0.2, killDelay: 0.1)
+    for _ in 0..<30 {
+      let result = try await runner.run(scriptPath: "tr a-z A-Z", input: "original")
+      #expect(result.output == "ORIGINAL")
+      await #expect(throws: ScriptRunnerError.nonZeroExit(code: 2, stderr: "error")) {
+        try await runner.run(scriptPath: "printf error >&2; exit 2", input: "")
+      }
+      await #expect(throws: ScriptRunnerError.emptyOutput) {
+        try await runner.run(scriptPath: ":", input: "")
+      }
+    }
+  }
+
+  @Test func escalatesTimeoutWhenTermIsIgnored() async throws {
+    await #expect(throws: ScriptRunnerError.timeout) {
+      try await ScriptRunner(timeout: 0.1, killDelay: 0.1).run(
+        scriptPath: "trap '' TERM; while :; do :; done", input: "")
+    }
+  }
+
   @Test func capturesOrderedOutputBeyondPipeCapacity() async throws {
     let result = try await ScriptRunner().run(
       scriptPath: "awk 'BEGIN { for (i = 0; i < 20000; i++) { print i; print i > \"/dev/stderr\" } }'",

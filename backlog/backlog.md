@@ -109,11 +109,11 @@
   - 作業・完了条件: 確定・未確定結果の本文全文が debug 診断ログの閲覧・共有先へ非マスクで渡らないようにする。実音声のログ収集で本文の扱いを確認し、必要な状態・終了診断は維持する。
   - 限界: 実ログ収集未実施。debug ログの通常時の永続保存や無条件の第三者アクセスを主張しない。取消後 idle では result loop guard が抑止するため、取消済み全文が常に記録されるとは断定しない。
 
-- [ ] F25 完了したスクリプトの timeout work の所有 cycle を解消する
-  - 目的・発生条件: 通常成功時の terminationHandler が cancelTimeoutWork を呼ぶたび、scheduleTimeout で構築した所有関係が残る。短い custom の反復実行で到達する。
-  - 根拠: `KM-04-C05`。[`ScriptRunner.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift):96-98,146-155,222-232。RunState が所有する timeoutWork は同じ state/process を closure から強参照し、cancel は stored work を解除しない。キャンセル済み work が予定時刻を過ぎても保持する cycle を局所再現で確認した。
-  - 作業・完了条件: 通常成功・失敗・timeout 後に RunState と work の所有 cycle が解消され、短い custom の反復実行で完了済み状態を保持し続けないことを確認する。timeout と通常終了の結果返却を維持し、所有関係の解放と実 Runner の反復実行を区別して検証する。
-  - 限界: owner→DispatchWorkItem→owner の同じ所有関係を0.3 秒後に queue、即 cancel、外部 owner 解放し、0.6 秒後も weakOwner が非 nil・deinit なしを局所再現した。元 RunState / Process 全体の heap profiling は未実施。保持総量・Foundation Process 内部資源は未測定。
+- [x] F25 完了したスクリプトの timeout work の所有 cycle を解消する
+  - 目的・発生条件: 短い custom の通常終了時、cancel だけでは RunState → timeoutWork → RunState の所有 cycle が残っていた（`KM-04-C05`）。
+  - 完了: [ScriptRunner.swift](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift) の完了境界で timeout / kill work を cancel して所有を解除し、完了後の登録・timeout 開始を拒否する。終了前後の登録と timeout 開始済みの順序を production RunState の直接 harness で確認（2026-10-04）。
+  - 検証: source hash を記録した一時 harness で実 Runner の RunState を weak 観測し、成功30回、non-zero / empty-output 各30回、SIGTERM / SIGKILL timeout 各1回が期限後に解放されることを確認。所有測定とは別に、実 Process の反復結果・出力回収・timeout の回帰を含む Package テスト192件、build、専用署名アプリの build/run・識別・停止が成功。証拠: `tmp/workflow/orchestrator-normal-tail-20261004/changes/F25/validation/`、`tmp/verification/verify-koecho/20261004-f25/`。
+  - 限界: Dispatch queue は cancel 済み work を期限まで一時保持し得る。Foundation Process 全体の heap、RSS、内部資源総量は測定していない。UI・TCC 権限維持の実操作は今回の対象外。
 
 - [ ] F28 履歴消去の保存失敗を消去成功として表示しない
   - 目的・発生条件: HistoryView の通常履歴ページにある Clear All から clear へ直接到達する。履歴を読み込めた後、保存先 directory を書き込み不能にする等、元ファイルの読み取りが可能なまま atomic write が失敗する条件で成立する。再起動時の purge も同じ書込み不能状態なら古い履歴を消去できない。

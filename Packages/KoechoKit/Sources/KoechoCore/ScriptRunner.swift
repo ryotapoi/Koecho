@@ -94,10 +94,7 @@ public nonisolated final class ScriptRunner: Sendable {
       }
 
       process.terminationHandler = { terminatedProcess in
-        state.cancelTimeoutWork()
-        state.cancelKillWork()
-
-        let timedOut = state.isTimedOut
+        let timedOut = state.complete()
 
         let stdoutData = stdoutCollector.finalize()
         let stderrData = stderrCollector.finalize()
@@ -144,7 +141,7 @@ public nonisolated final class ScriptRunner: Sendable {
 
         // Schedule timeout only after process is running (pid is valid)
         state.scheduleTimeout(after: timeout) {
-          state.markTimedOut()
+          guard state.beginTimeout() else { return }
           let pid = process.processIdentifier
           process.terminate()
 
@@ -159,6 +156,7 @@ public nonisolated final class ScriptRunner: Sendable {
         stdinPipe.fileHandleForWriting.write(inputData)
         stdinPipe.fileHandleForWriting.closeFile()
       } catch {
+        state.complete()
         logger.error("Failed to launch script: \(scriptPath), error: \(error)")
         resumeOnce(with: .failure(error))
       }
@@ -197,18 +195,31 @@ nonisolated private final class RunState: Sendable {
   private struct State {
     var didTimeout = false
     var resumed = false
+    var completed = false
     var timeoutWork: DispatchWorkItem?
     var killWork: DispatchWorkItem?
   }
 
   private let state = Mutex(State())
 
-  var isTimedOut: Bool {
-    state.withLock { $0.didTimeout }
+  func beginTimeout() -> Bool {
+    state.withLock { state in
+      guard !state.completed else { return false }
+      state.didTimeout = true
+      return true
+    }
   }
 
-  func markTimedOut() {
-    state.withLock { $0.didTimeout = true }
+  @discardableResult
+  func complete() -> Bool {
+    state.withLock { state in
+      state.completed = true
+      state.timeoutWork?.cancel()
+      state.timeoutWork = nil
+      state.killWork?.cancel()
+      state.killWork = nil
+      return state.didTimeout
+    }
   }
 
   func tryResume() -> Bool {
@@ -221,27 +232,22 @@ nonisolated private final class RunState: Sendable {
 
   func scheduleTimeout(after delay: TimeInterval, execute: @escaping @Sendable () -> Void) {
     state.withLock { state in
+      guard !state.completed else { return }
       let work = DispatchWorkItem(block: execute)
       state.timeoutWork = work
       DispatchQueue.global().asyncAfter(deadline: .now() + delay, execute: work)
     }
   }
 
-  func cancelTimeoutWork() {
-    state.withLock { $0.timeoutWork?.cancel() }
-  }
-
   func scheduleKill(after delay: TimeInterval, execute: @escaping @Sendable () -> Void) {
     state.withLock { state in
+      guard !state.completed else { return }
       let work = DispatchWorkItem(block: execute)
       state.killWork = work
       DispatchQueue.global().asyncAfter(deadline: .now() + delay, execute: work)
     }
   }
 
-  func cancelKillWork() {
-    state.withLock { $0.killWork?.cancel() }
-  }
 }
 
 /// Collects data from a Pipe's readability handler without blocking.
