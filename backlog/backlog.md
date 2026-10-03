@@ -85,7 +85,7 @@
   - 作業・完了条件: 非冪等な接頭辞追加 auto-run の出力で Accessibility 失敗後に権限を修正して再確定しても、同じ加工を重ねず、保持した本文を元の対象へ貼り付けられることを確認する。再試行と通常確定を既存テスト・実権限操作で確認する。
   - 限界: 実 TCC 権限修正と script は未再現。外部 service への再送はそのようなコマンドを利用者が登録した場合だけ。
 
-- [ ] F20 非 Accessibility ペースト失敗の復帰後も再確定を可能にする
+- [x] F20 非 Accessibility ペースト失敗の復帰後も再確定を可能にする
   - 目的・発生条件: CGEvent 生成失敗後、復帰パネルの本文をそのまま再 Confirm する。target を再取得する操作は閉じて再表示するまで走らない。
   - 根拠: `KM-01-C09`。[`InputPanelController.swift`](../Koecho/InputPanelController.swift):139-152,200-203,220-243,103-107; [`ClipboardPaster.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/ClipboardPaster.swift):142 の simulatePaste 経路; errorMessage の failedToCreateCGEvent 分岐。failedToCreateCGEvent など非 Accessibility 失敗は復帰時の target を nil にする。再 Confirm の pasteAndRecord は target guard で止まり、showPanel は可視なら refocus だけを行う。
   - 作業・完了条件: failedToCreateCGEvent 等で本文を復帰した後、閉じて再表示しなくても対象アプリへの再確定ができることを確認する。失敗時の本文保持と Accessibility 失敗の同対象 retry を維持し、注入した失敗で対象状態・再確定経路を確認する。

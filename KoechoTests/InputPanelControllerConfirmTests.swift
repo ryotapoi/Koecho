@@ -118,23 +118,34 @@ extension InputPanelControllerTests {
     #expect(paster.restoreClipboardCallCount == 1)
   }
 
-  @Test func accessibilityFailureRetriesSameTargetWithoutRestartingVoiceInput() async {
+  @Test(arguments: [ClipboardPasterError.accessibilityNotTrusted, .failedToCreateCGEvent])
+  func pasteFailureRetriesSameTargetWithoutRestartingVoiceInput(error: ClipboardPasterError)
+    async throws
+  {
     let paster = MockPaster()
-    paster.errorToThrow = ClipboardPasterError.accessibilityNotTrusted
+    paster.errorToThrow = error
     let engine = MockVoiceInputEngine()
     let ctx = makeController(paster: paster, makeEngine: { engine })
     let targetApp = NSRunningApplication.current
 
     ctx.controller.showPanel()
     await Task.yield()
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller))
     let startCallCountBeforeFailure = engine.startCallCount
     // The mock paster cannot exercise real TCC; it fixes the controller's
     // transformed-text, target, retry, history, and cleanup contract.
+    textView.replaceText("こんにちは")
     ctx.appState.setInputText("こんにちは")
     ctx.appState.frontmostApplication = targetApp
 
     await ctx.controller.confirm()
 
+    #expect(ctx.appState.isInputPanelVisible)
+    #expect(ctx.controller.panel.isVisible)
+    #expect(ctx.appState.inputText == "こんにちは")
+    #expect(textView.string == "こんにちは")
+    #expect(ctx.appState.errorMessage != nil)
+    #expect(ctx.historyStore.entries.isEmpty)
     #expect(paster.restoreClipboardCallCount == 1)
     #expect(ctx.appState.frontmostApplication === targetApp)
     #expect(engine.startCallCount == startCallCountBeforeFailure)
@@ -142,6 +153,7 @@ extension InputPanelControllerTests {
     paster.errorToThrow = nil
     await ctx.controller.confirm()
 
+    #expect(paster.pastedTexts == ["こんにちは"])
     #expect(paster.pastedApplications.count == 2)
     #expect(paster.pastedApplications[0] === targetApp)
     #expect(paster.pastedApplications[1] === targetApp)

@@ -227,7 +227,7 @@ final class InputPanelController {
       } else {
         restorePanelAfterPasteFailure(
           text: text,
-          targetApp: isAccessibilityTrustFailure(error) ? targetApp : nil,
+          targetApp: targetApp,
           error: error
         )
       }
@@ -236,11 +236,11 @@ final class InputPanelController {
   }
 
   /// Restores only the finalized input state after a paste failure. It deliberately
-  /// bypasses `showPanel()` so retrying Accessibility permission does not capture
-  /// System Settings as the paste target or start a new voice-input session.
+  /// bypasses `showPanel()` so retrying keeps the original paste target and does
+  /// not start a new voice-input session.
   private func restorePanelAfterPasteFailure(
     text: String,
-    targetApp: NSRunningApplication?,
+    targetApp: NSRunningApplication,
     error: any Error
   ) {
     appState.frontmostApplication = targetApp
@@ -255,13 +255,6 @@ final class InputPanelController {
     appState.isInputPanelVisible = true
     appState.errorMessage = errorMessage(for: ClipboardPasterError.targetAppTerminated)
     panel.makeKeyAndOrderFront(nil)
-  }
-
-  private func isAccessibilityTrustFailure(_ error: any Error) -> Bool {
-    if case ClipboardPasterError.accessibilityNotTrusted = error {
-      return true
-    }
-    return false
   }
 
   func cancel() {
