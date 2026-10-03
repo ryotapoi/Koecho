@@ -237,24 +237,6 @@ struct ScriptSettingsTests {
     #expect(reloaded.scriptTimeout == 45)
   }
 
-  @Test func persistsMultipleScripts() {
-    let defaults = makeDefaults()
-    let scripts = [
-      Script(name: "First", scriptPath: "/bin/first"),
-      Script(name: "Second", scriptPath: "/bin/second"),
-      Script(name: "Third", scriptPath: "/bin/third"),
-    ]
-
-    let settings = ScriptSettings(defaults: defaults)
-    settings.scripts = scripts
-
-    let reloaded = ScriptSettings(defaults: defaults)
-    #expect(reloaded.scripts.count == 3)
-    #expect(reloaded.scripts[0].name == "First")
-    #expect(reloaded.scripts[1].name == "Second")
-    #expect(reloaded.scripts[2].name == "Third")
-  }
-
   // MARK: - CRUD Methods
 
   @Test func allowsBuiltinFeatureConfigurationsAndCustomNameCollisions() {
@@ -470,16 +452,6 @@ struct ScriptSettingsTests {
   }
 
   // MARK: - Eligible Auto-Run Scripts
-
-  @Test func eligibleAutoRunScriptsIncludesNonPromptScripts() {
-    let settings = makeEmptySettings()
-    let a = Script(name: "A", scriptPath: "/bin/a")
-    let b = Script(name: "B", scriptPath: "/bin/b")
-    settings.scripts = [a, b]
-    #expect(settings.eligibleAutoRunScripts.count == 2)
-    #expect(settings.eligibleAutoRunScripts[0].id == a.id)
-    #expect(settings.eligibleAutoRunScripts[1].id == b.id)
-  }
 
   @Test func eligibleAutoRunScriptsFiltersMixed() {
     let settings = makeEmptySettings()

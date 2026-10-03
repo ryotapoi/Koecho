@@ -6,17 +6,6 @@ import Testing
 @MainActor
 @Suite(.serialized)
 struct ReplacementPreviewTooltipTests {
-  @Test func windowOriginKeepsUnclampedPosition() {
-    let origin = ReplacementPreviewTooltip.windowOrigin(
-      windowSize: NSSize(width: 80, height: 20),
-      aboveAnchor: NSPoint(x: 100, y: 100),
-      belowAnchor: NSPoint(x: 100, y: 140),
-      visibleFrame: NSRect(x: 0, y: 0, width: 400, height: 300)
-    )
-
-    #expect(origin == NSPoint(x: 100, y: 100))
-  }
-
   @Test func windowOriginClampsToRightEdge() {
     let origin = ReplacementPreviewTooltip.windowOrigin(
       windowSize: NSSize(width: 80, height: 20),

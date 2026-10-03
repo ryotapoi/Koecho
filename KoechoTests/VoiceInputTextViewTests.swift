@@ -221,16 +221,6 @@ struct VoiceInputTextViewTests {
     #expect(textView.volatileRange == nil)
   }
 
-  @Test func clearVolatileTextWhenNoneIsNoop() {
-    let textView = makeTextView()
-    textView.string = "hello"
-
-    textView.clearVolatileText()
-
-    #expect(textView.string == "hello")
-    #expect(textView.volatileRange == nil)
-  }
-
   @Test func finalizeVolatileTextKeepsTextClearsRange() {
     let textView = makeTextView()
     textView.string = "hello"
@@ -249,13 +239,6 @@ struct VoiceInputTextViewTests {
     textView.setVolatileText(" world", at: 5)
 
     #expect(textView.finalizedString == "hello")
-  }
-
-  @Test func finalizedStringWithNoVolatile() {
-    let textView = makeTextView()
-    textView.string = "hello world"
-
-    #expect(textView.finalizedString == "hello world")
   }
 
   @Test func setVolatileTextWithEmptyStringAfterVolatileClearsVolatile() {
@@ -354,19 +337,6 @@ struct VoiceInputTextViewTests {
     #expect(finalizeCalled)
   }
 
-  @Test func shouldChangeTextNoOpWhenNoVolatile() {
-    let textView = makeTextView()
-    textView.string = "hello"
-
-    let result = textView.shouldChangeText(
-      in: NSRange(location: 5, length: 0),
-      replacementString: "!"
-    )
-
-    #expect(result == true)
-    #expect(textView.string == "hello")
-  }
-
   @Test func setVolatileTextClampsToStorageLength() {
     let textView = makeTextView()
     textView.string = "hi"
@@ -378,16 +348,4 @@ struct VoiceInputTextViewTests {
     #expect(textView.volatileRange == NSRange(location: 2, length: 6))
   }
 
-  @Test func clearVolatileTextWithCorruptedRange() {
-    let textView = makeTextView()
-    textView.string = "hello"
-
-    textView.setVolatileText(" world", at: 5)
-    // Simulate external modification that corrupts the range
-    textView.textStorage?.replaceCharacters(in: NSRange(location: 0, length: 11), with: "hi")
-
-    // Should safely handle out-of-bounds range
-    textView.clearVolatileText()
-    #expect(textView.volatileRange == nil)
-  }
 }

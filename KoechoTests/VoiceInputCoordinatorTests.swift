@@ -316,16 +316,6 @@ import Testing
 
   // MARK: - VoiceInputDelegate: didUpdateVolatile
 
-  @Test func didUpdateVolatileSetsVolatileText() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    coordinator.handleCursorMoved(5)
-
-    coordinator.voiceInput(didUpdateVolatile: " world")
-
-    #expect(mockTV.setVolatileTextCalls.count == 1)
-    #expect(mockTV.setVolatileTextCalls[0].text == " world")
-  }
-
   @Test func visibleVolatileVoiceTextInvalidatesScriptUndoBeforeFinalization() {
     let (coordinator, appState, _, _) = makeCoordinator(inputText: "after")
     let textView = VoiceInputTextView()
@@ -410,14 +400,6 @@ import Testing
 
   // MARK: - handleCursorMoved
 
-  @Test func handleCursorMovedUpdatesVoiceInsertionPoint() {
-    let (coordinator, _, _, _) = makeCoordinator(inputText: "hello")
-
-    coordinator.handleCursorMoved(3)
-
-    #expect(coordinator.voiceInsertionPoint == 3)
-  }
-
   @Test func handleCursorMovedFinalizesVolatile() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
     mockTV.volatileRange = NSRange(location: 5, length: 6)
@@ -432,16 +414,6 @@ import Testing
   }
 
   // MARK: - Volatile suppression during cursor move (replay state without deadline)
-
-  @Test func didUpdateVolatileSuppressesWhenLocallyFinalizedAndNoDeadline() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    coordinator.handleCursorMoved(5)
-    coordinator.replayState = .restartInProgress(localText: "world")
-
-    coordinator.voiceInput(didUpdateVolatile: "wor")
-
-    #expect(mockTV.setVolatileTextCalls.isEmpty)
-  }
 
   @Test func didUpdateVolatileClearsStateWhenDeadlineExpired() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")

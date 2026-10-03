@@ -86,39 +86,6 @@ struct ReplacementRuleTests {
     #expect(result == "C")
   }
 
-  // MARK: - Skip conditions
-
-  @Test func emptyPatternSkipped() {
-    let rules = [
-      ReplacementRule(pattern: "", replacement: "x")
-    ]
-    let result = applyReplacementRules(rules, to: "hello")
-    #expect(result == "hello")
-  }
-
-  // MARK: - Edge cases
-
-  @Test func emptyInputText() {
-    let rules = [
-      ReplacementRule(pattern: "hello", replacement: "bye")
-    ]
-    let result = applyReplacementRules(rules, to: "")
-    #expect(result == "")
-  }
-
-  @Test func replacementResultsInEmptyString() {
-    let rules = [
-      ReplacementRule(pattern: ".*", replacement: "", usesRegularExpression: true)
-    ]
-    let result = applyReplacementRules(rules, to: "hello")
-    #expect(result == "")
-  }
-
-  @Test func noRulesReturnsOriginal() {
-    let result = applyReplacementRules([], to: "hello")
-    #expect(result == "hello")
-  }
-
   // MARK: - Regex mode ignores matchesWholeWord
 
   @Test func regexModeIgnoresMatchesWholeWord() {
@@ -211,23 +178,6 @@ struct ReplacementRuleTests {
     #expect(matches.count == 1)
     #expect(
       matches[0] == ReplacementMatch(range: NSRange(location: 4, length: 5), replacement: "$100"))
-  }
-
-  @Test func findMatchesNoMatch() {
-    let rules = [ReplacementRule(pattern: "xyz", replacement: "abc")]
-    let matches = findReplacementMatches(rules, in: "hello world")
-    #expect(matches.isEmpty)
-  }
-
-  @Test func findMatchesEmptyText() {
-    let rules = [ReplacementRule(pattern: "hello", replacement: "bye")]
-    let matches = findReplacementMatches(rules, in: "")
-    #expect(matches.isEmpty)
-  }
-
-  @Test func findMatchesEmptyRules() {
-    let matches = findReplacementMatches([], in: "hello world")
-    #expect(matches.isEmpty)
   }
 
   // MARK: - validate

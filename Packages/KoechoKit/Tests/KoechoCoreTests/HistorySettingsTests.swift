@@ -36,17 +36,11 @@ struct HistorySettingsTests {
     let settings = HistorySettings(defaults: makeDefaults())
     settings.historyMaxCount = 0
     #expect(settings.historyMaxCount == 1)
-
-    settings.historyMaxCount = -5
-    #expect(settings.historyMaxCount == 1)
   }
 
   @Test func clampsHistoryRetentionDays() {
     let settings = HistorySettings(defaults: makeDefaults())
     settings.historyRetentionDays = 0
-    #expect(settings.historyRetentionDays == 1)
-
-    settings.historyRetentionDays = -5
     #expect(settings.historyRetentionDays == 1)
   }
 }

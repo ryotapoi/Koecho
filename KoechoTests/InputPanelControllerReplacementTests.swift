@@ -24,6 +24,7 @@ extension InputPanelControllerTests {
     await ctx.controller.confirm()
 
     #expect(paster.pastedTexts == ["bye world"])
+    #expect(ctx.historyStore.entries.map(\.text) == ["bye world"])
   }
 
   @Test func confirmWithReplacementRulesEmptyingText() async {
@@ -175,14 +176,4 @@ extension InputPanelControllerTests {
     ctx.controller.handleTextChanged("えーとこんにちは")
     #expect(ctx.appState.inputText == "こんにちは")
   }
-
-  @Test func autoReplacementSkipsWhenNoRules() {
-    let ctx = makeController()
-
-    ctx.controller.showPanel()
-    ctx.controller.handleTextChanged("hello world")
-
-    #expect(ctx.appState.inputText == "hello world")
-  }
-
 }

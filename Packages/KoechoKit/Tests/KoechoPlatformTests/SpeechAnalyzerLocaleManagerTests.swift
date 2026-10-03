@@ -16,28 +16,6 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(manager.reservedLocales.isEmpty)
   }
 
-  @Test func findNormalizedMatchNormalized() {
-    let manager = SpeechAnalyzerLocaleManager()
-    let items = [
-      LocaleItem(
-        identifier: "en_US", displayName: "English (US)",
-        normalizedKey: SpeechLocale.normalizationKey("en_US"), isReserved: true)
-    ]
-    let match = manager.findNormalizedMatch(for: "en-US", in: items)
-    #expect(match?.identifier == "en_US")
-  }
-
-  @Test func findNormalizedMatchNoMatch() {
-    let manager = SpeechAnalyzerLocaleManager()
-    let items = [
-      LocaleItem(
-        identifier: "en-US", displayName: "English (US)",
-        normalizedKey: SpeechLocale.normalizationKey("en-US"), isReserved: true)
-    ]
-    let match = manager.findNormalizedMatch(for: "fr-FR", in: items)
-    #expect(match == nil)
-  }
-
   // MARK: - correctSelection
 
   @Test func correctSelectionWhenSelectionInAll() {

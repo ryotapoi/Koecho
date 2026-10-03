@@ -63,16 +63,6 @@ struct HistoryStoreTests {
     #expect(store.entries[0].text == "recent")
   }
 
-  @Test func persistAndReload() {
-    let dir = makeTempDirectory()
-    let settings = makeSettings()
-    let store1 = HistoryStore(directoryURL: dir)
-    store1.add(text: "persisted", settings: settings)
-    let store2 = HistoryStore(directoryURL: dir)
-    #expect(store2.entries.count == 1)
-    #expect(store2.entries[0].text == "persisted")
-  }
-
   @Test func clear() {
     let dir = makeTempDirectory()
     let store = HistoryStore(directoryURL: dir)

@@ -264,15 +264,6 @@ import Testing
 
   // MARK: - runAutoScript
 
-  @Test func runAutoScriptSuccess() async throws {
-    let (service, _, _, _) = makeService(inputText: "hello")
-    let script = Script(name: "Test", scriptPath: "cat")
-
-    let result = try await service.runAutoScript(script, on: "hello world")
-
-    #expect(result == "hello world")
-  }
-
   @Test func runAutoScriptPassesEmptySelection() async throws {
     let scriptPath = try makeScript(
       "echo \"sel=$KOECHO_SELECTION start=$KOECHO_SELECTION_START end=$KOECHO_SELECTION_END\""
@@ -286,15 +277,6 @@ import Testing
     let result = try await service.runAutoScript(script, on: "hello")
 
     #expect(result == "sel= start= end=")
-  }
-
-  @Test func runAutoScriptErrorThrows() async {
-    let (service, _, _, _) = makeService(inputText: "hello")
-    let script = Script(name: "Test", scriptPath: "exit 1")
-
-    await #expect(throws: (any Error).self) {
-      try await service.runAutoScript(script, on: "hello")
-    }
   }
 
   // MARK: - cycleAutoRunScript

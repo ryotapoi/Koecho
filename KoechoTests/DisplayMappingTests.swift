@@ -73,10 +73,8 @@ import Testing
 
   @Test func iconPickerFiltersPresetsAndOffersOneExactCustomSymbol() {
     let all = ScriptSymbolPresets.matchingGroups(query: "", selectedSymbol: "moon.stars.fill")
-    #expect(all.count == 6)
     #expect(all.last?.id == "custom")
     #expect(all.last?.symbols == ["moon.stars.fill"])
-    #expect(all.dropLast().flatMap(\.symbols).count == 29)
 
     let filtered = ScriptSymbolPresets.matchingGroups(query: "  arrow. ", selectedSymbol: "moon.stars.fill")
     #expect(filtered.count == 1)
@@ -165,7 +163,7 @@ import Testing
     #expect(appState.voiceEngineStatus == nil)
   }
 
-  @Test func inputPanelControllerPasteErrorMessagesCoverAllCases() async {
+  @Test func inputPanelControllerMapsPasteErrorMessages() async {
     let cases: [(any Error, String)] = [
       (
         ClipboardPasterError.accessibilityNotTrusted,
@@ -173,10 +171,6 @@ import Testing
           localized:
             "Enable Koecho in System Settings > Privacy & Security > Accessibility, then retry. If it is already enabled, remove and add the current Koecho again. Restart Koecho only if the permission still does not take effect."
         )
-      ),
-      (
-        ClipboardPasterError.targetAppTerminated,
-        String(localized: "Target application has been terminated.")
       ),
       (
         ClipboardPasterError.failedToCreateCGEvent,

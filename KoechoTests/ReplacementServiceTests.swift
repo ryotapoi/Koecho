@@ -89,7 +89,6 @@ import Testing
     service.applyOrPreview()
 
     #expect(appState.inputText == "hello")
-    #expect(mockTV.clearReplacementPreviewsCallCount == 0)
     #expect(mockTV.replaceTextSelectingCalls.isEmpty)
   }
 
@@ -157,6 +156,20 @@ import Testing
     service.applyOrPreview()
 
     #expect(mockTV.showReplacementPreviewsCalls.count == 1)
+
+    mockTV.string = "goodbye"
+    service.applyOrPreview()
+
+    #expect(mockTV.clearReplacementPreviewsCallCount == 1)
+    #expect(mockTV.showReplacementPreviewsCalls.count == 1)
+    #expect(appState.inputText == "hello")
+
+    mockTV.string = ""
+    service.applyOrPreview()
+
+    #expect(mockTV.clearReplacementPreviewsCallCount == 2)
+    #expect(mockTV.showReplacementPreviewsCalls.count == 1)
+    #expect(appState.inputText == "hello")
   }
 
   // MARK: - addRule

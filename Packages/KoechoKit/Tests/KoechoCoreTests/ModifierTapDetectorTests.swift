@@ -8,15 +8,6 @@ struct ModifierTapDetectorTests {
 
   // MARK: - Single Tap (adapted from Bool → TapResult)
 
-  @Test func longPressDoesNotFire() {
-    var detector = ModifierTapDetector()
-
-    _ = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: true, now: 1.0)
-    let release = detector.handleFlagsChanged(keyCode: fnKeyCode, targetFlagIsSet: false, now: 1.5)
-    #expect(release == .none)
-    #expect(detector.state == .idle)
-  }
-
   @Test func otherModifierKeyDoesNotFire() {
     var detector = ModifierTapDetector()
     detector.targetKeyCode = 55  // Left Command

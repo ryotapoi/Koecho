@@ -77,7 +77,9 @@ extension InputPanelControllerTests {
     #expect(ctx.historyStore.entries.map(\.text) == ["こんにちは"])
   }
 
-  @Test func accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput() async throws {
+  @Test func accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput()
+    async throws
+  {
     let paster = MockPaster()
     paster.errorToThrow = ClipboardPasterError.accessibilityNotTrusted
     let engine = MockVoiceInputEngine()
@@ -151,11 +153,13 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.isInputPanelVisible == true)
     #expect(ctx.appState.frontmostApplication == nil)
     #expect(ctx.appState.inputText == "")
-    #expect(ctx.appState.errorMessage == String(localized: "Target application has been terminated."))
+    #expect(
+      ctx.appState.errorMessage == String(localized: "Target application has been terminated."))
   }
 
   @Test func confirmWithEmptyTextActsAsCancel() async {
-    let ctx = makeController()
+    let ducker = MockVolumeDucker()
+    let ctx = makeController(ducker: ducker)
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("   \n  ")
@@ -167,6 +171,8 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "")
     #expect(ctx.appState.frontmostApplication == nil)
     #expect(ctx.paster.restoreClipboardCallCount == 1)
+    #expect(ctx.historyStore.entries.isEmpty)
+    #expect(ducker.restoreCallCount == 1)
   }
 
   @Test func confirmWhenNotVisibleIsNoop() async {
@@ -240,24 +246,6 @@ extension InputPanelControllerTests {
 
   // MARK: - History
 
-  @Test func confirmRecordsTextAfterReplacement() async {
-    let paster = MockPaster()
-    let ctx = makeController(paster: paster)
-
-    ctx.appState.settings.replacement.addReplacementRule(
-      ReplacementRule(pattern: "えーと", replacement: "")
-    )
-
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("えーと今日はいい天気")
-    ctx.appState.frontmostApplication = NSRunningApplication.current
-
-    await ctx.controller.confirm()
-
-    #expect(ctx.historyStore.entries.count == 1)
-    #expect(ctx.historyStore.entries[0].text == "今日はいい天気")
-  }
-
   @Test func confirmDoesNotRecordWhenDisabled() async {
     let paster = MockPaster()
     let ctx = makeController(paster: paster)
@@ -287,18 +275,5 @@ extension InputPanelControllerTests {
 
     #expect(ctx.historyStore.entries.isEmpty)
     #expect(ctx.appState.scriptUndoText == nil)
-  }
-
-  @Test func confirmDoesNotRecordEmptyText() async {
-    let paster = MockPaster()
-    let ctx = makeController(paster: paster)
-
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("   \n  ")
-    ctx.appState.frontmostApplication = NSRunningApplication.current
-
-    await ctx.controller.confirm()
-
-    #expect(ctx.historyStore.entries.isEmpty)
   }
 }

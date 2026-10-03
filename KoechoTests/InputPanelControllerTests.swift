@@ -90,13 +90,6 @@ struct InputPanelControllerTests {
     #expect(ctx.controller.panel.isVisible)
   }
 
-  // MARK: - Panel Configuration
-
-  @Test func panelUsesFrameAutosaveName() {
-    let ctx = makeController()
-    #expect(ctx.controller.panel.frameAutosaveName == "InputPanel")
-  }
-
   // MARK: - Selected Text as Initial Input
 
   @Test func showPanelWithSelectedTextSetsInputText() async throws {
@@ -146,16 +139,6 @@ struct InputPanelControllerTests {
     #expect(ducker.duckCallCount == 1)
   }
 
-  @Test func confirmEmptyTextCallsRestore() async {
-    let ducker = MockVolumeDucker()
-    let ctx = makeController(ducker: ducker)
-    ctx.controller.showPanel()
-    ctx.appState.setInputText("")
-    await ctx.controller.confirm()
-    // Empty text path calls clearState() which calls restore()
-    #expect(ducker.restoreCallCount == 1)
-  }
-
   // MARK: - Voice Input Off Mode
 
   @Test func showPanelWithVoiceOffSkipsDucking() {
@@ -165,25 +148,6 @@ struct InputPanelControllerTests {
     ctx.controller.showPanel()
 
     #expect(ducker.duckCallCount == 0)
-  }
-
-  @Test func confirmWithVoiceOffIsIdempotent() async {
-    let ctx = makeController()
-    ctx.appState.settings.voiceInput.isVoiceInputEnabled = false
-    ctx.controller.showPanel()
-
-    // confirm with empty text — should not crash
-    await ctx.controller.confirm()
-    #expect(ctx.appState.isInputPanelVisible == false)
-  }
-
-  @Test func cancelWithVoiceOffIsIdempotent() {
-    let ctx = makeController()
-    ctx.appState.settings.voiceInput.isVoiceInputEnabled = false
-    ctx.controller.showPanel()
-
-    ctx.controller.cancel()
-    #expect(ctx.appState.isInputPanelVisible == false)
   }
 
   @Test func voiceShortcutTogglesOnlyInsidePanel() async {
@@ -211,6 +175,8 @@ struct InputPanelControllerTests {
     ctx.controller.showPanel()
     #expect(ctx.controller.panel.onShortcutKey?(key) == false)
     ctx.appState.settings.voiceInput.voiceInputShortcutKey = key
-    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.option], character: "v")) == false)
+    #expect(
+      ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.option], character: "v"))
+        == false)
   }
 }

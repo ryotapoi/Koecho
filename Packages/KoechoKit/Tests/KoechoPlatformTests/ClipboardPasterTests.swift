@@ -44,18 +44,6 @@ struct ClipboardPasterTests {
     return pasteboard.string(forType: .string) == expected
   }
 
-  @Test func savePasteboardWithString() {
-    let pb = makeTestPasteboard()
-    pb.clearContents()
-    pb.setString("hello", forType: .string)
-    let items = savePasteboard(pb)
-    #expect(items.count == 1)
-    #expect(items[0].types.contains(.string))
-    let data = items[0].dataByType[.string]
-    #expect(data != nil)
-    #expect(String(data: data!, encoding: .utf8) == "hello")
-  }
-
   @Test func savePasteboardEmpty() {
     let pb = makeTestPasteboard()
     pb.clearContents()

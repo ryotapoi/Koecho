@@ -67,11 +67,6 @@ struct VoiceInputSettingsTests {
     #expect(VoiceInputSettings.systemSpeechAnalyzerLocale(preferredLanguage: nil) == "en-US")
   }
 
-  @Test func defaultAudioInputDeviceUID() {
-    let settings = VoiceInputSettings(defaults: makeDefaults())
-    #expect(settings.audioInputDeviceUID == nil)
-  }
-
   @Test func persistsAudioInputDeviceUID() {
     let defaults = makeDefaults()
 
@@ -86,16 +81,12 @@ struct VoiceInputSettingsTests {
     let defaults = makeDefaults()
 
     let settings = VoiceInputSettings(defaults: defaults)
+    #expect(settings.audioInputDeviceUID == nil)
     settings.audioInputDeviceUID = "SomeDevice"
     settings.audioInputDeviceUID = nil
 
     let reloaded = VoiceInputSettings(defaults: defaults)
     #expect(reloaded.audioInputDeviceUID == nil)
-  }
-
-  @Test func defaultAudioInputDeviceName() {
-    let settings = VoiceInputSettings(defaults: makeDefaults())
-    #expect(settings.audioInputDeviceName == nil)
   }
 
   @Test func persistsAudioInputDeviceName() {
@@ -109,6 +100,7 @@ struct VoiceInputSettingsTests {
   @Test func persistsNilAudioInputDeviceName() {
     let defaults = makeDefaults()
     let settings = VoiceInputSettings(defaults: defaults)
+    #expect(settings.audioInputDeviceName == nil)
     settings.audioInputDeviceName = "AirPods Pro"
     settings.audioInputDeviceName = nil
     let reloaded = VoiceInputSettings(defaults: defaults)

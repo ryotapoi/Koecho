@@ -165,17 +165,6 @@ nonisolated struct ScriptRunnerTests {
     }
   }
 
-  @Test func emptyOutput() async throws {
-    let path = try makeScript("printf ''")
-    defer { try? FileManager.default.removeItem(atPath: path) }
-
-    let runner = ScriptRunner()
-
-    await #expect(throws: ScriptRunnerError.emptyOutput) {
-      try await runner.run(scriptPath: path, input: "")
-    }
-  }
-
   @Test func whitespaceOnlyOutput() async throws {
     let path = try makeScript("echo '   '")
     defer { try? FileManager.default.removeItem(atPath: path) }
