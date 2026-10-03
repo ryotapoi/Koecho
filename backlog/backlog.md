@@ -33,11 +33,13 @@
 
 #### 通常対応
 
-- [ ] F2 音声終了待ち中の再確定で最終認識が欠落しないようにする
+- [x] F2 音声終了待ち中の再確定で最終認識が欠落しないようにする
   - 目的・発生条件: auto-run 未選択で音声入力を確定し、最終結果を待つ間にホットキーまたは Command+Return で再確定すると、末尾を欠いた本文の貼り付けや空入力としての終了に至る。
-  - 根拠: `KM-01-C05`。`R02-C02`。[`InputPanelController.swift`](../Koecho/InputPanelController.swift) は音声終了 await 前に isConfirming を立てず、[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) の stop は .stopping への再入で即時に返る。二つ目の confirm がパネルを閉じると、[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) の後続 didFinalize は非表示 guard で棄却される。
+  - 根拠: `KM-01-C05`。`R02-C02`。修正前は [`InputPanelController.swift`](../Koecho/InputPanelController.swift) の音声終了 await 中に再確定でき、二つ目の confirm がパネルを閉じると後続 didFinalize が非表示 guard で棄却されていた。
   - 作業・完了条件: 終了待ち中に繰り返し確定しても最終認識を含む本文が一度だけ貼り付けられ、空本文扱いで発話が失われないことを確認する。終了待ちと最終結果の順序を既存テストで確認し、実音声で連続確定を確認する。
-  - 限界: 実行未確認。停止 await 中の追加確定より後に最終結果が届く順序が条件。
+  - 進捗: confirm 入口に専用の再入ガードを追加。停止待ち中の追加確定より後に最終結果が届く順序を、初期本文あり／空の回帰テストで確認。最終本文の一回貼付、次回確定、既存 auto-run キャンセル・ペースト失敗後の再試行を含む App テスト192件と Package テスト190件、build が成功（2026-10-04）。
+  - 実環境確認: 専用署名ビルドを起動・再ビルド再起動し、本人が script と実音声の Command+Return／ホットキー連続確定で全文の一回貼付を確認。「問題なく動いた」「権限周りは何もない」と報告し、再許可なし（2026-10-04）。共有入力履歴の使用は本人許可済み。検証用プロセスは確認後に停止。
+  - 限界: 実画面確認は CUA timeout のため本人報告による。実音声の細かい結果到着順は回帰テストで担保する。
 
 - [ ] F6 クリップボード復元がペースト後の新しいコピー内容を上書きしないようにする
   - 目的・発生条件: ペースト後の復元待ち（既定2秒）に外部アプリでコピーするか「最後の履歴をコピー」を操作すると、その新しいコピー内容が古い snapshot で失われる。

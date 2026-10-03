@@ -9,6 +9,59 @@ import Testing
 // MARK: - confirm
 
 extension InputPanelControllerTests {
+  @Test(arguments: ["hello", ""])
+  func repeatedConfirmWaitsForFinalSpeech(initialText: String) async throws {
+    let engine = MockVoiceInputEngine()
+    let ctx = makeController(makeEngine: { engine })
+    ctx.controller.showPanel()
+    await Task.yield()
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller))
+    textView.replaceText(initialText)
+    ctx.appState.setInputText(initialText)
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+
+    let stopStarted = AsyncStream<Void>.makeStream()
+    let finishStop = AsyncStream<Void>.makeStream()
+    engine.onStop = {
+      // Model the real engine's immediate return on a second stop request.
+      guard engine.stopCallCount == 1 else { return }
+      stopStarted.continuation.yield(())
+      for await _ in finishStop.stream { break }
+    }
+    defer {
+      stopStarted.continuation.finish()
+      finishStop.continuation.finish()
+    }
+    let confirmTask = Task { await ctx.controller.confirm() }
+    for await _ in stopStarted.stream { break }
+
+    await ctx.controller.confirm()
+    await ctx.controller.confirm()
+    #expect(ctx.appState.isInputPanelVisible)
+    #expect(ctx.paster.pastedTexts.isEmpty)
+    #expect(ctx.paster.restoreClipboardCallCount == 0)
+    #expect(textView.string == initialText)
+
+    textView.setSelectedRange(NSRange(location: (initialText as NSString).length, length: 0))
+    ctx.controller.voiceCoordinator.handleCursorMoved((initialText as NSString).length)
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: " world")
+    finishStop.continuation.yield(())
+    await confirmTask.value
+
+    let expected = initialText.isEmpty ? "world" : "hello world"
+    #expect(ctx.paster.pastedTexts == [expected])
+    #expect(ctx.historyStore.entries.map(\.text) == [expected])
+    #expect(!ctx.appState.isInputPanelVisible)
+
+    ctx.controller.showPanel()
+    await Task.yield()
+    textView.replaceText("next")
+    ctx.appState.setInputText("next")
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+    await ctx.controller.confirm()
+    #expect(ctx.paster.pastedTexts == [expected, "next"])
+  }
+
   @Test func confirmSuccessClearsState() async {
     let paster = MockPaster()
     let ctx = makeController(paster: paster)

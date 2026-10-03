@@ -11,6 +11,8 @@ final class InputPanelController {
   private let paster: any Pasting
   private let historyStore: HistoryStore
   private var isConfirming = false
+  // Covers voice finalization and auto-run without blocking Escape cancellation.
+  private var isProcessingConfirmation = false
   private var textView: VoiceInputTextView?
   private(set) var panel: InputPanel
   private var replacementService: ReplacementService!
@@ -119,7 +121,11 @@ final class InputPanelController {
   }
 
   func confirm() async {
-    guard appState.isInputPanelVisible, !isConfirming, !appState.isRunningScript else { return }
+    guard appState.isInputPanelVisible, !isProcessingConfirmation, !isConfirming,
+      !appState.isRunningScript
+    else { return }
+    isProcessingConfirmation = true
+    defer { isProcessingConfirmation = false }
     appState.discardScriptUndo()
 
     let rawText = await finalizeVoiceInput()
