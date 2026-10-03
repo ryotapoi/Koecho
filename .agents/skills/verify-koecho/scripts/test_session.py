@@ -36,7 +36,7 @@ class SessionTests(unittest.TestCase):
         self.addCleanup(self.patch_scratch.stop)
 
     def state(self, **values):
-        data = {'before': {}, 'owned': {}, 'prepared_at': time.time() - 1}
+        data = {'owned': {}, 'prepared_at': time.time() - 1}
         data.update(values)
         self.state_file.write_text(json.dumps(data))
         return data

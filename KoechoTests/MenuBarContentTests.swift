@@ -42,7 +42,6 @@ struct MenuBarContentTests {
     LocaleItem(
       identifier: identifier,
       displayName: identifier,
-      sortKey: identifier,
       normalizedKey: SpeechLocale.normalizationKey(identifier),
       isReserved: true
     )

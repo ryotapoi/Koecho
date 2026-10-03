@@ -6,7 +6,6 @@ import os
 public struct LocaleItem: Identifiable, Sendable, Equatable {
   public let identifier: String
   public let displayName: String
-  public let sortKey: String
   public let normalizedKey: String
   public var isReserved: Bool
   public var id: String { identifier }
@@ -16,12 +15,11 @@ public struct LocaleItem: Identifiable, Sendable, Equatable {
   }
 
   public init(
-    identifier: String, displayName: String, sortKey: String, normalizedKey: String,
+    identifier: String, displayName: String, normalizedKey: String,
     isReserved: Bool
   ) {
     self.identifier = identifier
     self.displayName = displayName
-    self.sortKey = sortKey
     self.normalizedKey = normalizedKey
     self.isReserved = isReserved
   }
@@ -62,7 +60,7 @@ public final class SpeechAnalyzerLocaleManager {
       return makeLocaleItem(
         from: locale, normalizedKey: key, isReserved: reservedKeys.contains(key))
     }
-    items.sort { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
+    items.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
 
     allLocales = items
 
@@ -156,7 +154,7 @@ public final class SpeechAnalyzerLocaleManager {
     return reserved.map { locale in
       let key = SpeechLocale.normalizationKey(locale)
       return makeLocaleItem(from: locale, normalizedKey: key, isReserved: true)
-    }.sorted { $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending }
+    }.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
   }
 
   /// Canonical stale-selection correction: returns a replacement identifier
@@ -190,7 +188,6 @@ public final class SpeechAnalyzerLocaleManager {
     return LocaleItem(
       identifier: identifier,
       displayName: displayName,
-      sortKey: displayName,
       normalizedKey: normalizedKey,
       isReserved: isReserved
     )

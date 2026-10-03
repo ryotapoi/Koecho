@@ -2,12 +2,7 @@ import Foundation
 import os
 
 private struct ReplacementRuleApplication {
-  struct Match {
-    let range: NSRange
-    let replacement: String
-  }
-
-  let matches: [Match]
+  let matches: [ReplacementMatch]
   let result: String
 
   init?(rule: ReplacementRule, to text: String) {
@@ -17,7 +12,7 @@ private struct ReplacementRuleApplication {
     let matches = regex.matches(in: text, range: range)
 
     self.matches = matches.map { match in
-      Match(
+      ReplacementMatch(
         range: match.range,
         replacement: regex.replacementString(
           for: match,

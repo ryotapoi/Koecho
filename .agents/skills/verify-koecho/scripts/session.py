@@ -67,14 +67,14 @@ def main():
             'Shared installed-app history exists. Use a dedicated macOS user or obtain explicit consent '
             'for startup purge before --allow-shared-history; disabling history does not skip purge.')
         evidence.mkdir(parents=True, exist_ok=False)
-        state = {'before': {}, 'owned': {}, 'prepared_at': time.time()}
+        state = {'owned': {}, 'prepared_at': time.time()}
         state_file.write_text(json.dumps(state, indent=2))
         print(evidence); return
     state = json.loads(state_file.read_text())
     if ns.action == 'adopt':
         current = processes()
         assert not state['owned'], 'Run already has an owned process'
-        assert len(current) == 1 and not state['before'], 'Expected one newly launched verification process'
+        assert len(current) == 1, 'Expected one newly launched verification process'
         pid, process = next(iter(current.items()))
         launched = time.mktime(time.strptime(process['started'], '%a %b %d %H:%M:%S %Y'))
         assert launched >= int(state['prepared_at']), 'Process predates this run'

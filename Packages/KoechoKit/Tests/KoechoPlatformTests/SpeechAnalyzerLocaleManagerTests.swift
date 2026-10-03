@@ -20,7 +20,7 @@ struct SpeechAnalyzerLocaleManagerTests {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
       LocaleItem(
-        identifier: "en_US", displayName: "English (US)", sortKey: "English (US)",
+        identifier: "en_US", displayName: "English (US)",
         normalizedKey: SpeechLocale.normalizationKey("en_US"), isReserved: true)
     ]
     let match = manager.findNormalizedMatch(for: "en-US", in: items)
@@ -31,7 +31,7 @@ struct SpeechAnalyzerLocaleManagerTests {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
       LocaleItem(
-        identifier: "en-US", displayName: "English (US)", sortKey: "English (US)",
+        identifier: "en-US", displayName: "English (US)",
         normalizedKey: SpeechLocale.normalizationKey("en-US"), isReserved: true)
     ]
     let match = manager.findNormalizedMatch(for: "fr-FR", in: items)
@@ -44,7 +44,7 @@ struct SpeechAnalyzerLocaleManagerTests {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
       LocaleItem(
-        identifier: "en-US", displayName: "English (US)", sortKey: "English (US)",
+        identifier: "en-US", displayName: "English (US)",
         normalizedKey: SpeechLocale.normalizationKey("en-US"), isReserved: false)
     ]
     let result = manager.correctSelection(currentSelection: "en-US", items: items)
@@ -55,10 +55,10 @@ struct SpeechAnalyzerLocaleManagerTests {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
       LocaleItem(
-        identifier: "fr-FR", displayName: "French", sortKey: "French",
+        identifier: "fr-FR", displayName: "French",
         normalizedKey: SpeechLocale.normalizationKey("fr-FR"), isReserved: true),
       LocaleItem(
-        identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese",
+        identifier: "ja-JP", displayName: "Japanese",
         normalizedKey: SpeechLocale.normalizationKey("ja-JP"), isReserved: true),
     ]
     let result = manager.correctSelection(currentSelection: "de-DE", items: items)
@@ -69,10 +69,10 @@ struct SpeechAnalyzerLocaleManagerTests {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
       LocaleItem(
-        identifier: "fr-FR", displayName: "French", sortKey: "French",
+        identifier: "fr-FR", displayName: "French",
         normalizedKey: SpeechLocale.normalizationKey("fr-FR"), isReserved: true),
       LocaleItem(
-        identifier: "de-DE", displayName: "German", sortKey: "German",
+        identifier: "de-DE", displayName: "German",
         normalizedKey: SpeechLocale.normalizationKey("de-DE"), isReserved: true),
     ]
     let result = manager.correctSelection(currentSelection: "zh-CN", items: items)
@@ -89,10 +89,10 @@ struct SpeechAnalyzerLocaleManagerTests {
     let manager = SpeechAnalyzerLocaleManager()
     let items = [
       LocaleItem(
-        identifier: "ja-JP", displayName: "Japanese", sortKey: "Japanese",
+        identifier: "ja-JP", displayName: "Japanese",
         normalizedKey: SpeechLocale.normalizationKey("ja-JP"), isReserved: true),
       LocaleItem(
-        identifier: "en_US", displayName: "English (US)", sortKey: "English (US)",
+        identifier: "en_US", displayName: "English (US)",
         normalizedKey: SpeechLocale.normalizationKey("en_US"), isReserved: true),
     ]
     let result = manager.correctSelection(currentSelection: "en-US", items: items)
