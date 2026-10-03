@@ -41,11 +41,12 @@
   - 実環境確認: 専用署名ビルドを起動・再ビルド再起動し、本人が script と実音声の Command+Return／ホットキー連続確定で全文の一回貼付を確認。「問題なく動いた」「権限周りは何もない」と報告し、再許可なし（2026-10-04）。共有入力履歴の使用は本人許可済み。検証用プロセスは確認後に停止。
   - 限界: 実画面確認は CUA timeout のため本人報告による。実音声の細かい結果到着順は回帰テストで担保する。
 
-- [ ] F6 クリップボード復元がペースト後の新しいコピー内容を上書きしないようにする
+- [x] F6 クリップボード復元がペースト後の新しいコピー内容を上書きしないようにする
   - 目的・発生条件: ペースト後の復元待ち（既定2秒）に外部アプリでコピーするか「最後の履歴をコピー」を操作すると、その新しいコピー内容が古い snapshot で失われる。
-  - 根拠: `KM-05-C02` / `KM-06-C01`。`R09-C01`。[`ClipboardPaster.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/ClipboardPaster.swift) は現在のクリップボードが一時本文のままかを確認せず、clearContents と snapshot 書き戻しで遅延・即時復元する。[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift) の履歴コピーも同じ .general へ書き込む。
-  - 作業・完了条件: 復元待ちに行った外部コピーと履歴コピーが、遅延・明示復元後も保持されることを確認する。新しいコピーがない通常復元と連続ペーストも維持し、既存テストと実クリップボード操作で確認する。
-  - 限界: 実クリップボード未確認。復元までに別のコピーを挟む条件。
+  - 根拠: `KM-05-C02` / `KM-06-C01`。`R09-C01`。修正前の [`ClipboardPaster.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/ClipboardPaster.swift) は snapshot を無条件に復元していた。現在は一時本文を書いた版の changeCount を持ち、所有喪失時は復元を見送り、次のペーストでは新しいコピーを保存し直す。
+  - 完了: 外部コピー相当・実履歴コピーの遅延／明示復元、同一本文の再コピー、途中コピー後の連続ペーストの回帰テストを追加。Package テスト190件、build、専用署名アプリの build/run・署名確認が成功（2026-10-04）。
+  - 実環境確認: production source と hash が一致する一時 SPM harness で実 `.general`・実 ClipboardPaster・別 process の `pbcopy`・実 HistoryStore を使用。外部／履歴コピーの遅延・明示復元、同一本文、通常の遅延・明示復元、コピーあり／なしの連続ペーストの9ケースが成功。開始時 clipboard は全型をメモリ保存し、最後の所有版のままであることを確認して復元。証拠: `tmp/workflow/orchestrator-normal-20261004/changes/F6/evidence/`。
+  - 限界: CGEvent 送信・trust と対象 activate は既存依存で置換した。実 Cmd+V の貼付成功、UI 操作、Accessibility / Input Monitoring の権限維持は今回再確認していない。
 
 - [ ] F11 中断した修飾キータップの古いタイマーが次のダブルタップを失効させないようにする
   - 目的・発生条件: 非表示パネルで対象キーを単独タップし、300ms以内に別 modifier で中断してから対象キーをダブルタップすると、正しいタップ間隔でもパネルが開かない。

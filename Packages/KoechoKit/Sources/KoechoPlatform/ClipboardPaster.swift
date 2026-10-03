@@ -85,6 +85,7 @@ public final class ClipboardPaster: Pasting {
   private var restoreTask: Task<Void, Never>?
   private var savedContents: [PasteboardItem]?
   private var savedPasteboard: NSPasteboard?
+  private var ownedChangeCount: Int?
 
   public nonisolated init(
     pasteDelay: TimeInterval, cgEventClient: any CGEventClient = LiveCGEventClient()
@@ -122,7 +123,7 @@ public final class ClipboardPaster: Pasting {
     restoreTask?.cancel()
     restoreTask = nil
 
-    if savedContents == nil {
+    if savedContents == nil || savedPasteboard?.changeCount != ownedChangeCount {
       savedContents = savePasteboard(pasteboard)
       savedPasteboard = pasteboard
       logger.debug("Saved clipboard contents (\(self.savedContents?.count ?? 0) items)")
@@ -130,6 +131,7 @@ public final class ClipboardPaster: Pasting {
 
     pasteboard.clearContents()
     pasteboard.setString(text, forType: .string)
+    ownedChangeCount = pasteboard.changeCount
 
     target.activate()
     logger.debug(
@@ -142,14 +144,10 @@ public final class ClipboardPaster: Pasting {
     try cgEventClient.simulatePaste()
 
     let delay = pasteDelay
-    let saved = savedContents
     restoreTask = Task { [weak self] in
       try? await Task.sleep(for: .seconds(delay))
-      guard !Task.isCancelled, let self, let saved else { return }
-      restorePasteboard(pasteboard, from: saved)
-      self.savedContents = nil
-      self.savedPasteboard = nil
-      self.logger.debug("Clipboard restored after paste")
+      guard !Task.isCancelled, let self else { return }
+      self.restoreClipboard()
     }
   }
 
@@ -158,9 +156,12 @@ public final class ClipboardPaster: Pasting {
     restoreTask = nil
 
     guard let saved = savedContents, let pasteboard = savedPasteboard else { return }
-    restorePasteboard(pasteboard, from: saved)
+    if pasteboard.changeCount == ownedChangeCount {
+      restorePasteboard(pasteboard, from: saved)
+      logger.debug("Clipboard restored")
+    }
     savedContents = nil
     savedPasteboard = nil
-    logger.debug("Clipboard restored (immediate)")
+    ownedChangeCount = nil
   }
 }

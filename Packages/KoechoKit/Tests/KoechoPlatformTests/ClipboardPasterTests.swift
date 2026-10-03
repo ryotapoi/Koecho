@@ -152,6 +152,67 @@ struct ClipboardPasterTests {
     #expect(await waitForString("original", on: pasteboard))
   }
 
+  @Test(arguments: [false, true], [false, true])
+  func clipboardPasterPreservesNewCopy(historyCopy: Bool, immediate: Bool) async throws {
+    let pasteboard = makeTestPasteboard()
+    pasteboard.clearContents()
+    pasteboard.setString("original", forType: .string)
+    let paster = ClipboardPaster(pasteDelay: 0.15, cgEventClient: MockCGEventClient())
+    defer { paster.restoreClipboard() }
+    try await paster.paste(text: "temporary", to: MockClipboardPasteTarget(), using: pasteboard)
+
+    if historyCopy {
+      let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+      let suite = "ClipboardPasterTests.\(UUID().uuidString)"
+      let defaults = UserDefaults(suiteName: suite)!
+      defer {
+        defaults.removePersistentDomain(forName: suite)
+        try? FileManager.default.removeItem(at: directory)
+      }
+      let history = HistoryStore(directoryURL: directory)
+      history.add(text: "new copy", settings: HistorySettings(defaults: defaults))
+      #expect(history.copyLatestToClipboard(using: pasteboard))
+    } else {
+      pasteboard.clearContents()
+      pasteboard.setString("new copy", forType: .string)
+    }
+    let copyCount = pasteboard.changeCount
+    if immediate { paster.restoreClipboard() }
+    // Observe past the restore deadline, including a cancelled immediate-restore task.
+    try await Task.sleep(for: .milliseconds(300))
+    #expect(pasteboard.string(forType: .string) == "new copy")
+    #expect(pasteboard.changeCount == copyCount)
+  }
+
+  @Test func clipboardPasterPreservesSameTextCopiedAgain() async throws {
+    let pasteboard = makeTestPasteboard()
+    pasteboard.clearContents()
+    pasteboard.setString("original", forType: .string)
+    let paster = ClipboardPaster(pasteDelay: 0.15, cgEventClient: MockCGEventClient())
+    defer { paster.restoreClipboard() }
+    try await paster.paste(text: "temporary", to: MockClipboardPasteTarget(), using: pasteboard)
+    pasteboard.clearContents()
+    pasteboard.setString("temporary", forType: .string)
+    let copyCount = pasteboard.changeCount
+    try await Task.sleep(for: .milliseconds(300))
+    #expect(pasteboard.string(forType: .string) == "temporary")
+    #expect(pasteboard.changeCount == copyCount)
+  }
+
+  @Test func clipboardPasterRestoresNewCopyAfterNextPaste() async throws {
+    let pasteboard = makeTestPasteboard()
+    pasteboard.clearContents()
+    pasteboard.setString("original", forType: .string)
+    let paster = ClipboardPaster(pasteDelay: 0.3, cgEventClient: MockCGEventClient())
+    let target = MockClipboardPasteTarget()
+    defer { paster.restoreClipboard() }
+    try await paster.paste(text: "first", to: target, using: pasteboard)
+    pasteboard.clearContents()
+    pasteboard.setString("new copy", forType: .string)
+    try await paster.paste(text: "second", to: target, using: pasteboard)
+    #expect(await waitForString("new copy", on: pasteboard))
+  }
+
   @Test func clipboardPasterTargetTerminatedThrows() async {
     let client = MockCGEventClient()
     let paster = ClipboardPaster(pasteDelay: 0.1, cgEventClient: client)
