@@ -56,14 +56,20 @@ Xcode でビルドしてください。
 
 設定画面でシェルスクリプトを登録できます。スクリプトは `/bin/sh -c` で実行され、stdin にテキスト全文を受け取り、stdout に加工結果を返します。
 
-環境変数でコンテキスト情報も渡されます:
+手動実行時は、環境変数でコンテキスト情報も渡されます:
 
 | 環境変数 | 内容 |
 |---------|------|
-| `KOECHO_SELECTION` | フォアグラウンドアプリの選択テキスト |
+| `KOECHO_SELECTION` | 実行時の入力パネル内の選択テキスト（未選択時は空文字列） |
 | `KOECHO_PROMPT` | スクリプト実行時の追加入力 |
-| `KOECHO_SELECTION_START` | 選択範囲の開始位置 |
-| `KOECHO_SELECTION_END` | 選択範囲の終了位置 |
+| `KOECHO_SELECTION_START` | パネル本文先頭を 0 とする UTF-16 code unit 単位の選択開始位置 |
+| `KOECHO_SELECTION_END` | 同じ本文の UTF-16 code unit 単位の選択終了位置（exclusive: 終端を含まない） |
+
+未選択時の START と END は、ともにキャレット位置になります。外部アプリの選択を取得できた場合、そのテキストはパネル本文に取り込まれ、キャレットは末尾に置かれます。そのままスクリプトを実行すると `KOECHO_SELECTION` は空文字列です。選択テキストとして渡すには、パネル内で選択し直してください。
+
+たとえば `😀abc` の `b` を選択すると、`KOECHO_SELECTION=b`、START=3、END=4 になります。`😀` が UTF-16 code unit 2個分だからです。Python `str` の添字は Unicode code point 単位なので、このオフセットをそのまま slice に使えません。
+
+確定時の自動実行（auto-run）では、選択に関する3変数はすべて空文字列です。
 
 動作確認には `examples/echo-env.sh` を使ってください。登録して実行すると、stdin の内容と環境変数の値が表示されます。
 

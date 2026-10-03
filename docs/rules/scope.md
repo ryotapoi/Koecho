@@ -88,18 +88,25 @@
 
 ### 環境変数
 
+選択に関する3変数は、手動実行時の入力パネル内の選択を表す。
+
 | 変数名 | 説明 |
 |--------|------|
 | PATH | 親プロセスから継承 |
 | HOME | 親プロセスから継承 |
-| KOECHO_SELECTION | パネル内の選択テキスト（未選択時は空） |
-| KOECHO_SELECTION_START | パネル内の選択開始位置（先頭からの文字数） |
-| KOECHO_SELECTION_END | パネル内の選択終了位置（先頭からの文字数） |
+| KOECHO_SELECTION | 実行時の入力パネル内の選択テキスト（未選択時は空文字列） |
+| KOECHO_SELECTION_START | パネル本文先頭を 0 とする UTF-16 code unit 単位の選択開始位置 |
+| KOECHO_SELECTION_END | 同じ本文の UTF-16 code unit 単位の選択終了位置（exclusive: 終端を含まない） |
 | KOECHO_PROMPT | スクリプト実行時の追加入力（未入力時は空） |
+
+未選択時の START と END は、ともにキャレット位置となる。外部アプリの選択を取得できた場合、そのテキストはパネル本文に取り込まれ、表示時のキャレットは末尾に置かれる。そのまま手動実行すると `KOECHO_SELECTION` は空文字列となり、選択テキストとして渡すにはパネル内で選択し直す必要がある。
+
+たとえば `😀abc` の `b` を選択すると、`KOECHO_SELECTION=b`、START=3、END=4 となる。`😀` が UTF-16 code unit 2個分であり、Python `str` の Unicode code point 単位の添字とは異なるため、このオフセットをそのまま slice に使えない。
 
 ※ __CF_* 等の macOS 内部環境変数は渡さない（TCC 対策）
 
 ### 確定時自動実行（Auto-run on Confirm）
+- 選択に関する環境変数 `KOECHO_SELECTION` / `KOECHO_SELECTION_START` / `KOECHO_SELECTION_END` はすべて空文字列となる。
 - `requiresPrompt = false` のスクリプトから1つだけ auto-run スクリプトとして選択できる
 - 内蔵操作は prompt を必要とせず、確定時 auto-run の候補にはならない。
 - 実行タイミング: 置換ルール適用・trim 後、ペースト前

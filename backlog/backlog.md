@@ -73,13 +73,6 @@
   - 作業・完了条件: 英語 UI の空一覧で追加先を示す英語案内が表示され、日本語 UI でも対応する案内が表示されることを確認する。catalog の整合と両言語の実画面を確認する。
   - 限界: 英語実画面と生成済み localization bundle は未確認。source と catalog に基づく静的確認。
 
-- [ ] F15 日英 README と scope のスクリプト選択環境変数・座標単位を実装に合わせる
-  - 目的・発生条件: README に従い外部アプリの選択を KOECHO_SELECTION で処理するスクリプトを作って、そのままパネルから実行すると、想定した選択を得られず空入力となる。
-  - 根拠: `KM-08-001` / `KM-08-002`。`R12-001`。[`README.md`](../README.md) と [`README.ja.md`](../README.ja.md) はフォアグラウンドアプリの選択と説明するが、[スコープ](../docs/rules/scope.md) はパネル内選択を契約とする。[`PanelLifecycleManager.swift`](../Koecho/PanelLifecycleManager.swift) は外部選択を本文に取り込み、[`InputPanelController.swift`](../Koecho/InputPanelController.swift) はキャレットを末尾へ置く。[`ScriptExecutionService.swift`](../Koecho/ScriptExecutionService.swift) はパネル内 selectedRange から値を作り、[`ScriptRunner.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift) へ渡す。
-  - 作業・完了条件: 日英 README と [スコープ](../docs/rules/scope.md) に、KOECHO_SELECTION は実行時の入力パネル内選択、KOECHO_SELECTION_START / END は同じ本文の UTF-16 code unit 座標、END は exclusive と説明し、外部選択の取り込みと区別できることを確認する。絵文字を含む「😀abc」の b は START=3 / END=4 であり、Python の文字添字でそのまま slice する例と区別できるようにする。説明を実装・既存の選択あり／なしのテスト期待値と照合する。
-  - 補足根拠: `KM-08-002`。[スコープ](../docs/rules/scope.md):96-97 の「文字数」は UTF-16 単位を明示しない。Service:149-163 は NSString の NSRange.location / location+length を変換せず Runner の環境変数へ渡すため、Unicode code point / grapheme の添字とは一致しない。
-  - 限界: 実 NSTextView 選択・Python script の連携実行は未確認。Unicode 例は NSString / NSRange の単位を静的に照合した。パネル内で選択し直せばその選択が渡る。既存テストは静的読解のみで実行していない。
-
 - [ ] F16 入力パネルの初期寸法と最小寸法を仕様に合わせる
   - 目的・発生条件: 保存 frame のない初回表示、または利用者によるパネル縮小で到達する。View の200pt 最小幅は NSPanel の最小制約を解除しない。
   - 根拠: `KM-01-C02`。[`InputPanel.swift`](../Koecho/InputPanel.swift):25; [`InputPanelController.swift`](../Koecho/InputPanelController.swift):38; [`scope.md`](../docs/rules/scope.md):29。NSPanel の contentMinSize は520×240pt で、controller 生成時は560×240pt。正本の初期幅300pt、最小200×150pt と一致しない。

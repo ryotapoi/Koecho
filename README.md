@@ -58,14 +58,20 @@ The system will prompt for these permissions on first launch:
 
 Register shell scripts in the settings. Scripts run via `/bin/sh -c`, receive the full text on stdin, and return the processed result on stdout.
 
-Context is also passed via environment variables:
+For manual execution, context is also passed via environment variables:
 
 | Variable | Description |
 |----------|-------------|
-| `KOECHO_SELECTION` | Selected text in the foreground app |
+| `KOECHO_SELECTION` | Current selection in the input panel; empty when nothing is selected |
 | `KOECHO_PROMPT` | Additional input provided when running the script |
-| `KOECHO_SELECTION_START` | Start position of the selection |
-| `KOECHO_SELECTION_END` | End position of the selection |
+| `KOECHO_SELECTION_START` | Selection start as a UTF-16 code unit offset from the start of the panel text (0-based) |
+| `KOECHO_SELECTION_END` | Selection end as a UTF-16 code unit offset in the same text (exclusive) |
+
+With no selection, START and END both equal the caret position. When text selected in an external app can be read, it is imported as the panel text and the caret is placed at the end. Running a script immediately leaves `KOECHO_SELECTION` empty; select the imported text again in the panel to pass it as the selection.
+
+For example, selecting `b` in `😀abc` gives `KOECHO_SELECTION=b`, START=3, and END=4 because `😀` takes two UTF-16 code units. Python `str` indices count Unicode code points, so these offsets cannot be used directly to slice a Python string.
+
+For auto-run on confirm, all three selection variables are empty strings.
 
 Use `examples/echo-env.sh` to verify. Register and run it to see stdin contents and environment variable values.
 
