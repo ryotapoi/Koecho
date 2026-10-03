@@ -4,8 +4,10 @@ import os
 
 @MainActor
 public protocol Pasting {
-  func paste(text: String, to application: NSRunningApplication, using pasteboard: NSPasteboard)
-    async throws
+  func paste(
+    text: String, to application: NSRunningApplication, using pasteboard: NSPasteboard,
+    pasteDelay: TimeInterval
+  ) async throws
   func restoreClipboard()
 }
 
@@ -80,7 +82,6 @@ public func restorePasteboard(_ pasteboard: NSPasteboard, from items: [Pasteboar
 @MainActor
 public final class ClipboardPaster: Pasting {
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ClipboardPaster")
-  public let pasteDelay: TimeInterval
   private let cgEventClient: any CGEventClient
   private var restoreTask: Task<Void, Never>?
   private var savedContents: [PasteboardItem]?
@@ -88,27 +89,28 @@ public final class ClipboardPaster: Pasting {
   private var ownedChangeCount: Int?
 
   public nonisolated init(
-    pasteDelay: TimeInterval, cgEventClient: any CGEventClient = LiveCGEventClient()
+    cgEventClient: any CGEventClient = LiveCGEventClient()
   ) {
-    self.pasteDelay = pasteDelay
     self.cgEventClient = cgEventClient
   }
 
   public func paste(
     text: String,
     to application: NSRunningApplication,
-    using pasteboard: NSPasteboard = .general
+    using pasteboard: NSPasteboard = .general,
+    pasteDelay: TimeInterval
   ) async throws {
     try await paste(
       text: text,
       to: RunningApplicationPasteTarget(application: application),
-      using: pasteboard)
+      using: pasteboard, pasteDelay: pasteDelay)
   }
 
   func paste(
     text: String,
     to target: some ClipboardPasteTarget,
-    using pasteboard: NSPasteboard = .general
+    using pasteboard: NSPasteboard = .general,
+    pasteDelay: TimeInterval
   ) async throws {
     guard cgEventClient.isProcessTrusted() else {
       logger.error("Accessibility not trusted")

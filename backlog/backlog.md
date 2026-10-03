@@ -54,11 +54,12 @@
   - 作業・完了条件: 別 modifier で中断した後の新しいダブルタップが、その新しい待機区間で判定されパネルを表示することを確認する。提示のイベント順序を既存テストで確認し、通常の single / double tap と中断後の実ホットキー操作も確認する。
   - 限界: 実時間のイベント・timer 実行未確認。main queue が提示の期限順に進む条件を静的に確認した。
 
-- [ ] F12 クリップボード復元遅延の設定変更を次回ペーストへ反映する
+- [x] F12 クリップボード復元遅延の設定変更を次回ペーストへ反映する
   - 目的・発生条件: 一度パネルを開いた後に Settings で復元遅延を2秒から10秒などへ変更しても、次回以降のペーストが初回の遅延を使い続ける。
   - 根拠: `KM-01-C03` / `KM-05-C03`。`R09-C02`。[`GeneralSettingsView.swift`](../Koecho/GeneralSettingsView.swift) と [`PasteSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/PasteSettings.swift) は変更値を保存するが、[`InputPanelController.swift`](../Koecho/InputPanelController.swift) は生成時の値を [`ClipboardPaster.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/ClipboardPaster.swift) の immutable な pasteDelay へ渡す。[`KoechoApp.swift`](../Koecho/KoechoApp.swift) は controller を再利用し、以後の反映経路がない。
   - 作業・完了条件: パネル生成後の設定変更がアプリ再起動なしで次回ペーストの復元遅延へ反映されることを確認する。設定反映を既存テストと実クリップボードの復元時間で確認する。
-  - 限界: 実時間計測未確認。初回 controller 生成後の変更が条件。
+  - 完了確認: 同一の実 controller / ClipboardPaster / general clipboard で設定変更後の次回ペーストを確認。2秒設定は約2.13秒、10秒設定は約10.12秒で全 type/data を復元し、待機中の設定変更は進行中の操作へ影響しない。恒久回帰テストと初期値固定 mutation、必須 build / test / 起動 gate が成功。
+  - 限界: CGEvent の trust / キー送信のみ stub。実 Cmd+V 挿入・権限・Settings 画面操作は未確認。
 
 - [ ] F13 音声無効で起動した後の有効化で認識言語メニューを復帰させる
   - 目的・発生条件: ダウンロード済み言語が2つ以上あり、音声 off で起動した後、Settings を開かずパネルの Voice ボタンまたはショートカットで on にしても認識言語メニューが出ない。

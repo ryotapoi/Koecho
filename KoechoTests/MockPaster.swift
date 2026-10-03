@@ -5,6 +5,7 @@ import KoechoPlatform
 
 @MainActor
 final class MockPaster: Pasting {
+  var pastedDelays: [TimeInterval] = []
   var pastedTexts: [String] = []
   var pastedApplications: [NSRunningApplication] = []
   var errorToThrow: (any Error)?
@@ -14,9 +15,12 @@ final class MockPaster: Pasting {
   private var pasteStartedWaiter: CheckedContinuation<Void, Never>?
   private var pasteContinuation: CheckedContinuation<Void, Never>?
 
-  func paste(text: String, to application: NSRunningApplication, using pasteboard: NSPasteboard)
-    async throws
+  func paste(
+    text: String, to application: NSRunningApplication, using pasteboard: NSPasteboard,
+    pasteDelay: TimeInterval
+  ) async throws
   {
+    pastedDelays.append(pasteDelay)
     pastedApplications.append(application)
     onPasteAttempt?()
     if let error = errorToThrow {

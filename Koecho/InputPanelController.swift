@@ -94,7 +94,7 @@ final class InputPanelController {
     self.init(
       appState: appState,
       selectedTextReader: SelectedTextReader(),
-      paster: ClipboardPaster(pasteDelay: appState.settings.paste.pasteDelay),
+      paster: ClipboardPaster(),
       makeScriptRunner: { ScriptRunner(timeout: appState.settings.script.scriptTimeout) },
       historyStore: historyStore,
       ducker: OutputVolumeDucker(settings: appState.settings.volumeDucking)
@@ -215,7 +215,9 @@ final class InputPanelController {
     resetStateAndHidePanel()
 
     do {
-      try await paster.paste(text: text, to: targetApp, using: .general)
+      try await paster.paste(
+        text: text, to: targetApp, using: .general,
+        pasteDelay: appState.settings.paste.pasteDelay)
       historyStore.add(text: text, settings: appState.settings.history)
       logger.info("Paste completed successfully")
     } catch {

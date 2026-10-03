@@ -9,6 +9,27 @@ import Testing
 // MARK: - confirm
 
 extension InputPanelControllerTests {
+  @Test func reusedControllerUsesLatestPasteDelay() async throws {
+    let ctx = makeController()
+    ctx.appState.settings.voiceInput.isVoiceInputEnabled = false
+    ctx.appState.settings.paste.pasteDelay = 2
+    defer { ctx.controller.panel.close() }
+
+    for (delay, text) in [(2.0, "first"), (10.0, "second")] {
+      ctx.appState.settings.paste.pasteDelay = delay
+      ctx.controller.showPanel()
+      await Task.yield()
+      let textView = try #require(findVoiceInputTextView(in: ctx.controller))
+      textView.replaceText(text)
+      ctx.appState.setInputText(text)
+      ctx.appState.frontmostApplication = NSRunningApplication.current
+      await ctx.controller.confirm()
+    }
+
+    #expect(ctx.paster.pastedTexts == ["first", "second"])
+    #expect(ctx.paster.pastedDelays == [2, 10])
+  }
+
   @Test(arguments: ["hello", ""])
   func repeatedConfirmWaitsForFinalSpeech(initialText: String) async throws {
     let engine = MockVoiceInputEngine()
