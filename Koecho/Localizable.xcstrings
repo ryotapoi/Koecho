@@ -978,6 +978,16 @@
         }
       }
     },
+    "No scripts yet — add them in Settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだありません — 設定で追加できます"
+          }
+        }
+      }
+    },
     "No target application" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1809,9 +1819,6 @@
           }
         }
       }
-    },
-    "まだありません — 設定で追加できます" : {
-
     }
   },
   "version" : "1.0"

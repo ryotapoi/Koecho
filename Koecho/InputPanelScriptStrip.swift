@@ -28,7 +28,7 @@ struct InputPanelScriptStrip: View {
         .tracking(1)
 
       if scripts.isEmpty {
-        Text("まだありません — 設定で追加できます")
+        Text("No scripts yet — add them in Settings")
           .font(.caption)
           .foregroundStyle(.tertiary)
           .lineLimit(1)
