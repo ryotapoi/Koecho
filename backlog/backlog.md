@@ -48,11 +48,12 @@
   - 実環境確認: production source と hash が一致する一時 SPM harness で実 `.general`・実 ClipboardPaster・別 process の `pbcopy`・実 HistoryStore を使用。外部／履歴コピーの遅延・明示復元、同一本文、通常の遅延・明示復元、コピーあり／なしの連続ペーストの9ケースが成功。開始時 clipboard は全型をメモリ保存し、最後の所有版のままであることを確認して復元。証拠: `tmp/workflow/orchestrator-normal-20261004/changes/F6/evidence/`。
   - 限界: CGEvent 送信・trust と対象 activate は既存依存で置換した。実 Cmd+V の貼付成功、UI 操作、Accessibility / Input Monitoring の権限維持は今回再確認していない。
 
-- [ ] F11 中断した修飾キータップの古いタイマーが次のダブルタップを失効させないようにする
+- [x] F11 中断した修飾キータップの古いタイマーが次のダブルタップを失効させないようにする
   - 目的・発生条件: 非表示パネルで対象キーを単独タップし、300ms以内に別 modifier で中断してから対象キーをダブルタップすると、正しいタップ間隔でもパネルが開かない。
-  - 根拠: `KM-05-C01`。`R08-01`。[`ModifierTapDetector.swift`](../Packages/KoechoKit/Sources/KoechoCore/ModifierTapDetector.swift) は対象外 modifier で idle へ戻るが、[`HotkeyService.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HotkeyService.swift) は古い doubleTapTimer を残す。新しい waitingForSecondTap で timer を作らず、旧期限で新しい待機を失効させる。旧 release が0ms、中断が50/100ms、新タップが150/200msと350/400msなら、旧300ms期限が後のタップを妨げる。
-  - 作業・完了条件: 別 modifier で中断した後の新しいダブルタップが、その新しい待機区間で判定されパネルを表示することを確認する。提示のイベント順序を既存テストで確認し、通常の single / double tap と中断後の実ホットキー操作も確認する。
-  - 限界: 実時間のイベント・timer 実行未確認。main queue が提示の期限順に進む条件を静的に確認した。
+  - 根拠・修正: `KM-05-C01`。`R08-01`。[`ModifierTapDetector.swift`](../Packages/KoechoKit/Sources/KoechoCore/ModifierTapDetector.swift) は対象外 modifier で idle へ戻る。修正前の [`HotkeyService.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HotkeyService.swift) は古い doubleTapTimer を残し、新しい待機を旧期限で失効させていた。現在は対象外 modifier による中断時に service の timer も取り消し、次の待機から新しい300ms期限を開始する。
+  - 自動検証: 旧 release=0ms、中断=50/100ms、新タップ=150/200ms・350/400ms の実 timer 回帰を追加。修正前は旧期限による single callback と double callback 欠落で失敗し、修正後は成功。新待機自身の single expiry、重複 release による期限延長防止、既存の通常 single / double・可視時即時 single も成功。Package テスト298件と `build_macos` が成功（2026-10-04）。実時間ログの checkpoint は約54/102/151/204/359/405/664ms。証拠: `tmp/workflow/f11-20261004/changes/F11/evidence/`。
+  - 実環境確認: 専用署名アプリの `build_run_macos`・PID・署名照合が成功。本人が非表示 single の無反応、通常 double の表示、可視時 single の即時非表示、別 modifier 中断後 double の表示、Single Toggle の即時表示／非表示の5操作を行い「OK」と回答（2026-10-04）。検証後、所有アプリを停止・検証 build を削除し、証拠を保持した。
+  - 限界: 手動操作の正確なイベント間隔は未測定（本人「100msで押せてるかはわからない」）。旧期限と新待機の時間順序は service の実 timer 回帰で確認し、手動操作は実ホットキーとパネル動作の確認として扱う。CUA は timeout のため未使用。実際に選択した設定キー、権限追加有無は未回答であり、権限維持は今回の検証結果に含めない。
 
 - [x] F12 クリップボード復元遅延の設定変更を次回ペーストへ反映する
   - 目的・発生条件: 一度パネルを開いた後に Settings で復元遅延を2秒から10秒などへ変更しても、次回以降のペーストが初回の遅延を使い続ける。

@@ -95,6 +95,10 @@ public final class HotkeyService {
       let tapResult = detector.handleFlagsChanged(
         keyCode: keyCode, targetFlagIsSet: targetFlagIsSet, now: timestamp
       )
+      if keyCode != config.keyCode {
+        // The detector discarded this attempt; its timer must not expire a later tap.
+        cancelDoubleTapTimer()
+      }
 
       switch tapResult {
       case .singleTap:

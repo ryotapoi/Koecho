@@ -78,6 +78,58 @@ struct HotkeyServiceTests {
     #expect(singleTapCount == 1)
   }
 
+  @Test(arguments: [false, true])
+  func interruptedTapStartsNewTimer(completeDoubleTap: Bool) async throws {
+    var singleTapCount = 0
+    var doubleTapCount = 0
+    let service = makeService(
+      tapMode: .doubleTapToShow,
+      onSingleTap: { singleTapCount += 1 }, onDoubleTap: { doubleTapCount += 1 })
+    defer { service.stop() }
+    let clock = ContinuousClock()
+    let start = clock.now
+    service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 0.95)
+    service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.0)
+    try await clock.sleep(until: start + .milliseconds(50))
+    service.processEvent(
+      type: .flagsChanged, keyCode: UInt16(kVK_Shift), flags: .shift, timestamp: 1.05)
+    try await clock.sleep(until: start + .milliseconds(100))
+    service.processEvent(
+      type: .flagsChanged, keyCode: UInt16(kVK_Shift), flags: [], timestamp: 1.1)
+    try await clock.sleep(until: start + .milliseconds(150))
+    service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.15)
+    try await clock.sleep(until: start + .milliseconds(200))
+    service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.2)
+    try await clock.sleep(until: start + .milliseconds(350))
+    // The interrupted timer's 300 ms deadline must not expire the new tap.
+    #expect(singleTapCount == 0)
+    #expect(service.detector.state == .waitingForSecondTap(firstTapTime: 1.2))
+    if completeDoubleTap {
+      service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.35)
+      try await clock.sleep(until: start + .milliseconds(400))
+      service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.4)
+      #expect(doubleTapCount == 1)
+    }
+    try await clock.sleep(until: start + .milliseconds(650))
+    #expect(singleTapCount == (completeDoubleTap ? 0 : 1))
+    #expect(doubleTapCount == (completeDoubleTap ? 1 : 0))
+  }
+
+  @Test func duplicateReleaseDoesNotExtendTimer() async throws {
+    var singleTapCount = 0
+    let service = makeService(tapMode: .doubleTapToShow, onSingleTap: { singleTapCount += 1 })
+    defer { service.stop() }
+    let clock = ContinuousClock()
+    let start = clock.now
+    service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: .function, timestamp: 1.0)
+    service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
+    try await clock.sleep(until: start + .milliseconds(200))
+    service.processEvent(type: .flagsChanged, keyCode: fnKeyCode, flags: [], timestamp: 1.1)
+    try await clock.sleep(until: start + .milliseconds(400))
+    #expect(singleTapCount == 1)
+    #expect(service.detector.state == .idle)
+  }
+
   @Test func updateConfigResetsState() {
     var singleTapCount = 0
     let service = makeService(tapMode: .doubleTapToShow, onSingleTap: { singleTapCount += 1 })
