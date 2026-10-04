@@ -179,4 +179,25 @@ struct InputPanelControllerTests {
       ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.option], character: "v"))
         == false)
   }
+
+  @Test(arguments: [false, true])
+  func enablingVoiceFromOffPreservesRecognitionLocale(usingShortcut: Bool) async {
+    let ctx = makeController()
+    let key = ShortcutKey(modifiers: [.control], character: "v")
+    ctx.appState.settings.voiceInput.isVoiceInputEnabled = false
+    ctx.appState.settings.voiceInput.speechAnalyzerLocale = "ja-JP"
+    ctx.appState.settings.voiceInput.voiceInputShortcutKey = key
+    ctx.controller.showPanel()
+
+    if usingShortcut {
+      #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+      await ctx.controller.voiceShortcutTask?.value
+    } else {
+      await ctx.controller.toggleVoiceInput()
+    }
+
+    #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
+    #expect(ctx.appState.settings.voiceInput.speechAnalyzerLocale == "ja-JP")
+    ctx.controller.cancel()
+  }
 }
