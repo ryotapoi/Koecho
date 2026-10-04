@@ -184,11 +184,12 @@
   - 作業・完了条件: 言語切替の stop 待機中に Escape した後、新しい engine が開始せず、非表示のままマイクが起動しないことを確認する。通常切替と次回パネル表示を既存テストと実マイクで確認する。F4 の engine 内開始待ちとは別の、coordinator の停止→再生成経路を対象とする。
   - 限界: 実マイクと UI の時系列は未実施。start 成功は権限・モデル・デバイスが利用可能なことが条件。
 
-- [ ] F29 hosted test の App 初期化から通常版の設定を隔離する
+- [x] F29 hosted test の App 初期化から通常版の設定を隔離する
   - 目的・発生条件: project で KoechoTests は通常 app bundle ID com.ryotapoi.Koecho の Koecho.app を TEST_HOST として使い、verification.md も hosted test が app lifecycle を起動することを明記する。通常ユーザーの domain に値がある状態でこの hosted test を実行すると、テストメソッドによる隔離 factory 利用の有無によらず App 初期化から到達する。
   - 根拠: `KM-07-C01` / `KM-08-003`。[`KoechoApp.swift`](../Koecho/KoechoApp.swift):9-20；[`AppState.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AppState.swift):28-29；[`Settings.swift`](../Packages/KoechoKit/Sources/KoechoCore/Settings.swift):24-27；[`ScriptSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptSettings.swift):68-76,98-100,134,173-193；[`VoiceInputSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/VoiceInputSettings.swift):58-83,98-106；[`project.pbxproj`](../Koecho.xcodeproj/project.pbxproj):448,482,510,531；[`TestSupport.swift`](../KoechoTests/TestSupport.swift):8-13；[`verification.md`](../docs/rules/verification.md):25。KoechoApp の stored @State 初期値 AppState() は init の isTesting guard に先行する。AppState は Settings() を生成し、.standard を feature 設定へ渡す。VoiceInputSettings と ScriptSettings は init 内で save し、不正 timeout の補正、voice mode の正規化、壊れた shortcut の encoded nil への書戻し等を行う。test factory による suite 隔離はその前の App 初期化には適用されない。
   - 作業・完了条件: test factory 使用前の KoechoApp / AppState / Settings 初期化も専用 domain へ隔離し、文書化された KoechoTests の起動だけで通常版の設定を読み書き・正規化しないことを確認する。不正 timeout・旧 voice mode・壊れた shortcut を含む通常 domain の保存値が維持され、test 設定が専用 domain へ保存されることを安全な fixture で検証する。hosted test の起動時挙動を [Verification](../docs/rules/verification.md) の隔離説明と整合させる。
-  - 限界: hosted test を起動して実 UserDefaults domain を観測する検証は実行していない。専用 OS user や外部環境による HOME/domain 隔離が別途ある run は除く。文書化された標準 hosted test 経路と project 設定を照合した。
+  - 完了: `KoechoApp.makeInitialAppState` が Settings 生成前に既存の XCTestCase 判定で起動ごとの専用 suite を選ぶ。通常起動は `.standard` を維持する。安全な2つの disposable domain による回帰テストで、不正 timeout・旧 voice mode・壊れた shortcut の値と型の保持、通常側だけの device sentinel の非読込、テスト側の初期保存・更新、通常経路の既存正規化を確認した。XcodeBuildMCP `build_macos`、`test_macos -only-testing:KoechoTests`（197件）、Package `swift test`（192件）が成功（2026-10-05）。
+  - 検証範囲: 実 hosted run で XCTestCase 判定成立と同じ初期状態構築経路を確認した。実ユーザー domain へ異常 fixture を投入する実験は行わず、通常相当の専用 domain で代替した。HistoryStore のファイル保存先隔離は対象外。
 
 #### 調査後に改修規模・リスクを判断する
 

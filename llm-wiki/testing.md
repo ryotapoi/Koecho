@@ -13,7 +13,7 @@ sources:
 ## TEST_HOST
 
 - `KoechoTests` は `TEST_HOST = Koecho.app` で動くため、通常の app lifecycle がテストプロセス内で走る。
-- `KoechoApp` は `ProcessInfo.processInfo.environment["TEST_HOST"]` を見て、テスト時に `AppState` や system integration を初期化しない。
+- テスト検出・App 初期設定の隔離・system integration 抑止の正本は [Verification](../docs/rules/verification.md#制約と例外)。配線は `KoechoApp.isTesting` と `makeInitialAppState` を参照する。テスト時にも AppState は生成される。
 - UI 近傍テストで app 本体の状態が必要な場合は、`TestSupport` の factory や mock を使い、global singleton に依存しない。
 
 ## UserDefaults

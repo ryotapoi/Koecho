@@ -6,9 +6,9 @@ import os
 
 @main
 struct KoechoApp: App {
-  private static let isTesting = NSClassFromString("XCTestCase") != nil
+  static let isTesting = NSClassFromString("XCTestCase") != nil
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "App")
-  @State private var appState = AppState()
+  @State private var appState = makeInitialAppState()
   @State private var historyStore = HistoryStore()
   @State private var panelController: InputPanelController?
   @State private var hotkeyService: HotkeyService?
@@ -20,6 +20,22 @@ struct KoechoApp: App {
     guard !Self.isTesting else { return }
     logger.info("Koecho launched")
     requestAccessibilityIfNeeded()
+  }
+
+  static func makeInitialAppState(
+    isTesting: Bool = isTesting,
+    normalDefaults: @autoclosure () -> UserDefaults = .standard,
+    testingSuiteName: String = "com.ryotapoi.Koecho.hosted-tests-\(UUID().uuidString)"
+  ) -> AppState {
+    let defaults: UserDefaults
+    if isTesting {
+      // Select the suite before Settings can read or normalize app preferences.
+      // Never fall back to .standard if the isolated suite cannot be created.
+      defaults = UserDefaults(suiteName: testingSuiteName)!
+    } else {
+      defaults = normalDefaults()
+    }
+    return AppState(settings: Settings(defaults: defaults))
   }
 
   private func requestAccessibilityIfNeeded() {
