@@ -22,7 +22,7 @@ final class InputPanel: NSPanel {
     titlebarSeparatorStyle = .none
     isMovableByWindowBackground = true
     isReleasedWhenClosed = false
-    contentMinSize = NSSize(width: 520, height: 240)
+    minSize = NSSize(width: 320, height: 180)
   }
 
   override var canBecomeKey: Bool { true }

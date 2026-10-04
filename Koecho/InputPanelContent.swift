@@ -26,36 +26,43 @@ struct InputPanelContent: View {
   }
 
   var body: some View {
-    VStack(spacing: 0) {
-      VStack(spacing: 8) {
-        inputEditor
-        promptInput
-        statusMessage
-        scriptStrip
-      }
-      .padding(.leading, 4)
-      .padding(.trailing, 4)
-      .padding(.top, 0)
-      .padding(.bottom, 8)
+    GeometryReader { geometry in
+      ScrollView(.vertical) {
+        VStack(spacing: 0) {
+          VStack(spacing: 8) {
+            inputEditor
+              .frame(minHeight: 40, maxHeight: .infinity)
+            promptInput
+            statusMessage
+            scriptStrip
+          }
+          .padding(.leading, 4)
+          .padding(.trailing, 4)
+          .padding(.top, 0)
+          .padding(.bottom, 8)
 
-      InputPanelToolbar(
-        isVoiceInputEnabled: appState.settings.voiceInput.isVoiceInputEnabled,
-        replacementRules: appState.settings.replacement.replacementRules,
-        isAutoReplacementEnabled: appState.settings.replacement.isAutoReplacementEnabled,
-        scriptSettings: appState.settings.script,
-        isRunningScript: appState.isRunningScript,
-        hasPromptScript: hasPromptScript,
-        canUndoScript: appState.scriptUndoText != nil,
-        hotkeyConfig: appState.settings.hotkey.hotkeyConfig,
-        onSwitchEngine: onSwitchEngine,
-        onApplyReplacementRules: onApplyReplacementRules,
-        onUndoScript: onUndoScript,
-        onConfirm: onConfirm,
-        replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
-      )
-      .opacity(hasPromptScript ? 0.45 : 1.0)
+          InputPanelToolbar(
+            isVoiceInputEnabled: appState.settings.voiceInput.isVoiceInputEnabled,
+            replacementRules: appState.settings.replacement.replacementRules,
+            isAutoReplacementEnabled: appState.settings.replacement.isAutoReplacementEnabled,
+            scriptSettings: appState.settings.script,
+            isRunningScript: appState.isRunningScript,
+            hasPromptScript: hasPromptScript,
+            canUndoScript: appState.scriptUndoText != nil,
+            hotkeyConfig: appState.settings.hotkey.hotkeyConfig,
+            onSwitchEngine: onSwitchEngine,
+            onApplyReplacementRules: onApplyReplacementRules,
+            onUndoScript: onUndoScript,
+            onConfirm: onConfirm,
+            replacementShortcutKey: appState.settings.replacement.replacementShortcutKey
+          )
+          .opacity(hasPromptScript ? 0.45 : 1.0)
+        }
+        .frame(minHeight: geometry.size.height)
+      }
+      .scrollBounceBehavior(.basedOnSize)
     }
-    .frame(minWidth: 200, maxWidth: .infinity, maxHeight: .infinity)
+    .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
     .background {
       RoundedRectangle(cornerRadius: cornerRadius)
         .fill(.ultraThinMaterial)
@@ -91,7 +98,7 @@ struct InputPanelContent: View {
         onViewCreated: onTextViewCreated
       )
       .opacity(inputEditorOpacity)
-      .frame(minHeight: 120, maxHeight: CGFloat.infinity)
+      .frame(maxHeight: .infinity)
       .popover(
         isPresented: Binding(
           get: { appState.pendingReplacementPattern != nil },
@@ -186,7 +193,7 @@ struct InputPanelContent: View {
     onSwitchEngine: {},
     onCancelPrompt: {}
   )
-  .frame(width: 300, height: 200)
+  .frame(width: 320, height: 240)
 }
 
 #Preview("Empty") {
@@ -201,5 +208,54 @@ struct InputPanelContent: View {
     onSwitchEngine: {},
     onCancelPrompt: {}
   )
-  .frame(width: 300, height: 200)
+  .frame(width: 320, height: 240)
+}
+
+#Preview("Minimum — All Actions") {
+  let defaults = UserDefaults(suiteName: "preview-panel-minimum-actions")!
+  let settings = KoechoCore.Settings(defaults: defaults)
+  settings.voiceInput.isVoiceInputEnabled = false
+  settings.replacement.replacementRules = [ReplacementRule(patterns: ["test"], replacement: "Test")]
+  settings.replacement.isAutoReplacementEnabled = false
+  let format = Script(name: "Format", scriptPath: "format.sh")
+  let prompt = Script(name: "AI Rewrite", scriptPath: "ai.sh", requiresPrompt: true)
+  settings.script.scripts = [format, prompt]
+  settings.script.autoRunScriptId = format.id
+  let appState = AppState(settings: settings)
+  appState.setInputText("Edit this text in the small panel.")
+  appState.offerScriptUndo(restoring: "Original text")
+  return InputPanelContent(
+    appState: appState,
+    onExecuteScript: { _ in },
+    onConfirm: {},
+    onSwitchEngine: {},
+    onCancelPrompt: {}
+  )
+  .frame(width: 320, height: 180)
+}
+
+#Preview("Minimum — Prompt and Status") {
+  let defaults = UserDefaults(suiteName: "preview-panel-minimum-prompt")!
+  let settings = KoechoCore.Settings(defaults: defaults)
+  settings.voiceInput.isVoiceInputEnabled = false
+  settings.replacement.replacementRules = [ReplacementRule(patterns: ["test"], replacement: "Test")]
+  settings.replacement.isAutoReplacementEnabled = false
+  let format = Script(name: "Format", scriptPath: "format.sh")
+  let prompt = Script(name: "AI Rewrite", scriptPath: "ai.sh", requiresPrompt: true)
+  settings.script.scripts = [format, prompt]
+  settings.script.autoRunScriptId = format.id
+  let appState = AppState(settings: settings)
+  appState.setInputText("Edit this text in the small panel.")
+  appState.offerScriptUndo(restoring: "Original text")
+  appState.promptScript = prompt
+  appState.voiceEngineStatus = "Preparing voice input…"
+  appState.errorMessage = "An example error with enough text to wrap in the minimum panel."
+  return InputPanelContent(
+    appState: appState,
+    onExecuteScript: { _ in },
+    onConfirm: {},
+    onSwitchEngine: {},
+    onCancelPrompt: {}
+  )
+  .frame(width: 320, height: 180)
 }

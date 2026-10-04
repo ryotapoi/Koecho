@@ -37,7 +37,7 @@ final class InputPanelController {
     self.paster = paster
     self.historyStore = historyStore
 
-    self.panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 240))
+    self.panel = InputPanel(contentRect: NSRect(x: 0, y: 0, width: 320, height: 240))
 
     self.lifecycleManager = PanelLifecycleManager(
       appState: appState,
@@ -358,8 +358,14 @@ final class InputPanelController {
           self?.focusTextView()
         }
       ))
+    let minimumSize = panel.minSize
     panel.contentView = hostingView
     hostingView.layoutSubtreeIfNeeded()
+    // AppKit ignores minSize when hosting content participates in Auto Layout.
+    NSLayoutConstraint.activate([
+      hostingView.widthAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.width),
+      hostingView.heightAnchor.constraint(greaterThanOrEqualToConstant: minimumSize.height),
+    ])
   }
 
   private func configurePanelCallbacks() {

@@ -18,6 +18,35 @@ import Testing
 struct InputPanelControllerTests {
   // MARK: - Show / Cancel lifecycle
 
+  @Test func minimumFrameRemainsReachableWithHostedContent() async throws {
+    let ctx = makeController()
+    let panel = ctx.controller.panel
+    // Keep this resize from writing the standard domain's saved frame.
+    panel.setFrameAutosaveName("")
+    panel.setFrame(NSRect(x: 0, y: 0, width: 320, height: 180), display: false)
+    ctx.controller.showPanel()
+    await Task.yield()
+    panel.contentView?.layoutSubtreeIfNeeded()
+
+    #expect(panel.frame.size == NSSize(width: 320, height: 180))
+    #expect(panel.contentView?.fittingSize == NSSize(width: 320, height: 180))
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller))
+    let editorViewport = try #require(textView.enclosingScrollView)
+    #expect(editorViewport.visibleRect.width > 0)
+    #expect(editorViewport.visibleRect.height > 0)
+    let savedFrame = NSRect(x: 120, y: 180, width: 460, height: 320)
+    panel.setFrame(savedFrame, display: false)
+    ctx.controller.cancel()
+    ctx.controller.showPanel()
+    ctx.appState.promptScript = Script(
+      name: "Prompt", scriptPath: "prompt.sh", requiresPrompt: true)
+    await Task.yield()
+    panel.contentView?.layoutSubtreeIfNeeded()
+    #expect(panel.frame == savedFrame)
+    #expect(panel.contentView?.fittingSize == NSSize(width: 320, height: 180))
+    ctx.controller.cancel()
+  }
+
   @Test func showPanelSetsState() {
     let ctx = makeController()
 

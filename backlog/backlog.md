@@ -76,11 +76,13 @@
   - 完了確認: 英語ソースキーと日本語訳を対応させ、旧日本語キーを除去。専用署名検証版を英語・日本語の各起動引数で別起動し、スクリプト全件削除後の実入力パネルで各言語の案内全文と周辺 UI の言語を本人操作で確認。catalog・生成 bundle の英語ソース fallback と日本語訳の整合、必須 build、App 194テストが成功。
   - 限界: CUA は timeout のため実画面は本人報告を証拠とした。読み込み保護由来の空一覧は同一表示分岐であり、破損 fixture での再現は行っていない。狭幅レイアウトは今回未検証。本人は日本語「まだありません」の表現に懸念を示したが、今回の文言維持と完了を了承。
 
-- [ ] F16 入力パネルの初期寸法と最小寸法を仕様に合わせる
-  - 目的・発生条件: 保存 frame のない初回表示、または利用者によるパネル縮小で到達する。View の200pt 最小幅は NSPanel の最小制約を解除しない。
-  - 根拠: `KM-01-C02`。[`InputPanel.swift`](../Koecho/InputPanel.swift):25; [`InputPanelController.swift`](../Koecho/InputPanelController.swift):38; [`scope.md`](../docs/rules/scope.md):29。NSPanel の contentMinSize は520×240pt で、controller 生成時は560×240pt。正本の初期幅300pt、最小200×150pt と一致しない。
-  - 作業・完了条件: 保存 frame のない初回表示を初期幅300pt とし、200×150pt まで縮小できることを実ウィンドウで確認する。保存 frame の復元と入力・操作領域の利用を維持する。
-  - 限界: 実ウィンドウの resize 未実施。保存 frame がある場合の初期寸法は別だが最小寸法制約の不一致は残る。
+- [x] F16 入力パネルの初期寸法と最小寸法を仕様に合わせる
+  - 目的・発生条件: 保存 frame のない初回表示、または利用者によるパネル縮小で到達する。
+  - 根拠: `KM-01-C02`。[`InputPanel.swift`](../Koecho/InputPanel.swift)、[`InputPanelController.swift`](../Koecho/InputPanelController.swift)、[`scope.md`](../docs/rules/scope.md)。変更前は NSPanel の contentMinSize が520×240pt、controller 生成時が560×240pt だった。本人の寸法改訂に合わせ、初回320×240pt、最小320×180pt とした。
+  - 実装: hosting の標準 Auto Layout 制約で実効最小を維持。本文・操作領域の縦スクロール、toolbar の横スクロール、prompt の狭幅配置で既存操作への到達性を保つ。保存 frame 名・キー・復元順は維持。
+  - 検証: 更新後の build と App tests 195件が成功。[`InputPanelControllerTests.swift`](../KoechoTests/InputPanelControllerTests.swift) で hosting 接続後の320×180pt、正の本文 viewport、別位置460×320pt の再表示・prompt 出現後の維持を確認。局所画像・計測は通常 frame/content が320×240pt、最小が320×180pt、最小 contentLayout が320×148pt（titlebar/safe area 差32pt）、scroll 後の toolbar・prompt・status への到達を確認。
+  - 実操作証拠: 2026-10-04、改訂前の専用署名版を起動し、本人の初回表示報告と専用保存 frame の読み取りで300×240pt、本人の実 drag 最小報告と読み取りで200×150pt、基本 uppercase script の成功を確認。同じ制約・入力・callback 経路を維持した新寸法は、更新後の回帰と局所計測で補完した。
+  - 限界: 新寸法の本人 drag・実画面画像、prompt の実入力/Run/Cancel と全 toolbar の網羅操作、保存 frame のアプリ再起動後復元は未確認。CUA 初回取得は timeout。保存経路は変更せず、再表示の維持を回帰で確認。使いやすさ評価は本人指示により対象外。
 
 - [ ] F18 ペースト再試行で処理済み本文へ auto-run を重ねて適用しない
   - 目的・発生条件: 接頭辞追加など非冪等な auto-run を設定し、Accessibility 不足で失敗→権限修正→同じパネルから retry する操作で成立する。

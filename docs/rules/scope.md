@@ -26,7 +26,7 @@
 - hidesOnDeactivate = false
 - collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
 - タイトルバー非表示、移動可能
-- 初期幅 300pt、自由にリサイズ可能。最小 200×150pt。位置・サイズは自動保存
+- 初期幅 320pt、自由にリサイズ可能。最小 320×180pt。位置・サイズは自動保存
 
 ### 注意: フォアグラウンドアプリの記憶
 - パネル表示前に NSWorkspace.shared.frontmostApplication を記録

@@ -25,69 +25,74 @@ struct InputPanelToolbar: View {
   }
 
   var body: some View {
-    HStack(spacing: 8) {
-      Button {
-        Task { await onSwitchEngine() }
-      } label: {
-        Label {
-          Text("Voice")
-        } icon: {
-          Image(isVoiceEnabled ? "KoechoStatusItemColor" : "MenuBarIcon")
-            .renderingMode(isVoiceEnabled ? .original : .template)
-            .resizable()
-            .scaledToFit()
-            .frame(width: 12, height: 12)
-        }
-      }
-      .buttonStyle(.koechoToolbar(isEmphasized: isVoiceEnabled))
-      .disabled(isRunningScript)
-      .help(
-        !isVoiceInputEnabled ? String(localized: "Voice input is off") : String(localized: "Voice")
-      )
-
-      if !replacementRules.isEmpty && !isAutoReplacementEnabled {
+    ScrollView(.horizontal) {
+      HStack(spacing: 8) {
         Button {
-          onApplyReplacementRules()
+          Task { await onSwitchEngine() }
         } label: {
-          Label("Replace", systemImage: "arrow.2.squarepath")
+          Label {
+            Text("Voice")
+          } icon: {
+            Image(isVoiceEnabled ? "KoechoStatusItemColor" : "MenuBarIcon")
+              .renderingMode(isVoiceEnabled ? .original : .template)
+              .resizable()
+              .scaledToFit()
+              .frame(width: 12, height: 12)
+          }
         }
-        .buttonStyle(.koechoToolbar(isEmphasized: true))
+        .buttonStyle(.koechoToolbar(isEmphasized: isVoiceEnabled))
+        .disabled(isRunningScript)
         .help(
-          helpText(
-            String(localized: "Apply replacement rules"), shortcut: replacementShortcutKey)
+          !isVoiceInputEnabled
+            ? String(localized: "Voice input is off") : String(localized: "Voice")
         )
+
+        if !replacementRules.isEmpty && !isAutoReplacementEnabled {
+          Button {
+            onApplyReplacementRules()
+          } label: {
+            Label("Replace", systemImage: "arrow.2.squarepath")
+          }
+          .buttonStyle(.koechoToolbar(isEmphasized: true))
+          .help(
+            helpText(
+              String(localized: "Apply replacement rules"), shortcut: replacementShortcutKey)
+          )
+          .disabled(isRunningScript)
+        }
+
+        if canUndoScript {
+          Button("Undo Script", systemImage: "arrow.uturn.backward") {
+            onUndoScript()
+          }
+          .buttonStyle(.koechoToolbar(isEmphasized: true))
+          .disabled(isRunningScript || hasPromptScript)
+        }
+
+        Spacer(minLength: 8)
+
+        autoRunMenu
+
+        Button {
+          Task { await onConfirm() }
+        } label: {
+          HStack(spacing: 8) {
+            Text(hotkeyConfig.modifierBadge)
+              .font(.caption.bold())
+            Text("Confirm")
+              .font(.caption.bold())
+          }
+        }
+        .accessibilityLabel(Text("Confirm"))
+        .buttonStyle(.koechoToolbar(isPrimary: !hasPromptScript))
+        .keyboardShortcut(.return, modifiers: .command)
         .disabled(isRunningScript)
       }
-
-      if canUndoScript {
-        Button("Undo Script", systemImage: "arrow.uturn.backward") {
-          onUndoScript()
-        }
-        .buttonStyle(.koechoToolbar(isEmphasized: true))
-        .disabled(isRunningScript || hasPromptScript)
-      }
-
-      Spacer(minLength: 8)
-
-      autoRunMenu
-
-      Button {
-        Task { await onConfirm() }
-      } label: {
-        HStack(spacing: 8) {
-          Text(hotkeyConfig.modifierBadge)
-            .font(.caption.bold())
-          Text("Confirm")
-            .font(.caption.bold())
-        }
-      }
-      .accessibilityLabel(Text("Confirm"))
-      .buttonStyle(.koechoToolbar(isPrimary: !hasPromptScript))
-      .keyboardShortcut(.return, modifiers: .command)
-      .disabled(isRunningScript)
+      .fixedSize(horizontal: true, vertical: false)
+      .padding(.horizontal, 12)
     }
+    .scrollBounceBehavior(.basedOnSize)
     .font(.caption)
-    .padding(.horizontal, 12)
     .padding(.vertical, 9)
     .background(.regularMaterial)
     .overlay(alignment: .top) {
