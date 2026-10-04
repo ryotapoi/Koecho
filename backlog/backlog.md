@@ -31,7 +31,38 @@
 
 [実行結果のフォローアップ](v2.0.0-followups.md)
 
+#### 置換 UI の見直し
+
+通常対応の不具合修正後に進める。F8 で座標対応を整えてから個別置換 UI を導入し、F21 の preview 消去要件は新 UI と合わせて扱う。
+
+- [ ] F8 置換後の挿入位置とプレビューを最終本文の座標に合わせる
+  - 目的・発生条件: Auto-replace をオフにした手動置換で、連鎖置換・前方の長さ変更・削除一致の内側のカーソルが最終本文に正しく対応しない。aZ の位置1で a→bbbb→c は cZ の位置2、a z t の末尾位置5で z→zzzz、a→aaa、t→TT は最終長11に対して位置10、abcFILLERz の位置4で FILLER→空は abcz の位置0になる。連鎖や座標履歴の不整合は marked text の preview にも使われる。
+  - 根拠: `R07-C01` / `KM-02-C01` / `KM-02-C02` / `KM-02-C03`。[`ReplacementEngine.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift):29-84,126-131 は元 location と中間 length を組み合わせ、後続の前方置換で既存 offset entry を移動・更新しない。[`ReplacementService.swift`](../Koecho/ReplacementService.swift):39-60 と [`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift) の元本文 bounds filter は後段の補正・preview を除外する。Service は削除一致の内側にも削除長全体を差し引き、[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift):138-140 の clamp で位置0になる。
+  - 作業・完了条件: a b の位置1で a→long→x は最終本文 x b・挿入位置1・preview x、aZ の位置1で a→bbbb→c は cZ・位置1、a z t の末尾から z→zzzz、a→aaa、t→TT は aaa zzzz TT・位置11となることを確認する。abcFILLERz の位置4で FILLER→空は abcz の削除開始位置3へ対応させる。[置換ルール仕様](../docs/specs/replacement-rules.md) の登録順適用を維持し、各計算、marked preview、後続音声の挿入を既存テストと実操作で確認する。
+  - 限界: Core 本文変換と Service と同じ位置補正 loop の局所実行で、aZ→cZ・point=2、aaa zzzz TT・t match={6,1}・point=10、abcz・point=0 を再現した。Core logger を除去し最小 rule 型を使った計算の証拠で、実 NSTextView 操作・preview 描画・App integration は未確認。旧 a→long→x の tooltip 例は静的追跡。
+  - 関連・順序: 個別置換で使う候補範囲と挿入位置の土台を整えるタスク。以下の置換 UI 導入より先に対応するか、同じ変更で直接必要な座標処理を整合させる。F8 の不具合を残したまま preview 用範囲を個別置換に流用しない。
+
+- [ ] 置換候補の下線表示と1か所だけの置換を導入し、Tooltip を廃止する
+  - 目的: 自動置換では変化の速い本文に Tooltip を表示せず、手動置換では利用者が必要な候補だけを選んで置換できるようにする。
+  - 自動置換 on: Tooltip を廃止する。候補の下線はポインタを重ねずに表示する。既存描画を利用するなど無理のない実装で可能な場合に採用し、下線のために置換を遅らせない。下線を表示できなくても完了を妨げない。
+  - 自動置換 off: 候補に下線を表示し、候補の右クリックから「この箇所を置換」を選ぶなどの明示操作で、その1か所だけを置換する。同じ文字列の別の出現箇所や他の候補は変更しない。既存の Replace ボタンによる全体置換は維持する。
+  - 実装時の確認: 下線描画と Tooltip の tracking は分離できる。個別置換では表示中の本文に対応する正確な候補範囲を使い、本文変更後は候補を更新する。連鎖置換の preview 用範囲をそのまま編集範囲として使わない。IME・音声の未確定部分は確定するまで変更しない。
+  - 作業・完了条件: Tooltip が出ないこと、採用した下線が hover なしで表示されること、個別操作が選んだ1か所だけを変更すること、全体置換が維持されることを確認する。複数の同一候補、長さの変わる置換、本文編集後の候補更新を確認する。仕様の正本と関連テストを更新し、実 IME・音声操作で確認する。F8 の座標対応を利用し、F21 の preview 消去要件を引き継ぐ。
+  - 対象範囲: 個別置換は入力パネルの確定・貼り付け操作とは別の操作である。今回の依頼は個別操作の対象を1か所に限定することであり、確定・貼り付け時の既存の置換契約を変更する判断は含めない。
+
+- [ ] F21 未確定音声の表示開始時に既存の置換 preview を消去する
+  - 目的・発生条件: IME marked text の置換 preview が表示される間に音声 volatile が届く。両入力は同じ editor を使用でき、直接 storage 挿入は通常 onTextChanged による Service 経路を通らない。
+  - 根拠: `KM-02-C04`。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift):249-278; [`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift):84-102,194-207,304-337; [`ReplacementService.swift`](../Koecho/ReplacementService.swift):20-33; [`replacement-rules.md`](../docs/specs/replacement-rules.md) volatile 中は preview を消去する契約。非空 volatile callback で既存 preview を消す呼び出しがない。setVolatileText の storage 変更は suppression 内で、previewMatches/tracking/tooltip を保持する。
+  - 作業・完了条件: IME marked text の preview 表示中に非空 volatile が届くと、highlight・tracking・tooltip が消え、volatile 中に置換 preview が残らないことを既存テストと実 IME・音声操作で確認する。通常 marked preview を維持する。
+  - 限界: 実 IME と音声の同時描画未実施。古い range がどの文字へ描画されるかは挿入位置・本文長次第。
+  - 対応方針（2026-10-05）: 本グループの UI 導入と重なる preview lifecycle は、新しい表示・個別置換仕様と合わせて扱う。現仕様向けの試行では App tests 197件と build が成功し、本人が実 IME・音声の概略動作を確認したが、下線・Tooltip 消去の個別確認は未完了。試行の証拠は tmp/workflow/orchestrator-normal-20261004-next/changes/F21/ に保持する。
+  - 関連・順序: UI 導入と一緒に扱い、単独では旧 Tooltip 仕様の修正を進めない。Tooltip 廃止後は残る候補下線・表示状態について、volatile 開始時の消去と通常候補表示の復帰を確認する。
+
 #### 通常対応
+
+- [ ] 入力パネルの確定ボタンと確定時のスクリプト選択を右揃えに戻す
+  - 症状・根拠: 最近の変更後、入力パネルの確定ボタンと確定時のスクリプト選択が右揃えでなくなったとの本人報告（2026-10-05）。原因となった変更は未特定。
+  - 作業・完了条件: 両コントロールを従来どおり右揃えに戻す。通常幅と最小幅で配置を確認し、狭幅時にも両コントロールへ到達できること、スクリプト選択と確定操作が維持されることを実画面で確認する。
 
 - [x] F2 音声終了待ち中の再確定で最終認識が欠落しないようにする
   - 目的・発生条件: auto-run 未選択で音声入力を確定し、最終結果を待つ間にホットキーまたは Command+Return で再確定すると、末尾を欠いた本文の貼り付けや空入力としての終了に至る。
@@ -89,12 +120,6 @@
   - 根拠: `KM-01-C09`。[`InputPanelController.swift`](../Koecho/InputPanelController.swift):139-152,200-203,220-243,103-107; [`ClipboardPaster.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/ClipboardPaster.swift):142 の simulatePaste 経路; errorMessage の failedToCreateCGEvent 分岐。failedToCreateCGEvent など非 Accessibility 失敗は復帰時の target を nil にする。再 Confirm の pasteAndRecord は target guard で止まり、showPanel は可視なら refocus だけを行う。
   - 作業・完了条件: failedToCreateCGEvent 等で本文を復帰した後、閉じて再表示しなくても対象アプリへの再確定ができることを確認する。失敗時の本文保持と Accessibility 失敗の同対象 retry を維持し、注入した失敗で対象状態・再確定経路を確認する。
   - 限界: 実 CGEvent 生成失敗の条件・頻度は未測定。terminated target の別契約は対象外。editor は先に clear されるが inputText の fallback があるため本文の恒久消失までは確認していない。
-
-- [ ] F21 未確定音声の表示開始時に既存の置換 preview を消去する
-  - 目的・発生条件: IME marked text の置換 preview が表示される間に音声 volatile が届く。両入力は同じ editor を使用でき、直接 storage 挿入は通常 onTextChanged による Service 経路を通らない。
-  - 根拠: `KM-02-C04`。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift):249-278; [`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift):84-102,194-207,304-337; [`ReplacementService.swift`](../Koecho/ReplacementService.swift):20-33; [`replacement-rules.md`](../docs/specs/replacement-rules.md) volatile 中は preview を消去する契約。非空 volatile callback で既存 preview を消す呼び出しがない。setVolatileText の storage 変更は suppression 内で、previewMatches/tracking/tooltip を保持する。
-  - 作業・完了条件: IME marked text の preview 表示中に非空 volatile が届くと、highlight・tracking・tooltip が消え、volatile 中に置換 preview が残らないことを既存テストと実 IME・音声操作で確認する。通常 marked preview を維持する。
-  - 限界: 実 IME と音声の同時描画未実施。古い range がどの文字へ描画されるかは挿入位置・本文長次第。
 
 - [ ] F23 初期言語補正待ち中の新しい言語選択を保持する
   - 目的・発生条件: 保存値が補正対象で、補正先の準備 await が継続し、他の reserved 言語を Picker で選べる場合。selection 用 task は初期の task とは独立する。
@@ -174,12 +199,6 @@
   - 根拠: `KM-04-C02`。`R06-C02`。[`ScriptRunner.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift) は shell の PID だけを停止する。terminationHandler は timeout / kill work を取消後、collectors.finalize の readDataToEndOfFile で EOF を同期的に待つため、shell 終了後も書き込み端を持つ子が残ると continuation を返せない。
   - 作業・完了条件: 親 shell が先に終了する場合と timeout で終了する場合の双方で、子が pipe を保持しても設定 timeout と終了処理を経て EOF 待ちを終え、エラーと fallback が返って入力パネルが操作可能になることを確認する。`sleep 2 & printf done` など実コマンドで所要時間と結果を確認し、既存の通常出力回収・timeout の保証を維持する。
   - 限界: Logger のみ除去した元 Runner の局所実行で、timeout=0.2秒・killDelay=0.1秒、`sleep 2 & printf done` が2.020秒後に done を成功出力することを再現した。実アプリ未確認。永久継続する子の無期限待ちは EOF と制御経路からの推論で、foreground pipeline の timeout 超過例は別実行していない。
-
-- [ ] F8 置換後の挿入位置とプレビューを最終本文の座標に合わせる
-  - 目的・発生条件: Auto-replace をオフにした手動置換で、連鎖置換・前方の長さ変更・削除一致の内側のカーソルが最終本文に正しく対応しない。aZ の位置1で a→bbbb→c は cZ の位置2、a z t の末尾位置5で z→zzzz、a→aaa、t→TT は最終長11に対して位置10、abcFILLERz の位置4で FILLER→空は abcz の位置0になる。連鎖や座標履歴の不整合は marked text の preview にも使われる。
-  - 根拠: `R07-C01` / `KM-02-C01` / `KM-02-C02` / `KM-02-C03`。[`ReplacementEngine.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift):29-84,126-131 は元 location と中間 length を組み合わせ、後続の前方置換で既存 offset entry を移動・更新しない。[`ReplacementService.swift`](../Koecho/ReplacementService.swift):39-60 と [`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift) の元本文 bounds filter は後段の補正・preview を除外する。Service は削除一致の内側にも削除長全体を差し引き、[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift):138-140 の clamp で位置0になる。
-  - 作業・完了条件: a b の位置1で a→long→x は最終本文 x b・挿入位置1・preview x、aZ の位置1で a→bbbb→c は cZ・位置1、a z t の末尾から z→zzzz、a→aaa、t→TT は aaa zzzz TT・位置11となることを確認する。abcFILLERz の位置4で FILLER→空は abcz の削除開始位置3へ対応させる。[置換ルール仕様](../docs/specs/replacement-rules.md) の登録順適用を維持し、各計算、marked preview、後続音声の挿入を既存テストと実操作で確認する。
-  - 限界: Core 本文変換と Service と同じ位置補正 loop の局所実行で、aZ→cZ・point=2、aaa zzzz TT・t match={6,1}・point=10、abcz・point=0 を再現した。Core logger を除去し最小 rule 型を使った計算の証拠で、実 NSTextView 操作・preview 描画・App integration は未確認。旧 a→long→x の tooltip 例は静的追跡。
 
 - [ ] F19 Escape の中断を実行中の外部スクリプトへ伝える
   - 目的・発生条件: 長い custom 手動実行または auto-run 中に Escape する通常操作で成立する。再表示なしでも process の継続は生じる。
