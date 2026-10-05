@@ -122,11 +122,13 @@
   - 作業・完了条件: failedToCreateCGEvent 等で本文を復帰した後、閉じて再表示しなくても対象アプリへの再確定ができることを確認する。失敗時の本文保持と Accessibility 失敗の同対象 retry を維持し、注入した失敗で対象状態・再確定経路を確認する。
   - 限界: 実 CGEvent 生成失敗の条件・頻度は未測定。terminated target の別契約は対象外。editor は先に clear されるが inputText の fallback があるため本文の恒久消失までは確認していない。
 
-- [ ] F23 初期言語補正待ち中の新しい言語選択を保持する
+- [x] F23 初期言語補正待ち中の新しい言語選択を保持する
   - 目的・発生条件: 保存値が補正対象で、補正先の準備 await が継続し、他の reserved 言語を Picker で選べる場合。selection 用 task は初期の task とは独立する。
   - 根拠: `KM-03-C05`。[`SpeechAnalyzerLocaleManager.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerLocaleManager.swift):67-74,96-122; [`VoiceInputSection.swift`](../Koecho/VoiceInputSection.swift):37-50,72-83; [`VoiceInputSettings.swift`](../Packages/KoechoKit/Sources/KoechoCore/VoiceInputSettings.swift) locale setter の保存。loadLocales は開始時の補正値を計算後 isLoading=false にして download を await する。ユーザーが別言語を選んでも初期 task は失効せず、戻った古い補正値を selection へ代入する。
   - 作業・完了条件: 初期補正の download / 準備待ち中に Picker で別の reserved 言語を選んだ後、旧補正 task が復帰しても選択・保存値を上書きしないことを確認する。選択変更がない初期補正と通常の言語変更を既存テスト・実 UI で確認する。
-  - 限界: 実 UI/download 未実施。表記正規化だけの補正も候補になり得るが、await がすぐ終了する場合は競合窓が小さい。
+  - 進捗（2026-10-05）: 初期 await 前の選択を保持し、復帰時の現在選択比較と cancellation 確認後だけ補正を適用する。continuation で制御する回帰テストにより、別言語変更後／cancel 後の旧結果拒否・無変更時の補正・補正なしと保存再読込を確認した。Package 304 tests、App 202 tests、build は成功。
+  - 実 UI 確認（2026-10-05）: 同じ初期適用 helper・Binding・保存経路を使う隔離一時 fixture で、準備 await を continuation で制御した。本人報告は、待機中に英語（アメリカ）を選択→旧日本語補正を解放後の選択保持と、選択無変更での日本語補正の確認として扱う。保存保持は continuation 回帰テストの設定再読込、fixture を外した製品 source の専用 domain の locale 1キー読取（`en_US`）、通常変更後の同署名再起動で本人が「英語のまま」と確認した証拠で裏付けた。fixture の saved 表示や識別子文字列を本人が確認したとは扱わない。
+  - 限界: CUA は過去の取得 timeout により本人操作を使用。競合確認は synthetic preparation-await であり、実モデル download や自然な download 競合窓の再現は未実施。Accessibility / Input Monitoring / Microphone の権限維持は未確認。fixture は一時コピーだけで製品 source には残さず、所有検証アプリの停止・scratch build 削除・MCP profile 復元を完了した。
 
 - [ ] F24 音声認識本文の診断ログ出力を削除する
   - 目的・発生条件: 音声認識 result が到着し、debug ログ収集を有効にした Console/ 診断ログを閲覧・共有する通常の診断経路で到達する。

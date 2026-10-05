@@ -70,8 +70,8 @@ private struct SpeechAnalyzerLanguageSection: View {
       }
     }
     .task {
-      if let corrected = await manager.loadLocales(currentSelection: selection) {
-        selection = corrected
+      await loadInitialSpeechAnalyzerSelection(selection: $selection) { initialSelection in
+        await manager.loadLocales(currentSelection: initialSelection)
       }
     }
     .task(id: selection) {
@@ -97,6 +97,19 @@ private struct SpeechAnalyzerLanguageSection: View {
       )
     }
   }
+}
+
+@MainActor
+func loadInitialSpeechAnalyzerSelection(
+  selection: Binding<String>,
+  load: @MainActor (String) async -> String?
+) async {
+  let initialSelection = selection.wrappedValue
+  let corrected = await load(initialSelection)
+  guard !Task.isCancelled, selection.wrappedValue == initialSelection,
+    let corrected
+  else { return }
+  selection.wrappedValue = corrected
 }
 
 // MARK: - LanguageManagementSheet
