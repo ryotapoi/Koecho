@@ -139,11 +139,13 @@
   - 検証: source hash を記録した一時 harness で実 Runner の RunState を weak 観測し、成功30回、non-zero / empty-output 各30回、SIGTERM / SIGKILL timeout 各1回が期限後に解放されることを確認。所有測定とは別に、実 Process の反復結果・出力回収・timeout の回帰を含む Package テスト192件、build、専用署名アプリの build/run・識別・停止が成功。証拠: `tmp/workflow/orchestrator-normal-tail-20261004/changes/F25/validation/`、`tmp/verification/verify-koecho/20261004-f25/`。
   - 限界: Dispatch queue は cancel 済み work を期限まで一時保持し得る。Foundation Process 全体の heap、RSS、内部資源総量は測定していない。UI・TCC 権限維持の実操作は今回の対象外。
 
-- [ ] F28 履歴消去の保存失敗を消去成功として表示しない
+- [x] F28 履歴消去の保存失敗を消去成功として表示しない
   - 目的・発生条件: HistoryView の通常履歴ページにある Clear All から clear へ直接到達する。履歴を読み込めた後、保存先 directory を書き込み不能にする等、元ファイルの読み取りが可能なまま atomic write が失敗する条件で成立する。再起動時の purge も同じ書込み不能状態なら古い履歴を消去できない。
-  - 根拠: `KM-06-C02`。[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift):34-37,76-114；[`HistoryView.swift`](../Koecho/HistoryView.swift):82-99,114-118；[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift):47-52 は unavailable reset 時のみ保存成功後に memory 状態を変更する；[`KoechoApp.swift`](../Koecho/KoechoApp.swift):57-64。HistoryStore.clear は entries を空にしてから save する。save() は atomic write の失敗を false として返す内部 save 結果を捨て、isUnavailable も変更しない。元ファイルを保持したまま atomic write が失敗すると、UI は空表示である一方、次回 load は元の本文を再読み込みする。
+  - 根拠: `KM-06-C02`。[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift):34-37,76-114；[`HistoryView.swift`](../Koecho/HistoryView.swift):82-99,114-118；[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift):47-52 は unavailable reset 時のみ保存成功後に memory 状態を変更する；[`KoechoApp.swift`](../Koecho/KoechoApp.swift):57-64。変更前の HistoryStore.clear は entries を空にしてから save していた。save() は atomic write の失敗を false として返す内部 save 結果を捨て、isUnavailable も変更しない。元ファイルを保持したまま atomic write が失敗すると、UI は空表示になる一方、次回 load は元の本文を再読み込みしていた。
   - 作業・完了条件: 読み取り可能な元履歴が残る atomic write 失敗を扱い、Clear All 後に消去済みと誤認させず失敗を判別できることを確認する。成功時には永続消去され再起動で復活しないこと、失敗時には再読み込みと表示が整合することを保存失敗の検証と実ファイル操作で確認する。完了済み N3 の読込失敗保護とは別の消去保存経路を対象とする。
-  - 限界: 書込み失敗と再起動の実行再現は行っていない。全ての atomic write 失敗が必ず元ファイルを保持するという主張ではなく、保存先 directory が書き込み不能で元ファイルが残る条件に限定した。容量不足の発生率は未測定。
+  - 完了: 空履歴の保存成功後にだけ一覧を空にし、失敗を Bool で返す。通常 Clear All の失敗通知と一覧・件数の維持を接続した（2026-10-05）。
+  - 検証: 同一ソースの Package 299件、hosted test 197件、通常 build、固定署名版 build/run の成功を確認。実ファイルで書込み不可 directory の元履歴保持・再ロード・権限復旧後の再試行と永続消去・N3 保護を検証した。同一 HistoryView／HistoryStore の隔離 fixture で本人が失敗 alert、dismiss 後の一覧・1件・再試行可能状態、再起動後の保持、復旧再試行後と再起動後の空一覧・0件・Clear All 無効を確認した。通常履歴は操作していない。
+  - 限界: 全ての atomic write 失敗が必ず元ファイルを保持するという主張ではなく、保存先 directory が書き込み不能で元ファイルが残る条件に限定した。容量不足の発生率は未測定。
 
 #### 高難度対応
 

@@ -69,10 +69,41 @@ struct HistoryStoreTests {
     let settings = makeSettings()
     store.add(text: "a", settings: settings)
     store.add(text: "b", settings: settings)
-    store.clear()
+    #expect(store.clear())
     #expect(store.entries.isEmpty)
     let store2 = HistoryStore(directoryURL: dir)
     #expect(store2.entries.isEmpty)
+  }
+
+  @Test func failedClearPreservesReadableHistoryAndCanBeRetried() throws {
+    let dir = makeTempDirectory()
+    defer {
+      try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+      try? FileManager.default.removeItem(at: dir)
+    }
+    let fileURL = dir.appendingPathComponent("history.json")
+    let settings = makeSettings()
+    let initialStore = HistoryStore(directoryURL: dir)
+    initialStore.add(text: "retained history", settings: settings)
+    let store = HistoryStore(directoryURL: dir)
+    let loadedEntries = store.entries
+    let original = try Data(contentsOf: fileURL)
+
+    try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+    #expect(!store.clear())
+    #expect(store.entries == loadedEntries)
+    #expect(!store.isUnavailable)
+    #expect(try Data(contentsOf: fileURL) == original)
+    let reloaded = HistoryStore(directoryURL: dir)
+    #expect(reloaded.entries == loadedEntries)
+    #expect(!reloaded.isUnavailable)
+
+    try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+    #expect(store.clear())
+    #expect(store.entries.isEmpty)
+    let cleared = HistoryStore(directoryURL: dir)
+    #expect(cleared.entries.isEmpty)
+    #expect(!cleared.isUnavailable)
   }
 
   @Test func deleteEntry() {
@@ -100,7 +131,7 @@ struct HistoryStoreTests {
 
     store.purge(maxCount: settings.historyMaxCount, retentionDays: settings.historyRetentionDays)
     store.add(text: "new entry", settings: settings)
-    store.clear()
+    #expect(!store.clear())
     store.deleteEntry(id: UUID())
 
     #expect(store.entries.isEmpty)

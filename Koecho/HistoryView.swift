@@ -11,6 +11,7 @@ struct HistoryView: View {
   @State private var popoverEntryID: UUID?
   @State private var isShowingResetConfirmation = false
   @State private var isShowingResetError = false
+  @State private var isShowingClearError = false
 
   init(historyStore: HistoryStore) {
     self.historyStore = historyStore
@@ -50,6 +51,11 @@ struct HistoryView: View {
     } message: {
       Text("The unreadable history is still protected. Check available disk space and try again.")
     }
+    .alert("History Could Not Be Cleared", isPresented: $isShowingClearError) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text("Your history has not been cleared. Check available disk space and write permissions, then try again.")
+    }
   }
 
   private var historyContent: some View {
@@ -81,7 +87,9 @@ struct HistoryView: View {
 
       HStack {
         Button("Clear All") {
-          historyStore.clear()
+          if !historyStore.clear() {
+            isShowingClearError = true
+          }
         }
         .disabled(historyStore.entries.isEmpty)
         Spacer()

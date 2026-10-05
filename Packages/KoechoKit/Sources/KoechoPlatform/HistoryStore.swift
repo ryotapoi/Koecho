@@ -31,10 +31,11 @@ public final class HistoryStore {
     purge(maxCount: settings.historyMaxCount, retentionDays: settings.historyRetentionDays)
   }
 
-  public func clear() {
-    guard !isUnavailable else { return }
+  @discardableResult
+  public func clear() -> Bool {
+    guard !isUnavailable, save(entries: []) else { return false }
     entries.removeAll()
-    save()
+    return true
   }
 
   public func deleteEntry(id: UUID) {
