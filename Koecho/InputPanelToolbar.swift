@@ -2,6 +2,7 @@ import KoechoCore
 import SwiftUI
 
 struct InputPanelToolbar: View {
+  let availableWidth: CGFloat
   let isVoiceInputEnabled: Bool
   let replacementRules: [ReplacementRule]
   let isAutoReplacementEnabled: Bool
@@ -88,6 +89,7 @@ struct InputPanelToolbar: View {
         .keyboardShortcut(.return, modifiers: .command)
         .disabled(isRunningScript)
       }
+      .frame(minWidth: max(0, availableWidth - 24))
       .fixedSize(horizontal: true, vertical: false)
       .padding(.horizontal, 12)
     }
@@ -163,6 +165,7 @@ extension HotkeyConfig {
   scriptSettings.scripts = [both, symbolOnly, titleOnly]
   scriptSettings.autoRunScriptId = both.id
   return InputPanelToolbar(
+    availableWidth: 560,
     isVoiceInputEnabled: true,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     isAutoReplacementEnabled: false,
@@ -184,6 +187,7 @@ extension HotkeyConfig {
   let defaults = UserDefaults(suiteName: "preview-toolbar-running")!
   let scriptSettings = ScriptSettings(defaults: defaults)
   return InputPanelToolbar(
+    availableWidth: 350,
     isVoiceInputEnabled: false,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     isAutoReplacementEnabled: false,
@@ -209,6 +213,7 @@ extension HotkeyConfig {
     Script(name: "AI", scriptPath: "ai.sh"),
   ]
   return InputPanelToolbar(
+    availableWidth: 350,
     isVoiceInputEnabled: true,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     isAutoReplacementEnabled: true,
@@ -235,6 +240,7 @@ extension HotkeyConfig {
     Script(name: "AI", scriptPath: "ai.sh"),
   ]
   return InputPanelToolbar(
+    availableWidth: 350,
     isVoiceInputEnabled: true,
     replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
     isAutoReplacementEnabled: false,
@@ -257,6 +263,7 @@ extension HotkeyConfig {
   let defaults = UserDefaults(suiteName: "preview-toolbar-no-rules")!
   let scriptSettings = ScriptSettings(defaults: defaults)
   return InputPanelToolbar(
+    availableWidth: 350,
     isVoiceInputEnabled: true,
     replacementRules: [],
     isAutoReplacementEnabled: false,

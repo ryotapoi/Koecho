@@ -42,6 +42,7 @@ struct InputPanelContent: View {
           .padding(.bottom, 8)
 
           InputPanelToolbar(
+            availableWidth: geometry.size.width,
             isVoiceInputEnabled: appState.settings.voiceInput.isVoiceInputEnabled,
             replacementRules: appState.settings.replacement.replacementRules,
             isAutoReplacementEnabled: appState.settings.replacement.isAutoReplacementEnabled,
