@@ -197,6 +197,74 @@ nonisolated struct ScriptRunnerTests {
     }
   }
 
+  // MARK: - Cancellation
+
+  @Test func cancellationBeforeLaunchDoesNotRunCommand() async throws {
+    let marker = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: marker) }
+    let task = Task {
+      withUnsafeCurrentTask { $0?.cancel() }
+      return try await ScriptRunner().run(scriptPath: "touch '\(marker.path)'", input: "")
+    }
+    await #expect(throws: CancellationError.self) { try await task.value }
+    #expect(!FileManager.default.fileExists(atPath: marker.path))
+  }
+
+  @Test(arguments: [false, true])
+  func cancellationStopsOwnedProcess(ignoresTERM: Bool) async throws {
+    let marker = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: marker) }
+    let command = "\(ignoresTERM ? "trap '' TERM; " : "")echo $$ > '\(marker.path)'; while :; do :; done"
+    let task = Task { try await ScriptRunner(timeout: 20, killDelay: 0.1).run(scriptPath: command, input: "") }
+    defer { task.cancel() }
+    let deadline = ContinuousClock.now + .seconds(5)
+    while !FileManager.default.fileExists(atPath: marker.path), ContinuousClock.now < deadline {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    let pid = try #require(Int32(try String(contentsOf: marker, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)))
+    let start = ContinuousClock.now
+    task.cancel()
+    await #expect(throws: CancellationError.self) { try await task.value }
+    let exitDeadline = ContinuousClock.now + .seconds(5)
+    while kill(pid, 0) == 0, ContinuousClock.now < exitDeadline {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(start.duration(to: .now) < .seconds(5))
+    #expect(kill(pid, 0) == -1 && errno == ESRCH)
+  }
+
+  @Test func cancellationDoesNotWaitForChildHeldPipeEOF() async throws {
+    let marker = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: marker) }
+    let task = Task {
+      try await ScriptRunner(timeout: 20, killDelay: 0.1).run(
+        scriptPath: "sleep 3 & echo ready > '\(marker.path)'; printf done", input: "")
+    }
+    defer { task.cancel() }
+    let deadline = ContinuousClock.now + .seconds(5)
+    while !FileManager.default.fileExists(atPath: marker.path), ContinuousClock.now < deadline {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(FileManager.default.fileExists(atPath: marker.path))
+    let start = ContinuousClock.now
+    task.cancel()
+    await #expect(throws: CancellationError.self) { try await task.value }
+    #expect(start.duration(to: .now) < .seconds(2))
+  }
+
+  @Test func cancellationRacingLaunchAndExitCompletesOnce() async {
+    for _ in 0..<40 {
+      let task = Task { try await ScriptRunner(timeout: 2, killDelay: 0.1).run(scriptPath: "cat", input: "original") }
+      await Task.yield()
+      task.cancel()
+      do {
+        #expect(try await task.value.output == "original")
+      } catch {
+        #expect(error is CancellationError)
+      }
+    }
+  }
+
   // MARK: - Timeout
 
   @Test(arguments: [

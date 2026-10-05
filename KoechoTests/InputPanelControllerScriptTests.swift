@@ -127,6 +127,76 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.isInputPanelVisible == false)
   }
 
+  @Test(arguments: [false, true])
+  func escapeStopsScriptAndOldCompletionCannotClearNextRun(autoRun: Bool) async throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let ctx = makeController(makeScriptRunner: { ScriptRunner(timeout: 20, killDelay: 0.2) })
+    let shortcut = ShortcutKey(modifiers: [.control], character: "s")
+    func script(_ name: String) -> Script {
+      Script(name: name, scriptPath: "trap '' TERM; echo $$ > '\(directory.path)/\(name)'; while :; do :; done", shortcutKey: shortcut)
+    }
+    func waitForPID(_ name: String) async throws -> Int32 {
+      let marker = directory.appendingPathComponent(name)
+      let deadline = ContinuousClock.now + .seconds(5)
+      while !FileManager.default.fileExists(atPath: marker.path), ContinuousClock.now < deadline {
+        try await Task.sleep(for: .milliseconds(10))
+      }
+      return try #require(Int32(try String(contentsOf: marker, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)))
+    }
+    func waitForExit(_ pid: Int32) async throws {
+      let deadline = ContinuousClock.now + .seconds(5)
+      while kill(pid, 0) == 0, ContinuousClock.now < deadline {
+        try await Task.sleep(for: .milliseconds(10))
+      }
+      #expect(kill(pid, 0) == -1 && errno == ESRCH)
+    }
+    let first = script("first")
+    ctx.appState.settings.script.scripts = [first]
+    ctx.appState.settings.script.autoRunScriptId = autoRun ? first.id : nil
+    ctx.controller.showPanel()
+    ctx.appState.setInputText("original")
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+    let firstTask: Task<Void, Never>
+    if autoRun {
+      firstTask = Task { await ctx.controller.confirm() }
+    } else {
+      #expect(ctx.controller.panel.onShortcutKey?(shortcut) == true)
+      firstTask = try #require(ctx.controller.shortcutScriptTask)
+    }
+    let firstPID = try await waitForPID("first")
+    ctx.controller.panel.onEscape?()
+    ctx.controller.showPanel()
+    let second = script("second")
+    ctx.appState.settings.script.scripts = [second]
+    ctx.appState.settings.script.autoRunScriptId = nil
+    ctx.appState.setInputText("new text")
+    findVoiceInputTextView(in: ctx.controller)?.replaceText("new text")
+    #expect(ctx.controller.panel.onShortcutKey?(shortcut) == true)
+    let secondTask = try #require(ctx.controller.shortcutScriptTask)
+    let secondPID = try await waitForPID("second")
+    await firstTask.value
+    try await waitForExit(firstPID)
+    #expect(ctx.appState.isRunningScript)
+    #expect(ctx.appState.inputText == "new text")
+    #expect(ctx.appState.errorMessage == nil)
+    #expect(kill(secondPID, 0) == 0)
+    #expect(ctx.paster.pastedTexts.isEmpty)
+    #expect(ctx.historyStore.entries.isEmpty)
+    ctx.controller.panel.onEscape?()
+    await secondTask.value
+    try await waitForExit(secondPID)
+    #expect(!ctx.appState.isRunningScript)
+    ctx.controller.showPanel()
+    ctx.appState.setInputText("recovery")
+    findVoiceInputTextView(in: ctx.controller)?.replaceText("recovery")
+    ctx.appState.settings.script.scripts = [Script(name: "Upper", scriptPath: "tr a-z A-Z", shortcutKey: shortcut)]
+    #expect(ctx.controller.panel.onShortcutKey?(shortcut) == true)
+    await ctx.controller.shortcutScriptTask?.value
+    #expect(ctx.appState.inputText == "RECOVERY")
+  }
+
   // MARK: - Script shortcuts
 
   @Test func cmdShiftShortcutExecutesScript() async throws {

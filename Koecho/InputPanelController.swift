@@ -12,7 +12,7 @@ final class InputPanelController {
   private let historyStore: HistoryStore
   private var isConfirming = false
   // Covers voice finalization and auto-run without blocking Escape cancellation.
-  private var isProcessingConfirmation = false
+  private var processingConfirmationID: UUID?
   private var textView: VoiceInputTextView?
   private(set) var panel: InputPanel
   private var replacementService: ReplacementService!
@@ -121,11 +121,14 @@ final class InputPanelController {
   }
 
   func confirm() async {
-    guard appState.isInputPanelVisible, !isProcessingConfirmation, !isConfirming,
+    guard appState.isInputPanelVisible, processingConfirmationID == nil, !isConfirming,
       !appState.isRunningScript
     else { return }
-    isProcessingConfirmation = true
-    defer { isProcessingConfirmation = false }
+    let confirmationID = UUID()
+    processingConfirmationID = confirmationID
+    defer {
+      if processingConfirmationID == confirmationID { processingConfirmationID = nil }
+    }
     appState.discardScriptUndo()
 
     let rawText = await finalizeVoiceInput()
@@ -184,13 +187,12 @@ final class InputPanelController {
     appState.setInputText(text)
     textView?.replaceText(text)
 
-    appState.isRunningScript = true
-    defer { appState.isRunningScript = false }
-
     do {
       let transformed = try await scriptService.runAutoScript(autoScript, on: text)
       guard appState.isInputPanelVisible else { return nil }
       return transformed
+    } catch is CancellationError {
+      return nil
     } catch {
       guard appState.isInputPanelVisible else { return nil }
       appState.setInputText(text)
@@ -263,6 +265,8 @@ final class InputPanelController {
       return
     }
 
+    if appState.isRunningScript { processingConfirmationID = nil }
+    scriptService.cancelExecution()
     voiceCoordinator.cancelEngine()
     paster.restoreClipboard()
     replacementService.clearPreviews()

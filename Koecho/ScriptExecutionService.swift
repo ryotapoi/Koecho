@@ -6,6 +6,8 @@ import KoechoPlatform
 final class ScriptExecutionService {
   var textView: (any TextViewOperating)?
 
+  private var activeExecution: (id: UUID, task: Task<ScriptRunnerResult, any Error>)?
+
   private let appState: AppState
   private let makeScriptRunner: () -> ScriptRunner
   private let voiceCoordinator: VoiceInputCoordinator
@@ -50,31 +52,30 @@ final class ScriptExecutionService {
     }
 
     let originalText = appState.inputText
-    appState.isRunningScript = true
+    let execution = startExecution(
+      script, input: appState.inputText,
+      context: makeScriptContext(prompt: appState.promptText + appState.volatilePromptText)
+    )
     defer {
-      appState.isRunningScript = false
-      appState.promptScript = nil
-      appState.promptText = ""
-      appState.volatilePromptText = ""
+      if activeExecution?.id == execution.id {
+        activeExecution = nil
+        appState.isRunningScript = false
+        appState.promptScript = nil
+        appState.promptText = ""
+        appState.volatilePromptText = ""
+      }
     }
 
     appState.errorMessage = nil
 
-    let context = makeScriptContext(prompt: appState.promptText + appState.volatilePromptText)
-
-    let runner = makeScriptRunner()
     do {
-      let result = try await runner.run(
-        scriptPath: script.scriptPath,
-        input: appState.inputText,
-        context: context
-      )
-      guard appState.isInputPanelVisible else { return }
+      let result = try await execution.task.value
+      guard activeExecution?.id == execution.id, appState.isInputPanelVisible else { return }
       appState.setInputText(result.output)
       voiceCoordinator.moveVoiceInsertionPoint(toEndOf: result.output)
       appState.offerScriptUndo(restoring: originalText)
     } catch {
-      guard appState.isInputPanelVisible else { return }
+      guard activeExecution?.id == execution.id, appState.isInputPanelVisible else { return }
       appState.setInputText(originalText)
       appState.errorMessage = scriptErrorMessage(for: error, script: script)
     }
@@ -113,14 +114,39 @@ final class ScriptExecutionService {
   }
 
   func runAutoScript(_ script: Script, on text: String) async throws -> String {
-    let context = ScriptRunnerContext(prompt: "")
+    let execution = startExecution(script, input: text, context: ScriptRunnerContext(prompt: ""))
+    defer {
+      if activeExecution?.id == execution.id {
+        activeExecution = nil
+        appState.isRunningScript = false
+      }
+    }
+    do {
+      let result = try await execution.task.value
+      guard activeExecution?.id == execution.id else { throw CancellationError() }
+      return result.output
+    } catch {
+      guard activeExecution?.id == execution.id else { throw CancellationError() }
+      throw error
+    }
+  }
+
+  func cancelExecution() {
+    activeExecution?.task.cancel()
+    activeExecution = nil
+    appState.isRunningScript = false
+  }
+
+  private func startExecution(
+    _ script: Script, input: String, context: ScriptRunnerContext
+  ) -> (id: UUID, task: Task<ScriptRunnerResult, any Error>) {
     let runner = makeScriptRunner()
-    let result = try await runner.run(
-      scriptPath: script.scriptPath,
-      input: text,
-      context: context
-    )
-    return result.output
+    let execution = (id: UUID(), task: Task {
+      try await runner.run(scriptPath: script.scriptPath, input: input, context: context)
+    })
+    activeExecution = execution
+    appState.isRunningScript = true
+    return execution
   }
 
   private func executeBuiltin(_ script: Script) {

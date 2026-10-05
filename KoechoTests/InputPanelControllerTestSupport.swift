@@ -36,7 +36,8 @@ func makeController(
   paster: MockPaster? = nil,
   selectedTextReader: (any SelectedTextReading)? = nil,
   makeEngine: (() -> any VoiceInputEngine)? = nil,
-  ducker: MockVolumeDucker? = nil
+  ducker: MockVolumeDucker? = nil,
+  makeScriptRunner: (() -> ScriptRunner)? = nil
 ) -> TestContext {
   let p = paster ?? MockPaster()
   let d = ducker ?? MockVolumeDucker()
@@ -51,7 +52,7 @@ func makeController(
     appState: appState,
     selectedTextReader: reader,
     paster: p,
-    makeScriptRunner: {
+    makeScriptRunner: makeScriptRunner ?? {
       ScriptRunner(timeout: appState.settings.script.scriptTimeout)
     },
     makeEngine: makeEngine ?? { MockVoiceInputEngine() },

@@ -204,11 +204,11 @@
   - 実画面: 実controller/service/view/Runnerのsource同一性を記録し、専用defaults・historyの署名fixtureを使用。本人が通常Uppercase・失敗後の即再実行・概ね編集可能を明示し、両timeout手順を含む案内に対しCmd+A以外は大丈夫と文脈了承した。所有fixtureのみ停止済み。証拠: `tmp/workflow/orchestrator-20261005-f28-f5-f19-fresh/changes/F5/validation/`。
   - 限界: 本人報告は両case個別のcaption逐語記録・実測時刻ではなく手順全体の文脈確認。Cmd+Aはfixtureに標準Edit menuがない起動方式との差が説明候補で、製品bugとは未確定。通常版のTCC/hotkey/paste/mic維持は未確認。任意の子孫停止・外部作用取消・F19のEscape中断はこの完了の保証外。
 
-- [ ] F19 Escape の中断を実行中の外部スクリプトへ伝える
-  - 目的・発生条件: 長い custom 手動実行または auto-run 中に Escape する通常操作で成立する。再表示なしでも process の継続は生じる。
-  - 根拠: `KM-01-C08` / `KM-04-C04`。[`InputPanelController.swift`](../Koecho/InputPanelController.swift):259-268; [`ScriptExecutionService.swift`](../Koecho/ScriptExecutionService.swift):65-71,115-123; [`ScriptRunner.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift):89-165; [`scope.md`](../docs/rules/scope.md) auto-run/Escape 中断契約。既存 cancelDuringScriptDiscardsResult は非表示結果破棄だけを確認する。cancel は panel/voice/clipboard を解除するが、ScriptRunner への中断操作はない。Runner には Task cancellation handler がなく、外部 process は自発終了または timeout まで続く。
-  - 作業・完了条件: 手動 custom と auto-run の実行中に Escape すると process の中断が伝わり、自発終了や timeout まで継続しないことを実コマンドで確認する。通常完了・timeout・出力回収を維持する。F1 の旧結果適用防止とは別に process 継続を扱い、実行済みの外部作用の取り消しは求めない。
-  - 限界: 実アプリから process を観測していない。network 送信や file 変更の有無は登録コマンド次第であり、過去の副作用が取り消せるとは主張しない。
+- [x] F19 Escape の中断を実行中の外部スクリプトへ伝える
+  - 目的・発生条件: 長い custom 手動実行または auto-run 中に Escape すると、パネル非表示に加えて実行中の外部 Process へ中断を伝える。
+  - 実装: [`ScriptExecutionService.swift`](../Koecho/ScriptExecutionService.swift) が実行 Task を所有し、[`InputPanelController.swift`](../Koecho/InputPanelController.swift) の Escape から取消を伝える。[`ScriptRunner.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift) は起動前・起動中の取消を受け、TERM と既存 killDelay 後の KILL で停止する。取消完了は子の pipe EOF や設定 timeout を待たず、取消された実行の結果・cleanup は次実行へ適用しない。
+  - 検証: 2026-10-05 の署名付き隔離 SwiftUI fixture で本人が通常入力・編集・Cmd+A・Uppercase、manual と auto-run の Escape、再表示後の Uppercase を確認。manual PID 82084 は 13:13:34 開始→13:15:00 TERM、auto PID 92229 は 13:31:35 開始→13:35:43 TERM。両 PID の消滅を確認し、自然終了予定（各1200秒）・設定 timeout（1800秒）より前に停止した。auto-run は貼付け fake の呼出しなし・隔離履歴0件。Package 197件、KoechoTests 200件、build / build_run が成功。取消状態・TERM無視・EOF待ち・再実行の回帰と、source hash付き一時 harness で timer / collector 所有解除・完了後登録拒否を確認。証拠は `tmp/workflow/orchestrator-20261005-f28-f5-f19-fresh/changes/F19/validation/`。所有 fixture のみ終了済み。
+  - 限界: 任意の子孫・daemon・別 session の停止や既実行の外部作用の巻き戻しは保証しない。通常版の TCC・mic・clipboard・実 paste・global hotkey は未検証。F1 全体は未完了で、今回の取消実行の直接的な干渉防止だけを扱う。
 
 #### 調査・対応判断
 

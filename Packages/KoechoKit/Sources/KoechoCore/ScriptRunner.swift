@@ -58,6 +58,7 @@ public nonisolated final class ScriptRunner: Sendable {
     input: String,
     context: ScriptRunnerContext = ScriptRunnerContext()
   ) async throws -> ScriptRunnerResult {
+    try Task.checkCancellation()
     guard !scriptPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       logger.error("Script command is empty")
       throw ScriptRunnerError.emptyScript
@@ -86,79 +87,95 @@ public nonisolated final class ScriptRunner: Sendable {
     let killDelay = self.killDelay
     let logger = self.logger
 
-    let result: ScriptRunnerResult = try await withCheckedThrowingContinuation { continuation in
-      @Sendable func finishIfReady(forceTimeout: Bool = false) {
-        let stdoutData = stdoutCollector.outputIfFinished()
-        let stderrData = stderrCollector.outputIfFinished()
-        guard let completion = state.completeIfReady(
-          outputFinished: stdoutData != nil && stderrData != nil,
-          forceTimeout: forceTimeout
-        ) else { return }
+    let result: ScriptRunnerResult = try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        @Sendable func finishIfReady(forceInterruption: Bool = false) {
+          let stdoutData = stdoutCollector.outputIfFinished()
+          let stderrData = stderrCollector.outputIfFinished()
+          guard let completion = state.completeIfReady(
+            outputFinished: stdoutData != nil && stderrData != nil,
+            forceInterruption: forceInterruption
+          ) else { return }
 
-        stdoutCollector.stop()
-        stderrCollector.stop()
-        process.terminationHandler = nil
+          stdoutCollector.stop()
+          stderrCollector.stop()
+          process.terminationHandler = nil
 
-        if completion.timedOut {
-          logger.error("Script timed out: \(scriptPath)")
-          continuation.resume(throwing: ScriptRunnerError.timeout)
-          return
-        }
-
-        let stdoutString = String(data: stdoutData ?? Data(), encoding: .utf8) ?? ""
-        let stderrString = (String(data: stderrData ?? Data(), encoding: .utf8) ?? "")
-          .trimmingCharacters(in: .whitespacesAndNewlines)
-        if completion.exitCode != 0 {
-          continuation.resume(throwing: ScriptRunnerError.nonZeroExit(
-            code: completion.exitCode, stderr: stderrString))
-          return
-        }
-        let output = stdoutString.trimmingCharacters(in: .whitespacesAndNewlines)
-        if output.isEmpty {
-          continuation.resume(throwing: ScriptRunnerError.emptyOutput)
-        } else {
-          continuation.resume(returning: ScriptRunnerResult(output: output, stderr: stderrString))
-        }
-      }
-
-      stdoutCollector.start { finishIfReady() }
-      stderrCollector.start { finishIfReady() }
-      process.terminationHandler = { terminatedProcess in
-        let timedOut = state.recordExit(terminatedProcess.terminationStatus)
-        finishIfReady(forceTimeout: timedOut)
-      }
-
-      do {
-        try process.run()
-
-        // Schedule timeout only after process is running (pid is valid)
-        state.scheduleTimeout(after: timeout) {
-          guard state.beginTimeout() else { return }
-          if process.isRunning { process.terminate() }
-          if state.hasExited {
-            finishIfReady(forceTimeout: true)
+          if completion.cancelled {
+            continuation.resume(throwing: CancellationError())
             return
           }
 
-          // Bound output collection even when a child keeps a pipe open.
-          state.scheduleKill(after: killDelay) {
-            if process.isRunning { Darwin.kill(process.processIdentifier, SIGKILL) }
-            finishIfReady(forceTimeout: true)
+          if completion.timedOut {
+            logger.error("Script timed out: \(scriptPath)")
+            continuation.resume(throwing: ScriptRunnerError.timeout)
+            return
+          }
+
+          let stdoutString = String(data: stdoutData ?? Data(), encoding: .utf8) ?? ""
+          let stderrString = (String(data: stderrData ?? Data(), encoding: .utf8) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+          if completion.exitCode != 0 {
+            continuation.resume(throwing: ScriptRunnerError.nonZeroExit(
+              code: completion.exitCode, stderr: stderrString))
+            return
+          }
+          let output = stdoutString.trimmingCharacters(in: .whitespacesAndNewlines)
+          if output.isEmpty {
+            continuation.resume(throwing: ScriptRunnerError.emptyOutput)
+          } else {
+            continuation.resume(returning: ScriptRunnerResult(output: output, stderr: stderrString))
           }
         }
 
-        // Write stdin after launch
-        let inputData = input.data(using: .utf8) ?? Data()
-        stdinPipe.fileHandleForWriting.write(inputData)
-        stdinPipe.fileHandleForWriting.closeFile()
-      } catch {
-        guard state.completeAfterLaunchFailure() else { return }
-        stdoutCollector.stop()
-        stderrCollector.stop()
-        process.terminationHandler = nil
-        logger.error("Failed to launch script: \(scriptPath), error: \(error)")
-        continuation.resume(throwing: error)
+        @Sendable func interrupt() {
+          if process.isRunning { process.terminate() }
+          if state.hasExited {
+            finishIfReady(forceInterruption: true)
+            return
+          }
+          state.scheduleKill(after: killDelay) {
+            if process.isRunning { Darwin.kill(process.processIdentifier, SIGKILL) }
+            finishIfReady(forceInterruption: true)
+          }
+        }
+
+        state.setCancellationHandler { interrupt() }
+        stdoutCollector.start { finishIfReady() }
+        stderrCollector.start { finishIfReady() }
+        process.terminationHandler = { terminatedProcess in
+          let timedOut = state.recordExit(terminatedProcess.terminationStatus)
+          finishIfReady(forceInterruption: timedOut)
+        }
+
+        do {
+          guard try state.launch({ try process.run() }) else {
+            finishIfReady(forceInterruption: true)
+            return
+          }
+          state.deliverCancellation()
+
+          // Schedule timeout only after process is running (pid is valid)
+          state.scheduleTimeout(after: timeout) {
+            guard state.beginTimeout() else { return }
+            interrupt()
+          }
+
+          // Write stdin after launch
+          let inputData = input.data(using: .utf8) ?? Data()
+          stdinPipe.fileHandleForWriting.write(inputData)
+          stdinPipe.fileHandleForWriting.closeFile()
+        } catch {
+          guard state.completeAfterLaunchFailure() else { return }
+          stdoutCollector.stop()
+          stderrCollector.stop()
+          process.terminationHandler = nil
+          logger.error("Failed to launch script: \(scriptPath), error: \(error)")
+          continuation.resume(throwing: error)
+        }
       }
+    } onCancel: {
+      state.requestCancellation()
     }
 
     logger.info("Script completed: \(scriptPath)")
@@ -193,6 +210,10 @@ public nonisolated final class ScriptRunner: Sendable {
 nonisolated private final class RunState: Sendable {
   private struct State {
     var didTimeout = false
+    var didCancel = false
+    var launched = false
+    var cancellationDelivered = false
+    var cancellationHandler: (@Sendable () -> Void)?
     var exitCode: Int32?
     var completed = false
     var timeoutWork: DispatchWorkItem?
@@ -201,9 +222,37 @@ nonisolated private final class RunState: Sendable {
 
   private let state = Mutex(State())
 
+  func setCancellationHandler(_ handler: @escaping @Sendable () -> Void) {
+    state.withLock { $0.cancellationHandler = handler }
+  }
+
+  func launch(_ launch: () throws -> Void) rethrows -> Bool {
+    try state.withLock { state in
+      guard !state.didCancel else { return false }
+      try launch()
+      state.launched = true
+      return true
+    }
+  }
+
+  func requestCancellation() {
+    state.withLock { $0.didCancel = true }
+    deliverCancellation()
+  }
+
+  func deliverCancellation() {
+    let handler = state.withLock { state -> (@Sendable () -> Void)? in
+      guard state.didCancel, state.launched, !state.completed,
+        !state.cancellationDelivered else { return nil }
+      state.cancellationDelivered = true
+      return state.cancellationHandler
+    }
+    handler?()
+  }
+
   func beginTimeout() -> Bool {
     state.withLock { state in
-      guard !state.completed else { return false }
+      guard !state.completed, !state.didCancel else { return false }
       state.didTimeout = true
       return true
     }
@@ -214,22 +263,22 @@ nonisolated private final class RunState: Sendable {
   func recordExit(_ exitCode: Int32) -> Bool {
     state.withLock { state in
       state.exitCode = exitCode
-      return state.didTimeout
+      return state.didTimeout || state.didCancel
     }
   }
 
-  func completeIfReady(outputFinished: Bool, forceTimeout: Bool)
-    -> (timedOut: Bool, exitCode: Int32)?
+  func completeIfReady(outputFinished: Bool, forceInterruption: Bool)
+    -> (timedOut: Bool, cancelled: Bool, exitCode: Int32)?
   {
     state.withLock { state in
       guard !state.completed else { return nil }
-      if state.didTimeout {
-        guard forceTimeout else { return nil }
+      if state.didTimeout || state.didCancel {
+        guard forceInterruption else { return nil }
       } else {
         guard outputFinished, state.exitCode != nil else { return nil }
       }
       finish(&state)
-      return (state.didTimeout, state.exitCode ?? 0)
+      return (state.didTimeout, state.didCancel, state.exitCode ?? 0)
     }
   }
 
@@ -243,6 +292,7 @@ nonisolated private final class RunState: Sendable {
 
   private func finish(_ state: inout State) {
     state.completed = true
+    state.cancellationHandler = nil
     state.timeoutWork?.cancel()
     state.timeoutWork = nil
     state.killWork?.cancel()
@@ -260,7 +310,7 @@ nonisolated private final class RunState: Sendable {
 
   func scheduleKill(after delay: TimeInterval, execute: @escaping @Sendable () -> Void) {
     state.withLock { state in
-      guard !state.completed else { return }
+      guard !state.completed, state.killWork == nil else { return }
       let work = DispatchWorkItem(block: execute)
       state.killWork = work
       DispatchQueue.global().asyncAfter(deadline: .now() + delay, execute: work)
