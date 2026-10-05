@@ -34,6 +34,18 @@ import Testing
     return (service, appState, mockTV, coordinator)
   }
 
+  @Test func childHeldPipeTimeoutRestoresManualInputAndAllowsNextRun() async {
+    let (service, state, _, _) = makeService(inputText: "original", scriptTimeout: 0.2)
+    await service.execute(Script(name: "Pipe holder", scriptPath: "sleep 2 & printf done"))
+    #expect(state.inputText == "original")
+    #expect(state.errorMessage != nil)
+    #expect(!state.isRunningScript)
+    await service.execute(Script(name: "Uppercase", scriptPath: "tr a-z A-Z"))
+    #expect(state.inputText == "ORIGINAL")
+    #expect(state.errorMessage == nil)
+    #expect(!state.isRunningScript)
+  }
+
   // MARK: - Prompt flow
 
   @Test func executeWithPromptSetsPromptScript() async {

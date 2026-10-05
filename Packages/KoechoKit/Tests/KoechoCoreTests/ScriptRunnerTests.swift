@@ -199,6 +199,22 @@ nonisolated struct ScriptRunnerTests {
 
   // MARK: - Timeout
 
+  @Test(arguments: [
+    "sleep 2 & printf done",
+    "sleep 2 >&2 & printf done; while :; do :; done",
+    "sleep 2 2>/dev/null & printf done; while :; do :; done",
+    "sleep 2 >/dev/null & printf done; while :; do :; done",
+  ])
+  func timeoutIncludesChildHeldPipes(command: String) async throws {
+    let start = ContinuousClock.now
+    await #expect(throws: ScriptRunnerError.timeout) {
+      try await ScriptRunner(timeout: 0.2, killDelay: 0.1).run(scriptPath: command, input: "")
+    }
+    let elapsed = start.duration(to: .now)
+    print("F5 command=\(command) elapsed=\(elapsed) result=timeout")
+    #expect(elapsed < .seconds(1.5))
+  }
+
   @Test func timeout() async throws {
     let path = try makeScript("sleep 10")
     defer { try? FileManager.default.removeItem(atPath: path) }

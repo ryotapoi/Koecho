@@ -217,6 +217,31 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.scriptUndoText == nil)
   }
 
+  @Test func childHeldPipeTimeoutRestoresAutoRunFallbackAndAllowsEditing() async {
+    let ctx = makeController()
+    ctx.appState.settings.script.scriptTimeout = 0.2
+    let script = Script(name: "Pipe holder", scriptPath: "sleep 2 & printf done")
+    ctx.appState.settings.script.scripts = [script]
+    ctx.appState.settings.script.autoRunScriptId = script.id
+    ctx.controller.showPanel()
+    ctx.appState.setInputText("  original  ")
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+    await ctx.controller.confirm()
+    #expect(ctx.appState.inputText == "original")
+    #expect(ctx.appState.errorMessage != nil)
+    #expect(ctx.appState.isInputPanelVisible)
+    #expect(!ctx.appState.isRunningScript)
+    #expect(ctx.paster.pastedTexts.isEmpty)
+    findVoiceInputTextView(in: ctx.controller)?.replaceText("edited")
+    ctx.appState.setInputText("edited")
+    let success = Script(name: "Uppercase", scriptPath: "tr a-z A-Z")
+    ctx.appState.settings.script.scripts = [success]
+    ctx.appState.settings.script.autoRunScriptId = success.id
+    await ctx.controller.confirm()
+    #expect(ctx.paster.pastedTexts == ["EDITED"])
+    #expect(!ctx.appState.isInputPanelVisible)
+  }
+
   @Test func confirmAutoRunScriptError() async throws {
     let scriptPath = try makeScript("exit 1")
     let script = Script(name: "Fail", scriptPath: scriptPath)

@@ -87,53 +87,45 @@ public nonisolated final class ScriptRunner: Sendable {
     let logger = self.logger
 
     let result: ScriptRunnerResult = try await withCheckedThrowingContinuation { continuation in
-      @Sendable func resumeOnce(with result: Result<ScriptRunnerResult, any Error>) {
-        if state.tryResume() {
-          continuation.resume(with: result)
+      @Sendable func finishIfReady(forceTimeout: Bool = false) {
+        let stdoutData = stdoutCollector.outputIfFinished()
+        let stderrData = stderrCollector.outputIfFinished()
+        guard let completion = state.completeIfReady(
+          outputFinished: stdoutData != nil && stderrData != nil,
+          forceTimeout: forceTimeout
+        ) else { return }
+
+        stdoutCollector.stop()
+        stderrCollector.stop()
+        process.terminationHandler = nil
+
+        if completion.timedOut {
+          logger.error("Script timed out: \(scriptPath)")
+          continuation.resume(throwing: ScriptRunnerError.timeout)
+          return
+        }
+
+        let stdoutString = String(data: stdoutData ?? Data(), encoding: .utf8) ?? ""
+        let stderrString = (String(data: stderrData ?? Data(), encoding: .utf8) ?? "")
+          .trimmingCharacters(in: .whitespacesAndNewlines)
+        if completion.exitCode != 0 {
+          continuation.resume(throwing: ScriptRunnerError.nonZeroExit(
+            code: completion.exitCode, stderr: stderrString))
+          return
+        }
+        let output = stdoutString.trimmingCharacters(in: .whitespacesAndNewlines)
+        if output.isEmpty {
+          continuation.resume(throwing: ScriptRunnerError.emptyOutput)
+        } else {
+          continuation.resume(returning: ScriptRunnerResult(output: output, stderr: stderrString))
         }
       }
 
+      stdoutCollector.start { finishIfReady() }
+      stderrCollector.start { finishIfReady() }
       process.terminationHandler = { terminatedProcess in
-        let timedOut = state.complete()
-
-        let stdoutData = stdoutCollector.finalize()
-        let stderrData = stderrCollector.finalize()
-
-        let stdoutString = String(data: stdoutData, encoding: .utf8) ?? ""
-        let stderrString = String(data: stderrData, encoding: .utf8) ?? ""
-
-        if timedOut {
-          logger.error("Script timed out: \(scriptPath)")
-          resumeOnce(with: .failure(ScriptRunnerError.timeout))
-          return
-        }
-
-        let exitCode = terminatedProcess.terminationStatus
-        if exitCode != 0 {
-          logger.error("Script exited with code \(exitCode): \(scriptPath)")
-          resumeOnce(
-            with: .failure(
-              ScriptRunnerError.nonZeroExit(
-                code: exitCode,
-                stderr: stderrString.trimmingCharacters(in: .whitespacesAndNewlines)
-              )
-            ))
-          return
-        }
-
-        let trimmedOutput = stdoutString.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedOutput.isEmpty {
-          logger.warning("Script produced empty output: \(scriptPath)")
-          resumeOnce(with: .failure(ScriptRunnerError.emptyOutput))
-          return
-        }
-
-        resumeOnce(
-          with: .success(
-            ScriptRunnerResult(
-              output: trimmedOutput,
-              stderr: stderrString.trimmingCharacters(in: .whitespacesAndNewlines)
-            )))
+        let timedOut = state.recordExit(terminatedProcess.terminationStatus)
+        finishIfReady(forceTimeout: timedOut)
       }
 
       do {
@@ -142,12 +134,16 @@ public nonisolated final class ScriptRunner: Sendable {
         // Schedule timeout only after process is running (pid is valid)
         state.scheduleTimeout(after: timeout) {
           guard state.beginTimeout() else { return }
-          let pid = process.processIdentifier
-          process.terminate()
+          if process.isRunning { process.terminate() }
+          if state.hasExited {
+            finishIfReady(forceTimeout: true)
+            return
+          }
 
-          // Schedule SIGKILL in case SIGTERM is ignored
+          // Bound output collection even when a child keeps a pipe open.
           state.scheduleKill(after: killDelay) {
-            Darwin.kill(pid, SIGKILL)
+            if process.isRunning { Darwin.kill(process.processIdentifier, SIGKILL) }
+            finishIfReady(forceTimeout: true)
           }
         }
 
@@ -156,9 +152,12 @@ public nonisolated final class ScriptRunner: Sendable {
         stdinPipe.fileHandleForWriting.write(inputData)
         stdinPipe.fileHandleForWriting.closeFile()
       } catch {
-        state.complete()
+        guard state.completeAfterLaunchFailure() else { return }
+        stdoutCollector.stop()
+        stderrCollector.stop()
+        process.terminationHandler = nil
         logger.error("Failed to launch script: \(scriptPath), error: \(error)")
-        resumeOnce(with: .failure(error))
+        continuation.resume(throwing: error)
       }
     }
 
@@ -194,7 +193,7 @@ public nonisolated final class ScriptRunner: Sendable {
 nonisolated private final class RunState: Sendable {
   private struct State {
     var didTimeout = false
-    var resumed = false
+    var exitCode: Int32?
     var completed = false
     var timeoutWork: DispatchWorkItem?
     var killWork: DispatchWorkItem?
@@ -210,24 +209,44 @@ nonisolated private final class RunState: Sendable {
     }
   }
 
-  @discardableResult
-  func complete() -> Bool {
+  var hasExited: Bool { state.withLock { $0.exitCode != nil } }
+
+  func recordExit(_ exitCode: Int32) -> Bool {
     state.withLock { state in
-      state.completed = true
-      state.timeoutWork?.cancel()
-      state.timeoutWork = nil
-      state.killWork?.cancel()
-      state.killWork = nil
+      state.exitCode = exitCode
       return state.didTimeout
     }
   }
 
-  func tryResume() -> Bool {
+  func completeIfReady(outputFinished: Bool, forceTimeout: Bool)
+    -> (timedOut: Bool, exitCode: Int32)?
+  {
     state.withLock { state in
-      let shouldResume = !state.resumed
-      state.resumed = true
-      return shouldResume
+      guard !state.completed else { return nil }
+      if state.didTimeout {
+        guard forceTimeout else { return nil }
+      } else {
+        guard outputFinished, state.exitCode != nil else { return nil }
+      }
+      finish(&state)
+      return (state.didTimeout, state.exitCode ?? 0)
     }
+  }
+
+  func completeAfterLaunchFailure() -> Bool {
+    state.withLock { state in
+      guard !state.completed else { return false }
+      finish(&state)
+      return true
+    }
+  }
+
+  private func finish(_ state: inout State) {
+    state.completed = true
+    state.timeoutWork?.cancel()
+    state.timeoutWork = nil
+    state.killWork?.cancel()
+    state.killWork = nil
   }
 
   func scheduleTimeout(after delay: TimeInterval, execute: @escaping @Sendable () -> Void) {
@@ -250,40 +269,63 @@ nonisolated private final class RunState: Sendable {
 
 }
 
-/// Collects data from a Pipe's readability handler without blocking.
+/// Nonblocking reads keep both pipe draining and shutdown independent of child EOF.
 nonisolated private final class PipeCollector: Sendable {
   private struct State {
-    var chunks: [Data] = []
-    var finalized = false
+    var data = Data()
+    var finished = false
+    var stopped = false
   }
 
   private let state = Mutex(State())
   private let pipe: Pipe
+  private let source: any DispatchSourceRead
 
   init(pipe: Pipe) {
     self.pipe = pipe
-
-    pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
-      guard let self else { return }
-      self.state.withLock { state in
-        guard !state.finalized else { return }
-        let data = handle.availableData
-        if !data.isEmpty { state.chunks.append(data) }
-      }
-    }
+    let fd = pipe.fileHandleForReading.fileDescriptor
+    _ = fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK)
+    source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: .global())
+    source.setCancelHandler { try? pipe.fileHandleForReading.close() }
   }
 
-  /// Stop collecting and return all accumulated data.
-  /// Called from terminationHandler after the process has exited,
-  /// so all output has been written. The lock joins any in-flight read and
-  /// append before draining the pipe; queued callbacks skip the finalized pipe.
-  func finalize() -> Data {
-    pipe.fileHandleForReading.readabilityHandler = nil
-    return state.withLock { state in
-      state.finalized = true
-      let remaining = pipe.fileHandleForReading.readDataToEndOfFile()
-      if !remaining.isEmpty { state.chunks.append(remaining) }
-      return state.chunks.reduce(Data(), +)
+  func start(onFinished: @escaping @Sendable () -> Void) {
+    source.setEventHandler { [weak self] in
+      guard let self else { return }
+      let finished = self.state.withLock { state in
+        guard !state.stopped && !state.finished else { return false }
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        // Limit each callback so shutdown can always acquire this lock.
+        for _ in 0..<64 {
+          let count = Darwin.read(self.pipe.fileHandleForReading.fileDescriptor, &buffer, buffer.count)
+          if count > 0 {
+            state.data.append(contentsOf: buffer.prefix(count))
+          } else if count == 0 {
+            state.finished = true
+            return true
+          } else if errno == EINTR {
+            continue
+          } else {
+            return false
+          }
+        }
+        return false
+      }
+      if finished {
+        self.source.cancel()
+        onFinished()
+      }
     }
+    source.resume()
+  }
+
+  func outputIfFinished() -> Data? {
+    state.withLock { $0.finished ? $0.data : nil }
+  }
+
+  func stop() {
+    state.withLock { $0.stopped = true }
+    source.setEventHandler(handler: nil)
+    source.cancel()
   }
 }

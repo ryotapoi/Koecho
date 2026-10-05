@@ -197,11 +197,12 @@
 
 実装範囲・改修規模・既存動作へのリスクを調査し、対応するかと対応範囲を判断してから着手する。以下の完了条件は、改修を採用した場合の条件とする。
 
-- [ ] F5 子プロセスが出力パイプを保持してもスクリプト timeout を完了させる
-  - 目的・発生条件: シェル複合コマンドやパイプラインの子が stdout / stderr を保持すると、設定 timeout を過ぎても復帰せず実行中状態が続く。親 shell が先に正常終了する場合も、出力回収が子の EOF 待ちになり timeout が無効になる。
-  - 根拠: `KM-04-C02`。`R06-C02`。[`ScriptRunner.swift`](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift) は shell の PID だけを停止する。terminationHandler は timeout / kill work を取消後、collectors.finalize の readDataToEndOfFile で EOF を同期的に待つため、shell 終了後も書き込み端を持つ子が残ると continuation を返せない。
-  - 作業・完了条件: 親 shell が先に終了する場合と timeout で終了する場合の双方で、子が pipe を保持しても設定 timeout と終了処理を経て EOF 待ちを終え、エラーと fallback が返って入力パネルが操作可能になることを確認する。`sleep 2 & printf done` など実コマンドで所要時間と結果を確認し、既存の通常出力回収・timeout の保証を維持する。
-  - 限界: Logger のみ除去した元 Runner の局所実行で、timeout=0.2秒・killDelay=0.1秒、`sleep 2 & printf done` が2.020秒後に done を成功出力することを再現した。実アプリ未確認。永久継続する子の無期限待ちは EOF と制御経路からの推論で、foreground pipeline の timeout 超過例は別実行していない。
+- [x] F5 子プロセスが出力パイプを保持してもスクリプト timeout を完了させる
+  - 目的・発生条件: シェル複合コマンドやパイプラインの子が stdout / stderr を保持すると、shell 終了後も EOF 待ちで timeout が失効していた（`KM-04-C02`、`R06-C02`）。
+  - 完了: [ScriptRunner.swift](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift) の出力を非 blocking read で回収し、shell 終了と両 EOF が揃うまで期限を維持する。timeout 後は既存 TERM / KILL 猶予の範囲で子の EOF を待たずエラーを一度だけ返し、timer / collector callback の所有を解除する（2026-10-05）。
+  - 検証: 実 Runner の timeout=0.2秒 / killDelay=0.1秒で `sleep 2 & printf done` が0.204秒で timeout、shell が期限まで生存し子が stdout / stderr の片方だけを保持する場合も約0.204秒で timeout。通常全量・順序・stderr・stdin・environment・cwd・KILL回帰を含む Package193件、build、App199件が通過。manual の元本文、auto-run のtrim後fallback・error・running解除と次実行の成功、source hash付きweak観測でRunState/両collector解放・登録競合1000回を確認。
+  - 実画面: 実controller/service/view/Runnerのsource同一性を記録し、専用defaults・historyの署名fixtureを使用。本人が通常Uppercase・失敗後の即再実行・概ね編集可能を明示し、両timeout手順を含む案内に対しCmd+A以外は大丈夫と文脈了承した。所有fixtureのみ停止済み。証拠: `tmp/workflow/orchestrator-20261005-f28-f5-f19-fresh/changes/F5/validation/`。
+  - 限界: 本人報告は両case個別のcaption逐語記録・実測時刻ではなく手順全体の文脈確認。Cmd+Aはfixtureに標準Edit menuがない起動方式との差が説明候補で、製品bugとは未確定。通常版のTCC/hotkey/paste/mic維持は未確認。任意の子孫停止・外部作用取消・F19のEscape中断はこの完了の保証外。
 
 - [ ] F19 Escape の中断を実行中の外部スクリプトへ伝える
   - 目的・発生条件: 長い custom 手動実行または auto-run 中に Escape する通常操作で成立する。再表示なしでも process の継続は生じる。
