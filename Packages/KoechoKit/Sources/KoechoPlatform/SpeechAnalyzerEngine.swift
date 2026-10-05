@@ -277,7 +277,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
         for try await result in transcriber.results {
           guard let self, self.state == .listening || self.state == .stopping else { break }
           let text = String(result.text.characters)
-          self.logger.debug("Result: isFinal=\(result.isFinal) text=\"\(text, privacy: .public)\"")
+          self.logger.debug("Result: isFinal=\(result.isFinal)")
           if result.isFinal {
             self.delegate?.voiceInput(didFinalize: text)
           } else {

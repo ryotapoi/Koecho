@@ -130,11 +130,11 @@
   - 実 UI 確認（2026-10-05）: 同じ初期適用 helper・Binding・保存経路を使う隔離一時 fixture で、準備 await を continuation で制御した。本人報告は、待機中に英語（アメリカ）を選択→旧日本語補正を解放後の選択保持と、選択無変更での日本語補正の確認として扱う。保存保持は continuation 回帰テストの設定再読込、fixture を外した製品 source の専用 domain の locale 1キー読取（`en_US`）、通常変更後の同署名再起動で本人が「英語のまま」と確認した証拠で裏付けた。fixture の saved 表示や識別子文字列を本人が確認したとは扱わない。
   - 限界: CUA は過去の取得 timeout により本人操作を使用。競合確認は synthetic preparation-await であり、実モデル download や自然な download 競合窓の再現は未実施。Accessibility / Input Monitoring / Microphone の権限維持は未確認。fixture は一時コピーだけで製品 source には残さず、所有検証アプリの停止・scratch build 削除・MCP profile 復元を完了した。
 
-- [ ] F24 音声認識本文の診断ログ出力を削除する
-  - 目的・発生条件: 音声認識 result が到着し、debug ログ収集を有効にした Console/ 診断ログを閲覧・共有する通常の診断経路で到達する。
-  - 根拠: `KM-03-C06`。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift):277-285、特に280 の text privacy:.public。全 result の本文全文を Logger.debug の privacy:.public で渡している。本文は private 既定値ではマスクされず、delegate 判定より前にログへ渡される。
-  - 作業・完了条件: 確定・未確定結果の本文を Logger.debug へ渡す処理を削除する。Release でも debug ログ収集時には出力され得るため、マスクへの変更ではなく本文出力を削除する。実音声のログ収集で本文が出力されないことを確認し、必要な状態・終了診断は維持する。
-  - 限界: 実ログ収集未実施。debug ログの通常時の永続保存や無条件の第三者アクセスを主張しない。取消後 idle では result loop guard が抑止するため、取消済み全文が常に記録されるとは断定しない。
+- [x] F24 音声認識本文の診断ログ出力を削除する
+  - 目的・発生条件: 音声認識 result が到着し、debug ログ収集を有効にした Console/ 診断ログを閲覧・共有する通常の診断経路で到達していた（`KM-03-C06`）。
+  - 完了（2026-10-05）: [SpeechAnalyzerEngine.swift](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) の result ログから本文補間を削除した。isFinal と既存の状態・終了診断、final / volatile delegate への本文配送を保持した。private マスクや本文の派生情報への置換は行っていない。
+  - 検証: Package 304 tests（107 + 197）、build、専用署名版の build/run・所有識別が成功。本人の実音声入力で画面に「The Shibata wait beside the quiet Harbour」が表示され、新たな権限要求はなかったと報告された。対象 PID / subsystem / category 限定の debug stream に未確定結果13件・確定結果1件、開始・停止・finalize 成功・終了診断を観測し、発話文と本人報告の認識本文が含まれないことを確認した。所有アプリの停止・scratch build 削除・MCP profile 復元を完了した。証拠: `tmp/workflow/orchestrator-normal-20261005-f23-f24-resume/changes/F24/validation/redo/`、`tmp/verification/verify-koecho/20261005-f24-redo/`。
+  - 限界: 最初の収集は空ログのため成功扱いせず、本人の再実施で確認した。CUA の取得 timeout により実画面は本人報告を使用。認識精度や発話文の完全一致、Accessibility / Input Monitoring の権限維持は検証していない。debug ログの通常時の永続保存や無条件の第三者アクセスを主張しない。
 
 - [x] F25 完了したスクリプトの timeout work の所有 cycle を解消する
   - 目的・発生条件: 短い custom の通常終了時、cancel だけでは RunState → timeoutWork → RunState の所有 cycle が残っていた（`KM-04-C05`）。
