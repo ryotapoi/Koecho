@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Own only the fixed Koecho verification process; never invoke xcodebuild."""
+"""Own only the fixed Koecho verification process."""
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -43,11 +44,16 @@ def identity():
     assert 'TeamIdentifier=5AGP9L4RNN' in signature, 'Unexpected signing team'
     assert 'Authority=Developer ID Application: Ryota Kurosaki (5AGP9L4RNN)' in signature, 'Unexpected signing authority'
     requirement = next(line for line in signature.splitlines() if line.startswith('designated =>'))
-    return {'bundle_id': BUNDLE, 'app': str(APP), 'requirement': requirement, 'signature': signature}
+    return {'bundle_id': BUNDLE, 'app': str(APP), 'requirement': requirement, 'signature': signature,
+            'executable_sha256': hashlib.sha256(EXE.read_bytes()).hexdigest()}
+
+def require_owner(run):
+    marker = SCRATCH / 'owner.json'
+    assert marker.exists() and json.loads(marker.read_text())['run'] == run, 'Scratch belongs to another run'
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['plan', 'prepare', 'adopt', 'doctor', 'cleanup'])
+    parser.add_argument('action', choices=['plan', 'prepare', 'prepare-build', 'adopt', 'doctor', 'cleanup'])
     parser.add_argument('--run', default='')
     parser.add_argument('--remove-build', action='store_true')
     parser.add_argument('--allow-shared-history', action='store_true')
@@ -55,23 +61,32 @@ def main():
     if ns.action == 'plan':
         print(json.dumps({'defaults': {'projectPath': str(ROOT / 'Koecho.xcodeproj'),
               'scheme': 'Koecho', 'configuration': 'Debug', 'derivedDataPath': str(SCRATCH / 'DerivedData'),
-              'preferXcodebuild': True}, 'extraArgs': ARGS, 'launchArgs': ['-voiceInputMode', 'off'],
+              }, 'extraArgs': ARGS, 'launchArgs': ['-voiceInputMode', 'off'],
               'app': str(APP)}, indent=2)); return
     assert ns.run and Path(ns.run).name == ns.run and ns.run not in ('.', '..'), 'Use a single run directory name'
     evidence = ROOT / 'tmp/verification/verify-koecho' / ns.run
     state_file = evidence / 'session.json'
-    if ns.action == 'prepare':
+    if ns.action in ('prepare', 'prepare-build'):
         assert not processes(), 'Fixed verification app already running; do not adopt it'
         history = Path.home() / 'Library/Application Support/com.ryotapoi.koecho/history.json'
-        assert not history.exists() or ns.allow_shared_history, (
+        assert ns.action == 'prepare-build' or not history.exists() or ns.allow_shared_history, (
             'Shared installed-app history exists. Use a dedicated macOS user or obtain explicit consent '
             'for startup purge before --allow-shared-history; disabling history does not skip purge.')
         evidence.mkdir(parents=True, exist_ok=False)
-        state = {'owned': {}, 'prepared_at': time.time()}
+        SCRATCH.mkdir(parents=True, exist_ok=True)
+        marker = SCRATCH / 'owner.json'
+        assert not marker.exists(), 'Another run owns the fixed build; clean up that run first'
+        with marker.open('x') as file:
+            json.dump({'run': ns.run, 'root': str(ROOT)}, file)
+        state = {'owned': {}, 'prepared_at': time.time(),
+                 'shared_history_allowed': ns.allow_shared_history,
+                 'build_only': ns.action == 'prepare-build'}
         state_file.write_text(json.dumps(state, indent=2))
         print(evidence); return
     state = json.loads(state_file.read_text())
     if ns.action == 'adopt':
+        require_owner(ns.run)
+        assert not state.get('build_only'), 'Build-only run cannot adopt a process'
         current = processes()
         assert not state['owned'], 'Run already has an owned process'
         assert len(current) == 1, 'Expected one newly launched verification process'
@@ -83,17 +98,20 @@ def main():
         state['identity'] = identity()
         state_file.write_text(json.dumps(state, indent=2))
     elif ns.action == 'doctor':
+        require_owner(ns.run)
         current = processes()
         assert 'identity' in state, 'Identification incomplete: adopt did not verify the app signature'
         ident = identity()
         assert current == state['owned'] and current, 'Owned process absent or replaced'
         assert ident['requirement'] == state['identity']['requirement'], 'Signing requirement changed'
+        assert ident['executable_sha256'] == state['identity']['executable_sha256'], 'Executable replaced'
         print(json.dumps({'identity': ident, 'processes': current,
               'readiness': 'process-only; UI and permissions must be observed separately'}, indent=2)); return
     elif ns.action == 'cleanup':
         state.pop('cleanup', None)
         state.pop('build_retained', None)
         try:
+            require_owner(ns.run)
             current = processes()
             for pid, process in state['owned'].items():
                 if current.get(pid) == process:
@@ -105,6 +123,8 @@ def main():
             assert not remaining, f'Verification process remains at fixed path: {remaining}'
             if ns.remove_build and SCRATCH.exists():
                 shutil.rmtree(SCRATCH)
+            elif SCRATCH.exists():
+                (SCRATCH / 'owner.json').unlink()
         except Exception as error:
             state['cleanup_error'] = str(error)
             state_file.write_text(json.dumps(state, indent=2))

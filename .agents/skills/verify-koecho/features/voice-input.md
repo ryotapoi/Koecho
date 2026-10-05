@@ -22,6 +22,8 @@
 
 ## Gotchas
 
+- 実装の入口: `Koecho/VoiceInputSection.swift`、`InputPanelToolbar.swift`、`Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift`。
+
 - 利用可能な言語、モデルのダウンロード、マイク入力は実環境に依存する。実施不能なら未確認範囲を明記する。
 - `Voice` はパネル内の切り替えで、オフにすると設定の `Enable voice input` も変わる。次の導線に進む前に状態を確認する。
 - 文字が一時的に表示される途中状態と確定済み本文は区別して観測する。[音声入力テキスト仕様](../../../../docs/specs/voice-input-text.md)を参照。

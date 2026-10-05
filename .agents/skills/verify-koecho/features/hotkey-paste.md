@@ -22,6 +22,8 @@
 
 ## Gotchas
 
+- 実装の入口: `Koecho/HotkeySettingsView.swift`、`InputPanelController.swift`、`Packages/KoechoKit/Sources/KoechoPlatform/HotkeyService.swift`、`ClipboardPaster.swift`。
+
 - `Tap Mode` が一回のトグルと二回押し表示のどちらかで、開き方・確定の仕方が変わる。表示中の `Close Input Panel` も確定操作になる。
 - `Confirm` は `⌘ Return` のショートカットを持つ。ボタンの表示上の修飾キー印は現在のホットキー設定に従う。
 - ペースト先はパネル表示前に前面だったアプリ。Settings や権限画面が割り込んだ後は、対象アプリを前面にしてから新しいセッションを始める。

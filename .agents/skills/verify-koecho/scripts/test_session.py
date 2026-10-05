@@ -23,6 +23,7 @@ class SessionTests(unittest.TestCase):
         self.scratch = self.root / 'tmp/verify-koecho'
         self.scratch.mkdir(parents=True)
         self.run = 'test-run'
+        (self.scratch / 'owner.json').write_text(json.dumps({'run': self.run}))
         self.evidence = self.root / 'tmp/verification/verify-koecho' / self.run
         self.evidence.mkdir(parents=True)
         self.state_file = self.evidence / 'session.json'
@@ -133,6 +134,15 @@ class SessionTests(unittest.TestCase):
             with contextlib.redirect_stdout(output):
                 session.main()
         self.assertEqual(json.loads(output.getvalue())['launchArgs'], ['-voiceInputMode', 'off'])
+
+    def test_other_run_build_cannot_be_removed(self):
+        self.state()
+        (self.scratch / 'owner.json').write_text(json.dumps({'run': 'another-run'}))
+        with mock.patch.object(session, 'processes', return_value={}):
+            with self.assertRaisesRegex(AssertionError, 'another run'):
+                self.run_action('cleanup', '--remove-build')
+        self.assertTrue(self.scratch.exists())
+        self.assertIn('cleanup_error', self.saved())
 
 
 if __name__ == '__main__':

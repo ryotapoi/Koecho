@@ -22,6 +22,8 @@
 
 ## Gotchas
 
+- 実装の入口: `Koecho/ScriptManagementView.swift`、`ScriptEditView.swift`、`InputPanelScriptStrip.swift`、`ScriptExecutionService.swift`。
+
 - `Add Script` はアイコンのみの表示でもアクセシビリティラベルがある。操作前に live state の名称を確認する。
 - `Requires Prompt` が on だと、ボタン押下後に追加の入力欄が開く。この基本導線では off にする。
 - 手動スクリプトの Undo は成功直後の一回だけ。本文を編集したり、確定・キャンセルしたりすると失効する。[仕様](../../../../docs/specs/script-undo.md)を参照。

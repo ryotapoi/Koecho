@@ -11,6 +11,20 @@
 
 ## タスク
 
+### 開発・検証の残件
+
+- [ ] 検証版の共有履歴への影響を解消する方法と対応要否を決める（早め）
+  - 優先度・時期: 検証を繰り返すたびに実履歴へ影響し得るため、早めに対応方針を決める。対応までの起動は既存スキルの専用 macOS ユーザーまたは本人了解の条件に従う。
+  - 根拠: 専用 Bundle ID は UserDefaults を分けるが、[`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift) の既定保存先は通常版と同じ。[`KoechoApp.swift`](../Koecho/KoechoApp.swift) の通常起動は履歴 off でも purge / save を行う。2026-10-06 の移行確認は本人了解後に起動した。既存 F29 の設定隔離では履歴ファイルを扱っていない。
+  - 作業・完了条件: 通常版の履歴を検証で読み書きしない方法と、その採用・見送り理由を決めて記録する。実装する場合は、起動時整理・確定時の履歴追加・後片付けの保存先を観測し、通常版の履歴が維持されることを確認する。専用という名称や環境変数の指定だけで隔離済みとしない。[検証スキル](../.agents/skills/verify-koecho/SKILL.md) と実際の条件を整合させる。
+
+- [ ] XcodeBuildMCP 移行後の実画面検証を完了する（次の実操作の機会に）
+  - 優先度・時期: 次に実画面確認を伴う作業をするときに併せて確認する。通常作業中に対象経路が動くことを確認できれば、その証拠を使って該当項目を完了してよい。全項目を一度に確認する専用作業や、製品コード変更のない状態での自動 gate の再実行は不要。対象変更の必須 gate は [Verification](../docs/rules/verification.md) に従う。
+  - 現状: 2026-10-06 に公式 MCP / CLI の通常 build、App tests 202件、Package tests 304件、選択実行、専用署名・起動・識別・ログ・停止を実測。CUA は専用アプリの絶対パス取得で `timeoutReached` となり、画面操作は未実行。移行前の本人確認を今回の経路の証拠へ転用しない。
+  - 確認対象: メニューバーから Settings・入力パネルを開く、`original` → `tr a-z A-Z` → `ORIGINAL`、Escape で貼り付けずキャンセル、実音声の転記と Voice 切替、global hotkey による表示・確定、disposable 文書への貼り付けとクリップボード復元、再ビルド・再起動後の許可済み操作と再許可の有無。
+  - 作業・完了条件: [既存 feature map](../.agents/skills/verify-koecho/features/README.md) に沿い、確認した項目ごとに実施者・対象アプリ・操作・観測結果・副作用・証拠を記録する。本人操作でもよい。自動操作が必要な場合だけ CUA の復旧を調べる。残る項目は未確認として保持し、全対象の証拠が揃ったら完了とする。通常版との識別・hotkey 競合、共有履歴、OS 許可の条件を守り、起動・署名・ログだけから実操作の成功を推測しない。
+  - 移行時の証拠: `tmp/verification/mcp-migration-20261006/REPORT.md`、`tmp/verification/verify-koecho/migration-ui-first/`。手順の正本は上記スキルと feature map。
+
 ### v2.0.0 macOS 27 専用化・信頼性改善
 
 - バージョン: v1.8.0 を macOS 14 を対応下限とする最終リリースとし、本グループは macOS 27 以降向けの v2.0.0 とする。
@@ -171,6 +185,11 @@ F8 で座標対応を整えてから個別置換 UI を導入し、F21 の previ
   - 補足: 現在の比較は最大 512 UTF-16 code units で、仕様には上限が明記されていない。この契約差は、反復発話と重複除去の振る舞いを決める際に併せて扱う。
 
 #### その他
+
+- [ ] hosted tests の自動生成 UserDefaults domain の後片付けを整える（低優先度）
+  - 優先度・時期: hosted test の起動・隔離を次に扱う際に併せて対応する。通常版の設定隔離は F29 で対応済みであり、この残件だけを理由に開発・検証を止めない。
+  - 根拠: [`KoechoApp.makeInitialAppState`](../Koecho/KoechoApp.swift) は起動ごとの UUID suite を生成するが、run との所有記録と終了時の削除は実装されていない。2026-10-06 の実行時間帯に該当 plist が6件あったが、その時間帯の全ファイルが今回の run のものとは確定できず一括削除していない。
+  - 作業・完了条件: 起動が生成した domain を識別できるようにし、その domain だけを終了・後片付け時に削除する。通常版と別 run の設定を維持し、通常終了と中断後の回収で残存・削除対象を確認する。UUID の共通 prefix による一括削除はしない。F29 の隔離契約と [検証ルール](../docs/rules/verification.md) を維持する。
 
 - [ ] D2 非ブロッキングの注意 UI を検討する（低優先度）
   - 現状は warning ログのみで、選んだマイクと別のデバイスで録音されていることがユーザーに見えない（2026-07-09 Codex audit）。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift)

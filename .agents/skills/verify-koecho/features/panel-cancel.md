@@ -21,6 +21,8 @@
 
 ## Gotchas
 
+- 実装の入口: `Koecho/MenuBarContent.swift`、`InputPanelController.swift`、`PanelLifecycleManager.swift`。
+
 - メニューの `Close Input Panel` は表示中のトグルで、本文の確定・ペーストにつながる。キャンセルには `Escape` を使う。
 - 本文が空のまま確定した場合もキャンセル扱いになるが、この導線は非空本文で `Escape` の効果を確認する。
 - プロンプト表示中の `Escape` はまずプロンプトをキャンセルする。パネル自体のキャンセルは次の `Escape`。
