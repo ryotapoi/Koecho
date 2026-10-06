@@ -36,22 +36,11 @@ final class ReplacementService {
   private func applyNow(rules: [ReplacementRule]) {
     textView?.clearReplacementPreviews()
     let currentText = appState.inputText
-    let result = applyReplacementRules(rules, to: currentText)
+    let application = applyReplacementRules(
+      rules, to: currentText, insertionPoint: voiceCoordinator.voiceInsertionPoint)
+    let result = application.text
     if result != currentText {
-      let currentNSLength = (currentText as NSString).length
-      let matches = findReplacementMatches(rules, in: currentText)
-        .filter { $0.range.location >= 0 && $0.range.location + $0.range.length <= currentNSLength }
-        .sorted { $0.range.location < $1.range.location }
-      var voiceInsertionPoint = voiceCoordinator.voiceInsertionPoint
-      var offset = 0
-      for match in matches {
-        let adjustedLocation = match.range.location + offset
-        if adjustedLocation < voiceInsertionPoint {
-          let delta = (match.replacement as NSString).length - match.range.length
-          voiceInsertionPoint += delta
-          offset += delta
-        }
-      }
+      let voiceInsertionPoint = application.insertionPoint
       voiceCoordinator.moveVoiceInsertionPoint(to: voiceInsertionPoint, in: result)
 
       appState.setInputText(result)

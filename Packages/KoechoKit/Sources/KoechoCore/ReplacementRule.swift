@@ -129,7 +129,7 @@ extension ReplacementRule: Codable {
 
 public struct ReplacementMatch: Equatable {
   public let range: NSRange  // Match range in the original text
-  public let replacement: String  // Replacement string for this match
+  public let replacement: String  // Final content of this original preview region
 
   public init(range: NSRange, replacement: String) {
     self.range = range

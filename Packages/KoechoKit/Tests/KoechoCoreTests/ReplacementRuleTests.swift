@@ -137,12 +137,74 @@ struct ReplacementRuleTests {
     #expect(applyReplacementRules(rules, to: text) == "Q-Q")
     #expect(
       findReplacementMatches(rules, in: text) == [
-        ReplacementMatch(range: NSRange(location: 0, length: 2), replacement: "WXYZ"),
-        ReplacementMatch(range: NSRange(location: 3, length: 2), replacement: "WXYZ"),
-        ReplacementMatch(range: NSRange(location: 0, length: 4), replacement: "Q"),
-        ReplacementMatch(range: NSRange(location: 3, length: 4), replacement: "Q"),
+        ReplacementMatch(range: NSRange(location: 0, length: 2), replacement: "Q"),
+        ReplacementMatch(range: NSRange(location: 3, length: 2), replacement: "Q"),
       ]
     )
+  }
+
+  @Test func insertionPointFollowsSequentialReplacements() {
+    let cases: [(String, Int, [(String, String)], String, Int)] = [
+      ("a b", 1, [("a", "long"), ("long", "x")], "x b", 1),
+      ("aZ", 1, [("a", "bbbb"), ("bbbb", "c")], "cZ", 1),
+      ("a z t", 5, [("z", "zzzz"), ("a", "aaa"), ("t", "TT")], "aaa zzzz TT", 11),
+      ("abcFILLERz", 4, [("FILLER", "")], "abcz", 3),
+    ]
+    for (text, point, pairs, expectedText, expectedPoint) in cases {
+      let rules = pairs.map { ReplacementRule(pattern: $0.0, replacement: $0.1) }
+      let result = applyReplacementRules(rules, to: text, insertionPoint: point)
+      #expect(result.text == expectedText)
+      #expect(result.insertionPoint == expectedPoint)
+    }
+  }
+
+  @Test func insertionPointMapsMatchBoundariesAndUTF16() {
+    let rules = [ReplacementRule(pattern: "😀ab", replacement: "猫")]
+    for (point, expected) in [(1, 1), (3, 2), (5, 2), (6, 3)] {
+      let result = applyReplacementRules(rules, to: "x😀abZ", insertionPoint: point)
+      #expect(result.text == "x猫Z")
+      #expect(result.insertionPoint == expected)
+    }
+    let deletion = [ReplacementRule(pattern: "😀ab", replacement: "")]
+    for (point, expected) in [(1, 1), (3, 1), (5, 1), (6, 2)] {
+      #expect(applyReplacementRules(deletion, to: "x😀abZ", insertionPoint: point).insertionPoint == expected)
+    }
+  }
+
+  @Test func previewTracksLaterFrontEditsAndPartialGeneratedMatches() {
+    let rules = [
+      ReplacementRule(pattern: "z", replacement: "zzzz"),
+      ReplacementRule(pattern: "a", replacement: "aaa"),
+      ReplacementRule(pattern: "t", replacement: "TT"),
+    ]
+    #expect(findReplacementMatches(rules, in: "a z t") == [
+      ReplacementMatch(range: NSRange(location: 0, length: 1), replacement: "aaa"),
+      ReplacementMatch(range: NSRange(location: 2, length: 1), replacement: "zzzz"),
+      ReplacementMatch(range: NSRange(location: 4, length: 1), replacement: "TT"),
+    ])
+    let partial = [
+      ReplacementRule(pattern: "😀", replacement: "abcd"),
+      ReplacementRule(pattern: "bc", replacement: "X"),
+      ReplacementRule(pattern: "dZ", replacement: "!"),
+    ]
+    #expect(findReplacementMatches(partial, in: "😀Z") == [
+      ReplacementMatch(range: NSRange(location: 0, length: 3), replacement: "aX!")
+    ])
+  }
+
+  @Test func previewRetainsDeletionAndZeroWidthRegexInsertions() {
+    let rules = [ReplacementRule(pattern: "FILLER", replacement: "")]
+    #expect(findReplacementMatches(rules, in: "abcFILLERz") == [
+      ReplacementMatch(range: NSRange(location: 3, length: 6), replacement: "")
+    ])
+    let insertion = [
+      ReplacementRule(pattern: "^|$", replacement: "!", usesRegularExpression: true),
+      ReplacementRule(pattern: "!", replacement: "??"),
+    ]
+    #expect(findReplacementMatches(insertion, in: "a") == [
+      ReplacementMatch(range: NSRange(location: 0, length: 0), replacement: "??"),
+      ReplacementMatch(range: NSRange(location: 1, length: 0), replacement: "??"),
+    ])
   }
 
   @Test func findMatchesRegexCaptureGroups() {

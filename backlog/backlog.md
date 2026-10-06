@@ -41,12 +41,10 @@
 
 F8 で座標対応を整えてから個別置換 UI を導入し、F21 の preview 消去要件は新 UI と合わせて扱う。
 
-- [ ] F8 置換後の挿入位置とプレビューを最終本文の座標に合わせる
-  - 目的・発生条件: Auto-replace をオフにした手動置換で、連鎖置換・前方の長さ変更・削除一致の内側のカーソルが最終本文に正しく対応しない。aZ の位置1で a→bbbb→c は cZ の位置2、a z t の末尾位置5で z→zzzz、a→aaa、t→TT は最終長11に対して位置10、abcFILLERz の位置4で FILLER→空は abcz の位置0になる。連鎖や座標履歴の不整合は marked text の preview にも使われる。
-  - 根拠: `R07-C01` / `KM-02-C01` / `KM-02-C02` / `KM-02-C03`。[`ReplacementEngine.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift):29-84,126-131 は元 location と中間 length を組み合わせ、後続の前方置換で既存 offset entry を移動・更新しない。[`ReplacementService.swift`](../Koecho/ReplacementService.swift):39-60 と [`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift) の元本文 bounds filter は後段の補正・preview を除外する。Service は削除一致の内側にも削除長全体を差し引き、[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift):138-140 の clamp で位置0になる。
-  - 作業・完了条件: a b の位置1で a→long→x は最終本文 x b・挿入位置1・preview x、aZ の位置1で a→bbbb→c は cZ・位置1、a z t の末尾から z→zzzz、a→aaa、t→TT は aaa zzzz TT・位置11となることを確認する。abcFILLERz の位置4で FILLER→空は abcz の削除開始位置3へ対応させる。[置換ルール仕様](../docs/specs/replacement-rules.md) の登録順適用を維持し、各計算、marked preview、後続音声の挿入を既存テストと実操作で確認する。
-  - 限界: Core 本文変換と Service と同じ位置補正 loop の局所実行で、aZ→cZ・point=2、aaa zzzz TT・t match={6,1}・point=10、abcz・point=0 を再現した。Core logger を除去し最小 rule 型を使った計算の証拠で、実 NSTextView 操作・preview 描画・App integration は未確認。旧 a→long→x の tooltip 例は静的追跡。
-  - 関連・順序: 個別置換で使う候補範囲と挿入位置の土台を整えるタスク。以下の置換 UI 導入より先に対応するか、同じ変更で直接必要な座標処理を整合させる。F8 の不具合を残したまま preview 用範囲を個別置換に流用しない。
+- [x] F8 置換後の挿入位置とプレビューを最終本文の座標に合わせる
+  - 完了（2026-10-07）: 登録順の各置換で UTF-16 の挿入位置を対応させ、削除一致の内側は削除開始位置へ写す。preview は元本文の範囲に連鎖後の最終内容を表示する。契約は[置換ルール仕様](../docs/specs/replacement-rules.md#入力中の安全分岐と-preview)へ反映済み。
+  - 検証: 四例の Core 回帰、Service から実 NSTextView の選択と後続 volatile / final callback への接続、Package tests 312件・App tests 207件・通常 build が成功。本人が四例の本文と挿入位置、marked preview の最終 x と本文非破壊性、連鎖・削除後の実音声挿入を確認した。一部は案内への返答を文脈で判定し、原文と判断を `tmp/workflow/orchestrator-replacement-ui-20261006/changes/F8/manual-results.json` に保存した。
+  - 後続: 個別置換 UI は未完了。連鎖 preview の元範囲は個別ルールの編集範囲と同一ではないため、そのまま流用しない。
 
 - [ ] 置換候補の下線表示と1か所だけの置換を導入し、Tooltip を廃止する
   - 目的: 自動置換では変化の速い本文に Tooltip を表示せず、手動置換では利用者が必要な候補だけを選んで置換できるようにする。

@@ -172,6 +172,63 @@ import Testing
     #expect(appState.inputText == "hello")
   }
 
+  @Test func replacementCoordinatesFeedRealTextViewAndFollowingVoice() {
+    let (service, appState, _, coordinator) = makeService(inputText: "aZ")
+    appState.settings.replacement.isAutoReplacementEnabled = false
+    appState.settings.replacement.addReplacementRule(ReplacementRule(pattern: "a", replacement: "bbbb"))
+    appState.settings.replacement.addReplacementRule(ReplacementRule(pattern: "bbbb", replacement: "c"))
+    let textView = VoiceInputTextView()
+    textView.replaceText("aZ", selecting: NSRange(location: 1, length: 0))
+    service.textView = textView
+    coordinator.textView = textView
+    coordinator.handleCursorMoved(1)
+
+    service.applyOrPreview()
+
+    #expect(appState.inputText == "cZ")
+    #expect(coordinator.voiceInsertionPoint == 1)
+    #expect(textView.selectedRange() == NSRange(location: 1, length: 0))
+    coordinator.voiceInput(didUpdateVolatile: "voice")
+    #expect(textView.string == "cvoiceZ")
+    #expect(textView.volatileRange == NSRange(location: 1, length: 5))
+    #expect(appState.inputText == "cZ")
+    coordinator.voiceInput(didFinalize: "voice")
+    #expect(textView.string == "cvoiceZ")
+    #expect(textView.volatileRange == nil)
+    #expect(appState.inputText == "cvoiceZ")
+    #expect(coordinator.voiceInsertionPoint == 6)
+  }
+
+  @Test func deletionInsideMatchUpdatesSelectionAndVoiceTogether() {
+    let (service, appState, textView, coordinator) = makeService(inputText: "abcFILLERz")
+    appState.settings.replacement.addReplacementRule(ReplacementRule(pattern: "FILLER", replacement: ""))
+    coordinator.handleCursorMoved(4)
+
+    service.applyOrPreview()
+
+    #expect(appState.inputText == "abcz")
+    #expect(coordinator.voiceInsertionPoint == 3)
+    #expect(textView.selectedRange() == NSRange(location: 3, length: 0))
+  }
+
+  @Test func markedChainPreviewUsesFinalContentWithoutEditingText() {
+    let (service, appState, textView, coordinator) = makeService(inputText: "a b")
+    appState.settings.replacement.addReplacementRule(ReplacementRule(pattern: "a", replacement: "long"))
+    appState.settings.replacement.addReplacementRule(ReplacementRule(pattern: "long", replacement: "x"))
+    coordinator.handleCursorMoved(1)
+    textView.markedText = true
+
+    service.applyOrPreview()
+
+    #expect(textView.showReplacementPreviewsCalls.last == [
+      ReplacementMatch(range: NSRange(location: 0, length: 1), replacement: "x")
+    ])
+    #expect(textView.string == "a b")
+    #expect(appState.inputText == "a b")
+    #expect(coordinator.voiceInsertionPoint == 1)
+    #expect(textView.replaceTextSelectingCalls.isEmpty)
+  }
+
   // MARK: - addRule
 
   @Test func addRuleAddsAndAppliesExistingRules() {
