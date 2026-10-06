@@ -5,9 +5,11 @@
 | 機能 | ファイル | 主な観測点 |
 | --- | --- | --- |
 | Custom Script の手動実行 | [custom-script.md](custom-script.md) | `original` → `ORIGINAL`、任意で `Undo Script` |
-| 入力パネルのキャンセル | [panel-cancel.md](panel-cancel.md) | `Escape` で閉じ、ペーストしない |
+| 入力パネルのキャンセル | [panel-cancel.md](panel-cancel.md) | TextEdit の編集欄にフォーカスを置いて開き、`Escape` 後の本文不変と再表示時のリセットを別に確認 |
 | 音声入力 | [voice-input.md](voice-input.md) | 音声設定、権限、パネルへの転記 |
 | ホットキーとペースト | [hotkey-paste.md](hotkey-paste.md) | パネル表示、確定、対象アプリへの貼り付け |
+
+表の項目は個別の機能確認であり、順に操作しただけで一連の操作全体の検証済みとはしない。スクリプト変換の成功と、Escape で貼り付けないことは別の結果として記録する。
 
 検証専用アプリは `com.ryotapoi.Koecho.Verification` / 表示名 `Koecho Verification`。実行済み bundle の固定パスは `tmp/verify-koecho/DerivedData/Build/Products/Debug/Koecho.app`。補助 script `../scripts/session.py` は `plan`、`prepare`、`adopt`、`doctor`、`cleanup` を提供し、`prepare` → `build_launch.py build` → `build_launch.py launch` → `doctor`（launch が adopt） → `cleanup` の順に使う。証拠は `tmp/verification/verify-koecho/<run>`、作業用 scratch は `tmp/verify-koecho` に置く。
 

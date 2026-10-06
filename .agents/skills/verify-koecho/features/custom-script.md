@@ -12,7 +12,7 @@
 2. 左側の `Scripts` を開く。リスト下の `Add Script`（+）から `Custom Script` を選ぶ。新しい項目が選択され、右側に編集欄が出る。
 3. `Display Name` を `Verification Uppercase`、`Script Command` を `tr a-z A-Z` にする。`Requires Prompt` は off のままにする。編集内容はこの画面で設定される。
 4. メニューバーの `Open Input Panel` を選び、本文に `original` と入力する。`SCRIPTS` 行の `Verification Uppercase` ボタンを押し、本文が `ORIGINAL` に置き換わることを確認する。
-5. 任意で `Undo Script` を押し、`original` に戻ることを確認する。最後は `Escape` でパネルを閉じる。
+5. 任意で `Undo Script` を押し、`original` に戻ることを確認する。変換と Undo はそれぞれ結果を記録する。最後は後片付けとして `Escape` でパネルを閉じる。
 
 ## Driving it with CUA・本人操作
 
@@ -24,6 +24,7 @@
 
 - 実装の入口: `Koecho/ScriptManagementView.swift`、`ScriptEditView.swift`、`InputPanelScriptStrip.swift`、`ScriptExecutionService.swift`。
 
+- この項目の観測対象はパネル内のスクリプト変換。最後の Escape は後片付けであり、「貼り付けずにキャンセル」の検証として数えない。キャンセルは [panel-cancel](panel-cancel.md) のフォーカス条件と観測点で別に確認する。
 - `Add Script` はアイコンのみの表示でもアクセシビリティラベルがある。操作前に live state の名称を確認する。
 - `Requires Prompt` が on だと、ボタン押下後に追加の入力欄が開く。この基本導線では off にする。
 - 手動スクリプトの Undo は成功直後の一回だけ。本文を編集したり、確定・キャンセルしたりすると失効する。[仕様](../../../../docs/specs/script-undo.md)を参照。
