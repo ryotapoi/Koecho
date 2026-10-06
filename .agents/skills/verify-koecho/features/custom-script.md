@@ -8,7 +8,7 @@
 
 ## How to get to it (user POV)
 
-1. メニューバーの Koecho メニューから `Settings...` を開き、左側の `General` で `Enable voice input` と `Enable History` を off にし、実画面で両方の状態を確認する。履歴 off の確認を入力パネルの確定操作より前に済ませる。
+1. メニューバーの Koecho メニューから `Settings...` を開き、左側の `General` で `Enable voice input` を off にし、実画面で確認する。検証中の履歴を残したくない場合は `Enable History` も off にする。
 2. 左側の `Scripts` を開く。リスト下の `Add Script`（+）から `Custom Script` を選ぶ。新しい項目が選択され、右側に編集欄が出る。
 3. `Display Name` を `Verification Uppercase`、`Script Command` を `tr a-z A-Z` にする。`Requires Prompt` は off のままにする。編集内容はこの画面で設定される。
 4. メニューバーの `Open Input Panel` を選び、本文に `original` と入力する。`SCRIPTS` 行の `Verification Uppercase` ボタンを押し、本文が `ORIGINAL` に置き換わることを確認する。

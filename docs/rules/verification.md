@@ -23,7 +23,7 @@
 - Xcode 操作は `docs/rules/xcode-mcp.md` に従う。project 既定は `Koecho.xcodeproj`、scheme は `Koecho`、configuration は Debug。必須 gate を実行できない場合は未実行として報告する。
 - `Koecho` scheme は `KoechoTests` と `KoechoUITests` の両方を含む。通常の app test は `-only-testing:KoechoTests` で UITests を除外し、UITest を追加・変更した場合だけ対象に含める。
 - `KoechoTests` は `TEST_HOST = Koecho.app` の hosted test。通常の app lifecycle を起動するため、`KoechoApp` は `NSClassFromString("XCTestCase") != nil` でテストを検出し、system integration を抑止する。App の初期 `AppState` / `Settings` も、設定を読み込む前に起動ごとの専用 `suiteName`（`com.ryotapoi.Koecho.hosted-tests-<UUID>`）へ隔離し、通常版の `.standard` は使わない。各テストでは引き続き factory / mock を使い、UserDefaults を扱う fixture は専用の `suiteName` で隔離して自分の domain のみ後片付けする。
-- hosted test の `HistoryStore()` 初期化は共有履歴を読む。起動時 purge はテスト判定で抑止されるが、完全なファイル隔離ではない。自動起動 suite の UUID は run と紐付いて記録されず、fixture と異なり終了時の domain 削除も実装されていない。既存 domain を一括削除せず、残存は報告する。この製品側の lifecycle 改善を検証 helper の変更へ混ぜない。
+- hosted test の初期 HistoryStore は起動ごとの専用一時ディレクトリへ隔離し、通常版の保存先解決・旧履歴移行を行わない。各履歴テストも専用ディレクトリを注入する。起動時 purge はテスト判定で抑止される。自動起動 suite の UUID は run と紐付いて記録されず、fixture と異なり終了時の domain 削除も実装されていない。既存 domain を一括削除せず、残存は報告する。この製品側の lifecycle 改善を検証 helper の変更へ混ぜない。
 - 音声認識の OS / hardware 連携は unit test で実送信せず、注入した engine や mock までを検証する。実動作は実環境の確認で補う。
 - `RenderPreview` が使えない場合は専用検証アプリとスクリーンショットで代替する。いずれも使えず対象 View の局所確認しかできない場合は、未確認の見た目を報告する。SPM module を使う Preview は事前 build が必要。
 - 成否は終了コードだけでなく、実行件数・全失敗・未完了・timeout・残留 process も確認する。保存済み CLI helper と結果取得方法は `docs/rules/xcode-mcp.md` を参照する。0件や結果欠損は成功ではない。

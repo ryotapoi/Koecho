@@ -56,7 +56,6 @@ def main():
     parser.add_argument('action', choices=['plan', 'prepare', 'prepare-build', 'adopt', 'doctor', 'cleanup'])
     parser.add_argument('--run', default='')
     parser.add_argument('--remove-build', action='store_true')
-    parser.add_argument('--allow-shared-history', action='store_true')
     ns = parser.parse_args()
     if ns.action == 'plan':
         print(json.dumps({'defaults': {'projectPath': str(ROOT / 'Koecho.xcodeproj'),
@@ -68,10 +67,6 @@ def main():
     state_file = evidence / 'session.json'
     if ns.action in ('prepare', 'prepare-build'):
         assert not processes(), 'Fixed verification app already running; do not adopt it'
-        history = Path.home() / 'Library/Application Support/com.ryotapoi.koecho/history.json'
-        assert ns.action == 'prepare-build' or not history.exists() or ns.allow_shared_history, (
-            'Shared installed-app history exists. Use a dedicated macOS user or obtain explicit consent '
-            'for startup purge before --allow-shared-history; disabling history does not skip purge.')
         evidence.mkdir(parents=True, exist_ok=False)
         SCRATCH.mkdir(parents=True, exist_ok=True)
         marker = SCRATCH / 'owner.json'
@@ -79,7 +74,6 @@ def main():
         with marker.open('x') as file:
             json.dump({'run': ns.run, 'root': str(ROOT)}, file)
         state = {'owned': {}, 'prepared_at': time.time(),
-                 'shared_history_allowed': ns.allow_shared_history,
                  'build_only': ns.action == 'prepare-build'}
         state_file.write_text(json.dumps(state, indent=2))
         print(evidence); return

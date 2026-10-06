@@ -128,6 +128,25 @@ class SessionTests(unittest.TestCase):
         self.assertIn('Verification process remains', saved['cleanup_error'])
         self.assertTrue(self.scratch.exists())
 
+    def test_prepare_allows_existing_normal_history(self):
+        history = self.root / 'Library/Application Support/com.ryotapoi.koecho/history.json'
+        history.parent.mkdir(parents=True)
+        history.write_text('normal history fixture')
+        self.evidence.rmdir()
+        (self.scratch / 'owner.json').unlink()
+        with mock.patch.object(session, 'processes', return_value={}), \
+             mock.patch.object(Path, 'home', return_value=self.root):
+            self.run_action('prepare')
+        self.assertFalse(self.saved()['build_only'])
+        self.assertEqual(history.read_text(), 'normal history fixture')
+
+    def test_build_only_rejects_adoption(self):
+        self.state(build_only=True)
+        with mock.patch.object(session, 'processes', return_value=self.owned):
+            with self.assertRaisesRegex(AssertionError, 'Build-only'):
+                self.run_action('adopt')
+        self.assertEqual(self.saved()['owned'], {})
+
     def test_plan_does_not_override_history_setting(self):
         with mock.patch.object(sys, 'argv', ['session.py', 'plan']):
             output = io.StringIO()

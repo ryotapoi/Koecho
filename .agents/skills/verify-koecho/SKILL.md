@@ -21,17 +21,17 @@ description: Koecho の macOS メニューバー・入力パネル・Settings �
 | 証明書 SHA-1 | `85B7C4380400A535BE172DF27D367F6282068BE5` |
 | 出力 | repository の `tmp/verify-koecho/DerivedData/Build/Products/Debug/Koecho.app` |
 
-Bundle ID は通常版の UserDefaults / TCC identity と分けるため、表示名は本人が対象を認識するため、固定証明書と path は再ビルド時の署名 requirement と権限継続性を保つために使う。固定 path は checkout ごとに異なるが、複数 worktree の検証版は同じ UserDefaults domain を共有するため同時に操作しない。
+Bundle ID は通常版の UserDefaults / TCC identity と分けるため、表示名は本人が対象を認識するため、固定証明書と path は再ビルド時の署名 requirement と権限継続性を保つために使う。固定 path は checkout ごとに異なるが、複数 worktree の検証版は同じ UserDefaults domain と履歴保存先を共有するため同時に操作しない。
 
 上の証明書と private key が利用可能であることが前提。使えない場合は blocked とし、ad-hoc や別証明書へ自動で切り替えない。`PRODUCT_NAME` / `PRODUCT_MODULE_NAME` の一括 override は依存 SPM target の出力を衝突させるため使わない。
 
-**完全なデータ隔離ではない。** UserDefaults の標準 domain は別 ID になるが、`HistoryStore` は `~/Library/Application Support/com.ryotapoi.koecho/history.json` を共有する。`KoechoApp` は起動時に履歴を purge するため、Settings → General で `Enable History` を off にしても、既存履歴の読み込み・起動時の整理は止まらない。履歴のある通常ユーザーでは、専用 macOS ユーザーを使用するか、起動時に共有履歴が変更されることへの本人の了解が必要。helper の `--allow-shared-history` は了解後だけ使う。共有履歴をバックアップ復元や削除で自動操作しない。
+履歴は `~/Library/Application Support/com.ryotapoi.Koecho.Verification/history.json` に保存され、通常版の履歴を読み込まず、起動時整理・追加・削除も検証版の保存先だけに作用する。通常版の旧小文字パスからの移行は通常版だけが行う。同一 Bundle ID の検証版 worktree 同士では履歴を共有するため、同時に操作しない。`Enable History` off は検証中の記録を残したくない場合に選ぶ。通常版の履歴を保護するための必須条件ではなく、検証版自身の起動時整理は off でも実行される。通常版の履歴をバックアップ復元や削除で自動操作しない。
 
 メニューバー名 `Koecho`、Settings タイトル等は製品コードに固定されている。全 UI が Verification 表示になるとは期待しない。通常版が同時起動し、本人がメニューを区別できない場合は操作を止める。通常版を無断終了しない。クリップボード、マイク、global hotkey、貼り付け先は OS と共有する。
 
 ## Build-only
 
-共有履歴に触れずビルドと署名だけ確認する場合は次を使う。起動はしない。
+ビルドと署名だけ確認する場合は次を使う。起動はしない。
 
 ```sh
 .agents/skills/verify-koecho/scripts/session.py prepare-build --run koecho-build-check
@@ -52,9 +52,9 @@ repository root から helper を実行する。`RUN` は毎回異なる一つ�
 .agents/skills/verify-koecho/scripts/build_launch.py launch --run 20261002-script-check
 ```
 
-`prepare` 成功後だけ次へ進む。既に専用アプリが起動中なら別 run として所有せず作業を止める。`owner.json` が別 run の場合も、その run の後片付けまで進めない。`plan` の設定を使う専用 helper でビルドし、固定 app を起動する。`build` のログと成否は run の証拠ディレクトリに保存する。`launch` は同じ run の成功記録と固定 app の署名を起動前に検査する。`launch` は `prepare` 済みの共有履歴条件を再確認する。launch は `adopt` を自動実行し、所有 PID を保存する。続けて `doctor` で固定 path、PID、開始時刻、署名と実行ファイル hash を検査する。失敗後は再起動前に状態を確認して所有 run を cleanup する。
+`prepare` 成功後だけ次へ進む。既に専用アプリが起動中なら別 run として所有せず作業を止める。`owner.json` が別 run の場合も、その run の後片付けまで進めない。`plan` の設定を使う専用 helper でビルドし、固定 app を起動する。`build` のログと成否は run の証拠ディレクトリに保存する。`launch` は同じ run の成功記録と固定 app の署名を起動前に検査する。launch は `adopt` を自動実行し、所有 PID を保存する。続けて `doctor` で固定 path、PID、開始時刻、署名と実行ファイル hash を検査する。失敗後は再起動前に状態を確認して所有 run を cleanup する。
 
-初回 script 用 launchArgs は `-voiceInputMode off`。通常のキーボード入力・Settings・script 実行を使い、内部 setter や test hook は使わない。音声開始だけを抑止する。入力パネルからの確定操作より前に、実画面の Settings → General で `Enable History` を off にし、その状態を確認する。起動時の履歴整理はこの設定でも抑止しない。Accessibility 要求、hotkey、外部 script、ペーストも抑止しない。本人確認中はプロセスを保持する期限を決め、返信待ちを検証成功と扱わない。
+初回 script 用 launchArgs は `-voiceInputMode off`。通常のキーボード入力・Settings・script 実行を使い、内部 setter や test hook は使わない。音声開始だけを抑止する。検証中の履歴を残したくない場合は、実画面の Settings → General で `Enable History` を off にし、その状態を確認する。検証版自身の起動時整理はこの設定でも抑止しない。Accessibility 要求、hotkey、外部 script、ペーストも抑止しない。本人確認中はプロセスを保持する期限を決め、返信待ちを検証成功と扱わない。
 
 成功後に:
 
@@ -96,7 +96,7 @@ helper の回帰テストは repository root で `python3 -m unittest discover -
 .agents/skills/verify-koecho/scripts/session.py cleanup --run 20261002-script-check
 ```
 
-所有 PID が同じ実行パス・起動時刻のときだけ SIGTERM を送る。scratch の削除・所有 marker の解放は同じ run の marker がある場合だけ行う。5秒で停止しない場合、または固定実行パスに未所有の process が残る場合は失敗を `session.json` に記録する。未所有 process は kill しない。残留時は scratch も保持する。権限維持の次回確認用に固定 build は保持する。最終終了時は同じ cleanup に `--remove-build` を付けて所有 scratch を削除する。証拠、専用 UserDefaults、TCC 許可、共有履歴は保持する。ユーザーの通常版や既存プロセスに触れない。証拠が残ることと、無関係な既存差分を変更していないことを確認する。コミットしない。
+所有 PID が同じ実行パス・起動時刻のときだけ SIGTERM を送る。scratch の削除・所有 marker の解放は同じ run の marker がある場合だけ行う。5秒で停止しない場合、または固定実行パスに未所有の process が残る場合は失敗を `session.json` に記録する。未所有 process は kill しない。残留時は scratch も保持する。権限維持の次回確認用に固定 build は保持する。最終終了時は同じ cleanup に `--remove-build` を付けて所有 scratch を削除する。証拠、専用 UserDefaults、TCC 許可、検証版履歴は保持する。ユーザーの通常版や既存プロセスに触れない。証拠が残ることと、無関係な既存差分を変更していないことを確認する。コミットしない。
 
 ## 起動オプションと観測
 
@@ -109,4 +109,4 @@ helper の回帰テストは repository root で `python3 -m unittest discover -
 
 起動環境は `open --env` で対象 process にだけ渡し、`launchctl setenv` はしない。引数は `--arg` を繰り返す（先頭が `-` なら `--arg=...`）。stdout / stderr は evidence に直接保存し、OSLog は所有 PID と subsystem で限定する。`logs` は直近5分の保持済みログであり、無期限 stream や全イベントの保存を保証しない。debug が必要なら操作前に本人と対象・期限を決め、PID 限定 `log stream` を別の所有 process として管理する。機密値を引数や environment probe に使わない。
 
-通常版が同時起動していると、同じ hotkey が両方へ届く可能性がある。global hotkey / paste の実操作は本人が通常版を止めるなどして競合を解消した後だけ行う。通常版の無断停止、クリップボード全文の保存、共有履歴の reset はしない。貼り付け先は本人が指定した disposable 文書を使い、本文・クリップボード復元を観測する。マイク・音量 ducking・モデル download は実環境の作用であり、script / keyboard の確認から推測しない。
+通常版が同時起動していると、同じ hotkey が両方へ届く可能性がある。global hotkey / paste の実操作は本人が通常版を止めるなどして競合を解消した後だけ行う。通常版の無断停止、クリップボード全文の保存、通常版履歴の reset はしない。貼り付け先は本人が指定した disposable 文書を使い、本文・クリップボード復元を観測する。マイク・音量 ducking・モデル download は実環境の作用であり、script / keyboard の確認から推測しない。

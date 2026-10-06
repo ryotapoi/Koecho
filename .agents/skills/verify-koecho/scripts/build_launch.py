@@ -64,8 +64,6 @@ def main():
     result = json.loads((evidence / 'build-result.json').read_text())
     assert result['success'], 'Build failed'
     assert session.identity() == json.loads((evidence / 'identity.json').read_text()), 'Build artifact replaced'
-    history = Path.home() / 'Library/Application Support/com.ryotapoi.koecho/history.json'
-    assert not history.exists() or state.get('shared_history_allowed'), 'Shared history requires prior consent'
     launch_args = ['-voiceInputMode', 'on' if ns.voice_input_on else 'off', *ns.arg]
     command = ['/usr/bin/open', '-n', '-a', str(session.APP), '--stdout', str(evidence / 'stdout.log'),
                '--stderr', str(evidence / 'stderr.log')]

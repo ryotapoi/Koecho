@@ -28,6 +28,97 @@ struct HistoryStoreTests {
     return settings
   }
 
+  @Test func migrationHandlesActualFilesystemCaseSemantics() throws {
+    // CHANGE-VERIFY: Allow the same filesystem contract test on a dedicated case-sensitive image.
+    let base = ProcessInfo.processInfo.environment["KOECHO_HISTORY_TEST_ROOT"]
+      .map { URL(fileURLWithPath: $0) } ?? FileManager.default.temporaryDirectory
+    let root = base.appendingPathComponent("koecho-case-fixture-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let legacy = root.appendingPathComponent("com.ryotapoi.koecho")
+    let destination = root.appendingPathComponent("com.ryotapoi.Koecho")
+    HistoryStore(directoryURL: legacy).add(text: "preserved", settings: makeSettings())
+    let oldFile = legacy.appendingPathComponent("history.json")
+    let before = try Data(contentsOf: oldFile)
+    let aliasedBeforeMigration = FileManager.default.fileExists(
+      atPath: destination.appendingPathComponent("history.json").path
+    )
+    let store = HistoryStore(directoryURL: destination, legacyDirectoryURL: legacy)
+    #expect(!store.isUnavailable)
+    #expect(store.entries.map(\.text) == ["preserved"])
+    #expect(try Data(contentsOf: destination.appendingPathComponent("history.json")) == before)
+    #expect(FileManager.default.fileExists(atPath: oldFile.path) == aliasedBeforeMigration)
+    #expect(HistoryStore(directoryURL: destination, legacyDirectoryURL: legacy).entries.map(\.text) == ["preserved"])
+  }
+
+  @Test func legacyMigrationPersistsAndDoesNotRestoreClearedHistory() throws {
+    let root = makeTempDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let legacy = root.appendingPathComponent("legacy")
+    let destination = root.appendingPathComponent("destination")
+    let settings = makeSettings()
+    HistoryStore(directoryURL: legacy).add(text: "legacy", settings: settings)
+    let unrelated = legacy.appendingPathComponent("unrelated.txt")
+    try Data("keep".utf8).write(to: unrelated)
+    let store = HistoryStore(directoryURL: destination, legacyDirectoryURL: legacy)
+    #expect(!store.isUnavailable)
+    #expect(store.entries.map(\.text) == ["legacy"])
+    #expect(HistoryStore(directoryURL: destination).entries.map(\.text) == ["legacy"])
+    #expect(try Data(contentsOf: unrelated) == Data("keep".utf8))
+    #expect(store.clear())
+    // A leftover old file must never override the authoritative destination.
+    HistoryStore(directoryURL: legacy).add(text: "stale", settings: settings)
+    let oldData = try Data(contentsOf: legacy.appendingPathComponent("history.json"))
+    let reloaded = HistoryStore(directoryURL: destination, legacyDirectoryURL: legacy)
+    #expect(!reloaded.isUnavailable)
+    #expect(reloaded.entries.isEmpty)
+    #expect(try Data(contentsOf: legacy.appendingPathComponent("history.json")) == oldData)
+  }
+
+  @Test func corruptLegacyRemainsProtectedUntilExplicitInitialization() throws {
+    let root = makeTempDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let legacy = root.appendingPathComponent("legacy")
+    let destination = root.appendingPathComponent("destination")
+    try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)
+    let corrupt = Data("invalid JSON".utf8)
+    try corrupt.write(to: legacy.appendingPathComponent("history.json"))
+    let store = HistoryStore(directoryURL: destination, legacyDirectoryURL: legacy)
+    #expect(store.isUnavailable)
+    store.purge(maxCount: 1, retentionDays: 1)
+    store.add(text: "blocked", settings: makeSettings())
+    #expect(!store.clear())
+    #expect(try Data(contentsOf: destination.appendingPathComponent("history.json")) == corrupt)
+    #expect(store.initializeUnavailableHistory())
+    #expect(!HistoryStore(directoryURL: destination, legacyDirectoryURL: legacy).isUnavailable)
+  }
+
+  @Test func migrationFailureProtectsLegacyAndDoesNotCreateEmptyDestination() throws {
+    let root = makeTempDirectory()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let legacy = root.appendingPathComponent("legacy")
+    HistoryStore(directoryURL: legacy).add(text: "keep", settings: makeSettings())
+    let oldFile = legacy.appendingPathComponent("history.json")
+    let oldData = try Data(contentsOf: oldFile)
+    let blocker = root.appendingPathComponent("blocked")
+    try Data("file instead of directory".utf8).write(to: blocker)
+    let destination = blocker.appendingPathComponent("destination")
+    let store = HistoryStore(directoryURL: destination, legacyDirectoryURL: legacy)
+    #expect(store.isUnavailable)
+    store.purge(maxCount: 0, retentionDays: 0)
+    store.add(text: "blocked", settings: makeSettings())
+    store.deleteEntry(id: UUID())
+    #expect(!store.clear())
+    #expect(!store.initializeUnavailableHistory())
+    #expect(try Data(contentsOf: oldFile) == oldData)
+    // Removing the fixture obstruction allows the explicit reset; the old file
+    // then remains ignored on subsequent launches.
+    try FileManager.default.removeItem(at: blocker)
+    #expect(store.initializeUnavailableHistory())
+    #expect(HistoryStore(directoryURL: destination, legacyDirectoryURL: legacy).entries.isEmpty)
+    #expect(try Data(contentsOf: oldFile) == oldData)
+  }
+
   @Test func addInsertsEntry() {
     let dir = makeTempDirectory()
     let store = HistoryStore(directoryURL: dir)

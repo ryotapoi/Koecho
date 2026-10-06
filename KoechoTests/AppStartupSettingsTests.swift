@@ -7,6 +7,68 @@ import Testing
 
 @MainActor
 struct AppStartupSettingsTests {
+  @Test func historyUsesRuntimeIdentityAndVerificationOperationsAreIsolated() throws {
+    let support = FileManager.default.temporaryDirectory
+      .appendingPathComponent("koecho-history-startup-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: support) }
+    let suite = "koecho-history-startup-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let settings = HistorySettings(defaults: defaults)
+    let legacy = support.appendingPathComponent("com.ryotapoi.koecho")
+    HistoryStore(directoryURL: legacy).add(text: "legacy", settings: settings)
+    let normal = KoechoApp.makeInitialHistoryStore(
+      isTesting: false, bundleIdentifier: "com.ryotapoi.Koecho", applicationSupportURL: support
+    )
+    #expect(normal.entries.map(\.text) == ["legacy"])
+    let normalFile = support.appendingPathComponent("com.ryotapoi.Koecho/history.json")
+    let normalData = try Data(contentsOf: normalFile)
+    // Keep a legacy fixture even when the migration moved the original file.
+    if !FileManager.default.fileExists(atPath: legacy.appendingPathComponent("history.json").path) {
+      HistoryStore(directoryURL: legacy).add(text: "old fixture", settings: settings)
+    }
+    let legacyFile = legacy.appendingPathComponent("history.json")
+    let legacyData = try Data(contentsOf: legacyFile)
+    let verification = KoechoApp.makeInitialHistoryStore(
+      isTesting: false, bundleIdentifier: "com.ryotapoi.Koecho.Verification",
+      applicationSupportURL: support
+    )
+    #expect(verification.entries.isEmpty)
+    verification.purge(maxCount: 1, retentionDays: 1)
+    verification.add(text: "verification", settings: settings)
+    let verificationFile = support.appendingPathComponent("com.ryotapoi.Koecho.Verification/history.json")
+    #expect(FileManager.default.fileExists(atPath: verificationFile.path))
+    verification.deleteEntry(id: try #require(verification.entries.first).id)
+    verification.add(text: "clear", settings: settings)
+    #expect(verification.clear())
+    #expect(try Data(contentsOf: normalFile) == normalData)
+    #expect(try Data(contentsOf: legacyFile) == legacyData)
+    let mixedCase = KoechoApp.makeInitialHistoryStore(
+      isTesting: false, bundleIdentifier: "Example.MixedCASE", applicationSupportURL: support
+    )
+    mixedCase.add(text: "case", settings: settings)
+    #expect(FileManager.default.fileExists(atPath: support.appendingPathComponent("Example.MixedCASE/history.json").path))
+  }
+
+  @Test func hostedStartupIsolatesHistoryBeforeResolvingNormalStorage() throws {
+    #expect(KoechoApp.isTesting)
+    let testing = FileManager.default.temporaryDirectory
+      .appendingPathComponent("koecho-hosted-history-fixture-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: testing) }
+    var accessedNormalStorage = false
+    func normalSupport() -> URL {
+      accessedNormalStorage = true
+      return URL(fileURLWithPath: "/unused")
+    }
+    let store = KoechoApp.makeInitialHistoryStore(
+      applicationSupportURL: normalSupport(), testingDirectoryURL: testing
+    )
+    #expect(!accessedNormalStorage)
+    #expect(store.entries.isEmpty)
+    #expect(store.clear())
+    #expect(FileManager.default.fileExists(atPath: testing.appendingPathComponent("history.json").path))
+  }
+
   @Test func hostedStartupIsolatesSettingsBeforeNormalization() throws {
     #expect(KoechoApp.isTesting)
     let normalName = "koecho-startup-normal-\(UUID().uuidString)"

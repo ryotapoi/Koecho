@@ -9,7 +9,7 @@ struct KoechoApp: App {
   static let isTesting = NSClassFromString("XCTestCase") != nil
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "App")
   @State private var appState = makeInitialAppState()
-  @State private var historyStore = HistoryStore()
+  @State private var historyStore = makeInitialHistoryStore()
   @State private var panelController: InputPanelController?
   @State private var hotkeyService: HotkeyService?
   @State private var didPurge = false
@@ -36,6 +36,27 @@ struct KoechoApp: App {
       defaults = normalDefaults()
     }
     return AppState(settings: Settings(defaults: defaults))
+  }
+
+  static func makeInitialHistoryStore(
+    isTesting: Bool = isTesting,
+    bundleIdentifier: @autoclosure () -> String = Bundle.main.bundleIdentifier!,
+    applicationSupportURL: @autoclosure () -> URL = FileManager.default.urls(
+      for: .applicationSupportDirectory, in: .userDomainMask
+    ).first!,
+    testingDirectoryURL: URL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("koecho-hosted-history-\(UUID().uuidString)")
+  ) -> HistoryStore {
+    guard !isTesting else { return HistoryStore(directoryURL: testingDirectoryURL) }
+    let identifier = bundleIdentifier()
+    let support = applicationSupportURL()
+    // The historical name identifies migration eligibility, not the runtime identity.
+    let legacyName = "com.ryotapoi.koecho"
+    return HistoryStore(
+      directoryURL: support.appendingPathComponent(identifier),
+      legacyDirectoryURL: identifier.lowercased() == legacyName
+        ? support.appendingPathComponent(legacyName) : nil
+    )
   }
 
   private func requestAccessibilityIfNeeded() {

@@ -23,10 +23,11 @@
 
 [信頼性改善](v2.0.0-reliability.md)
 
-- [ ] N15 履歴の保存先を実行アプリの Bundle ID に合わせる
+- [x] N15 履歴の保存先を実行アプリの Bundle ID に合わせる
   - 目的・根拠: [`HistoryStore.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HistoryStore.swift) は `com.ryotapoi.koecho` を固定しており、既に別 Bundle ID の通常版と検証版が同じ履歴を読み書きしている。通常版の Bundle ID は `com.ryotapoi.Koecho`、検証版は `com.ryotapoi.Koecho.Verification`。Bundle ID・署名・設定の分離を変更する作業ではなく、履歴の保存先をその識別に合わせる。
   - 実装方針: App 側で `Bundle.main.bundleIdentifier` を取得し、FileManager が返す Application Support にその値を付加して `history.json` の保存先を作る。Bundle ID の文字列をコード内の別定数として重複定義せず、大文字小文字も取得値を維持する。HistoryStore の既存の保存先注入を利用し、テストでは専用ディレクトリを渡す。[Apple の実装例](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/AccessingFilesandDirectories/AccessingFilesandDirectories.html)を参照。
   - 作業・完了条件: 通常版の既存の小文字パスから履歴を引き継ぎ、大文字小文字を区別する環境と区別しない環境の両方を考慮する。検証版は通常版の既存履歴を取り込まず、読み込み・起動時整理・追加・削除が検証版の保存先だけに作用することを確認する。保存先の正本と検証スキル・helper の共有履歴に関する記述・条件を実装に合わせて更新する。
+  - 完了・検証（2026-10-06）: App の実行 Bundle ID から保存先を注入し、通常版限定のファイル移行と失敗保護、hosted test の一時ディレクトリ隔離を実装。case-insensitive APFS と専用 case-sensitive HFS+ image で移行・再読み込みを実測し、既存新履歴優先・破損旧履歴・移行失敗・検証版の全履歴操作の隔離を回帰テストで確認。Package 308件、KoechoTests 204論理test / 210case、build、helper 9件が成功（全失敗・残留0）。専用署名版の起動後に検証版保存先の history.json 作成と通常版/旧パスの hash・mtime 不変を確認し、所有PIDのみ停止。UI・TCC・マイク・ペーストは今回未検証。証拠: `tmp/workflow/n15-20261006/changes/n15/`、`tmp/verification/cli/n15-*`、`tmp/verification/verify-koecho/n15-launch/`。
 
 #### 機能改善
 

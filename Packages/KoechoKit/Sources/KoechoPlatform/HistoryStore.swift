@@ -6,22 +6,43 @@ import os
 
 @MainActor @Observable
 public final class HistoryStore {
-  // This existing user data location requires migration if it ever changes.
-  private static let historyDirectoryName = "com.ryotapoi.koecho"
-
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "HistoryStore")
   private let fileURL: URL
   public private(set) var entries: [HistoryEntry] = []
   public private(set) var isUnavailable = false
 
-  public init(directoryURL: URL? = nil) {
-    let directory =
-      directoryURL
-      ?? FileManager.default.urls(
-        for: .applicationSupportDirectory, in: .userDomainMask
-      ).first!.appendingPathComponent(Self.historyDirectoryName)
-    self.fileURL = directory.appendingPathComponent("history.json")
-    load()
+  public init(directoryURL: URL, legacyDirectoryURL: URL? = nil) {
+    self.fileURL = directoryURL.appendingPathComponent("history.json")
+    do {
+      if let legacyDirectoryURL {
+        try migrateLegacyHistory(from: legacyDirectoryURL.appendingPathComponent("history.json"))
+      }
+      load()
+    } catch {
+      logger.warning("Failed to migrate history: \(error.localizedDescription)")
+      isUnavailable = true
+    }
+  }
+
+  private func migrateLegacyHistory(from legacyFileURL: URL) throws {
+    // A reachable destination is authoritative, including on case-insensitive volumes
+    // where the old and new spellings already refer to the same file.
+    guard try !Self.historyFileExists(at: fileURL) else { return }
+    guard try Self.historyFileExists(at: legacyFileURL) else { return }
+    try FileManager.default.createDirectory(
+      at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true
+    )
+    try FileManager.default.moveItem(at: legacyFileURL, to: fileURL)
+  }
+
+  private static func historyFileExists(at url: URL) throws -> Bool {
+    do {
+      return try url.checkResourceIsReachable()
+    } catch let error as CocoaError
+      where error.code == .fileNoSuchFile || error.code == .fileReadNoSuchFile
+    {
+      return false
+    }
   }
 
   public func add(text: String, settings: HistorySettings) {

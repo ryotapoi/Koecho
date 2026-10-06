@@ -72,7 +72,9 @@ Koecho → KoechoPlatform → KoechoCore
 
 ### 履歴の保存
 
-- 履歴本体は `~/Library/Application Support/com.ryotapoi.koecho/history.json` に JSON ファイルとして保存する
+- App が実行アプリの `Bundle.main.bundleIdentifier` を大文字小文字を保ったまま Application Support に付加し、HistoryStore に保存先を注入する。履歴本体は `~/Library/Application Support/<Bundle ID>/history.json` に JSON ファイルとして保存する
+- 通常版だけが旧 `com.ryotapoi.koecho/history.json` をファイル単位で移行する。新保存先が既に存在する場合（case-insensitive で同じ実体を指す場合を含む）はそれを正とし、旧履歴を再取り込みしない。検証版は旧履歴を取り込まない
+- HistoryStore が読み込み・移行・保存を所有する。移行失敗は読み込み失敗と同じ保護状態にし、明示初期化まで通常書き込みを止める
 - 履歴の設定値（有効フラグ・最大件数・保持日数）は UserDefaults に保持する
 
 ## テストターゲット
