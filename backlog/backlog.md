@@ -49,7 +49,7 @@ F8 で座標対応を整えてから個別置換 UI を導入し、F21 の previ
 - [x] 置換候補の下線表示と1か所だけの置換を導入し、Tooltip を廃止する
   - 完了（2026-10-07）: 現本文の単独候補へ hover なしの下線を表示し、右クリックの「この箇所を置換」で1件だけ編集する。長さ変更後の選択・音声挿入位置を補正し、本文/ルール/設定変更と音声 final で候補更新する。Tooltip と専用 tracking を廃止した。契約は[置換ルール仕様](../docs/specs/replacement-rules.md)へ反映済み。
   - 検証: Package tests 316件・App tests 209件（215実行）・通常 build・専用署名 build が成功。本人が複数候補/伸長/Unicode 前方編集/全文 Replace と shortcut/単発後実音声位置/通常候補の実 volatile 消去復帰/削除/auto on の即時置換と実 IME 下線・確定削除を肯定した。包括的・番号付き返答を文脈で判定した項目の原文と限界を `tmp/workflow/orchestrator-replacement-ui-20261006/changes/replacement-ui-single/manual-results.json` に保存。専用版の所有 PID を cleanup 済み。
-  - F21 の限界: 本人環境では右クリックまたは実音声入力時に IME が確定するため、marked と volatile の同時 OS 描画は観測不能/未確認。通常候補の実音声 lifecycle と、programmatic marked→volatile 回帰を区別して `f21-verification-evidence.json` へ保存し、後続評価へ渡す。
+  - F21 の限界: 本人環境では右クリックまたは実音声入力時に IME が確定するため、marked と volatile の同時 OS 描画は観測不能/未確認。通常候補の実音声 lifecycle と、programmatic marked→volatile 回帰を区別して `f21-verification-evidence.json` へ保存。証拠照合と完了判断は下記 F21 の記録を参照。
   - 目的: 自動置換では変化の速い本文に Tooltip を表示せず、手動置換では利用者が必要な候補だけを選んで置換できるようにする。
   - 自動置換 on: Tooltip を廃止する。候補の下線はポインタを重ねずに表示する。既存描画を利用するなど無理のない実装で可能な場合に採用し、下線のために置換を遅らせない。下線を表示できなくても完了を妨げない。
   - 自動置換 off: 候補に下線を表示し、候補の右クリックから「この箇所を置換」を選ぶなどの明示操作で、その1か所だけを置換する。同じ文字列の別の出現箇所や他の候補は変更しない。既存の Replace ボタンによる全体置換は維持する。
@@ -57,8 +57,10 @@ F8 で座標対応を整えてから個別置換 UI を導入し、F21 の previ
   - 作業・完了条件: Tooltip が出ないこと、採用した下線が hover なしで表示されること、個別操作が選んだ1か所だけを変更すること、全体置換が維持されることを確認する。複数の同一候補、長さの変わる置換、本文編集後の候補更新を確認する。仕様の正本と関連テストを更新し、実 IME・音声操作で確認する。F8 の座標対応を利用し、F21 の preview 消去要件を引き継ぐ。
   - 対象範囲: 個別置換は入力パネルの確定・貼り付け操作とは別の操作である。今回の依頼は個別操作の対象を1か所に限定することであり、確定・貼り付け時の既存の置換契約を変更する判断は含めない。
 
-- [ ] F21 未確定音声の表示開始時に既存の置換 preview を消去する
-  - 引継ぎ（2026-10-07）: 個別置換 UI Change に非空 volatile 開始時の候補消去/終了後復帰と自動回帰を実装済み。本人が通常候補の実音声 volatile 中下線消去/確定後復帰を肯定した。本人環境では音声開始で IME が確定するため、marked+volatile の同時 OS 描画は観測不能/未確認。mock marked→Coordinator volatile の回帰と実 TextView volatile 境界の成功を実環境確認と区別し、`tmp/workflow/orchestrator-replacement-ui-20261006/changes/replacement-ui-single/f21-verification-evidence.json` へ保存。残る task は後続 no_change の証拠評価であり、追加実装が必要という記録ではない。
+- [x] F21 未確定音声の表示開始時に既存の置換 preview を消去する
+  - 完了（2026-10-07）: 個別置換 UI Change の実装と保存済み証拠を現コード・テストへ照合した。Coordinator と実 TextView が非空 volatile 挿入前に候補・操作 callback を消去し、Service は volatile 中の再表示を抑止する。通常 marked preview と volatile 終了・final 後の本文状態に応じた候補復帰を維持する。旧 Tooltip・専用 tracking は UI Change で廃止済み。
+  - 検証: App tests 209件（215実行）・Package tests 316件・通常 build が成功。mock marked→Coordinator volatile の消去/final 復帰回帰と実 TextView の volatile 開始による候補 action 失効回帰を確認した。本人は実 IME 下線・確定削除と、通常候補の実音声 volatile 中下線消去/確定後復帰を文脈肯定した。証拠は `tmp/workflow/orchestrator-replacement-ui-20261006/changes/replacement-ui-single/f21-verification-evidence.json` と同ディレクトリの `manual-results.json` に保存。
+  - 残存する限界と判断: 本人環境では音声開始で IME が確定するため、marked+hardware volatile の同時 OS 描画は未観測。本人確認は包括的返答中心で個別画像・認識本文は未受領。programmatic 回帰は状態境界、実 TextView 回帰は操作失効を検証し、下線 pixels や同時 OS 描画の実測 pass とは扱わない。自システムの消去境界と通常候補の実音声描画 lifecycle を別々の証拠で裏付けているため、この未観測は完了を妨げる残件とは判断しない。
   - 目的・発生条件: IME marked text の置換 preview が表示される間に音声 volatile が届く。両入力は同じ editor を使用でき、直接 storage 挿入は通常 onTextChanged による Service 経路を通らない。
   - 発見時の根拠: `KM-02-C04`。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift):249-278; [`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift):84-102,194-207,304-337; [`ReplacementService.swift`](../Koecho/ReplacementService.swift):20-33; [`replacement-rules.md`](../docs/specs/replacement-rules.md) volatile 中は preview を消去する契約。非空 volatile callback で既存 preview を消す呼び出しがない。setVolatileText の storage 変更は suppression 内で、previewMatches/tracking/tooltip を保持する。
   - 作業・完了条件: IME marked text の preview 表示中に非空 volatile が届くと、highlight・tracking・tooltip が消え、volatile 中に置換 preview が残らないことを既存テストと実 IME・音声操作で確認する。通常 marked preview を維持する。
