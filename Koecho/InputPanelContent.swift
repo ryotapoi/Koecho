@@ -16,6 +16,7 @@ struct InputPanelContent: View {
   var onAddReplacementRule: (ReplacementRule) -> Void = { _ in }
   var onTextChanged: (String) -> Void = { _ in }
   var onTextCommitted: () -> Void = {}
+  var onRefreshReplacementCandidates: () -> Void = {}
   var onTextViewCreated: (VoiceInputTextView) -> Void = { _ in }
   var onFocusTextEditor: () -> Void = {}
 
@@ -91,6 +92,9 @@ struct InputPanelContent: View {
       VoiceInputTextEditor(
         text: appState.inputText,
         isDisabled: appState.isRunningScript,
+        replacementRules: appState.settings.replacement.replacementRules,
+        isAutoReplacementEnabled: appState.settings.replacement.isAutoReplacementEnabled,
+        onRefreshReplacementCandidates: onRefreshReplacementCandidates,
         onTextChanged: onTextChanged,
         onTextCommitted: onTextCommitted,
         onAddReplacementRule: { pattern in

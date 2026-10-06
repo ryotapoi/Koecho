@@ -44,9 +44,12 @@ F8 で座標対応を整えてから個別置換 UI を導入し、F21 の previ
 - [x] F8 置換後の挿入位置とプレビューを最終本文の座標に合わせる
   - 完了（2026-10-07）: 登録順の各置換で UTF-16 の挿入位置を対応させ、削除一致の内側は削除開始位置へ写す。preview は元本文の範囲に連鎖後の最終内容を表示する。契約は[置換ルール仕様](../docs/specs/replacement-rules.md#入力中の安全分岐と-preview)へ反映済み。
   - 検証: 四例の Core 回帰、Service から実 NSTextView の選択と後続 volatile / final callback への接続、Package tests 312件・App tests 207件・通常 build が成功。本人が四例の本文と挿入位置、marked preview の最終 x と本文非破壊性、連鎖・削除後の実音声挿入を確認した。一部は案内への返答を文脈で判定し、原文と判断を `tmp/workflow/orchestrator-replacement-ui-20261006/changes/F8/manual-results.json` に保存した。
-  - 後続: 個別置換 UI は未完了。連鎖 preview の元範囲は個別ルールの編集範囲と同一ではないため、そのまま流用しない。
+  - 後続: F8 完了時点では個別置換 UI は未完了だった。連鎖 preview の元範囲は個別ルールの編集範囲と同一ではないため、後続 UI ではそのまま流用しない。
 
-- [ ] 置換候補の下線表示と1か所だけの置換を導入し、Tooltip を廃止する
+- [x] 置換候補の下線表示と1か所だけの置換を導入し、Tooltip を廃止する
+  - 完了（2026-10-07）: 現本文の単独候補へ hover なしの下線を表示し、右クリックの「この箇所を置換」で1件だけ編集する。長さ変更後の選択・音声挿入位置を補正し、本文/ルール/設定変更と音声 final で候補更新する。Tooltip と専用 tracking を廃止した。契約は[置換ルール仕様](../docs/specs/replacement-rules.md)へ反映済み。
+  - 検証: Package tests 316件・App tests 209件（215実行）・通常 build・専用署名 build が成功。本人が複数候補/伸長/Unicode 前方編集/全文 Replace と shortcut/単発後実音声位置/通常候補の実 volatile 消去復帰/削除/auto on の即時置換と実 IME 下線・確定削除を肯定した。包括的・番号付き返答を文脈で判定した項目の原文と限界を `tmp/workflow/orchestrator-replacement-ui-20261006/changes/replacement-ui-single/manual-results.json` に保存。専用版の所有 PID を cleanup 済み。
+  - F21 の限界: 本人環境では右クリックまたは実音声入力時に IME が確定するため、marked と volatile の同時 OS 描画は観測不能/未確認。通常候補の実音声 lifecycle と、programmatic marked→volatile 回帰を区別して `f21-verification-evidence.json` へ保存し、後続評価へ渡す。
   - 目的: 自動置換では変化の速い本文に Tooltip を表示せず、手動置換では利用者が必要な候補だけを選んで置換できるようにする。
   - 自動置換 on: Tooltip を廃止する。候補の下線はポインタを重ねずに表示する。既存描画を利用するなど無理のない実装で可能な場合に採用し、下線のために置換を遅らせない。下線を表示できなくても完了を妨げない。
   - 自動置換 off: 候補に下線を表示し、候補の右クリックから「この箇所を置換」を選ぶなどの明示操作で、その1か所だけを置換する。同じ文字列の別の出現箇所や他の候補は変更しない。既存の Replace ボタンによる全体置換は維持する。
@@ -55,10 +58,11 @@ F8 で座標対応を整えてから個別置換 UI を導入し、F21 の previ
   - 対象範囲: 個別置換は入力パネルの確定・貼り付け操作とは別の操作である。今回の依頼は個別操作の対象を1か所に限定することであり、確定・貼り付け時の既存の置換契約を変更する判断は含めない。
 
 - [ ] F21 未確定音声の表示開始時に既存の置換 preview を消去する
+  - 引継ぎ（2026-10-07）: 個別置換 UI Change に非空 volatile 開始時の候補消去/終了後復帰と自動回帰を実装済み。本人が通常候補の実音声 volatile 中下線消去/確定後復帰を肯定した。本人環境では音声開始で IME が確定するため、marked+volatile の同時 OS 描画は観測不能/未確認。mock marked→Coordinator volatile の回帰と実 TextView volatile 境界の成功を実環境確認と区別し、`tmp/workflow/orchestrator-replacement-ui-20261006/changes/replacement-ui-single/f21-verification-evidence.json` へ保存。残る task は後続 no_change の証拠評価であり、追加実装が必要という記録ではない。
   - 目的・発生条件: IME marked text の置換 preview が表示される間に音声 volatile が届く。両入力は同じ editor を使用でき、直接 storage 挿入は通常 onTextChanged による Service 経路を通らない。
-  - 根拠: `KM-02-C04`。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift):249-278; [`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift):84-102,194-207,304-337; [`ReplacementService.swift`](../Koecho/ReplacementService.swift):20-33; [`replacement-rules.md`](../docs/specs/replacement-rules.md) volatile 中は preview を消去する契約。非空 volatile callback で既存 preview を消す呼び出しがない。setVolatileText の storage 変更は suppression 内で、previewMatches/tracking/tooltip を保持する。
+  - 発見時の根拠: `KM-02-C04`。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift):249-278; [`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift):84-102,194-207,304-337; [`ReplacementService.swift`](../Koecho/ReplacementService.swift):20-33; [`replacement-rules.md`](../docs/specs/replacement-rules.md) volatile 中は preview を消去する契約。非空 volatile callback で既存 preview を消す呼び出しがない。setVolatileText の storage 変更は suppression 内で、previewMatches/tracking/tooltip を保持する。
   - 作業・完了条件: IME marked text の preview 表示中に非空 volatile が届くと、highlight・tracking・tooltip が消え、volatile 中に置換 preview が残らないことを既存テストと実 IME・音声操作で確認する。通常 marked preview を維持する。
-  - 限界: 実 IME と音声の同時描画未実施。古い range がどの文字へ描画されるかは挿入位置・本文長次第。
+  - 発見時の限界: 実 IME と音声の同時描画未実施。古い range がどの文字へ描画されるかは挿入位置・本文長次第。
   - 対応方針（2026-10-05）: 本グループの UI 導入と重なる preview lifecycle は、新しい表示・個別置換仕様と合わせて扱う。現仕様向けの試行では App tests 197件と build が成功し、本人が実 IME・音声の概略動作を確認したが、下線・Tooltip 消去の個別確認は未完了。試行の証拠は tmp/workflow/orchestrator-normal-20261004-next/changes/F21/ に保持する。
   - 関連・順序: UI 導入と一緒に扱い、単独では旧 Tooltip 仕様の修正を進めない。Tooltip 廃止後は残る候補下線・表示状態について、volatile 開始時の消去と通常候補表示の復帰を確認する。
 

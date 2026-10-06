@@ -79,7 +79,7 @@ import Testing
     let (coordinator, appState, _, engine) = makeCoordinator()
     appState.settings.replacement.isAutoReplacementEnabled = true
     var replacementCalls = 0
-    coordinator.onAutoReplacement = { replacementCalls += 1 }
+    coordinator.onReplacementInput = { replacementCalls += 1 }
     let finishStop = AsyncStream<Void>.makeStream()
     engine.onStop = {
       for await _ in finishStop.stream { break }
@@ -254,26 +254,26 @@ import Testing
     #expect(mockTV.string == "")
   }
 
-  @Test func didFinalizeCallsOnAutoReplacement() {
+  @Test func didFinalizeUpdatesReplacementInput() {
     let (coordinator, appState, _, _) = makeCoordinator(inputText: "")
     appState.settings.replacement.isAutoReplacementEnabled = true
     var autoReplacementCalled = false
-    coordinator.onAutoReplacement = { autoReplacementCalled = true }
+    coordinator.onReplacementInput = { autoReplacementCalled = true }
 
     coordinator.voiceInput(didFinalize: "hello")
 
     #expect(autoReplacementCalled)
   }
 
-  @Test func didFinalizeSkipsAutoReplacementWhenDisabled() {
+  @Test func didFinalizeUpdatesCandidatesWhenAutoReplacementDisabled() {
     let (coordinator, appState, _, _) = makeCoordinator(inputText: "")
     appState.settings.replacement.isAutoReplacementEnabled = false
     var autoReplacementCalled = false
-    coordinator.onAutoReplacement = { autoReplacementCalled = true }
+    coordinator.onReplacementInput = { autoReplacementCalled = true }
 
     coordinator.voiceInput(didFinalize: "hello")
 
-    #expect(!autoReplacementCalled)
+    #expect(autoReplacementCalled)
   }
 
   @Test func didFinalizeClearsPromptVolatileTextWhenTargetIsPrompt() {

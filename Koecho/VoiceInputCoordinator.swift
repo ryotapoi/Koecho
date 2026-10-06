@@ -22,7 +22,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   private(set) var isStoppingEngine = false
   private(set) var restartTranscriberTask: Task<Void, Never>?
 
-  var onAutoReplacement: (() -> Void)?
+  var onReplacementInput: (() -> Void)?
   var onCursorAutoReplacement: (() -> Void)?
 
   enum VoiceTarget {
@@ -231,18 +231,24 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     case .suppressing(let localText, _):
       clearReplayState()
       accumulatedFinalizedText += localText
-      if text == localText { return }
+      if text == localText {
+        if !isStoppingEngine { onReplacementInput?() }
+        return
+      }
     }
     transcriberAlreadyRestarted = false
 
     let newText = stripOverlappingPrefix(text, accumulated: accumulatedFinalizedText)
-    guard !newText.isEmpty else { return }
+    guard !newText.isEmpty else {
+      if !isStoppingEngine { onReplacementInput?() }
+      return
+    }
 
     let inserted = insertFinalizedText(newText, at: voiceInsertionPoint)
     accumulatedFinalizedText += inserted
 
-    if !isStoppingEngine, appState.settings.replacement.isAutoReplacementEnabled {
-      onAutoReplacement?()
+    if !isStoppingEngine {
+      onReplacementInput?()
     }
   }
 
@@ -272,7 +278,9 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
       return
     case .textEditor:
       transcriberAlreadyRestarted = false
+      if !text.isEmpty { textView?.clearReplacementPreviews() }
       textView?.setVolatileText(text, at: voiceInsertionPoint)
+      if text.isEmpty { onReplacementInput?() }
       if textView?.volatileRange != nil {
         appState.discardScriptUndo()
       }

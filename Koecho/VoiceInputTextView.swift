@@ -22,10 +22,8 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   /// the marked text state and causes duplicate text.
   private var previewMatches: [ReplacementMatch] = []
 
-  /// Tracking areas for hover detection over underlined matches.
-  private var previewTrackingAreas: [NSTrackingArea] = []
-  private var tooltipTextByArea: [ObjectIdentifier: String] = [:]
-  private let previewTooltip = ReplacementPreviewTooltip()
+  var onDisplayTextChanged: (() -> Void)?
+  private var onReplaceCandidate: ((ReplacementMatch) -> Void)?
 
   // MARK: - TextViewOperating
 
@@ -40,6 +38,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
       clearVolatileText()
       string = text
     }
+    onDisplayTextChanged?()
   }
 
   /// Replace the document and its selected result as one suppressed UI update.
@@ -53,6 +52,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
       setSelectedRange(selection)
       scrollRangeToVisible(selection)
     }
+    onDisplayTextChanged?()
   }
 
   @discardableResult
@@ -87,6 +87,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     let clampedPoint = min(insertionPoint, storage.length)
     let adjustedText = removingDuplicateLeadingPunctuation(text, at: clampedPoint)
     guard !adjustedText.isEmpty else { return }
+    clearReplacementPreviews()
     let nsText = adjustedText as NSString
 
     suppressCallbacks {
@@ -117,6 +118,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     }
 
     volatileRange = nil
+    onDisplayTextChanged?()
   }
 
   /// Finalize volatile text: remove styling, keep the text, clear volatileRange.
@@ -140,6 +142,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     }
 
     volatileRange = nil
+    onDisplayTextChanged?()
   }
 
   /// Return the finalized text (excluding volatile text).
@@ -193,85 +196,22 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   func showReplacementPreviews(_ matches: [ReplacementMatch]) {
     previewMatches = matches
-    rebuildPreviewTrackingAreas()
+    onReplaceCandidate = nil
+    needsDisplay = true
+  }
+
+  func showReplacementCandidates(
+    _ matches: [ReplacementMatch], onReplace: @escaping (ReplacementMatch) -> Void
+  ) {
+    previewMatches = matches
+    onReplaceCandidate = onReplace
     needsDisplay = true
   }
 
   func clearReplacementPreviews() {
-    guard !previewMatches.isEmpty else { return }
     previewMatches = []
-    removePreviewTrackingAreas()
-    previewTooltip.hide()
+    onReplaceCandidate = nil
     needsDisplay = true
-  }
-
-  // MARK: - Tracking areas for hover
-
-  private func removePreviewTrackingAreas() {
-    for area in previewTrackingAreas {
-      removeTrackingArea(area)
-    }
-    previewTrackingAreas.removeAll()
-    tooltipTextByArea.removeAll()
-  }
-
-  private func rebuildPreviewTrackingAreas() {
-    removePreviewTrackingAreas()
-    guard let layoutManager, let textContainer else { return }
-    let origin = textContainerOrigin
-    let nsString = string as NSString
-
-    for match in previewMatches {
-      guard match.range.location >= 0,
-        match.range.location + match.range.length <= nsString.length
-      else { continue }
-
-      let glyphRange = layoutManager.glyphRange(
-        forCharacterRange: match.range,
-        actualCharacterRange: nil
-      )
-      let rect = layoutManager.boundingRect(
-        forGlyphRange: glyphRange,
-        in: textContainer
-      )
-      let viewRect = rect.offsetBy(dx: origin.x, dy: origin.y)
-
-      let original = nsString.substring(with: match.range)
-      let tipText =
-        match.replacement.isEmpty
-        ? "\(original) → \(String(localized: "(delete)"))"
-        : "\(original) → \(match.replacement)"
-
-      let area = NSTrackingArea(
-        rect: viewRect,
-        options: [.mouseEnteredAndExited, .activeInActiveApp],
-        owner: self,
-        userInfo: nil
-      )
-      addTrackingArea(area)
-      previewTrackingAreas.append(area)
-      tooltipTextByArea[ObjectIdentifier(area)] = tipText
-    }
-  }
-
-  override func mouseEntered(with event: NSEvent) {
-    guard let area = event.trackingArea,
-      let text = tooltipTextByArea[ObjectIdentifier(area)]
-    else {
-      super.mouseEntered(with: event)
-      return
-    }
-    previewTooltip.show(text, near: area.rect, in: self)
-  }
-
-  override func mouseExited(with event: NSEvent) {
-    guard let area = event.trackingArea,
-      tooltipTextByArea[ObjectIdentifier(area)] != nil
-    else {
-      super.mouseExited(with: event)
-      return
-    }
-    previewTooltip.hide()
   }
 
   // MARK: - Underline drawing
@@ -364,17 +304,51 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   // MARK: - Context menu
 
   override func menu(for event: NSEvent) -> NSMenu? {
-    let menu = super.menu(for: event)
-    guard selectedRange().length > 0 else { return menu }
-    menu?.addItem(.separator())
-    let item = NSMenuItem(
-      title: String(localized: "Add Replacement Rule\u{2026}"),
-      action: #selector(addReplacementRuleFromMenu(_:)),
-      keyEquivalent: ""
-    )
-    item.target = self
-    menu?.addItem(item)
+    let menu = super.menu(for: event) ?? NSMenu()
+    if isEditable, !hasMarkedText(), volatileRange == nil,
+      let onReplaceCandidate, let match = replacementCandidate(at: convert(event.locationInWindow, from: nil))
+    {
+      menu.addItem(.separator())
+      let item = NSMenuItem(
+        title: String(localized: "Replace This Occurrence"),
+        action: #selector(replaceOccurrenceFromMenu(_:)), keyEquivalent: "")
+      item.target = self
+      // Capture this menu's candidate and callback, rather than a subsequently
+      // refreshed list. The service validates its document and rules snapshot.
+      item.representedObject = ReplacementMenuAction { onReplaceCandidate(match) }
+      menu.addItem(item)
+    }
+    if selectedRange().length > 0 {
+      menu.addItem(.separator())
+      let item = NSMenuItem(
+        title: String(localized: "Add Replacement Rule\u{2026}"),
+        action: #selector(addReplacementRuleFromMenu(_:)), keyEquivalent: "")
+      item.target = self
+      menu.addItem(item)
+    }
     return menu
+  }
+
+  private func replacementCandidate(at point: NSPoint) -> ReplacementMatch? {
+    guard let layoutManager, let textContainer else { return nil }
+    let containerPoint = NSPoint(
+      x: point.x - textContainerOrigin.x, y: point.y - textContainerOrigin.y)
+    let glyph = layoutManager.glyphIndex(for: containerPoint, in: textContainer)
+    guard glyph < layoutManager.numberOfGlyphs,
+      layoutManager.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: textContainer)
+        .contains(containerPoint)
+    else { return nil }
+    let character = layoutManager.characterIndexForGlyph(at: glyph)
+    return previewMatches.first { NSLocationInRange(character, $0.range) }
+  }
+
+  @objc private func replaceOccurrenceFromMenu(_ sender: NSMenuItem) {
+    (sender.representedObject as? ReplacementMenuAction)?.perform()
+  }
+
+  private final class ReplacementMenuAction: NSObject {
+    let perform: () -> Void
+    init(perform: @escaping () -> Void) { self.perform = perform }
   }
 
   @objc private func addReplacementRuleFromMenu(_ sender: Any?) {

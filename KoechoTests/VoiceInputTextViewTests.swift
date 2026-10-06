@@ -348,4 +348,46 @@ struct VoiceInputTextViewTests {
     #expect(textView.volatileRange == NSRange(location: 2, length: 6))
   }
 
+  @Test func candidateMenuHitsCurrentGlyphAndVolatileClearsItsAction() throws {
+    let textView = makeTextView()
+    textView.frame = NSRect(x: 0, y: 0, width: 320, height: 160)
+    let window = NSWindow(
+      contentRect: textView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = textView
+    defer { window.contentView = nil }
+    textView.replaceText("a aZ")
+    let candidates = findReplacementCandidates(
+      [ReplacementRule(pattern: "a", replacement: "long")], in: textView.string)
+    var selected: ReplacementMatch?
+    textView.showReplacementCandidates(candidates) { selected = $0 }
+    let manager = try #require(textView.layoutManager)
+    let container = try #require(textView.textContainer)
+    manager.ensureLayout(for: container)
+    // Derive the event from the live glyph geometry, without fixed text coordinates.
+    let glyphRange = manager.glyphRange(forCharacterRange: candidates[1].range, actualCharacterRange: nil)
+    let rect = manager.boundingRect(forGlyphRange: glyphRange, in: container)
+    let point = textView.convert(NSPoint(
+      x: rect.midX + textView.textContainerOrigin.x,
+      y: rect.midY + textView.textContainerOrigin.y), to: nil)
+    let event = try #require(NSEvent.mouseEvent(
+      with: .rightMouseDown, location: point, modifierFlags: [], timestamp: 0,
+      windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
+    let menu = try #require(textView.menu(for: event))
+    let item = try #require(menu.items.first {
+      $0.title == String(localized: "Replace This Occurrence")
+    })
+    _ = NSApp.sendAction(try #require(item.action), to: item.target, from: item)
+    #expect(selected == candidates[1])
+    #expect(textView.string == "a aZ")
+    textView.setVolatileText("voice", at: 3)
+    #expect(textView.menu(for: event)?.items.contains {
+      $0.title == String(localized: "Replace This Occurrence")
+    } == false)
+    textView.clearVolatileText()
+    // Clearing volatile alone cannot revive a cleared candidate callback.
+    #expect(textView.menu(for: event)?.items.contains {
+      $0.title == String(localized: "Replace This Occurrence")
+    } == false)
+  }
+
 }

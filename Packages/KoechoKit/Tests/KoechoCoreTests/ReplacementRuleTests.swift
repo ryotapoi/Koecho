@@ -468,4 +468,47 @@ struct ReplacementRuleTests {
     let rule = ReplacementRule(patterns: ["", "foo", ""], replacement: "bar")
     #expect(rule.displayName == "foo → bar")
   }
+  @Test func singleCandidatesUseCurrentTextWithoutChaining() {
+    let rules = [ReplacementRule(pattern: "a", replacement: "bbbb"),
+      ReplacementRule(pattern: "bbbb", replacement: "c")]
+    let candidates = findReplacementCandidates(rules, in: "a a bbbb")
+    #expect(candidates == [
+      ReplacementMatch(range: NSRange(location: 0, length: 1), replacement: "bbbb"),
+      ReplacementMatch(range: NSRange(location: 2, length: 1), replacement: "bbbb"),
+      ReplacementMatch(range: NSRange(location: 4, length: 4), replacement: "c")])
+    let result = applyReplacementMatch(candidates[1], to: "a a bbbb", insertionPoint: 3)
+    #expect(result.text == "a bbbb bbbb")
+    #expect(result.insertionPoint == 6)
+  }
+
+  @Test func singleCandidatesRespectRuleOrderAndMatchingModes() {
+    let candidates = findReplacementCandidates([
+      ReplacementRule(patterns: ["cat", "cater"], replacement: "pet", matchesWholeWord: true),
+      ReplacementRule(pattern: "(cat)(er)", replacement: "$2-$1", usesRegularExpression: true)
+    ], in: "cater cat scatter")
+    #expect(candidates == [
+      ReplacementMatch(range: NSRange(location: 0, length: 5), replacement: "pet"),
+      ReplacementMatch(range: NSRange(location: 6, length: 3), replacement: "pet")])
+    #expect(findReplacementCandidates([
+      ReplacementRule(pattern: "(cat)(er)", replacement: "$2-$1", usesRegularExpression: true)
+    ], in: "cater").first?.replacement == "er-cat")
+  }
+
+  @Test func singleDeletionMapsUTF16PointsInsideAndAfterMatch() {
+    let text = "😀removeZ"
+    let match = findReplacementCandidates([ReplacementRule(pattern: "remove", replacement: "")], in: text)[0]
+    #expect(match.range == NSRange(location: 2, length: 6))
+    #expect(applyReplacementMatch(match, to: text, insertionPoint: 2).insertionPoint == 2)
+    #expect(applyReplacementMatch(match, to: text, insertionPoint: 4).insertionPoint == 2)
+    #expect(applyReplacementMatch(match, to: text, insertionPoint: 8).insertionPoint == 2)
+    #expect(applyReplacementMatch(match, to: text, insertionPoint: 9).text == "😀Z")
+    #expect(applyReplacementMatch(match, to: text, insertionPoint: 9).insertionPoint == 3)
+  }
+
+  @Test func zeroWidthRegexOnlyAppliesToWholeDocument() {
+    let rules = [ReplacementRule(pattern: "^", replacement: "start", usesRegularExpression: true)]
+    #expect(findReplacementCandidates(rules, in: "text").isEmpty)
+    #expect(applyReplacementRules(rules, to: "text") == "starttext")
+  }
+
 }

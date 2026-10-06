@@ -70,9 +70,20 @@ final class MockTextViewOperating: TextViewOperating {
     showReplacementPreviewsCalls.append(matches)
   }
 
+  var replacementCandidates: [ReplacementMatch] = []
+  var onReplaceCandidate: ((ReplacementMatch) -> Void)?
+  func showReplacementCandidates(
+    _ matches: [ReplacementMatch], onReplace: @escaping (ReplacementMatch) -> Void
+  ) {
+    replacementCandidates = matches
+    onReplaceCandidate = onReplace
+  }
+
   var clearReplacementPreviewsCallCount = 0
   func clearReplacementPreviews() {
     clearReplacementPreviewsCallCount += 1
+    replacementCandidates = []
+    onReplaceCandidate = nil
   }
 
   func makeFirstResponder(in panel: InputPanel) {}

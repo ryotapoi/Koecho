@@ -72,8 +72,8 @@ final class InputPanelController {
       isConfirming: { [weak self] in self?.isConfirming ?? false }
     )
 
-    voiceCoordinator.onAutoReplacement = { [weak self] in
-      self?.replacementService.applyOrPreview()
+    voiceCoordinator.onReplacementInput = { [weak self] in
+      self?.replacementService.handleInput()
     }
     voiceCoordinator.onCursorAutoReplacement = { [weak self] in
       guard let self, self.appState.settings.replacement.isAutoReplacementEnabled else { return }
@@ -301,9 +301,7 @@ final class InputPanelController {
       appState.discardScriptUndo()
     }
     appState.errorMessage = nil
-    if appState.settings.replacement.isAutoReplacementEnabled {
-      replacementService.applyOrPreview()
-    }
+    replacementService.handleInput()
     voiceCoordinator.handleTextChanged()
   }
 
@@ -352,6 +350,9 @@ final class InputPanelController {
         },
         onTextCommitted: { [weak self] in
           self?.handleTextCommitted()
+        },
+        onRefreshReplacementCandidates: { [weak self] in
+          self?.replacementService.refreshCandidates()
         },
         onTextViewCreated: { [weak self] view in
           guard let self else { return }
@@ -422,6 +423,9 @@ final class InputPanelController {
     voiceCoordinator.textView = view
     replacementService.textView = view
     scriptService.textView = view
+    view.onDisplayTextChanged = { [weak self] in
+      self?.replacementService.refreshCandidates()
+    }
     view.onCursorMoved = { [weak self] position in
       self?.voiceCoordinator.handleCursorMoved(position)
     }
@@ -435,9 +439,7 @@ final class InputPanelController {
       appState.setInputText(textView.string)
     }
     replacementService.clearPreviews()
-    if appState.settings.replacement.isAutoReplacementEnabled {
-      replacementService.applyOrPreview()
-    }
+    replacementService.handleInput()
   }
 
   private func focusTextView() {

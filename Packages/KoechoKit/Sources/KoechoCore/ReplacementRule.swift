@@ -128,8 +128,8 @@ extension ReplacementRule: Codable {
 }
 
 public struct ReplacementMatch: Equatable {
-  public let range: NSRange  // Match range in the original text
-  public let replacement: String  // Final content of this original preview region
+  public let range: NSRange  // UTF-16 range in the displayed document
+  public let replacement: String  // Replacement content for a candidate or final preview region
 
   public init(range: NSRange, replacement: String) {
     self.range = range

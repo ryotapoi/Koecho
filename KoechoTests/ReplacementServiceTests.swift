@@ -245,4 +245,105 @@ import Testing
     #expect(appState.inputText == "bye earth")
   }
 
+  @Test func manualCandidateChangesOnlyChosenOccurrenceAndMapsFollowingVoice() {
+    let (service, state, view, coordinator) = makeService(inputText: "a aZ")
+    state.settings.replacement.isAutoReplacementEnabled = false
+    state.settings.replacement.addReplacementRule(ReplacementRule(pattern: "a", replacement: "bbbb"))
+    state.settings.replacement.addReplacementRule(ReplacementRule(pattern: "bbbb", replacement: "c"))
+    coordinator.textView = view
+    coordinator.handleCursorMoved(3)
+    view.selectedRangeValue = NSRange(location: 3, length: 0)
+    service.handleInput()
+    #expect(state.inputText == "a aZ")
+    #expect(view.replacementCandidates.count == 2)
+    view.onReplaceCandidate?(view.replacementCandidates[1])
+    #expect(state.inputText == "a bbbbZ")
+    #expect(view.selectedRange() == NSRange(location: 6, length: 0))
+    #expect(coordinator.voiceInsertionPoint == 6)
+    #expect(view.replacementCandidates == [
+      ReplacementMatch(range: NSRange(location: 0, length: 1), replacement: "bbbb"),
+      ReplacementMatch(range: NSRange(location: 2, length: 4), replacement: "c")])
+    coordinator.voiceInput(didFinalize: "voice")
+    #expect(state.inputText == "a bbbbvoiceZ")
+  }
+
+  @Test func staleCandidateActionsRejectChangedDocumentOrRules() {
+    let (service, state, view, _) = makeService(inputText: "a a")
+    state.settings.replacement.isAutoReplacementEnabled = false
+    state.settings.replacement.addReplacementRule(ReplacementRule(pattern: "a", replacement: "long"))
+    service.refreshCandidates()
+    let action = view.onReplaceCandidate
+    let match = view.replacementCandidates[0]
+    state.setInputText("b a")
+    view.replaceText("b a")
+    action?(match)
+    #expect(state.inputText == "b a")
+    #expect(view.replacementCandidates.first?.range == NSRange(location: 2, length: 1))
+    let nextAction = view.onReplaceCandidate
+    let nextMatch = view.replacementCandidates[0]
+    state.settings.replacement.replacementRules = []
+    nextAction?(nextMatch)
+    #expect(state.inputText == "b a")
+    #expect(view.replacementCandidates.isEmpty)
+  }
+
+  @Test func candidateActionCannotEditDuringMarkedVolatileScriptOrAutomaticMode() {
+    let (service, state, view, _) = makeService(inputText: "a")
+    state.settings.replacement.isAutoReplacementEnabled = false
+    state.settings.replacement.addReplacementRule(ReplacementRule(pattern: "a", replacement: "long"))
+    service.refreshCandidates()
+    let action = view.onReplaceCandidate
+    let match = view.replacementCandidates[0]
+    view.markedText = true
+    action?(match)
+    #expect(state.inputText == "a")
+    #expect(view.showReplacementPreviewsCalls.last == [match])
+    view.markedText = false
+    view.volatileRange = NSRange(location: 0, length: 1)
+    action?(match)
+    #expect(view.replacementCandidates.isEmpty)
+    view.volatileRange = nil
+    state.isRunningScript = true
+    action?(match)
+    state.isRunningScript = false
+    state.settings.replacement.isAutoReplacementEnabled = true
+    action?(match)
+    #expect(state.inputText == "a")
+    #expect(view.replaceTextSelectingCalls.isEmpty)
+  }
+
+  @Test func volatileStartClearsMarkedPreviewAndFinalRestoresManualCandidates() {
+    let (service, state, view, coordinator) = makeService(inputText: "a")
+    state.settings.replacement.isAutoReplacementEnabled = false
+    state.settings.replacement.addReplacementRule(ReplacementRule(pattern: "a", replacement: "long"))
+    coordinator.textView = view
+    coordinator.onReplacementInput = { service.handleInput() }
+    view.markedText = true
+    service.handleInput()
+    #expect(view.showReplacementPreviewsCalls.last?.count == 1)
+    coordinator.voiceInput(didUpdateVolatile: "voice")
+    #expect(view.clearReplacementPreviewsCallCount > 0)
+    view.markedText = false
+    coordinator.voiceInput(didFinalize: "voice")
+    #expect(view.replacementCandidates.count == 1)
+    #expect(state.inputText == "voicea")
+  }
+
+  @Test func manualDeletionMapsSelectionAndVoiceAndWholeReplaceStillChains() {
+    let (service, state, view, coordinator) = makeService(inputText: "😀a aZ")
+    state.settings.replacement.isAutoReplacementEnabled = false
+    state.settings.replacement.addReplacementRule(ReplacementRule(pattern: "a", replacement: ""))
+    coordinator.handleCursorMoved(5)
+    view.selectedRangeValue = NSRange(location: 5, length: 0)
+    service.refreshCandidates()
+    view.onReplaceCandidate?(view.replacementCandidates[0])
+    #expect(state.inputText == "😀 aZ")
+    #expect(coordinator.voiceInsertionPoint == 4)
+    #expect(view.selectedRange() == NSRange(location: 4, length: 0))
+    #expect(view.replacementCandidates.first?.range == NSRange(location: 3, length: 1))
+    service.applyOrPreview()
+    #expect(state.inputText == "😀 Z")
+    #expect(view.replacementCandidates.isEmpty)
+  }
+
 }

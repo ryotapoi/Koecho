@@ -2,11 +2,12 @@
 regen: compiled
 sources:
   - Koecho/VoiceInputTextView.swift
-  - Koecho/ReplacementPreviewTooltip.swift
   - Koecho/VoiceInputTextEditor.swift
   - Koecho/VoiceInputCoordinator.swift
   - Koecho/InputPanelController.swift
   - Koecho/ReplacementService.swift
+  - Koecho/TextViewOperating.swift
+  - docs/specs/replacement-rules.md
   - Koecho/ScriptExecutionService.swift
   - docs/decisions/0010-nstextview-subclass-replacing-swiftui-texteditor.md
   - docs/decisions/0017-split-inputpanelcontroller-into-services.md
@@ -24,7 +25,8 @@ sources:
 - confirm は `VoiceInputTextView.commitMarkedTextIfNeeded()` で IME marked text を通常入力として確定してから音声入力を停止する。この順序を逆にしない。
 - プログラム由来の textStorage 変更でも `didChangeText` が発火する。storage 編集と callback suppression は `VoiceInputTextView` の操作へ閉じ、外部からフラグや storage を制御しない。
 - レイアウトと overlay 位置計算は `layoutManager` の glyph rect と `textContainerOrigin` を基準にする。文字列 index と画面座標を直接結びつけない。
-- replacement preview の tracking area と下線 geometry は `VoiceInputTextView`、hover tooltip の floating window・描画・画面端調整・show/hide lifecycle は `ReplacementPreviewTooltip` が所有する。TextView には tooltip subview を追加しない。
+- replacement の下線 geometry・glyph hit-test・個別 context menu は `VoiceInputTextView` が所有する。Tooltip と専用 tracking はない。menu は表示時の callback を保持し、`ReplacementService` が現在本文・ルール・未確定/実行状態を再確認して1件だけ適用する。
+- `onDisplayTextChanged` は suppression 下の全文変更と volatile 終了後に候補を再計算する。`VoiceInputTextEditor.updateNSView` は本文/ルール/auto/script 状態の同期後にも候補を更新する。非空 volatile の開始時は Coordinator と TextView の表示境界で既存候補を消去する。
 - `wantsUpdateLayer` を `true` にすると `draw(_:)` が呼ばれない。背景や下線を `draw(_:)` で描く view では使わない。
 
 ## SpeechAnalyzer / focus

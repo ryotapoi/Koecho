@@ -22,17 +22,6 @@
         }
       }
     },
-    "(delete)" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（削除）"
-          }
-        }
-      }
-    },
     "%@ (%lld)" : {
       "localizations" : {
         "en" : {
@@ -1121,6 +1110,17 @@
     },
     "Remove pattern" : {
 
+    },
+    "Replace This Occurrence" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この箇所を置換"
+          }
+        }
+      }
     },
     "Replace" : {
       "localizations" : {

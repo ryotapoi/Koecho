@@ -1,9 +1,13 @@
 import AppKit
+import KoechoCore
 import SwiftUI
 
 struct VoiceInputTextEditor: NSViewRepresentable {
   var text: String
   var isDisabled: Bool
+  var replacementRules: [ReplacementRule]
+  var isAutoReplacementEnabled: Bool
+  var onRefreshReplacementCandidates: () -> Void
   var onTextChanged: (String) -> Void
   var onTextCommitted: () -> Void
   var onAddReplacementRule: (String) -> Void
@@ -64,6 +68,7 @@ struct VoiceInputTextEditor: NSViewRepresentable {
 
     textView.isEditable = !isDisabled
     textView.font = .systemFont(ofSize: NSFont.systemFontSize)
+    onRefreshReplacementCandidates()
   }
 
   final class Coordinator {

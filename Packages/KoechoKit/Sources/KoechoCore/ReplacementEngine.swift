@@ -59,6 +59,42 @@ public func applyReplacementRules(
   return (result, point)
 }
 
+/// Find editable, non-overlapping occurrences in the current document.
+/// Earlier registered rules own overlapping occurrences. Zero-width matches
+/// remain supported by whole-document application, but have no clickable text.
+public func findReplacementCandidates(_ rules: [ReplacementRule], in text: String)
+  -> [ReplacementMatch]
+{
+  var candidates: [ReplacementMatch] = []
+  for rule in rules {
+    guard let application = ReplacementRuleApplication(rule: rule, to: text) else { continue }
+    for match in application.matches where match.range.length > 0 {
+      guard !candidates.contains(where: {
+        NSIntersectionRange($0.range, match.range).length > 0
+      }) else { continue }
+      candidates.append(match)
+    }
+  }
+  return candidates.sorted { $0.range.location < $1.range.location }
+}
+
+/// Apply one current-document match, using the same UTF-16 point mapping as
+/// whole-document replacement. The caller must validate the match's snapshot.
+public func applyReplacementMatch(
+  _ match: ReplacementMatch, to text: String, insertionPoint: Int
+) -> (text: String, insertionPoint: Int) {
+  let result = (text as NSString).replacingCharacters(in: match.range, with: match.replacement)
+  let point: Int
+  if insertionPoint <= match.range.location {
+    point = insertionPoint
+  } else if insertionPoint < NSMaxRange(match.range) {
+    point = match.range.location + min(insertionPoint - match.range.location, match.replacement.utf16.count)
+  } else {
+    point = insertionPoint + match.replacement.utf16.count - match.range.length
+  }
+  return (result, point)
+}
+
 /// Find non-overlapping preview regions in the original UTF-16 coordinates.
 /// A region's replacement is its final content after all registered rules,
 /// including subsequent changes to only part of previously generated text.

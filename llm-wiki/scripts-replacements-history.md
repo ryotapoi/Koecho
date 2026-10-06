@@ -4,6 +4,7 @@ sources:
   - Koecho/InputPanelController.swift
   - Koecho/ScriptExecutionService.swift
   - Koecho/ReplacementService.swift
+  - docs/specs/replacement-rules.md
   - Koecho/InputPanelScriptStrip.swift
   - Koecho/PromptInputView.swift
   - Koecho/ScriptManagementView.swift
@@ -37,9 +38,9 @@ sources:
 ## 置換ルール
 
 - `ReplacementRule` は Core の pure logic。plain text mode は複数 `patterns` を持ち、regex mode は single `pattern` を使う。保存形式の decode は `patterns` のみを受け付け、旧 `pattern` 単数形式は移行しない。
-- `applyReplacementRules` は確定時や手動適用で使う。`findReplacementMatches` は preview overlay 用で、元テキスト座標へ range を戻す。
-- `ReplacementService.applyOrPreview()` は panel 表示中・script 非実行中だけ動く。marked text 中は preview、通常時は apply、volatile range 中は preview clear。
-- voice insertion point は `VoiceInputCoordinator` が所有するため、通常適用では `ReplacementService.applyOrPreview()` 内の `applyNow(rules:)` が replacement delta を反映して移動させる。
+- `applyReplacementRules` は確定時や全文の手動適用で使う。`findReplacementMatches` は連鎖 preview 下線用で、元テキスト座標へ range を戻す。`findReplacementCandidates` は現在本文の単独候補を登録順で重複排除し、`applyReplacementMatch` はその1件だけを編集・位置補正する。
+- `ReplacementService.handleInput()` は auto on で `applyOrPreview()`、auto off で `refreshCandidates()` へ分岐する。明示的な全文 Replace / shortcut / ルール追加は `applyOrPreview()` を使う。panel 表示中・script 非実行中だけ動き、marked text 中は非破壊の下線、volatile range 中は候補消去。個別操作は本文/ルール snapshot を確認し、操作後は候補を再計算する。
+- voice insertion point は `VoiceInputCoordinator` が所有するため、通常適用では `ReplacementService.applyOrPreview()` 内の `applyNow(rules:)` が 各一致前後の UTF-16 座標を対応させて移動する。個別操作も同じ位置規則で TextView の選択両端と音声挿入位置を補正する。
 
 ## 履歴
 
