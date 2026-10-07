@@ -38,7 +38,7 @@ CLAUDE.local.md
 .codex/
 
 # Temporary files
-/tmp/
+.tmp/
 
 # macOS
 .DS_Store
