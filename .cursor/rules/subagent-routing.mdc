@@ -2,11 +2,17 @@
 alwaysApply: true
 ---
 
-# Subagent の使い分け
+# Subagent
 
-Subagentを積極的に活用し、現在のAgentのcontextを要求の解釈、判断、および統合のために維持する。委譲の要否は作業量ではなく、未解決の判断を必要とするかどうかに基づいて決定する。
+分担の原則は `~/.config/agents/principles/working-principles.md` の「Subagent」に従う。
 
-- 読み込み、検索、一覧化、事実・根拠の収集、明示された条件との照合、およびread-onlyのレビューは、原則として `composer-scout` に委譲する。
-- 方針、対象範囲、期待する挙動、および完了条件が決まっており、結果をdiffやテストで検証できる変更は、原則として `composer-worker` に委譲する。
-- 要求の解釈、計画、設計、トレードオフ、専門知識に依存する判断は現在のAgentが担当する。委譲後にそうした判断が必要になった場合、Subagentは事実と未決事項を現在のAgentに返す。
-- 独立したread-only作業のみを並列化し、同一worktreeを編集するwriterは1つに絞る。現在のAgentは実際のdiff、テスト結果、および根拠を確認して統合する。
+## モデル
+
+依頼全体で選び、途中の作業ごとに担当を替えない。
+
+- `composer-2.5`：情報収集・抽出、具体的な手順や既存の実装例に沿う定型変更。
+- `grok-4.7-xhigh`：比較・要約・判断、通常の実装・変更、不具合・矛盾・見落としの発見。迷ったらgrok。
+
+選んだモデルに対応する agent を使う。調査には読み取り専用の `composer-scout` または `grok-scout`、変更には書き込み可能な `composer-worker` または `grok-worker` を使う。
+
+作業開始時に `~/.config/agents/principles/working-principles.md` を読み、作業全体に適用する。
