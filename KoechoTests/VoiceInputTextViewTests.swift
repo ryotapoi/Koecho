@@ -362,7 +362,8 @@ struct VoiceInputTextViewTests {
     textView.setSelectedRange(selection)
     let candidates = findReplacementCandidates(
       [ReplacementRule(pattern: "a", replacement: "long")], in: textView.string)
-    textView.showReplacementCandidates(candidates) { _ in }
+    var selectedTargets: [ReplacementMatch]?
+    textView.showReplacementCandidates(candidates) { selectedTargets = $0 }
     let manager = try #require(textView.layoutManager)
     let container = try #require(textView.textContainer)
     manager.ensureLayout(for: container)
@@ -382,16 +383,22 @@ struct VoiceInputTextViewTests {
     standardView.setSelectedRange(selection)
     let standardMenu = try #require(standardView.menu(for: event))
     let menu = try #require(textView.menu(for: event))
-    let replaceTitle = String(localized: "Replace This Occurrence")
+    let replaceTitle = scenario == 1 || scenario == 2 ? String(localized: "Replace Selection") : String(localized: "Replace This Occurrence")
     let addTitle = String(localized: "Add Replacement Rule\u{2026}")
     let expectedTitles: [String] = switch scenario {
     case 0: [replaceTitle]
-    case 1: [addTitle]
+    case 1: [replaceTitle, addTitle]
     case 2: [replaceTitle, addTitle]
     default: []
     }
     #expect(Array(menu.items.prefix(expectedTitles.count)).map(\.title) == expectedTitles)
-    #expect(menu.items.filter { $0.title == replaceTitle }.count == (scenario == 0 || scenario == 2 ? 1 : 0))
+    if scenario != 3 {
+      let item = try #require(menu.items.first)
+      _ = NSApp.sendAction(try #require(item.action), to: item.target, from: item)
+      #expect(selectedTargets == candidates)
+    }
+
+    #expect(menu.items.filter { $0.title == replaceTitle }.count == (scenario != 3 ? 1 : 0))
     #expect(menu.items.filter { $0.title == addTitle }.count == (scenario == 1 || scenario == 2 ? 1 : 0))
     let boundaryCount = !expectedTitles.isEmpty && !standardMenu.items.isEmpty
       && !standardMenu.items[0].isSeparatorItem ? 1 : 0
@@ -412,9 +419,10 @@ struct VoiceInputTextViewTests {
     window.contentView = textView
     defer { window.contentView = nil }
     textView.replaceText("a aZ")
+    textView.setSelectedRange(NSRange(location: 0, length: 0))
     let candidates = findReplacementCandidates(
       [ReplacementRule(pattern: "a", replacement: "long")], in: textView.string)
-    var selected: ReplacementMatch?
+    var selected: [ReplacementMatch]?
     textView.showReplacementCandidates(candidates) { selected = $0 }
     let manager = try #require(textView.layoutManager)
     let container = try #require(textView.textContainer)
@@ -433,7 +441,7 @@ struct VoiceInputTextViewTests {
       $0.title == String(localized: "Replace This Occurrence")
     })
     _ = NSApp.sendAction(try #require(item.action), to: item.target, from: item)
-    #expect(selected == candidates[1])
+    #expect(selected == [candidates[1]])
     #expect(textView.string == "a aZ")
     textView.setVolatileText("voice", at: 3)
     #expect(textView.menu(for: event)?.items.contains {

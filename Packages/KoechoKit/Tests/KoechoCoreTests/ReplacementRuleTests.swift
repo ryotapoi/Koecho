@@ -511,4 +511,33 @@ struct ReplacementRuleTests {
     #expect(applyReplacementRules(rules, to: "text") == "starttext")
   }
 
+  @Test(arguments: [2, 3, 4, 5, 6, 7]) func localTargetsIncludeBothCaretEdges(position: Int) {
+    let match = ReplacementMatch(range: NSRange(location: 3, length: 3), replacement: "x")
+    #expect(replacementTargets([match], selection: NSRange(location: position, length: 0)) ==
+      (position >= 3 && position <= 6 ? [match] : []))
+  }
+
+  @Test func localTargetsOwnLeftBoundaryAndRequireCompleteContainment() {
+    let a = ReplacementMatch(range: NSRange(location: 0, length: 2), replacement: "long")
+    let b = ReplacementMatch(range: NSRange(location: 2, length: 2), replacement: "")
+    #expect(replacementTargets([b, a], selection: NSRange(location: 2, length: 0)) == [a])
+    #expect(replacementTargets([a, b], selection: NSRange(location: 0, length: 4)) == [a, b])
+    #expect(replacementTargets([a, b], selection: NSRange(location: 1, length: 3)) == [b])
+    #expect(replacementTargets([a, b], selection: NSRange(location: 1, length: 2)).isEmpty)
+  }
+
+  @Test func snapshotEditsMapUnicodePointsWithoutSearchingGeneratedText() {
+    let text = "😀ab cde fZ"
+    let matches = [
+      ReplacementMatch(range: NSRange(location: 2, length: 2), replacement: "LONG"),
+      ReplacementMatch(range: NSRange(location: 5, length: 3), replacement: "x"),
+      ReplacementMatch(range: NSRange(location: 9, length: 1), replacement: "")]
+    let expected = [0, 1, 2, 3, 6, 7, 8, 8, 8, 9, 9, 10]
+    for point in 0...11 {
+      let result = applyReplacementMatches(matches, to: text, insertionPoint: point)
+      #expect(result.text == "😀LONG x Z")
+      #expect(result.insertionPoint == expected[point])
+    }
+  }
+
 }

@@ -417,6 +417,7 @@ extension InputPanelControllerTests {
     )
     ctx.controller.showPanel()
     ctx.appState.setInputText("hello")
+    findVoiceInputTextView(in: ctx.controller)?.replaceText("hello", selecting: NSRange(location: 0, length: 0))
     #expect(ctx.controller.panel.onShortcutKey?(key) == true)
     #expect(ctx.appState.inputText == "bye")
     #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)

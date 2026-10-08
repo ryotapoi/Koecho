@@ -256,7 +256,7 @@ import Testing
     service.handleInput()
     #expect(state.inputText == "a aZ")
     #expect(view.replacementCandidates.count == 2)
-    view.onReplaceCandidate?(view.replacementCandidates[1])
+    view.onReplaceCandidate?([view.replacementCandidates[1]])
     #expect(state.inputText == "a bbbbZ")
     #expect(view.selectedRange() == NSRange(location: 6, length: 0))
     #expect(coordinator.voiceInsertionPoint == 6)
@@ -276,13 +276,13 @@ import Testing
     let match = view.replacementCandidates[0]
     state.setInputText("b a")
     view.replaceText("b a")
-    action?(match)
+    action?([match])
     #expect(state.inputText == "b a")
     #expect(view.replacementCandidates.first?.range == NSRange(location: 2, length: 1))
     let nextAction = view.onReplaceCandidate
     let nextMatch = view.replacementCandidates[0]
     state.settings.replacement.replacementRules = []
-    nextAction?(nextMatch)
+    nextAction?([nextMatch])
     #expect(state.inputText == "b a")
     #expect(view.replacementCandidates.isEmpty)
   }
@@ -295,19 +295,19 @@ import Testing
     let action = view.onReplaceCandidate
     let match = view.replacementCandidates[0]
     view.markedText = true
-    action?(match)
+    action?([match])
     #expect(state.inputText == "a")
     #expect(view.showReplacementPreviewsCalls.last == [match])
     view.markedText = false
     view.volatileRange = NSRange(location: 0, length: 1)
-    action?(match)
+    action?([match])
     #expect(view.replacementCandidates.isEmpty)
     view.volatileRange = nil
     state.isRunningScript = true
-    action?(match)
+    action?([match])
     state.isRunningScript = false
     state.settings.replacement.isAutoReplacementEnabled = true
-    action?(match)
+    action?([match])
     #expect(state.inputText == "a")
     #expect(view.replaceTextSelectingCalls.isEmpty)
   }
@@ -336,7 +336,7 @@ import Testing
     coordinator.handleCursorMoved(5)
     view.selectedRangeValue = NSRange(location: 5, length: 0)
     service.refreshCandidates()
-    view.onReplaceCandidate?(view.replacementCandidates[0])
+    view.onReplaceCandidate?([view.replacementCandidates[0]])
     #expect(state.inputText == "😀 aZ")
     #expect(coordinator.voiceInsertionPoint == 4)
     #expect(view.selectedRange() == NSRange(location: 4, length: 0))
@@ -344,6 +344,52 @@ import Testing
     service.applyOrPreview()
     #expect(state.inputText == "😀 Z")
     #expect(view.replacementCandidates.isEmpty)
+  }
+
+  @Test func selectedSnapshotMapsMultipleEditsAndNextVoiceWithoutChaining() {
+    let (service, state, view, coordinator) = makeService(inputText: "😀a b cZ")
+    state.settings.replacement.isAutoReplacementEnabled = false
+    state.settings.replacement.replacementRules = [
+      ReplacementRule(pattern: "a", replacement: "long"),
+      ReplacementRule(pattern: "b", replacement: ""),
+      ReplacementRule(pattern: "c", replacement: "x"),
+      ReplacementRule(pattern: "long", replacement: "chain")]
+    coordinator.textView = view
+    coordinator.handleCursorMoved(7)
+    view.selectedRangeValue = NSRange(location: 2, length: 5)
+    service.replaceSelection()
+    #expect(state.inputText == "😀long  xZ")
+    #expect(view.string == state.inputText)
+    #expect(view.selectedRange() == NSRange(location: 2, length: 7))
+    #expect(coordinator.voiceInsertionPoint == 9)
+    #expect(view.replacementCandidates == [ReplacementMatch(range: NSRange(location: 2, length: 4), replacement: "chain")])
+    coordinator.voiceInput(didFinalize: "voice")
+    #expect(state.inputText == "😀long  xvoiceZ")
+  }
+
+  @Test(arguments: [false, true]) func localShortcutRejectsUncommittedText(marked: Bool) {
+    let (service, state, view, coordinator) = makeService(inputText: "aZ")
+    state.settings.replacement.replacementRules = [ReplacementRule(pattern: "a", replacement: "long")]
+    view.selectedRangeValue = NSRange(location: 1, length: 0)
+    coordinator.handleCursorMoved(1)
+    view.markedText = marked
+    view.volatileRange = marked ? nil : NSRange(location: 0, length: 1)
+    service.replaceSelection()
+    #expect(state.inputText == "aZ")
+    #expect(view.selectedRange() == NSRange(location: 1, length: 0))
+    #expect(coordinator.voiceInsertionPoint == 1)
+  }
+
+  @Test func localNoTargetPreservesDocumentSelectionAndVoicePoint() {
+    let (service, state, view, coordinator) = makeService(inputText: "aZ")
+    state.settings.replacement.replacementRules = [ReplacementRule(pattern: "a", replacement: "long")]
+    view.selectedRangeValue = NSRange(location: 2, length: 0)
+    coordinator.handleCursorMoved(2)
+    service.replaceSelection()
+    #expect(state.inputText == "aZ")
+    #expect(view.string == "aZ")
+    #expect(view.selectedRange() == NSRange(location: 2, length: 0))
+    #expect(coordinator.voiceInsertionPoint == 2)
   }
 
 }

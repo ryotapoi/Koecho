@@ -178,17 +178,6 @@
         }
       }
     },
-    "Apply replacement rules" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "置換ルールを適用"
-          }
-        }
-      }
-    },
     "Arrows" : {
       "localizations" : {
         "ja" : {
@@ -1111,6 +1100,16 @@
     "Remove pattern" : {
 
     },
+    "Replace Selection" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択範囲を置換"
+          }
+        }
+      }
+    },
     "Replace This Occurrence" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1118,16 +1117,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "この箇所を置換"
-          }
-        }
-      }
-    },
-    "Replace" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "置換"
           }
         }
       }

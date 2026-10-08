@@ -23,7 +23,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   private var previewMatches: [ReplacementMatch] = []
 
   var onDisplayTextChanged: (() -> Void)?
-  private var onReplaceCandidate: ((ReplacementMatch) -> Void)?
+  private var onReplaceCandidate: (([ReplacementMatch]) -> Void)?
 
   // MARK: - TextViewOperating
 
@@ -202,7 +202,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   }
 
   func showReplacementCandidates(
-    _ matches: [ReplacementMatch], onReplace: @escaping (ReplacementMatch) -> Void
+    _ matches: [ReplacementMatch], onReplace: @escaping ([ReplacementMatch]) -> Void
   ) {
     previewMatches = matches
     onReplaceCandidate = onReplace
@@ -306,19 +306,28 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   // MARK: - Context menu
 
   override func menu(for event: NSEvent) -> NSMenu? {
+    // AppKit may select the clicked word while building its standard menu.
+    // Interpret the user's existing selection before that side effect.
+    let selection = selectedRange()
     let menu = super.menu(for: event) ?? NSMenu()
     var appItems: [NSMenuItem] = []
     if isEditable, !hasMarkedText(), volatileRange == nil,
-      let onReplaceCandidate, let match = replacementCandidate(at: convert(event.locationInWindow, from: nil))
+      let onReplaceCandidate, let character = replacementCharacter(at: convert(event.locationInWindow, from: nil))
     {
-      let item = NSMenuItem(
-        title: String(localized: "Replace This Occurrence"),
-        action: #selector(replaceOccurrenceFromMenu(_:)), keyEquivalent: "")
-      item.target = self
-      // Capture this menu's candidate and callback, rather than a subsequently
-      // refreshed list. The service validates its document and rules snapshot.
-      item.representedObject = ReplacementMenuAction { onReplaceCandidate(match) }
-      appItems.append(item)
+      let usesSelection = selection.length > 0 && NSLocationInRange(character, selection)
+      let targets = usesSelection
+        ? replacementTargets(previewMatches, selection: selection)
+        : previewMatches.filter { NSLocationInRange(character, $0.range) }.prefix(1).map { $0 }
+      if !targets.isEmpty {
+        let item = NSMenuItem(
+          title: usesSelection ? String(localized: "Replace Selection") : String(localized: "Replace This Occurrence"),
+          action: #selector(replaceOccurrenceFromMenu(_:)), keyEquivalent: "")
+        item.target = self
+        // Capture this menu's candidate and callback, rather than a subsequently
+        // refreshed list. The service validates its document and rules snapshot.
+        item.representedObject = ReplacementMenuAction { onReplaceCandidate(targets) }
+        appItems.append(item)
+      }
     }
     if selectedRange().length > 0 {
       let item = NSMenuItem(
@@ -338,7 +347,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     return menu
   }
 
-  private func replacementCandidate(at point: NSPoint) -> ReplacementMatch? {
+  private func replacementCharacter(at point: NSPoint) -> Int? {
     guard let layoutManager, let textContainer else { return nil }
     let containerPoint = NSPoint(
       x: point.x - textContainerOrigin.x, y: point.y - textContainerOrigin.y)
@@ -348,7 +357,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
         .contains(containerPoint)
     else { return nil }
     let character = layoutManager.characterIndexForGlyph(at: glyph)
-    return previewMatches.first { NSLocationInRange(character, $0.range) }
+    return character
   }
 
   @objc private func replaceOccurrenceFromMenu(_ sender: NSMenuItem) {

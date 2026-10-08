@@ -4,18 +4,14 @@ import SwiftUI
 struct InputPanelToolbar: View {
   let availableWidth: CGFloat
   let isVoiceInputEnabled: Bool
-  let replacementRules: [ReplacementRule]
-  let isAutoReplacementEnabled: Bool
   @Bindable var scriptSettings: ScriptSettings
   let isRunningScript: Bool
   let hasPromptScript: Bool
   let canUndoScript: Bool
   let hotkeyConfig: HotkeyConfig
   var onSwitchEngine: () async -> Void
-  var onApplyReplacementRules: () -> Void
   var onUndoScript: () -> Void
   var onConfirm: () async -> Void
-  let replacementShortcutKey: ShortcutKey?
 
   private var hasAutoRunScripts: Bool {
     !scriptSettings.eligibleAutoRunScripts.isEmpty
@@ -47,20 +43,6 @@ struct InputPanelToolbar: View {
           !isVoiceInputEnabled
             ? String(localized: "Voice input is off") : String(localized: "Voice")
         )
-
-        if !replacementRules.isEmpty && !isAutoReplacementEnabled {
-          Button {
-            onApplyReplacementRules()
-          } label: {
-            Label("Replace", systemImage: "arrow.2.squarepath")
-          }
-          .buttonStyle(.koechoToolbar(isEmphasized: true))
-          .help(
-            helpText(
-              String(localized: "Apply replacement rules"), shortcut: replacementShortcutKey)
-          )
-          .disabled(isRunningScript)
-        }
 
         if canUndoScript {
           Button("Undo Script", systemImage: "arrow.uturn.backward") {
@@ -167,18 +149,14 @@ extension HotkeyConfig {
   return InputPanelToolbar(
     availableWidth: 560,
     isVoiceInputEnabled: true,
-    replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
-    isAutoReplacementEnabled: false,
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: false,
     canUndoScript: true,
     hotkeyConfig: .default,
     onSwitchEngine: {},
-    onApplyReplacementRules: {},
     onUndoScript: {},
-    onConfirm: {},
-    replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
+    onConfirm: {}
   )
   .frame(width: 560, height: 40)
 }
@@ -189,18 +167,14 @@ extension HotkeyConfig {
   return InputPanelToolbar(
     availableWidth: 350,
     isVoiceInputEnabled: false,
-    replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
-    isAutoReplacementEnabled: false,
     scriptSettings: scriptSettings,
     isRunningScript: true,
     hasPromptScript: false,
     canUndoScript: false,
     hotkeyConfig: .default,
     onSwitchEngine: {},
-    onApplyReplacementRules: {},
     onUndoScript: {},
-    onConfirm: {},
-    replacementShortcutKey: nil
+    onConfirm: {}
   )
   .frame(width: 350, height: 40)
 }
@@ -215,18 +189,14 @@ extension HotkeyConfig {
   return InputPanelToolbar(
     availableWidth: 350,
     isVoiceInputEnabled: true,
-    replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
-    isAutoReplacementEnabled: true,
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: false,
     canUndoScript: false,
     hotkeyConfig: .default,
     onSwitchEngine: {},
-    onApplyReplacementRules: {},
     onUndoScript: {},
-    onConfirm: {},
-    replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
+    onConfirm: {}
   )
   .frame(width: 350, height: 40)
   .preferredColorScheme(.dark)
@@ -242,18 +212,14 @@ extension HotkeyConfig {
   return InputPanelToolbar(
     availableWidth: 350,
     isVoiceInputEnabled: true,
-    replacementRules: [ReplacementRule(patterns: ["test"], replacement: "Test")],
-    isAutoReplacementEnabled: false,
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: true,
     canUndoScript: false,
     hotkeyConfig: .default,
     onSwitchEngine: {},
-    onApplyReplacementRules: {},
     onUndoScript: {},
-    onConfirm: {},
-    replacementShortcutKey: ShortcutKey(modifiers: [.control], character: "r")
+    onConfirm: {}
   )
   .frame(width: 350, height: 40)
   .opacity(0.45)
@@ -265,18 +231,14 @@ extension HotkeyConfig {
   return InputPanelToolbar(
     availableWidth: 350,
     isVoiceInputEnabled: true,
-    replacementRules: [],
-    isAutoReplacementEnabled: false,
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: false,
     canUndoScript: false,
     hotkeyConfig: .default,
     onSwitchEngine: {},
-    onApplyReplacementRules: {},
     onUndoScript: {},
-    onConfirm: {},
-    replacementShortcutKey: nil
+    onConfirm: {}
   )
   .frame(width: 350, height: 40)
 }

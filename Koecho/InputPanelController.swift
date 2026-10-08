@@ -333,9 +333,6 @@ final class InputPanelController {
         onCancelPrompt: { [weak self] in
           self?.cancelPrompt()
         },
-        onApplyReplacementRules: { [weak self] in
-          self?.replacementService.applyOrPreview()
-        },
         onUndoScript: { [weak self] in
           self?.undoLastScript()
         },
@@ -396,7 +393,7 @@ final class InputPanelController {
         shortcut == rShortcut,
         !self.appState.settings.replacement.replacementRules.isEmpty
       {
-        self.replacementService.applyOrPreview()
+        self.replacementService.replaceSelection()
         return true
       }
       if let script = self.appState.settings.script.scripts.first(where: {

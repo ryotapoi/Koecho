@@ -1,5 +1,6 @@
 ---
-status: current
+status: superseded
+superseded_by: 0035-local-manual-replacement.md
 ---
 
 # 置換ルールを確定入力に適用し、未確定入力には候補を示す

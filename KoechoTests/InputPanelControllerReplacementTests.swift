@@ -57,12 +57,34 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("えーと天気")
+    findVoiceInputTextView(in: ctx.controller)?.replaceText("えーと天気", selecting: NSRange(location: 1, length: 0))
 
     let handled = ctx.controller.panel.onShortcutKey?(
       ShortcutKey(modifiers: [.control], character: "r"))
 
     #expect(handled == true)
     #expect(ctx.appState.inputText == "天気")
+  }
+
+  @Test func replacementShortcutUsesCurrentSelectionWithoutChaining() throws {
+    let ctx = makeController()
+    ctx.appState.settings.replacement.isAutoReplacementEnabled = false
+    ctx.appState.settings.replacement.replacementRules = [
+      ReplacementRule(pattern: "a", replacement: "long"),
+      ReplacementRule(pattern: "long", replacement: "x")]
+    ctx.controller.showPanel()
+    let view = try #require(findVoiceInputTextView(in: ctx.controller))
+    ctx.appState.setInputText("a aZ")
+    view.replaceText("a aZ", selecting: NSRange(location: 1, length: 0))
+    let key = ShortcutKey(modifiers: [.control], character: "r")
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    #expect(ctx.appState.inputText == "long aZ")
+    view.setSelectedRange(NSRange(location: 0, length: 6))
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    #expect(ctx.appState.inputText == "x longZ")
+    ctx.appState.settings.replacement.replacementShortcutKey = nil
+    #expect(ctx.controller.panel.onShortcutKey?(key) == false)
+    #expect(ctx.appState.inputText == "x longZ")
   }
 
   @Test func shortcutRFallsBackToScriptWhenNoRules() async throws {
@@ -95,6 +117,7 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("えーと天気")
+    findVoiceInputTextView(in: ctx.controller)?.replaceText("えーと天気", selecting: NSRange(location: 1, length: 0))
 
     let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
 
@@ -113,6 +136,7 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("えーと天気")
+    findVoiceInputTextView(in: ctx.controller)?.replaceText("えーと天気", selecting: NSRange(location: 1, length: 0))
 
     // Ctrl+X should apply replacement rules
     let handledX = ctx.controller.panel.onShortcutKey?(
@@ -122,6 +146,7 @@ extension InputPanelControllerTests {
 
     // Ctrl+R should NOT apply replacement rules (no longer the shortcut)
     ctx.appState.setInputText("えーと天気")
+    findVoiceInputTextView(in: ctx.controller)?.replaceText("えーと天気", selecting: NSRange(location: 1, length: 0))
     let handledR = ctx.controller.panel.onShortcutKey?(
       ShortcutKey(modifiers: [.control], character: "r"))
     #expect(handledR == false)
@@ -140,6 +165,7 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("えーと天気")
+    findVoiceInputTextView(in: ctx.controller)?.replaceText("えーと天気", selecting: NSRange(location: 1, length: 0))
 
     // Ctrl+R should fall through to script (replacement shortcut is nil)
     let handled = ctx.controller.panel.onShortcutKey?(ctrlR)

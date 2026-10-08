@@ -71,9 +71,9 @@ final class MockTextViewOperating: TextViewOperating {
   }
 
   var replacementCandidates: [ReplacementMatch] = []
-  var onReplaceCandidate: ((ReplacementMatch) -> Void)?
+  var onReplaceCandidate: (([ReplacementMatch]) -> Void)?
   func showReplacementCandidates(
-    _ matches: [ReplacementMatch], onReplace: @escaping (ReplacementMatch) -> Void
+    _ matches: [ReplacementMatch], onReplace: @escaping ([ReplacementMatch]) -> Void
   ) {
     replacementCandidates = matches
     onReplaceCandidate = onReplace

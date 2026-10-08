@@ -15,7 +15,7 @@ protocol TextViewOperating: AnyObject {
   func finalizeVolatileText()
   func showReplacementPreviews(_ matches: [ReplacementMatch])
   func showReplacementCandidates(
-    _ matches: [ReplacementMatch], onReplace: @escaping (ReplacementMatch) -> Void)
+    _ matches: [ReplacementMatch], onReplace: @escaping ([ReplacementMatch]) -> Void)
   func clearReplacementPreviews()
   func makeFirstResponder(in panel: InputPanel)
   func setSelectedRange(_ range: NSRange)

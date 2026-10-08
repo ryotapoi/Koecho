@@ -95,6 +95,31 @@ public func applyReplacementMatch(
   return (result, point)
 }
 
+/// Select fully contained occurrences, or one occurrence at the caret.
+/// At an adjacent boundary the leftmost occurrence owns the caret.
+public func replacementTargets(
+  _ candidates: [ReplacementMatch], selection: NSRange
+) -> [ReplacementMatch] {
+  if selection.length > 0 {
+    return candidates.filter {
+      $0.range.location >= selection.location && NSMaxRange($0.range) <= NSMaxRange(selection)
+    }
+  }
+  return candidates.sorted { $0.range.location < $1.range.location }.first {
+    selection.location >= $0.range.location && selection.location <= NSMaxRange($0.range)
+  }.map { [$0] } ?? []
+}
+
+/// Apply a validated, non-overlapping snapshot without searching generated text.
+/// Descending edits preserve original ranges and map each UTF-16 point cumulatively.
+public func applyReplacementMatches(
+  _ matches: [ReplacementMatch], to text: String, insertionPoint: Int
+) -> (text: String, insertionPoint: Int) {
+  matches.sorted { $0.range.location > $1.range.location }.reduce((text, insertionPoint)) {
+    applyReplacementMatch($1, to: $0.0, insertionPoint: $0.1)
+  }
+}
+
 /// Find non-overlapping preview regions in the original UTF-16 coordinates.
 /// A region's replacement is its final content after all registered rules,
 /// including subsequent changes to only part of previously generated text.

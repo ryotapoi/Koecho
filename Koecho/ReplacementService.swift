@@ -36,7 +36,7 @@ final class ReplacementService {
     }
   }
 
-  /// Ordinary input honors Auto-replace; explicit Replace keeps applying all rules.
+  /// Ordinary input honors Auto-replace. Manual operations use current candidates.
   func handleInput() {
     if appState.settings.replacement.isAutoReplacementEnabled {
       applyOrPreview()
@@ -65,28 +65,41 @@ final class ReplacementService {
       textView.showReplacementPreviews(matches)
     } else {
       textView.showReplacementCandidates(matches) { [weak self] match in
-        self?.replaceOccurrence(match, in: text, rules: rules)
+        guard let self else { return }
+        guard !self.appState.settings.replacement.isAutoReplacementEnabled else {
+          self.refreshCandidates()
+          return
+        }
+        self.replaceOccurrences(match, in: text, rules: rules)
       }
     }
   }
 
-  private func replaceOccurrence(_ match: ReplacementMatch, in text: String, rules: [ReplacementRule]) {
+  func replaceSelection() {
+    guard let textView else { return }
+    let text = textView.string
+    let rules = appState.settings.replacement.replacementRules
+    let targets = replacementTargets(findReplacementCandidates(rules, in: text), selection: textView.selectedRange())
+    replaceOccurrences(targets, in: text, rules: rules)
+  }
+
+  private func replaceOccurrences(_ matches: [ReplacementMatch], in text: String, rules: [ReplacementRule]) {
     guard let textView,
       appState.isInputPanelVisible, !appState.isRunningScript,
-      !appState.settings.replacement.isAutoReplacementEnabled,
       !textView.hasMarkedText(), textView.volatileRange == nil,
       textView.string == text, appState.inputText == text,
       appState.settings.replacement.replacementRules == rules,
-      findReplacementCandidates(rules, in: text).contains(match)
+      matches.allSatisfy({ findReplacementCandidates(rules, in: text).contains($0) })
     else {
       refreshCandidates()
       return
     }
-    let application = applyReplacementMatch(
-      match, to: text, insertionPoint: voiceCoordinator.voiceInsertionPoint)
+    guard !matches.isEmpty else { return }
+    let application = applyReplacementMatches(
+      matches, to: text, insertionPoint: voiceCoordinator.voiceInsertionPoint)
     let selection = textView.selectedRange()
-    let start = applyReplacementMatch(match, to: text, insertionPoint: selection.location).insertionPoint
-    let end = applyReplacementMatch(match, to: text, insertionPoint: NSMaxRange(selection)).insertionPoint
+    let start = applyReplacementMatches(matches, to: text, insertionPoint: selection.location).insertionPoint
+    let end = applyReplacementMatches(matches, to: text, insertionPoint: NSMaxRange(selection)).insertionPoint
     voiceCoordinator.moveVoiceInsertionPoint(to: application.insertionPoint, in: application.text)
     appState.setInputText(application.text)
     appState.errorMessage = nil
