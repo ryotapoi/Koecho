@@ -307,10 +307,10 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   override func menu(for event: NSEvent) -> NSMenu? {
     let menu = super.menu(for: event) ?? NSMenu()
+    var appItems: [NSMenuItem] = []
     if isEditable, !hasMarkedText(), volatileRange == nil,
       let onReplaceCandidate, let match = replacementCandidate(at: convert(event.locationInWindow, from: nil))
     {
-      menu.addItem(.separator())
       let item = NSMenuItem(
         title: String(localized: "Replace This Occurrence"),
         action: #selector(replaceOccurrenceFromMenu(_:)), keyEquivalent: "")
@@ -318,15 +318,22 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
       // Capture this menu's candidate and callback, rather than a subsequently
       // refreshed list. The service validates its document and rules snapshot.
       item.representedObject = ReplacementMenuAction { onReplaceCandidate(match) }
-      menu.addItem(item)
+      appItems.append(item)
     }
     if selectedRange().length > 0 {
-      menu.addItem(.separator())
       let item = NSMenuItem(
         title: String(localized: "Add Replacement Rule\u{2026}"),
         action: #selector(addReplacementRuleFromMenu(_:)), keyEquivalent: "")
       item.target = self
-      menu.addItem(item)
+      appItems.append(item)
+    }
+    if !appItems.isEmpty {
+      if let firstItem = menu.items.first, !firstItem.isSeparatorItem {
+        menu.insertItem(.separator(), at: 0)
+      }
+      for (index, item) in appItems.enumerated() {
+        menu.insertItem(item, at: index)
+      }
     }
     return menu
   }

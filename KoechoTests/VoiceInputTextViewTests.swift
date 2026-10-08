@@ -348,6 +348,62 @@ struct VoiceInputTextViewTests {
     #expect(textView.volatileRange == NSRange(location: 2, length: 6))
   }
 
+  @Test(arguments: [0, 1, 2, 3])
+  func contextMenuPrependsEligibleActionsAndPreservesStandardItems(scenario: Int) throws {
+    let textView = makeTextView()
+    textView.frame = NSRect(x: 0, y: 0, width: 320, height: 160)
+    let window = NSWindow(
+      contentRect: textView.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+    window.contentView = textView
+    defer { window.contentView = nil }
+    textView.replaceText("a Z")
+    let selection = NSRange(
+      location: scenario == 3 ? 2 : 0, length: scenario == 1 || scenario == 2 ? 3 : 0)
+    textView.setSelectedRange(selection)
+    let candidates = findReplacementCandidates(
+      [ReplacementRule(pattern: "a", replacement: "long")], in: textView.string)
+    textView.showReplacementCandidates(candidates) { _ in }
+    let manager = try #require(textView.layoutManager)
+    let container = try #require(textView.textContainer)
+    manager.ensureLayout(for: container)
+    let characterRange = NSRange(location: scenario == 1 || scenario == 3 ? 2 : 0, length: 1)
+    let glyphRange = manager.glyphRange(forCharacterRange: characterRange, actualCharacterRange: nil)
+    let rect = manager.boundingRect(forGlyphRange: glyphRange, in: container)
+    let point = textView.convert(NSPoint(
+      x: rect.midX + textView.textContainerOrigin.x,
+      y: rect.midY + textView.textContainerOrigin.y), to: nil)
+    let event = try #require(NSEvent.mouseEvent(
+      with: .rightMouseDown, location: point, modifierFlags: [], timestamp: 0,
+      windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
+    let standardView = NSTextView(frame: textView.frame)
+    standardView.isRichText = false
+    standardView.allowsUndo = true
+    standardView.string = textView.string
+    standardView.setSelectedRange(selection)
+    let standardMenu = try #require(standardView.menu(for: event))
+    let menu = try #require(textView.menu(for: event))
+    let replaceTitle = String(localized: "Replace This Occurrence")
+    let addTitle = String(localized: "Add Replacement Rule\u{2026}")
+    let expectedTitles: [String] = switch scenario {
+    case 0: [replaceTitle]
+    case 1: [addTitle]
+    case 2: [replaceTitle, addTitle]
+    default: []
+    }
+    #expect(Array(menu.items.prefix(expectedTitles.count)).map(\.title) == expectedTitles)
+    #expect(menu.items.filter { $0.title == replaceTitle }.count == (scenario == 0 || scenario == 2 ? 1 : 0))
+    #expect(menu.items.filter { $0.title == addTitle }.count == (scenario == 1 || scenario == 2 ? 1 : 0))
+    let boundaryCount = !expectedTitles.isEmpty && !standardMenu.items.isEmpty
+      && !standardMenu.items[0].isSeparatorItem ? 1 : 0
+    if boundaryCount == 1 {
+      #expect(menu.items[expectedTitles.count].isSeparatorItem)
+    }
+    let standardSuffix = Array(menu.items.dropFirst(expectedTitles.count + boundaryCount))
+    #expect(standardSuffix.map(\.title) == standardMenu.items.map(\.title))
+    #expect(standardSuffix.map(\.action) == standardMenu.items.map(\.action))
+    #expect(standardSuffix.map(\.isSeparatorItem) == standardMenu.items.map(\.isSeparatorItem))
+  }
+
   @Test func candidateMenuHitsCurrentGlyphAndVolatileClearsItsAction() throws {
     let textView = makeTextView()
     textView.frame = NSRect(x: 0, y: 0, width: 320, height: 160)
