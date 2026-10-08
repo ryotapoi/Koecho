@@ -18,7 +18,7 @@
 
 - CUA の初回呼び出しは [README](README.md) の `getApp` 絶対パス。返された documentation と live state に従い、メニュー、Settings、入力パネルの順に操作する。固定した座標・要素 ID は置かない。
 - 初回起動時の Accessibility / Input Monitoring 許可は本人の操作が必要な場合がある。許可後に再ビルド・再起動し、同じ検証アプリの許可が維持されるか確認する。
-- パネルの本文、スクリプト実行後、任意の Undo 後の状態を `tmp/verification/verify-koecho/<run>` に記録する。Finder / desktop は取得しない。
+- パネルの本文、スクリプト実行後、任意の Undo 後の状態を `.tmp/verification/verify-koecho/<run>` に記録する。Finder / desktop は取得しない。
 
 ## Gotchas
 
@@ -27,5 +27,5 @@
 - この項目の観測対象はパネル内のスクリプト変換。最後の Escape は後片付けであり、「貼り付けずにキャンセル」の検証として数えない。キャンセルは [panel-cancel](panel-cancel.md) のフォーカス条件と観測点で別に確認する。
 - `Add Script` はアイコンのみの表示でもアクセシビリティラベルがある。操作前に live state の名称を確認する。
 - `Requires Prompt` が on だと、ボタン押下後に追加の入力欄が開く。この基本導線では off にする。
-- 手動スクリプトの Undo は成功直後の一回だけ。本文を編集したり、確定・キャンセルしたりすると失効する。[仕様](../../../../docs/specs/script-undo.md)を参照。
-- 外部 script の実行を含む変更の必須 gate は[検証の正本](../../../../docs/rules/verification.md)を参照。
+- 手動スクリプトの Undo は成功直後の一回だけ。本文を編集したり、確定・キャンセルしたりすると失効する。[回帰テスト](../../../../KoechoTests/InputPanelControllerScriptTests.swift)を参照。
+- 外部 script の実行を含む変更の必須 gate は[検証の正本](../../../../docs/verification.md)を参照。

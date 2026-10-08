@@ -56,6 +56,8 @@ The system will prompt for these permissions on first launch:
 
 ### Script integration
 
+See the [script interface](docs/script-interface.md) for the full input, output, environment, and cancellation contract.
+
 Register shell scripts in the settings. Scripts run via `/bin/sh -c`, receive the full text on stdin, and return the processed result on stdout.
 
 For manual execution, context is also passed via environment variables:

@@ -17,7 +17,7 @@
 
 - CUA は [README](README.md) の絶対パスによる `getApp` で開始し、続きは documentation と live state で決める。貼り付け先の選択と入力欄の確認は、そのアプリを明示的に対象として行う。
 - 権限ダイアログが出る場合は本人操作を記録する。初回許可の後、再ビルド・再起動で許可が維持されるかも確認する。
-- キャンセル前後のパネルと貼り付け先の状態を `tmp/verification/verify-koecho/<run>` に残す。Finder / desktop は取得しない。
+- キャンセル前後のパネルと貼り付け先の状態を `.tmp/verification/verify-koecho/<run>` に残す。Finder / desktop は取得しない。
 - 本人操作では、パネル表示直前の TextEdit のフォーカス・選択状態と、Escape 後の本文を報告に含める。表示直前のフォーカスが不明なら、この前提は未確認として記録する。
 
 ## Gotchas
@@ -29,4 +29,4 @@
 - メニューの `Close Input Panel` は表示中のトグルで、本文の確定・ペーストにつながる。キャンセルには `Escape` を使う。
 - 本文が空のまま確定した場合もキャンセル扱いになるが、この導線は非空本文で `Escape` の効果を確認する。
 - プロンプト表示中の `Escape` はまずプロンプトをキャンセルする。パネル自体のキャンセルは次の `Escape`。
-- ウィンドウ lifecycle と操作フローの必須 gate は[検証の正本](../../../../docs/rules/verification.md)を参照。
+- ウィンドウ lifecycle と操作フローの必須 gate は[検証の正本](../../../../docs/verification.md)を参照。

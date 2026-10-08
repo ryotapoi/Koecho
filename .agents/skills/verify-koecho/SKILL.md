@@ -9,7 +9,7 @@ description: Koecho の macOS メニューバー・入力パネル・Settings �
 
 ## 正本と隔離の限界
 
-作業開始時に repository の AGENTS.md と [検証の正本](../../../docs/rules/verification.md)を読む。変更条件ごとの必須 gate は正本に従い、このスキルで置き換えない。Xcode は [Xcode MCP 操作](../../../docs/rules/xcode-mcp.md)に従う。製品コード・project・tests は変更せず、既存差分を保持する。
+作業開始時に repository の AGENTS.md と [検証の正本](../../../docs/verification.md)を読む。変更条件ごとの必須 gate は正本に従い、このスキルで置き換えない。Xcode は [Xcode MCP 操作](../../../docs/xcode.md)に従う。製品コード・project・tests は変更せず、既存差分を保持する。
 
 | 固定項目 | 値 |
 | --- | --- |
@@ -19,7 +19,7 @@ description: Koecho の macOS メニューバー・入力パネル・Settings �
 | 実行ファイル | `Koecho.app/Contents/MacOS/Koecho` |
 | 署名 | Developer ID Application: Ryota Kurosaki (5AGP9L4RNN) |
 | 証明書 SHA-1 | `85B7C4380400A535BE172DF27D367F6282068BE5` |
-| 出力 | repository の `tmp/verify-koecho/DerivedData/Build/Products/Debug/Koecho.app` |
+| 出力 | repository の `.tmp/verify-koecho/DerivedData/Build/Products/Debug/Koecho.app` |
 
 Bundle ID は通常版の UserDefaults / TCC identity と分けるため、表示名は本人が対象を認識するため、固定証明書と path は再ビルド時の署名 requirement と権限継続性を保つために使う。固定 path は checkout ごとに異なるが、複数 worktree の検証版は同じ UserDefaults domain と履歴保存先を共有するため同時に操作しない。
 
@@ -73,7 +73,7 @@ repository root から helper を実行する。`RUN` は毎回異なる一つ�
 CUA の最初の呼出しはこれ一つだけ:
 
 ```js
-let app = await cua.getApp('/Users/ryota/Sources/ryotapoi/Koecho/tmp/verify-koecho/DerivedData/Build/Products/Debug/Koecho.app');
+let app = await cua.getApp('/Users/ryota/Sources/ryotapoi/Koecho/.tmp/verify-koecho/DerivedData/Build/Products/Debug/Koecho.app');
 ```
 
 別 checkout では plan が返す絶対パスを使う。以後は返された documentation と live AX state の名称を使う。操作後に `getAXState()` を取得し、要素番号を取り直す。固定座標・推測した要素番号は使わない。timeout した場合は同じ取得を繰り返さず、doctor → blocked 記録 → 本人操作への引継ぎ。Finder / desktop / 全体 screenshot は現在許可されていない。別 UI 技術で迂回しない。
@@ -90,7 +90,7 @@ helper の回帰テストは repository root で `python3 -m unittest discover -
 
 ## Evidence と Cleanup
 
-証拠は `tmp/verification/verify-koecho/<run>/`。scratch の外であり gitignored。`session.json`、doctor 出力、`build.log`、`build-result.json`、stdout / stderr / PID 限定 OSLog、実施者、操作、観測結果、所要時間、失敗、権限設定、残存ギャップを保存する。CUA の対象 app screenshot を取得できた場合だけ保存し、本人確認は報告文と実施日時で残す。実行不能は draft / blocked と記し、build 成功を実画面検証済みとしない。
+証拠は `.tmp/verification/verify-koecho/<run>/`。scratch の外であり gitignored。`session.json`、doctor 出力、`build.log`、`build-result.json`、stdout / stderr / PID 限定 OSLog、実施者、操作、観測結果、所要時間、失敗、権限設定、残存ギャップを保存する。CUA の対象 app screenshot を取得できた場合だけ保存し、本人確認は報告文と実施日時で残す。実行不能は draft / blocked と記し、build 成功を実画面検証済みとしない。
 
 ```sh
 .agents/skills/verify-koecho/scripts/session.py cleanup --run 20261002-script-check
@@ -100,7 +100,7 @@ helper の回帰テストは repository root で `python3 -m unittest discover -
 
 ## 起動オプションと観測
 
-`build_launch.py build --run <run> --timeout 600` は Apple CLI を使い、[共通 helper](../../../scripts/verify.py) の timeout・残留検査と run のログを保存する。通常 build / tests の gate は [Xcode 操作](../../../docs/rules/xcode-mcp.md) にあり、このスキル限定ではない。
+`build_launch.py build --run <run> --timeout 600` は Apple CLI を使い、[共通 helper](../../../scripts/verify.py) の timeout・残留検査と run のログを保存する。通常 build / tests の gate は [Xcode 操作](../../../docs/xcode.md) にあり、このスキル限定ではない。
 
 ```sh
 .agents/skills/verify-koecho/scripts/build_launch.py launch --run 20261002-script-check --arg=-AppleLanguages --arg='(en)' --env KOECHO_VERIFICATION_RUN=20261002-script-check

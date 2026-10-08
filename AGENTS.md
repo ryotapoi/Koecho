@@ -1,28 +1,20 @@
 # Koecho
 
-Koecho は macOS 27.0+ 向けの軽量音声入力アプリ。詳細は `docs/rules/mission.md` を正とする。
+常に [開発時の規則](docs/development.md) を読み、作業全体に適用する。
 
-## タスク別の正本
+## 作業ごとの入口
 
-タスクに必要な文書だけを読む。推測で済ませず、判断に影響する正本を確認する。
+- 目的・非目標・守る制約: [要件](docs/requirements.md)
+- 設計・責務・依存方向を変える: [decisions/](decisions/) の `status: current` の ADR
+- 振る舞いを確認する: 対象のコードとテスト
+- 外部スクリプトを作る・入出力を変える: [スクリプトの契約](docs/script-interface.md)
+- 変更を検証する: [必須 gate](docs/verification.md)
+- Xcode・build・test を操作する: [Xcode 操作](docs/xcode.md)
+- 実アプリの入力・メニュー・Settings を検証する: [verify-koecho](.agents/skills/verify-koecho/SKILL.md)
+- 文書・ADR・backlog の配置や内容を変える: [情報管理の原則](docs/rules/information-management.md)
+- AppKit・Swift・Speech の既知の罠を調べる: [プラットフォーム観測](docs/platform-observations.md)
+- 音声認識の語彙・発音モデルを再検討する: [実験記録](docs/speech-custom-vocabulary-experiments.md)
+- 今後の作業・版に含める作業を確認する: [backlog](backlog/backlog.md)
+- 版を切る: [リリース手順](docs/release.md)
 
-- 目的・非目標・対象範囲・ユーザー挙動: `docs/rules/mission.md`、`docs/rules/scope.md`、`docs/specs/`
-- 責務配置・依存方向: `docs/rules/architecture.md`
-- 技術制約・実装原則: `docs/rules/constraints.md`、`docs/rules/principles.md`
-- 検証の必須 gate: `docs/rules/verification.md`
-- Xcode 操作: `docs/rules/xcode-mcp.md`
-- docs・backlog・llm-wiki の変更: `docs/rules/information-management.md`
-- 過去の判断理由: `docs/decisions/`
-- リリース: `docs/rules/release.md`
-
-## 変更時の注意
-
-- SwiftUI View 層を変更するときは `swiftui-specialist` を使う。
-- ディクテーション制御・テキストコミットのライフサイクル、volatile テキスト、`isSuppressingCallbacks`、NSTextView / textStorage の直接操作は High-risk として扱い、`docs/rules/verification.md` を確認する。
-- UserDefaults の永続化パターン変更・設定マイグレーション、権限依存機能（Accessibility / Input Monitoring）、CGEvent ペースト、グローバルホットキー（NSEvent）、外部スクリプト実行（Process + Pipe）、並行性（`@MainActor` 境界、async/await、AVAudioEngine コールバック）は High-risk として扱い、`docs/rules/verification.md` を確認する。
-- `--no-verify` でフックをスキップしない。
-- 明示的な指示なしに force push しない。
-
-## Language
-
-コード・コメント・コミットメッセージは英語、ドキュメント（`AGENTS.md`、`.agents/`、`docs/rules/`、`docs/specs/`、`backlog/`、`docs/decisions/`、`llm-wiki/`、README 等）は日本語とする。
+過去の判断理由が必要な場合だけ、`status: superseded` の ADR と git 履歴を参照する。
