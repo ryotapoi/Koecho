@@ -119,9 +119,11 @@
 
 #### 調査・対応判断
 
-発生条件・実環境での影響・対応要否を確認してから、修正・仕様整理・見送りを判断する。移動した項目の改修はまだ確約しない。
+発生条件・実環境での影響・対応要否を確認してから、修正・仕様整理・見送りを判断する。改修は確約しない。実害・頻度と、調査・実装・維持のコストを比べて採否を決める。対象を絞った確認で未再現なら、その条件と限界を記録して見送りを判断できる。再現だけのための新しい基盤や網羅的な調査は要求しない。
 
 - [ ] ScriptRunner の取消・終了競合時の stdin Broken pipe を調べる
+
+  優先度・調査の区切り: 実 Runner の abort が観測されているため、本節で先に扱う。既存の取消レースと早期終了時の stdin 書込みに絞り、実アプリからの到達性と局所的な対処の可否を判断する。常時再現ではないため、短い再実行の成功だけで解消済みとはしない。
 
   観測（2026-10-08）: Package gate `caret-preview-package-01` で既存 `cancellationRacingLaunchAndExitCompletesOnce` の実 Runner が `NSFileHandleOperationException`（`writeData: Broken pipe`）により abort し、111件で未完了となった。call stack は [ScriptRunner.swift](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift) の stdin 書込みを示す。この run では Runner と当該テストに差分なし。直後の同じ全体 gate `caret-preview-package-02` は319件成功したため、常時再現ではない。証拠: `.tmp/verification/cli/caret-preview-package-01/` と `caret-preview-package-02/`。
 
@@ -131,6 +133,8 @@
 
 - [ ] 置換ルールの日本語変換入力不能を調べる
 
+  調査の区切り: 現行版の Settings で発生する欄と変換操作をまず確認する。未再現なら試した条件を記録して見送りを判断し、状態同期・保存処理を原因と決めた変更は行わない。
+
   本人観察（2026-10-08）: Settings の置換ルール入力欄では日本語変換すると入力できないが、日本語のコピー＆ペーストでは入力できる。Settings の Pattern / Replacement の具体的な発生欄は未特定。最新製品 commit `65094f5` の専用版で Input Panel のルール追加 Replacement 欄を案内した確認では、本人は日本語変換入力ができると回答した（ルール保存や全入力条件の確認ではない）。根因と今回の置換 UI 差分との回帰因果は未確認。
 
   目的・調査範囲: 発生する画面・欄・IME の変換操作条件を特定し、入力中の状態同期や field 更新を含む原因を調べ、対応方針を決める。
@@ -138,6 +142,8 @@
   作業・完了条件: 再現条件・原因の調査結果と、修正／仕様整理／見送りの対応判断を記録する。修正を採用する場合は、対象欄で実 IME による変換・確定・ルール保存を確認し、既存の日本語貼り付けによる入力を維持する。
 
 - [ ] Fn 貼り付け後に残る IME 変換候補を調べる
+
+  優先度・調査の区切り: 貼り付け本文は正常なため、日本語入力不能の確認時に併せて扱う。候補残存の再現と次の入力への影響を確認し、未観測の旧本文復活やデータ消失を前提に対応を広げない。
 
   本人観察（2026-10-08）: キーボードで未確定の「こんにちは」を入力して Fn で貼り付けると、貼り付け内容は「こんにちは」で正常。その後 Input Panel を再表示すると本文は空だが、「こんにちは」の IME 変換候補が表示される。根因と今回の置換 UI 差分との回帰因果は未確認。
 
@@ -149,7 +155,9 @@
 
 - [ ] F7 認識再開中の発話欠落を調べる
 
-  目的・発生条件: 発話中にキーボード入力やカーソル移動を行うと、認識再開中の発話が取り込まれず音声入力が途切れる。
+  目的・発生条件: キーボード入力や volatile text がある状態でのカーソル移動に伴う認識再開では、録音を一時停止する。停止区間が利用者に分かる発話欠落を生むか、重複防止とのトレードオフを変える価値があるかを判断する。
+
+  優先度・調査の区切り: 低優先度。D1 の実音声確認と同じ機会に通常の入力操作で確認する。実害が見えなければ現行方式を維持し、録音継続のための buffering や認識構成の変更へ進まない。
 
   根拠: `KM-03-C02`。`R04-C02`。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) のテキスト操作は restartTranscriber へ到達する。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) は tap を除去し AVAudioEngine を停止した後、analyzer と旧 resultTask の終了を await し、その間の入力を保持しない。割り込みと重複防止の現行判断は [ADR 0032](../decisions/0032-speech-overlap-defense.md) を参照。
 
@@ -157,55 +165,21 @@
 
   限界: 実音声未確認。中断時間と欠落語数は OS・callback の進行に依存し未測定。既存 D1 の意図した反復発話と重複除去の判断とは別に扱う。
 
-- [ ] F22 大量置換の処理時間を調べる
-
-  目的・発生条件: 5 万 UTF-16 程度のＡ，Ｂ；改行の1 万行を取り込み、，→,、；→;を Replace する。本文長制限はこの経路にない。preview も同関数を使う。
-
-  根拠: `KM-02-C07`。[`ReplacementEngine.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift):66-84,126-131; [`ReplacementService.swift`](../Koecho/ReplacementService.swift):6,36-42。delta=0 でも全 match の offset entry を保持し、後続 match 毎に先頭から2 回線形探索するため、各1 万一致の rule で約1 億 entry 訪問になる。MainActor の同期処理である。
-
-  作業・完了条件: Release 条件と実パネルで処理時間・UI 応答を計測し、改善要否を判断して記録する。改善を採用する場合は、登録順・置換結果・座標対応を維持し、5 万 UTF-16 程度の「Ａ，Ｂ；改行」1 万行に ，→,、；→; を適用する場合の約1 億 entry 訪問を解消する。Release 条件の計測と実パネル操作で本文長・一致数に対する処理時間と UI 応答を確認し、preview 経路も同じ計算を使うことを照合する。F8 と同じ座標変換部分を触る場合は実装範囲を合わせる。
-
-  限界: 原 Core 算法の logger を除去し最小型を使った Swift script で20000 match・3.44396 秒を観測した。非最適化環境の値であり Release アプリの待機時間とは扱わない。実アプリの Escape・描画待ち時間は未測定。
-
 - [ ] F26 focus 変更時の誤貼付を調べる
 
-  目的・発生条件: 通常 confirm はパネルを隠し可視状態を false にしてから paste を await する。この待機中にはユーザーが別アプリをクリックでき、singleToggle で再表示する経路も showPanel の isConfirming ガードがないため到達する。送信時に別の入力欄が focus を得て Cmd+V を受け付ける条件で、そこへ本文が渡る。
+  目的・発生条件: 通常 confirm はパネルを隠してから paste を await する。対象アプリの activate 後の100ms 待機中に別アプリへ focus を移す、またはパネルを再表示すると、送信時の入力欄が Cmd+V を受け付ける場合に元の対象以外へ本文が渡る可能性がある。
 
-  根拠: `KM-05-C04`。[`ClipboardPaster.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/ClipboardPaster.swift):117-142；[`CGEventClient.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/CGEventClient.swift):24-37；[`InputPanelController.swift`](../Koecho/InputPanelController.swift):104-112,200-215；[`KoechoApp.swift`](../Koecho/KoechoApp.swift):193-204；macOS SDK CoreGraphics/Headers/CGEvent.h:347-354 は CGEventPost を event stream への post、:356-374 は特定アプリ向け post を別 API として定義している。パネル表示前のアプリを記憶してペースト前に再 activate するが、その後100ms の await があり、対象や現在 focus を照合せず simulatePaste を呼ぶ。LiveCGEventClient は PID を指定せず Cmd+V を HID event stream へ post する。対象の貼付成功を確認する処理もなく、イベント生成が成功すれば caller は履歴を追加する。
+  根拠: `KM-05-C04`。[`ClipboardPaster.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/ClipboardPaster.swift) は対象 activate 後に await し、focus を照合せず simulatePaste を呼ぶ。[`CGEventClient.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/CGEventClient.swift) は PID を指定せず Cmd+V を HID event stream へ post する。[`InputPanelController.swift`](../Koecho/InputPanelController.swift) の showPanel は isConfirming で再表示を抑止しない。
 
-  作業・完了条件: 実アプリで focus 切替時の配送を確認し、誤貼付の成立条件と最小の対策を判断して記録する。対策を採用する場合は、対象 activate 後の100ms 待機中に他アプリの入力欄へ focus を移した場合とパネルを再表示した場合に、記憶した対象以外へ本文を貼り付けたり成功として履歴に追加したりしないことを確認する。通常の対象アプリへの貼付を維持し、送信時の対象判断を既存テストと実アプリの focus 切替で確認する。
+  調査の区切り: 元のアプリへの貼り付けは主機能なので、上記2操作に絞って実配送を確認する。再現できなければ条件と限界を記録して見送りを判断する。再現専用の自動化基盤は作らない。
 
-  限界: 実 OS で100ms 内の focus 切替と配送を再現していない。任意の別アプリが貼付を受け入れると断定せず、送信時にその入力欄が focus を持ち Cmd+V を受け付ける場合に限定する。発生頻度は未確認。
+  作業・完了条件: 成立条件・利用者への影響と、局所的な対策の費用を比べ、修正／見送りを判断して記録する。対策を採用する場合は、確認した競合で対象以外への送信を抑止し、送信を見送った本文を履歴へ追加せず、通常の貼り付けを維持する。外部アプリが貼り付けを完了したことの検証は要求しない。
 
-- [ ] F27 外部アプリの選択取得待ちを調べる
+  限界: 実 OS で100ms 内の focus 切替と配送を再現していない。発生頻度は未確認。
 
-  目的・発生条件: Accessibility 権限を得た通常 showPanel 経路で常に外部 focus/selection を問い合わせる。最前面アプリが応答停止・長い処理待ちで AX 応答を返せない場合、パネル表示前に呼び出しスレッドが待つ。HotkeyService も main queue へ処理を配送するため、その間後続操作が処理されない。
+- [ ] D1 反復発話と再配信防御の対応要否を判断する
 
-  根拠: `KM-05-C05`。[`PanelLifecycleManager.swift`](../Koecho/PanelLifecycleManager.swift):5,24-41；[`InputPanelController.swift`](../Koecho/InputPanelController.swift):90-117；[`SelectedTextReader.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SelectedTextReader.swift):25-39；[`AccessibilityClient.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AccessibilityClient.swift):17-42；[`HotkeyService.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/HotkeyService.swift):83-85；macOS SDK HIServices/Headers/AXUIElement.h:38-39,145-148,388-402 は応答不能時の messaging failure と AX API timeout を説明する。MainActor 上の PanelLifecycleManager.show は makeKeyAndOrderFront より前に SelectedTextReader.read を同期実行し、LiveAccessibilityClient は外部アプリへの AXUIElementCopyAttributeValue を同期実行する。応答待ちの間は MainActor を解放しない。SDK は AX messaging に応答不能アプリと timeout が存在することを明記している。
-
-  作業・完了条件: 実 AX 応答待ちの停止時間と操作への影響を確認し、待機上限の調整・非同期化・見送りを判断して記録する。改修を採用する場合は、最前面アプリが AX 応答を返さない場合でも、選択取得待ちの間にパネル表示・menu・hotkey 操作を処理できることを確認する。通常の選択本文取り込みと表示前アプリの記録を維持し、注入した遅い取得と実 AX 応答待ちを分けて検証する。
-
-  限界: AX 実応答停止、既定 timeout 値、実際の停止秒数は測定していない。停止する長さは外部アプリと OS に依存し、全ての AX 呼び出しが遅いという主張ではない。
-
-- [ ] F30 カーソル割込み時の buffer を調べる
-
-  目的・発生条件: `KM-02-C05` は `confirmed` / `uncertain`。確定音声 callback 後から次の volatile 到着前にカーソルを移す場合、buffer を破棄しない現行経路で利用者に見える再送・表示重複が起きるかを調べ、対応要否を決める。
-
-  根拠: [`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift):179-195,249-279 は volatileRange=nil なら挿入点だけを更新し restart を呼ばない。[`InputPanelController.swift`](../Koecho/InputPanelController.swift):414-416 から到達する。割り込みと重複防止の現行判断は [ADR 0032](../decisions/0032-speech-overlap-defense.md) を参照。確定 callback には重複除去があるが volatile にはない。
-
-  作業・完了条件: 対象 runtime の実 SpeechAnalyzer で提示のカーソル操作後に古い本文が volatile として再送されるか、表示への影響と頻度を確認する。条件・結果・限界を記録して修正／仕様整理／見送りの対応判断をもって完了とする。反復発話と重複除去を扱う [D1](#調査対応判断) の調査と観測を共有できるが、同じ原因とは未判定。
-
-  限界: この条件での実再送・表示重複は未観測。buffer を再生成しないことだけから具体的な害や修正必要性を確定しない。
-
-- [ ] N1 音声変換失敗への対応を判断する
-
-  目的・根拠: format / device 変更時に音声だけ落ちて listening 表示が残る可能性がある。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) の変換失敗分岐が return のみ。
-
-  候補方針: 音声変換に失敗した場合は音声入力をオフにし、失敗したことと、再度オンにすれば続けられる旨を説明する。ただし、この対応自体を採用するかは未決とする。
-
-  作業・完了条件: 実環境と必要なテストで失敗の発生条件と頻度を確認し、その結果に基づいて候補方針を正式に採用するか見送るかを判断して記録する。
-
-- [ ] D1 意図した反復発話を入力可能にする
+  優先度・調査の区切り: 低優先度。F7 と同じ実音声確認で、通常の反復発話と入力操作後の再配信を確認する。実害が見えない場合や、安全に区別する変更が大きい場合は現行防御を維持して見送りを判断する。
 
   背景・根拠: `SpeechAnalyzer` が別々に返す確定結果でも、蓄積済みテキストの末尾と新しい結果の先頭が重なると、現在は重複として後者から除去する。これはキーボード入力・カーソル移動の割り込み後に前セグメントが再配信される既知の問題への防御であり、ユーザーが同じ言葉を繰り返して入力したい意図を削除するためではない。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) の `stripOverlappingPrefix`、[ADR 0032](../decisions/0032-speech-overlap-defense.md)
 
@@ -213,7 +187,9 @@
 
   実装時の判断・確認: 実際の SDK・対応 runtime で `SpeechAnalyzer` の挙動を確認し、重複除去を外せるか、または対象を狭められるかを判断する。macOS 27 専用化および対応下限の変更は決定済みとし、ライブラリ側で解消済みかどうかは未決定とする。採用する範囲で必要な場合だけ仕様と確認項目を更新し、既存の手段で確認する。新しいテスト基盤は要求しない。
 
-  補足: 現在の比較は最大 512 UTF-16 code units。この範囲外の再配信への対応が必要かも、反復発話と重複除去の振る舞いを決める際に併せて扱う。
+  併せて見る観点: 確定音声の直後、次の volatile 到着前にカーソルを移した場合の旧本文の再表示（旧 F30）は未観測。D1 の確認中に現れた場合だけ影響を判断し、独立した再現調査は行わない。512 UTF-16 code units を超える再配信も、実際に観測した場合だけ扱う。
+
+  完了条件: 確認した条件・結果・限界と、修正／仕様整理／見送りの判断を記録する。
 
 #### その他
 
