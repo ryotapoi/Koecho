@@ -28,7 +28,7 @@ def main():
     assert Path(ns.run).name == ns.run and ns.run not in ('.', '..'), 'Use a single run directory name'
     assert ns.timeout > 0, 'Timeout must be positive'
     assert ns.action == 'launch' or not (ns.env or ns.arg or ns.voice_input_on), 'Launch options only apply to launch'
-    evidence = session.ROOT / 'tmp/verification/verify-koecho' / ns.run
+    evidence = session.ROOT / '.tmp/verification/verify-koecho' / ns.run
     state_file = evidence / 'session.json'
     state = json.loads(state_file.read_text())
     session.require_owner(ns.run)

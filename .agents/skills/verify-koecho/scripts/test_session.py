@@ -20,11 +20,11 @@ class SessionTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        self.scratch = self.root / 'tmp/verify-koecho'
+        self.scratch = self.root / '.tmp/verify-koecho'
         self.scratch.mkdir(parents=True)
         self.run = 'test-run'
         (self.scratch / 'owner.json').write_text(json.dumps({'run': self.run}))
-        self.evidence = self.root / 'tmp/verification/verify-koecho' / self.run
+        self.evidence = self.root / '.tmp/verification/verify-koecho' / self.run
         self.evidence.mkdir(parents=True)
         self.state_file = self.evidence / 'session.json'
         self.process = {'started': time.strftime('%a %b %d %H:%M:%S %Y'), 'command': str(session.EXE)}

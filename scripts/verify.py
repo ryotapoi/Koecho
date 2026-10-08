@@ -149,9 +149,9 @@ def main():
         parser.error('--filter is for Package tests')
     if any(not t.startswith('KoechoTests/') for t in ns.only):
         parser.error('--only must be a discovered KoechoTests/<suite>/<test> identifier')
-    evidence = ROOT / 'tmp/verification/cli' / ns.run
+    evidence = ROOT / '.tmp/verification/cli' / ns.run
     evidence.mkdir(parents=True, exist_ok=False)
-    scratch = ROOT / 'tmp/verification-scratch' / ns.run
+    scratch = ROOT / '.tmp/verification-scratch' / ns.run
     if scratch.exists():
         parser.error('Scratch already exists')
     if ns.action.startswith('package'):

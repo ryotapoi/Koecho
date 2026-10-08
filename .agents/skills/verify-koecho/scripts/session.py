@@ -12,7 +12,7 @@ import subprocess
 import time
 
 ROOT = Path(__file__).resolve().parents[4]
-SCRATCH = ROOT / 'tmp/verify-koecho'
+SCRATCH = ROOT / '.tmp/verify-koecho'
 APP = SCRATCH / 'DerivedData/Build/Products/Debug/Koecho.app'
 EXE = APP / 'Contents/MacOS/Koecho'
 BUNDLE = 'com.ryotapoi.Koecho.Verification'
@@ -63,7 +63,7 @@ def main():
               }, 'extraArgs': ARGS, 'launchArgs': ['-voiceInputMode', 'off'],
               'app': str(APP)}, indent=2)); return
     assert ns.run and Path(ns.run).name == ns.run and ns.run not in ('.', '..'), 'Use a single run directory name'
-    evidence = ROOT / 'tmp/verification/verify-koecho' / ns.run
+    evidence = ROOT / '.tmp/verification/verify-koecho' / ns.run
     state_file = evidence / 'session.json'
     if ns.action in ('prepare', 'prepare-build'):
         assert not processes(), 'Fixed verification app already running; do not adopt it'
