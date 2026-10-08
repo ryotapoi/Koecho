@@ -1,6 +1,6 @@
 # Xcode 操作
 
-XcodeBuildMCP は使用しない。通常 build は公式 Xcode MCP の `BuildProject` または Apple CLI、App tests は対象を限定した CLI、Package tests は `swift test` を使う。必須 gate の正本は [verification.md](verification.md)。専用署名・起動・停止は [verify-koecho](../../.agents/skills/verify-koecho/SKILL.md) に従う。
+XcodeBuildMCP は使用しない。通常 build は公式 Xcode MCP の `BuildProject` または Apple CLI、App tests は対象を限定した CLI、Package tests は `swift test` を使う。必須 gate の正本は [verification.md](verification.md)。専用署名・起動・停止は [verify-koecho](../.agents/skills/verify-koecho/SKILL.md) に従う。
 
 ## 公式 MCP の接続と対象確認
 
@@ -17,7 +17,7 @@ MCP の full path は一時ファイルなので、必要な log・summary・xcr
 
 ## CLI の保存済み入口
 
-repository root から実行する。run 名は毎回未使用の一つのディレクトリ名。出力は `tmp/verification/cli/<run>`、成果物は `tmp/verification-scratch/<run>`。他 checkout と共有しない。通常は現在の `xcode-select`、Beta が必要な run だけ `DEVELOPER_DIR` を指定する（`xcode-select --switch` はしない）。実行に必要な cache / process 読取が sandbox に拒否された場合はその command だけ escalation する。
+repository root から実行する。run 名は毎回未使用の一つのディレクトリ名。出力は `.tmp/verification/cli/<run>`、成果物は `.tmp/verification-scratch/<run>`。他 checkout と共有しない。通常は現在の `xcode-select`、Beta が必要な run だけ `DEVELOPER_DIR` を指定する（`xcode-select --switch` はしない）。実行に必要な cache / process 読取が sandbox に拒否された場合はその command だけ escalation する。
 
 ```sh
 scripts/verify.py build --run build-check
@@ -36,9 +36,9 @@ helper は `xcrun xcodebuild -project <checkout>/Koecho.xcodeproj -scheme Koecho
 全文を毎回読まず、まず `result.json` / `test-summary.json` の件数と全失敗を確認する。App の parameterized tests は論理 test 数と case 数が異なるため、過去の件数を固定しない。必要な詳細だけ取得する。
 
 ```sh
-scripts/verify.py results --path tmp/verification/cli/app-all/tests.xcresult
-scripts/verify.py results --path tmp/verification/cli/app-focused/tests.xcresult --test-id 'AppStartupSettingsTests/hostedStartupIsolatesSettingsBeforeNormalization()'
-scripts/verify.py log --path tmp/verification/cli/app-all/build.log --pattern 'error:|warning:|failed' --limit 30
+scripts/verify.py results --path .tmp/verification/cli/app-all/tests.xcresult
+scripts/verify.py results --path .tmp/verification/cli/app-focused/tests.xcresult --test-id 'AppStartupSettingsTests/hostedStartupIsolatesSettingsBeforeNormalization()'
+scripts/verify.py log --path .tmp/verification/cli/app-all/build.log --pattern 'error:|warning:|failed' --limit 30
 ```
 
 log 出力は全一致件数・表示上限・全文 path を返す。上限を超えた失敗を消さない。run の残留がないことを `result.json` で確認してから、その run の scratch だけ削除し、証拠は保持する。helper の回帰確認は `python3 -B -m unittest discover -s scripts -p 'test_*.py' -v`。
