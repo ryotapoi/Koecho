@@ -11,7 +11,7 @@
 - 変更を検証する: [必須 gate](docs/verification.md)
 - Xcode・build・test を操作する: [Xcode 操作](docs/xcode.md)
 - 実アプリの入力・メニュー・Settings を検証する: [verify-koecho](.agents/skills/verify-koecho/SKILL.md)
-- 文書・ADR・backlog の配置や内容を変える: [情報管理の原則](docs/rules/information-management.md)
+- 文書・ADR・backlog の配置や内容を変える: [情報管理の原則](docs/information-management.md)
 - AppKit・Swift・Speech の既知の罠を調べる: [プラットフォーム観測](docs/platform-observations.md)
 - 音声認識の語彙・発音モデルを再検討する: [実験記録](docs/speech-custom-vocabulary-experiments.md)
 - 今後の作業・版に含める作業を確認する: [backlog](backlog/backlog.md)
