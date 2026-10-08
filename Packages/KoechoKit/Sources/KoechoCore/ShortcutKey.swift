@@ -60,6 +60,7 @@ public struct ShortcutKey: Codable, Equatable, Hashable, Sendable {
   }
 
   static func encodeOptional(_ shortcut: ShortcutKey?) throws -> Data {
+    // Empty Data records an explicitly disabled shortcut; a missing key may load a default.
     guard let shortcut else { return Data() }
     return try JSONEncoder().encode(shortcut)
   }

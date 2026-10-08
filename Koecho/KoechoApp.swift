@@ -8,6 +8,7 @@ import os
 struct KoechoApp: App {
   static let isTesting = NSClassFromString("XCTestCase") != nil
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "App")
+  // MenuBarExtra content can be recreated when presented; keep shared state in the App.
   @State private var appState = makeInitialAppState()
   @State private var historyStore = makeInitialHistoryStore()
   @State private var panelController: InputPanelController?

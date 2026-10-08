@@ -191,6 +191,7 @@ public nonisolated final class ScriptRunner: Sendable {
     process.executableURL = URL(fileURLWithPath: "/bin/sh")
     process.arguments = ["-c", scriptPath]
     // Avoid inheriting the app process cwd and private TCC-related variables.
+    // Inheriting __CF_* values has triggered microphone permission prompts in child processes.
     process.currentDirectoryURL = FileManager.default.temporaryDirectory
 
     var env: [String: String] = [:]

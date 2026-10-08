@@ -49,6 +49,8 @@ struct ReplacementRuleEditView: View {
   @ViewBuilder
   private var plainPatternSection: some View {
     Section("Patterns") {
+      // Removing an empty row in onChange can discard uncommitted Japanese input.
+      // Keep row removal explicit while a TextField is being edited.
       ForEach($rule.patterns) { $pattern in
         HStack {
           TextField(

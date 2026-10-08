@@ -1,5 +1,5 @@
 ---
-regen: none
+observed_on: 2026-10-01
 sources:
   - https://developer.apple.com/documentation/speech/sfcustomlanguagemodeldata
   - https://developer.apple.com/documentation/speech/dictationtranscriber
@@ -120,4 +120,4 @@ let b = DictationTranscriber(
 
 旧 API の造語対照は、同じ生成済み発音モデルがこの音声で効く正の証拠である。新 API の陰性は登録失敗、内部候補の脱落、Apple側の不具合、新 API 一般非対応のいずれとも断定できない。単一 TTS・各条件少数回、確定境界や認識設定の差が残る。期待表記が得られない機能を有効として提供せず、試作は取りやめた。
 
-将来再検討する際は、公開仕様と観測を分け、同じ音声・モデル・locale・context・weight・報告設定で比較し、未確定／区間final／request-final／全別候補を混同しない。この記録は精度保証や製品の旧 API への移行判断ではない。一般的な Speech/Audio の入口は [Speech / Audio](speech-audio.md)、macOS 26時代の注意点は [SpeechAnalyzer 外部知見](speechanalyzer-external-notes.md)。
+将来再検討する際は、公開仕様と観測を分け、同じ音声・モデル・locale・context・weight・報告設定で比較し、未確定／区間final／request-final／全別候補を混同しない。この記録は精度保証や製品の旧 API への移行判断ではない。macOS 26時代の観測と関連する調査の注意点は [プラットフォーム観測](platform-observations.md) を参照する。

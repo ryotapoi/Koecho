@@ -156,6 +156,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   }
 
   private func applyVolatileStyling(_ range: NSRange) {
+    // Underlines identify replacement candidates; voice previews use color and background.
     guard let layoutManager else { return }
     layoutManager.addTemporaryAttribute(
       .foregroundColor,
@@ -217,6 +218,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   // MARK: - Underline drawing
 
   override func draw(_ dirtyRect: NSRect) {
+    // Keep wantsUpdateLayer false: layer updates bypass this underline drawing path.
     super.draw(dirtyRect)
     drawReplacementUnderlines()
   }

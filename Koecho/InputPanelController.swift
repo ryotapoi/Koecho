@@ -146,6 +146,7 @@ final class InputPanelController {
   /// Confirm phase 1: stop voice input and collect the finalized text,
   /// clearing the text view.
   private func finalizeVoiceInput() async -> String {
+    // Commit IME text before stopping voice input so finalization cannot discard it.
     textView?.commitMarkedTextIfNeeded()
     replacementService.clearPreviews()
     await voiceCoordinator.stopEngine()

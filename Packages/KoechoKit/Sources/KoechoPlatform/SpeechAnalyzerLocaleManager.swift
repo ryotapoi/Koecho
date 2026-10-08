@@ -141,6 +141,8 @@ public final class SpeechAnalyzerLocaleManager {
     if let index = allLocales.firstIndex(where: { $0.identifier == item.identifier }) {
       allLocales[index].isReserved = false
     }
+    // Release removes the reservation, not necessarily the files in installedLocales.
+    // A retained file is not proof that the model can be used without a new reservation.
     await AssetInventory.release(reservedLocale: reservedLocale)
     verificationCache.invalidate(for: Locale(identifier: item.identifier))
   }

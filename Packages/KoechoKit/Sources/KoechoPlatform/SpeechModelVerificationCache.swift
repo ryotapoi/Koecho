@@ -9,6 +9,8 @@ import KoechoCore
 /// avoids repeated model checks after `assetInstallationRequest` has verified
 /// the locale, because released models can still appear in `installedLocales`
 /// while requiring a fresh reservation/download before use.
+/// macOS 26 observations also showed that reboot or disk pressure can remove model files;
+/// a verification from a previous app session must not be persisted as availability.
 @MainActor
 final class SpeechModelVerificationCache {
   static let shared = SpeechModelVerificationCache()

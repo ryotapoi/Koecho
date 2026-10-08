@@ -49,6 +49,7 @@ struct MenuBarContent: View {
   /// dismisses, so bump the level while activating the new window.
   @MainActor
   private func bringSettingsWindowToFront() async {
+    // Let menu dismissal and window creation settle before looking up the window.
     try? await Task.sleep(for: .milliseconds(100))
     let settingsWindow = NSApplication.shared.windows
       .first { $0.identifier?.rawValue.contains("settings") == true }

@@ -59,6 +59,7 @@ struct VoiceInputTextEditor: NSViewRepresentable {
     textView.onTextCommitted = onTextCommitted
     textView.onAddReplacementRule = onAddReplacementRule
 
+    // A model refresh must not overwrite an IME composition or an in-flight voice preview.
     if textView.string != text,
       !textView.hasMarkedText(),
       textView.volatileRange == nil
