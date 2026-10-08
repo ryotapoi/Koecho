@@ -71,11 +71,13 @@ final class MockTextViewOperating: TextViewOperating {
   }
 
   var replacementCandidates: [ReplacementMatch] = []
+  var replacementCandidateRules: [ReplacementRule] = []
   var onReplaceCandidate: (([ReplacementMatch]) -> Void)?
   func showReplacementCandidates(
-    _ matches: [ReplacementMatch], onReplace: @escaping ([ReplacementMatch]) -> Void
+    _ matches: [ReplacementMatch], rules: [ReplacementRule], onReplace: @escaping ([ReplacementMatch]) -> Void
   ) {
     replacementCandidates = matches
+    replacementCandidateRules = rules
     onReplaceCandidate = onReplace
   }
 

@@ -64,7 +64,7 @@ final class ReplacementService {
     if textView.hasMarkedText() {
       textView.showReplacementPreviews(matches)
     } else {
-      textView.showReplacementCandidates(matches) { [weak self] match in
+      textView.showReplacementCandidates(matches, rules: rules) { [weak self] match in
         guard let self else { return }
         guard !self.appState.settings.replacement.isAutoReplacementEnabled else {
           self.refreshCandidates()

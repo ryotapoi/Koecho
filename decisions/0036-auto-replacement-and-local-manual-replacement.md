@@ -1,5 +1,6 @@
 ---
-status: current
+status: superseded
+superseded_by: 0037-caret-replacement-preview.md
 ---
 
 # 自動置換の無効化と本文上の手動置換

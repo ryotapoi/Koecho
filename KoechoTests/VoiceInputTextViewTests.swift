@@ -454,4 +454,125 @@ struct VoiceInputTextViewTests {
     } == false)
   }
 
+  @Test func caretStopRechecksSnapshotAndRejectsCancelledReservations() throws {
+    let preview = CaretReplacementPreview()
+    let first = CaretReplacementPreview.Snapshot(
+      text: "a", caret: 0, match: .init(range: NSRange(location: 0, length: 1), replacement: "long"))
+    var current: CaretReplacementPreview.Snapshot? = first
+    preview.update(first, current: { current }, onChange: {})
+    let stale = try #require(preview.timer)
+    preview.cancel()
+    stale.fire()
+    #expect(preview.displayed == nil)
+    preview.update(first, current: { current }, onChange: {})
+    current = nil
+    try #require(preview.timer).fire()
+    #expect(preview.displayed == nil)
+    current = first
+    preview.update(first, current: { current }, onChange: {})
+    let reservation = try #require(preview.timer)
+    preview.update(first, current: { current }, onChange: {})
+    #expect(preview.timer === reservation)
+    reservation.fire()
+    #expect(preview.displayed?.label == "a → long")
+    preview.update(nil, current: { nil }, onChange: {})
+    #expect(preview.displayed == nil)
+  }
+
+  @Test func caretPreviewUsesManualCandidateContentAndEarlierAdjacentBoundary() throws {
+    let view = makeTextView()
+    view.frame = NSRect(x: 0, y: 0, width: 320, height: 160)
+    let window = CaretPreviewWindow(contentRect: view.frame, styleMask: [.titled], backing: .buffered, defer: false)
+    window.contentView = view
+    window.makeKeyAndOrderFront(nil)
+    window.makeFirstResponder(view)
+    defer { window.orderOut(nil); window.contentView = nil }
+    let cases: [(String, [ReplacementRule], Int, String)] = [
+      ("ab", [.init(pattern: "a", replacement: "long"), .init(pattern: "b", replacement: "B")], 1, "a → long"),
+      ("long", [.init(pattern: "long", replacement: "x")], 4, "long → x"),
+      ("delete", [.init(pattern: "delete", replacement: "")], 0, "delete → ∅"),
+      ("item42", [.init(pattern: "item([0-9]+)", replacement: "$1", usesRegularExpression: true)], 3, "item42 → 42"),
+      ("a", [.init(pattern: "a", replacement: "b"), .init(pattern: "b", replacement: "c")], 1, "a → b")
+    ]
+    for (text, rules, caret, label) in cases {
+      view.replaceText(text, selecting: NSRange(location: caret, length: 0))
+      view.showReplacementCandidates(findReplacementCandidates(rules, in: text), rules: rules) { _ in }
+      try #require(view.caretReplacementPreview.timer).fire()
+      #expect(view.caretReplacementPreview.displayed?.label == label)
+      #expect(view.string == text)
+      #expect(view.selectedRange() == NSRange(location: caret, length: 0))
+      #expect(window.firstResponder === view)
+    }
+  }
+
+  @Test(arguments: Array(0...12), [false, true])
+  func caretPreviewCancelsForInputLifecycleAndStartsFresh(scenario: Int, wasDisplayed: Bool) throws {
+    let view = makeTextView()
+    view.frame = NSRect(x: 0, y: 0, width: 320, height: 160)
+    let window = CaretPreviewWindow(contentRect: view.frame, styleMask: [.titled], backing: .buffered, defer: false)
+    window.contentView = view
+    window.makeKeyAndOrderFront(nil)
+    window.makeFirstResponder(view)
+    defer { window.orderOut(nil); window.contentView = nil }
+    let rules = [ReplacementRule(pattern: "a", replacement: "long")]
+    let candidates = findReplacementCandidates(rules, in: "ab")
+    view.replaceText("a b", selecting: NSRange(location: 0, length: 0))
+    view.showReplacementCandidates(candidates, rules: rules) { _ in }
+    let old = try #require(view.caretReplacementPreview.timer)
+    if wasDisplayed { old.fire() }
+    #expect((view.caretReplacementPreview.displayed != nil) == wasDisplayed)
+    switch scenario {
+    case 0: _ = view.shouldChangeText(in: NSRange(location: 0, length: 0), replacementString: "x")
+    case 1: view.setSelectedRange(NSRange(location: 2, length: 0))
+    case 2: view.setSelectedRange(NSRange(location: 0, length: 1))
+    case 3:
+      view.setSelectedRanges([NSValue(range: NSRange(location: 0, length: 1)),
+                              NSValue(range: NSRange(location: 2, length: 1))],
+                             affinity: .downstream, stillSelecting: false)
+      #expect(view.selectedRanges.count == 2)
+    case 4: view.replaceText("changed")
+    case 5:
+      var changed = rules
+      changed[0].matchesWholeWord = true
+      // The candidate array is deliberately unchanged: rules alone invalidate the interval.
+      view.showReplacementCandidates(candidates, rules: changed) { _ in }
+    case 6: view.showReplacementPreviews(candidates)
+    case 7: view.setMarkedText("に", selectedRange: NSRange(location: 1, length: 0),
+                               replacementRange: NSRange(location: NSNotFound, length: 0))
+    case 8: view.setVolatileText("voice", at: 2)
+    case 9: window.makeFirstResponder(nil)
+    case 10: view.isHidden = true
+    case 11:
+      // The panel controller clears previews before ordering its window out.
+      view.clearReplacementPreviews()
+      window.orderOut(nil)
+    default:
+      window.previewIsKey = false
+      NotificationCenter.default.post(name: NSWindow.didResignKeyNotification, object: window)
+    }
+    old.fire()
+    #expect(view.caretReplacementPreview.displayed == nil)
+    if scenario == 5 { #expect(view.caretReplacementPreview.timer != nil) }
+    else { #expect(view.caretReplacementPreview.timer == nil) }
+    view.commitMarkedTextIfNeeded()
+    view.isHidden = false
+    window.previewIsKey = true
+    window.makeKeyAndOrderFront(nil)
+    window.makeFirstResponder(view)
+    view.replaceText("ab", selecting: NSRange(location: 0, length: 0))
+    view.showReplacementCandidates(candidates, rules: rules) { _ in }
+    let fresh = try #require(view.caretReplacementPreview.timer)
+    #expect(fresh !== old)
+    fresh.fire()
+    #expect(view.caretReplacementPreview.displayed?.label == "a → long")
+  }
+
+}
+
+// Hosted tests suppress app activation; supply only the OS key-window signal.
+// The text view, first-responder transitions, snapshot selection and timers remain real.
+@MainActor
+private final class CaretPreviewWindow: NSWindow {
+  var previewIsKey = true
+  override var isKeyWindow: Bool { previewIsKey }
 }

@@ -254,9 +254,11 @@ import Testing
     state.settings.replacement.replacementRules = [ReplacementRule(pattern: "a", replacement: "x")]
     service.refreshCandidates()
     #expect(view.replacementCandidates.first?.range == NSRange(location: 0, length: 1))
+    #expect(view.replacementCandidateRules == state.settings.replacement.replacementRules)
     state.settings.replacement.replacementRules = [ReplacementRule(pattern: "b", replacement: "y")]
     service.refreshCandidates()
     #expect(view.replacementCandidates.first?.range == NSRange(location: 2, length: 1))
+    #expect(view.replacementCandidateRules == state.settings.replacement.replacementRules)
     state.settings.replacement.isAutoReplacementEnabled = true
     service.refreshCandidates()
     #expect(view.replacementCandidates.isEmpty)

@@ -119,7 +119,7 @@ F8・個別置換 UI・F21 は対応済み。以下の未完了タスクで、�
 
   作業・完了条件: 上記カーソル境界、複数候補の完全包含・部分重なり・全選択、長さ変更・削除・連鎖、本文編集後の候補更新、後続音声位置を既存テストと実操作で確認する。ショートカットの変更・無効化を維持し、Replace ボタンと不要な接続・表示資産を削除する。選択範囲の右クリック置換も同じ対象・適用規則に揃え、仕様の正本と関連テストを更新する。
 
-  完了（2026-10-08）: カーソル候補1件・完全包含候補群を一回の非連鎖操作へ揃え、選択内の通常文字からの右クリックも範囲置換へ接続した。Replace ボタンを削除し、選択・後続音声位置と snapshot の安全性を維持した。Package/App tests、通常 build と本人による実操作の包括確認で検証した。判断は [ADR 0036](../decisions/0036-auto-replacement-and-local-manual-replacement.md) に保持する。
+  完了（2026-10-08）: カーソル候補1件・完全包含候補群を一回の非連鎖操作へ揃え、選択内の通常文字からの右クリックも範囲置換へ接続した。Replace ボタンを削除し、選択・後続音声位置と snapshot の安全性を維持した。Package/App tests、通常 build と本人による実操作の包括確認で検証した。判断は [ADR 0037](../decisions/0037-caret-replacement-preview.md) に保持する。
 
 - [x] Auto-replace off の自動置換を止める
 
@@ -129,9 +129,9 @@ F8・個別置換 UI・F21 は対応済み。以下の未完了タスクで、�
 
   作業・完了条件: off で未適用候補を残して Confirm すると、音声・IME の確定後の本文が置換されずに貼り付けられ、auto-run script にも置換前の本文が渡ることを確認する。明示操作で一部だけ置換した場合も、残った候補を確定時に変更しない。ルール追加・設定更新時の本文非変更と on の既存挙動を確認する。trim・空本文・script・貼り付けの既存契約は維持し、仕様の正本と関連テストを更新する。
 
-  完了（2026-10-08）: Confirm とルール追加を既存 Auto-replace 設定に従わせた。off は音声・IME 確定後の未適用候補を維持し、部分手動適用後の残存・生成候補もそのまま trim・script・貼り付けへ渡す。on の全文適用と空本文の既存処理を保持した。通常 build、App 217論理test / 232case、Package 319件が成功。専用署名版で未適用/部分手動後の実貼り付け、ルール/設定更新、auto-run、IME/実音声、on 代表動作を提示し、本人の「全部OK」を包括的な文脈上の確認として記録した（個別画像・独立CUA観測はなく、権限の再許可有無は未回答）。公開 script 契約と [ADR 0036](../decisions/0036-auto-replacement-and-local-manual-replacement.md) を更新。証拠: `.tmp/workflow/orchestrator-replacement-ui-20261008/changes/replacement-auto-off/`、本人の質問/返信原文: `.tmp/workflow/orchestrator-replacement-ui-20261008/auto-off-user-questions.md`。
+  完了（2026-10-08）: Confirm とルール追加を既存 Auto-replace 設定に従わせた。off は音声・IME 確定後の未適用候補を維持し、部分手動適用後の残存・生成候補もそのまま trim・script・貼り付けへ渡す。on の全文適用と空本文の既存処理を保持した。通常 build、App 217論理test / 232case、Package 319件が成功。専用署名版で未適用/部分手動後の実貼り付け、ルール/設定更新、auto-run、IME/実音声、on 代表動作を提示し、本人の「全部OK」を包括的な文脈上の確認として記録した（個別画像・独立CUA観測はなく、権限の再許可有無は未回答）。公開 script 契約を更新。現在の判断は [ADR 0037](../decisions/0037-caret-replacement-preview.md) に保持する。証拠: `.tmp/workflow/orchestrator-replacement-ui-20261008/changes/replacement-auto-off/`、本人の質問/返信原文: `.tmp/workflow/orchestrator-replacement-ui-20261008/auto-off-user-questions.md`。
 
-- [ ] カーソル停止時に置換候補の内容を表示する
+- [x] カーソル停止時に置換候補の内容を表示する
 
   目的: マウスを使わず、置換ショートカットを実行する前に対象候補の置換内容を確認できるようにする。
 
@@ -140,6 +140,8 @@ F8・個別置換 UI・F21 は対応済み。以下の未完了タスクで、�
   対象・表示の契約: 範囲選択・複数範囲選択中は表示しない。対象候補とカーソル境界は既存の局所置換と一致させ、1回の非連鎖置換の結果を表示する。入力・カーソル移動・範囲選択・本文やルール/設定の変更・IME変換・音声未確定入力・フォーカス喪失・パネル非表示で、表示と待機中の予約を取り消す。IME・音声の未確定部分には表示しない。
 
   作業・完了条件: キーボードだけで候補へ移動し、停止後に正しい置換内容が表示されること、範囲選択や入力再開で消え古い候補を表示しないことを確認する。長さ変更・削除・正規表現・隣接候補境界・非連鎖の表示内容と、実 IME・音声入力時の非表示を確認する。下線と既存の局所置換を維持し、自動置換を遅らせない。カーソル基準の表示方式に合わせて現行 ADR と関連テストを更新する。
+
+  完了（2026-10-08）: 単一カーソルの0.7秒停止後に、既存局所置換と一致する非連鎖内容を入力ビュー内へ描画する。取消と発火時の再確認、同一候補通知とルール変更の区別を実装した。通常 build、App 220論理test / 260case、Package 319件が成功。専用署名版の4rules・5代表例、ショートカット、取消、実 IME・実発話の未確定/確定後、on即時置換とoff下線/右クリックを依頼し、本人の「1,2,3 OK」を番号ごとの包括的報告として受理した。表示位置・読みやすさ・0.7秒は依頼文脈内の受理であり、独立画像・詳細観測はない。権限再許可有無は未回答。判断は [ADR 0037](../decisions/0037-caret-replacement-preview.md) に保持する。証拠と質問/返信原文: `.tmp/workflow/caret-preview-20261008/changes/caret-preview/`。所有専用版は終了し、最終 scratch を削除した。
 
 #### 通常対応
 
@@ -250,6 +252,14 @@ F8・個別置換 UI・F21 は対応済み。以下の未完了タスクで、�
 #### 調査・対応判断
 
 発生条件・実環境での影響・対応要否を確認してから、修正・仕様整理・見送りを判断する。移動した項目の改修はまだ確約しない。
+
+- [ ] ScriptRunner の取消・終了競合時の stdin Broken pipe を調べる
+
+  観測（2026-10-08）: Package gate `caret-preview-package-01` で既存 `cancellationRacingLaunchAndExitCompletesOnce` の実 Runner が `NSFileHandleOperationException`（`writeData: Broken pipe`）により abort し、111件で未完了となった。call stack は [ScriptRunner.swift](../Packages/KoechoKit/Sources/KoechoCore/ScriptRunner.swift) の stdin 書込みを示す。この run では Runner と当該テストに差分なし。直後の同じ全体 gate `caret-preview-package-02` は319件成功したため、常時再現ではない。証拠: `.tmp/verification/cli/caret-preview-package-01/` と `caret-preview-package-02/`。
+
+  目的・調査範囲: script の終了または取消と stdin 書込みの競合条件、実アプリで到達する入力・操作、プロセス全体の終了リスクを特定する。F1 の旧結果遮断や既存 EOF timeout とは別に扱う。
+
+  作業・完了条件: 再現条件・実環境への影響・修正または見送りの判断を記録する。修正を採用する場合は取消・早期終了時に app を abort せず、Runner の既存完了・取消契約と通常 stdin 送信を維持することを実 Runner の回帰で確認する。
 
 - [ ] 置換ルールの日本語変換入力不能を調べる
 

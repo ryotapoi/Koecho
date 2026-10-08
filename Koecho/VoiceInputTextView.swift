@@ -21,9 +21,16 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   /// Subviews must not be added during IME composition — doing so corrupts
   /// the marked text state and causes duplicate text.
   private var previewMatches: [ReplacementMatch] = []
+  private var previewRules: [ReplacementRule] = []
+  let caretReplacementPreview = CaretReplacementPreview()
+  private var windowObservers: [NSObjectProtocol] = []
 
   var onDisplayTextChanged: (() -> Void)?
   private var onReplaceCandidate: (([ReplacementMatch]) -> Void)?
+
+  isolated deinit {
+    for observer in windowObservers { NotificationCenter.default.removeObserver(observer) }
+  }
 
   // MARK: - TextViewOperating
 
@@ -34,6 +41,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   }
 
   func replaceText(_ text: String) {
+    clearReplacementPreviews()
     suppressCallbacks {
       clearVolatileText()
       string = text
@@ -43,6 +51,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   /// Replace the document and its selected result as one suppressed UI update.
   func replaceText(_ text: String, selecting range: NSRange) {
+    clearReplacementPreviews()
     suppressCallbacks {
       clearVolatileText()
       string = text
@@ -57,6 +66,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   @discardableResult
   func insertFinalizedText(_ text: String, at position: Int) -> String {
+    clearReplacementPreviews()
     guard let storage = textStorage else { return "" }
     let clampedPoint = min(position, storage.length)
     let adjustedText = removingDuplicateLeadingPunctuation(text, at: clampedPoint)
@@ -196,23 +206,143 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   // MARK: - Replacement previews
 
   func showReplacementPreviews(_ matches: [ReplacementMatch]) {
+    caretReplacementPreview.cancel()
     previewMatches = matches
     onReplaceCandidate = nil
     needsDisplay = true
   }
 
   func showReplacementCandidates(
-    _ matches: [ReplacementMatch], onReplace: @escaping ([ReplacementMatch]) -> Void
+    _ matches: [ReplacementMatch], rules: [ReplacementRule] = [],
+    onReplace: @escaping ([ReplacementMatch]) -> Void
   ) {
+    if previewMatches != matches || previewRules != rules || onReplaceCandidate == nil {
+      caretReplacementPreview.cancel()
+    }
+    previewRules = rules
     previewMatches = matches
     onReplaceCandidate = onReplace
+    refreshCaretReplacementPreview()
     needsDisplay = true
   }
 
   func clearReplacementPreviews() {
+    caretReplacementPreview.cancel()
     previewMatches = []
     onReplaceCandidate = nil
     needsDisplay = true
+  }
+
+  // MARK: - Caret replacement preview
+
+  private func caretPreviewSnapshot() -> CaretReplacementPreview.Snapshot? {
+    guard isEditable, !isHiddenOrHasHiddenAncestor,
+      let window, window.isVisible, window.isKeyWindow, window.firstResponder === self,
+      !hasMarkedText(), volatileRange == nil, onReplaceCandidate != nil,
+      selectedRanges.count == 1, selectedRange().length == 0,
+      let match = replacementTargets(previewMatches, selection: selectedRange()).first,
+      match.range.location >= 0, NSMaxRange(match.range) <= (string as NSString).length
+    else { return nil }
+    return .init(text: string, caret: selectedRange().location, match: match)
+  }
+
+  private func refreshCaretReplacementPreview() {
+    caretReplacementPreview.update(
+      caretPreviewSnapshot(), current: { [weak self] in self?.caretPreviewSnapshot() },
+      onChange: { [weak self] in self?.needsDisplay = true })
+  }
+
+  override func becomeFirstResponder() -> Bool {
+    let result = super.becomeFirstResponder()
+    if result {
+      // NSWindow installs its first responder after this callback returns.
+      DispatchQueue.main.async { [weak self] in self?.refreshCaretReplacementPreview() }
+    }
+    return result
+  }
+
+  override func resignFirstResponder() -> Bool {
+    let result = super.resignFirstResponder()
+    if result { caretReplacementPreview.cancel() }
+    return result
+  }
+
+  override func viewWillMove(toWindow newWindow: NSWindow?) {
+    caretReplacementPreview.cancel()
+    for observer in windowObservers { NotificationCenter.default.removeObserver(observer) }
+    windowObservers.removeAll()
+    super.viewWillMove(toWindow: newWindow)
+    guard let newWindow else { return }
+    for name in [NSWindow.didResignKeyNotification, NSWindow.willCloseNotification] {
+      windowObservers.append(NotificationCenter.default.addObserver(
+        forName: name, object: newWindow, queue: .main
+      ) { [weak self] _ in
+        MainActor.assumeIsolated { self?.caretReplacementPreview.cancel() }
+      })
+    }
+    windowObservers.append(NotificationCenter.default.addObserver(
+      forName: NSWindow.didBecomeKeyNotification, object: newWindow, queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated { self?.refreshCaretReplacementPreview() }
+    })
+  }
+
+  override var isHidden: Bool {
+    didSet {
+      if isHidden { caretReplacementPreview.cancel() }
+      else { refreshCaretReplacementPreview() }
+    }
+  }
+
+  override var isEditable: Bool {
+    didSet {
+      if !isEditable { caretReplacementPreview.cancel() }
+    }
+  }
+
+  override func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
+    caretReplacementPreview.cancel()
+    super.setMarkedText(string, selectedRange: selectedRange, replacementRange: replacementRange)
+  }
+
+  override func unmarkText() {
+    caretReplacementPreview.cancel()
+    super.unmarkText()
+    onDisplayTextChanged?()
+    refreshCaretReplacementPreview()
+  }
+
+  private func drawCaretReplacementPreview() {
+    guard let snapshot = caretReplacementPreview.displayed,
+      snapshot == caretPreviewSnapshot() else { return }
+    var actualRange = NSRange()
+    let screenRect = firstRect(forCharacterRange: NSRange(location: snapshot.caret, length: 0),
+                               actualRange: &actualRange)
+    guard let window else { return }
+    let caretRect = convert(window.convertFromScreen(screenRect), from: nil)
+    // An insertion rectangle can have zero width; give visibility testing a pixel of area.
+    guard visibleRect.intersects(caretRect.insetBy(dx: -1, dy: 0)) else { return }
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.lineBreakMode = .byWordWrapping
+    let label = NSAttributedString(string: snapshot.label, attributes: [
+      .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+      .foregroundColor: NSColor.labelColor, .paragraphStyle: paragraph])
+    let width = max(1, min(320, visibleRect.width - 16))
+    let measured = label.boundingRect(with: NSSize(width: max(1, width - 16), height: .greatestFiniteMagnitude),
+                                      options: [.usesLineFragmentOrigin, .usesFontLeading])
+    let size = NSSize(width: min(width, ceil(measured.width) + 16),
+                      height: min(visibleRect.height - 8, ceil(measured.height) + 12))
+    let x = max(visibleRect.minX + 4, min(caretRect.minX, visibleRect.maxX - size.width - 4))
+    var y = caretRect.maxY + 4
+    if y + size.height > visibleRect.maxY - 4 { y = caretRect.minY - size.height - 4 }
+    y = max(visibleRect.minY + 4, y)
+    let rect = NSRect(origin: NSPoint(x: x, y: y), size: size)
+    NSColor.controlBackgroundColor.setFill()
+    let path = NSBezierPath(roundedRect: rect, xRadius: 5, yRadius: 5)
+    path.fill()
+    NSColor.separatorColor.setStroke()
+    path.stroke()
+    label.draw(with: rect.insetBy(dx: 8, dy: 6), options: [.usesLineFragmentOrigin, .usesFontLeading])
   }
 
   // MARK: - Underline drawing
@@ -221,6 +351,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     // Keep wantsUpdateLayer false: layer updates bypass this underline drawing path.
     super.draw(dirtyRect)
     drawReplacementUnderlines()
+    drawCaretReplacementPreview()
   }
 
   private func drawReplacementUnderlines() {
@@ -268,6 +399,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   override func shouldChangeText(in affectedCharRange: NSRange, replacementString: String?) -> Bool
   {
+    caretReplacementPreview.cancel()
     // Finalize volatile text before keyboard input so it becomes confirmed text.
     if let range = volatileRange, !isSuppressingCallbacks {
       if let storage = textStorage, range.location + range.length <= storage.length {
@@ -282,6 +414,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   }
 
   override func didChangeText() {
+    clearReplacementPreviews()
     super.didChangeText()
     guard !isSuppressingCallbacks else { return }
     onTextChanged?(string)
@@ -297,10 +430,12 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   override func setSelectedRanges(
     _ ranges: [NSValue], affinity: NSSelectionAffinity, stillSelecting stillSelectingFlag: Bool
   ) {
+    caretReplacementPreview.cancel()
     super.setSelectedRanges(ranges, affinity: affinity, stillSelecting: stillSelectingFlag)
     if !stillSelectingFlag, !isSuppressingCallbacks {
       onCursorMoved?(selectedRange().location)
     }
+    if !stillSelectingFlag { refreshCaretReplacementPreview() }
   }
 
   // MARK: - Context menu
@@ -376,5 +511,57 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     else { return }
     let selectedText = (string as NSString).substring(with: range)
     onAddReplacementRule?(selectedText)
+  }
+}
+
+/// Owns the stop interval and its snapshot; cancellation also invalidates callbacks already queued.
+@MainActor
+final class CaretReplacementPreview {
+  struct Snapshot: Equatable {
+    let text: String
+    let caret: Int
+    let match: ReplacementMatch
+
+    var label: String {
+      let original = (text as NSString).substring(with: match.range)
+      return "\(original) → \(match.replacement.isEmpty ? "∅" : match.replacement)"
+    }
+  }
+
+  private(set) var timer: Timer?
+  private(set) var displayed: Snapshot?
+  private var pending: Snapshot?
+  private var generation = 0
+  private var onChange: (() -> Void)?
+
+  func cancel() {
+    generation += 1
+    timer?.invalidate()
+    timer = nil
+    pending = nil
+    displayed = nil
+    onChange?()
+  }
+
+  func update(_ snapshot: Snapshot?, current: @escaping @MainActor () -> Snapshot?, onChange: @escaping () -> Void) {
+    if let snapshot, snapshot == pending || snapshot == displayed { return }
+    if snapshot == nil, pending == nil, displayed == nil { return }
+    cancel()
+    self.onChange = onChange
+    guard let snapshot else { return }
+    pending = snapshot
+    let reservation = generation
+    let timer = Timer(timeInterval: 0.7, repeats: false) { [weak self] _ in
+      MainActor.assumeIsolated {
+        guard let self, self.generation == reservation else { return }
+        self.timer = nil
+        self.pending = nil
+        guard current() == snapshot else { return }
+        self.displayed = snapshot
+        self.onChange?()
+      }
+    }
+    self.timer = timer
+    RunLoop.main.add(timer, forMode: .common)
   }
 }
