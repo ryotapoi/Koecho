@@ -265,7 +265,8 @@ extension InputPanelControllerTests {
 
   // MARK: - Auto-Run Script
 
-  @Test func confirmWithAutoRunScript() async throws {
+  @Test(arguments: [true, false])
+  func confirmWithAutoRunScriptHonorsAutoReplacement(isAutomatic: Bool) async throws {
     let scriptPath = try makeScript("tr a-z A-Z")
     let script = Script(name: "Upper", scriptPath: scriptPath)
     let paster = MockPaster()
@@ -274,16 +275,20 @@ extension InputPanelControllerTests {
     ctx.appState.settings.script.scripts = [script]
     ctx.appState.settings.script.autoRunScriptId = script.id
 
+    ctx.appState.settings.replacement.isAutoReplacementEnabled = isAutomatic
+    ctx.appState.settings.replacement.addReplacementRule(
+      ReplacementRule(pattern: "hello", replacement: "bye"))
     ctx.controller.showPanel()
-    ctx.appState.setInputText("hello")
+    ctx.appState.setInputText("  hello\n")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
 
-    #expect(paster.pastedTexts == ["HELLO"])
+    let expected = isAutomatic ? "BYE" : "HELLO"
+    #expect(paster.pastedTexts == [expected])
     #expect(ctx.appState.isInputPanelVisible == false)
     #expect(ctx.historyStore.entries.count == 1)
-    #expect(ctx.historyStore.entries[0].text == "HELLO")
+    #expect(ctx.historyStore.entries[0].text == expected)
     #expect(ctx.appState.scriptUndoText == nil)
   }
 

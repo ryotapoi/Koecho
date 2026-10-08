@@ -9,7 +9,8 @@ import Testing
 // MARK: - Replacement Rules on Confirm
 
 extension InputPanelControllerTests {
-  @Test func confirmAppliesReplacementRules() async {
+  @Test(arguments: [true, false])
+  func confirmHonorsAutoReplacement(isAutomatic: Bool) async {
     let paster = MockPaster()
     let ctx = makeController(paster: paster)
 
@@ -18,16 +19,19 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
-    ctx.appState.setInputText("hello world")
+    ctx.appState.settings.replacement.isAutoReplacementEnabled = isAutomatic
+    ctx.appState.setInputText("  hello world\n")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
 
-    #expect(paster.pastedTexts == ["bye world"])
-    #expect(ctx.historyStore.entries.map(\.text) == ["bye world"])
+    let expected = isAutomatic ? "bye world" : "hello world"
+    #expect(paster.pastedTexts == [expected])
+    #expect(ctx.historyStore.entries.map(\.text) == [expected])
   }
 
-  @Test func confirmWithReplacementRulesEmptyingText() async {
+  @Test(arguments: [true, false])
+  func confirmWithDeletionRuleHonorsAutoReplacement(isAutomatic: Bool) async {
     let paster = MockPaster()
     let ctx = makeController(paster: paster)
 
@@ -36,15 +40,56 @@ extension InputPanelControllerTests {
     )
 
     ctx.controller.showPanel()
+    ctx.appState.settings.replacement.isAutoReplacementEnabled = isAutomatic
     ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
 
-    // All text removed by replacement → treated as cancel
-    #expect(paster.pastedTexts.isEmpty)
+    #expect(paster.pastedTexts == (isAutomatic ? [] : ["hello"]))
     #expect(ctx.appState.isInputPanelVisible == false)
-    #expect(paster.restoreClipboardCallCount == 1)
+    #expect(paster.restoreClipboardCallCount == (isAutomatic ? 1 : 0))
+  }
+
+  @Test func confirmPreservesRemainingAndGeneratedManualCandidates() async throws {
+    let ctx = makeController()
+    ctx.appState.settings.replacement.isAutoReplacementEnabled = false
+    ctx.appState.settings.replacement.replacementRules = [
+      ReplacementRule(pattern: "a", replacement: "long"),
+      ReplacementRule(pattern: "long", replacement: "x")]
+    ctx.controller.showPanel()
+    let view = try #require(findVoiceInputTextView(in: ctx.controller))
+    ctx.appState.setInputText("a a")
+    view.replaceText("a a", selecting: NSRange(location: 0, length: 1))
+    #expect(ctx.controller.panel.onShortcutKey?(
+      ShortcutKey(modifiers: [.control], character: "r")) == true)
+    #expect(ctx.appState.inputText == "long a")
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+
+    await ctx.controller.confirm()
+
+    #expect(ctx.paster.pastedTexts == ["long a"])
+    #expect(ctx.historyStore.entries.map(\.text) == ["long a"])
+  }
+
+  @Test func confirmPreservesFinalAndRemainingVolatileSpeechWhenAutomaticReplacementIsOff() async throws {
+    let engine = MockVoiceInputEngine()
+    let ctx = makeController(makeEngine: { engine })
+    ctx.appState.settings.replacement.isAutoReplacementEnabled = false
+    ctx.appState.settings.replacement.replacementRules = [
+      ReplacementRule(pattern: "hello", replacement: "bye"),
+      ReplacementRule(pattern: "world", replacement: "earth")]
+    ctx.controller.showPanel()
+    await Task.yield()
+    _ = try #require(findVoiceInputTextView(in: ctx.controller))
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
+    ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: " world")
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+
+    await ctx.controller.confirm()
+
+    #expect(ctx.paster.pastedTexts == ["hello world"])
+    #expect(ctx.historyStore.entries.map(\.text) == ["hello world"])
   }
 
   // MARK: - Replacement shortcuts

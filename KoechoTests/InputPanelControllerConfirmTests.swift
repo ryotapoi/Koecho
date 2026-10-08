@@ -204,13 +204,17 @@ extension InputPanelControllerTests {
     #expect(engine.state == .idle)
   }
 
-  @Test func confirmCommitsMarkedJapaneseTextBeforeStoppingVoiceInput() async throws {
+  @Test(arguments: [true, false])
+  func confirmCommitsMarkedJapaneseTextBeforeStoppingVoiceInput(isAutomatic: Bool) async throws {
     let paster = MockPaster()
     let ctx = makeController(paster: paster)
 
     ctx.controller.showPanel()
     await Task.yield()
     let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
+    ctx.appState.settings.replacement.isAutoReplacementEnabled = isAutomatic
+    ctx.appState.settings.replacement.addReplacementRule(
+      ReplacementRule(pattern: "こんにちは", replacement: "こんばんは"))
     textView.setMarkedText(
       "こんにちは",
       selectedRange: NSRange(location: 5, length: 0),
@@ -221,7 +225,7 @@ extension InputPanelControllerTests {
 
     await ctx.controller.confirm()
 
-    #expect(paster.pastedTexts == ["こんにちは"])
+    #expect(paster.pastedTexts == [isAutomatic ? "こんばんは" : "こんにちは"])
   }
 
   @Test func terminatedTargetCancelsRetryAndReopensEmptyPanel() async {

@@ -231,8 +231,10 @@ import Testing
 
   // MARK: - addRule
 
-  @Test func addRuleAddsAndAppliesExistingRules() {
-    let (service, appState, _, _) = makeService(inputText: "hello world")
+  @Test(arguments: [true, false])
+  func addRuleHonorsAutoReplacement(isAutomatic: Bool) {
+    let (service, appState, view, _) = makeService(inputText: "hello world")
+    appState.settings.replacement.isAutoReplacementEnabled = isAutomatic
     appState.pendingReplacementPattern = "hello"
     appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "world", replacement: "earth")
@@ -242,7 +244,28 @@ import Testing
 
     #expect(appState.settings.replacement.replacementRules.count == 2)
     #expect(appState.pendingReplacementPattern == nil)
-    #expect(appState.inputText == "bye earth")
+    #expect(appState.inputText == (isAutomatic ? "bye earth" : "hello world"))
+    #expect(view.replacementCandidates.count == (isAutomatic ? 0 : 2))
+  }
+
+  @Test func settingsRefreshUpdatesCandidatesWithoutChangingText() {
+    let (service, state, view, _) = makeService(inputText: "a b")
+    state.settings.replacement.isAutoReplacementEnabled = false
+    state.settings.replacement.replacementRules = [ReplacementRule(pattern: "a", replacement: "x")]
+    service.refreshCandidates()
+    #expect(view.replacementCandidates.first?.range == NSRange(location: 0, length: 1))
+    state.settings.replacement.replacementRules = [ReplacementRule(pattern: "b", replacement: "y")]
+    service.refreshCandidates()
+    #expect(view.replacementCandidates.first?.range == NSRange(location: 2, length: 1))
+    state.settings.replacement.isAutoReplacementEnabled = true
+    service.refreshCandidates()
+    #expect(view.replacementCandidates.isEmpty)
+    state.settings.replacement.isAutoReplacementEnabled = false
+    service.refreshCandidates()
+    #expect(view.replacementCandidates.count == 1)
+    #expect(state.inputText == "a b")
+    #expect(view.string == "a b")
+    #expect(view.replaceTextSelectingCalls.isEmpty)
   }
 
   @Test func manualCandidateChangesOnlyChosenOccurrenceAndMapsFollowingVoice() {

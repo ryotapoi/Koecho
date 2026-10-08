@@ -1,5 +1,6 @@
 ---
-status: current
+status: superseded
+superseded_by: 0036-auto-replacement-and-local-manual-replacement.md
 ---
 
 # 本文上の対象を手動置換する

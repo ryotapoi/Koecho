@@ -132,8 +132,9 @@ final class InputPanelController {
     appState.discardScriptUndo()
 
     let rawText = await finalizeVoiceInput()
-    let text = replacementService.applyRules(to: rawText)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let replacedText = appState.settings.replacement.isAutoReplacementEnabled
+      ? replacementService.applyRules(to: rawText) : rawText
+    let text = replacedText.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !text.isEmpty else {
       dismissAsEmptyConfirm()
       return

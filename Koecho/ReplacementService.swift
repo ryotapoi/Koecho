@@ -138,7 +138,7 @@ final class ReplacementService {
   func addRule(_ rule: ReplacementRule) {
     appState.settings.replacement.addReplacementRule(rule)
     appState.pendingReplacementPattern = nil
-    applyOrPreview()
+    handleInput()
   }
 
   private func showPreview(rules: [ReplacementRule]) {
