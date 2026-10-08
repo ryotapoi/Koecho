@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0028-native-text-editor-integration.md
+---
+
 # ADR 0010: NSTextView subclass replacing SwiftUI TextEditor
-
-## Status
-
-Accepted
 
 ## Context
 

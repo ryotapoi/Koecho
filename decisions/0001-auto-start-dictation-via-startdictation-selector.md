@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0025-speechanalyzer-only-voice-input.md
+---
+
 # ADR 0001: Auto-start Dictation via startDictation: selector
-
-## Status
-
-Accepted
 
 ## Context
 

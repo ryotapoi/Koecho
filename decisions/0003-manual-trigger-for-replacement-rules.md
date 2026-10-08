@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0011-debounced-auto-replacement.md
+---
+
 # ADR 0003: Manual trigger for replacement rules
-
-## Status
-
-Superseded by ADR 0011
 
 ## Context
 

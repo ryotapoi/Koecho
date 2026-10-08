@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0010-nstextview-subclass-replacing-swiftui-texteditor.md
+---
+
 # ADR 0009: isa-swizzling for TextEditor context menu customization
-
-## Status
-
-Superseded by ADR 0010
 
 ## Context
 

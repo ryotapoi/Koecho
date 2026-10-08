@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0008: NSView-based shortcut key recorder
-
-## Status
-
-Accepted
 
 ## Context
 

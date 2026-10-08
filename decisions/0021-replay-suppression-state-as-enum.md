@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0021: Replay 抑制状態の enum 状態機械化
-
-## Status
-
-Accepted
 
 ## Context
 

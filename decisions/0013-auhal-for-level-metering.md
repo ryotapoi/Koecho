@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0031-audio-input-and-metering.md
+---
+
 # ADR 0013: AUHAL for level metering
-
-## Status
-
-Accepted
 
 ## Context
 

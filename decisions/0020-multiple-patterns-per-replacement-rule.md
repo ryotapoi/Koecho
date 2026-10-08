@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0034-replacement-pattern-model.md
+---
+
 # ADR 0020: Multiple Patterns per Replacement Rule
-
-## Status
-
-Accepted
 
 ## Context
 

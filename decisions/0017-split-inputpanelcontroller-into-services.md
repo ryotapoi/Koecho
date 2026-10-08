@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0017: Split InputPanelController into focused services
-
-## Status
-
-Accepted
 
 ## Context
 

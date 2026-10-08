@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0032-speech-overlap-defense.md
+---
+
 # ADR 0016: Accumulated text overlap removal for SpeechAnalyzer
-
-## Status
-
-Accepted
 
 ## Context
 

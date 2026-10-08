@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0025-speechanalyzer-only-voice-input.md
+---
+
 # ADR 0005: Dictation auto-start robustness with flag-controlled startup
-
-## Status
-
-Accepted
 
 ## Context
 

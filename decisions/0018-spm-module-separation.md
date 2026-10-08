@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0033-core-platform-module-boundaries.md
+---
+
 # ADR 0018: SPM モジュール分離 (KoechoCore + KoechoPlatform)
-
-## Status
-
-Accepted
 
 ## Context
 

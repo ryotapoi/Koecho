@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0029-replacement-interaction.md
+---
+
 # ADR 0011: Immediate auto-replacement via DictationTextView
-
-## Status
-
-Accepted
 
 ## Context
 

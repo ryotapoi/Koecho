@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0025: SpeechAnalyzer 専用の音声入力
-
-## Status
-
-Accepted
 
 ## Date
 

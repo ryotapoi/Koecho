@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0026: Settings の Scripts 一覧は `.onMove` を維持する
-
-## Status
-
-Accepted
 
 ## Date
 

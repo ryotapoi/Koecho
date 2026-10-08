@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0027-history-storage-and-isolation.md
+---
+
 # ADR 0004: History storage as JSON file
-
-## Status
-
-Accepted
 
 ## Context
 

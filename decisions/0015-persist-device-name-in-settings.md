@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0015: Persist audio input device name in Settings
-
-## Status
-
-Accepted
 
 ## Context
 

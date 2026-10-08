@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0006: Script path as shell command string
-
-## Status
-
-Accepted
 
 ## Context
 

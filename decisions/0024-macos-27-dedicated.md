@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0030-macos27-speech-and-toolchain.md
+---
+
 # ADR 0024: macOS 27 専用化
-
-## Status
-
-Accepted
 
 ## Date
 

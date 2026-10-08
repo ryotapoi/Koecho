@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0025-speechanalyzer-only-voice-input.md
+---
+
 # ADR 0019: Voice Input Off as Engine Mode
-
-## Status
-
-Superseded by ADR 0024
 
 ## Context
 

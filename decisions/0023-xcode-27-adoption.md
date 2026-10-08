@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0030-macos27-speech-and-toolchain.md
+---
+
 # ADR 0023: Xcode 27 の Swift・macOS API 採用判断
-
-## Status
-
-Superseded by ADR 0024
 
 ## Date
 

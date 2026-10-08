@@ -1,8 +1,9 @@
+---
+status: superseded
+superseded_by: 0030-macos27-speech-and-toolchain.md
+---
+
 # ADR 0012: SpeechAnalyzer voice input engine
-
-## Status
-
-Superseded by ADR 0024
 
 ## Context
 

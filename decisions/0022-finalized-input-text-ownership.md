@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0022: 確定入力テキストの所有権と書き込み経路
-
-## Status
-
-Accepted
 
 ## Context
 

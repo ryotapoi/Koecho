@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0002: Window scene + NavigationSplitView for settings UI
-
-## Status
-
-Accepted
 
 ## Context
 

@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0014: Separate OutputVolumeDucker class for volume ducking
-
-## Status
-
-Accepted
 
 ## Context
 

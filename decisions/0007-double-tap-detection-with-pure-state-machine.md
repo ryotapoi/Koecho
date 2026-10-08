@@ -1,8 +1,8 @@
+---
+status: current
+---
+
 # ADR 0007: Double-tap detection with pure state machine and external timer
-
-## Status
-
-Accepted
 
 ## Context
 
