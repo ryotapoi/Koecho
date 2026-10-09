@@ -149,6 +149,11 @@ public nonisolated final class ScriptRunner: Sendable {
         }
 
         do {
+          // Throwing FileHandle writes still raise SIGPIPE on a closed pipe.
+          // Suppress it only on this writer, without changing the app's signal disposition.
+          guard fcntl(stdinPipe.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1) != -1 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+          }
           guard try state.launch({ try process.run() }) else {
             finishIfReady(forceInterruption: true)
             return
@@ -161,10 +166,15 @@ public nonisolated final class ScriptRunner: Sendable {
             interrupt()
           }
 
-          // Write stdin after launch
+          // A peer can close stdin during exit or cancellation. Leave the result
+          // to RunState rather than treating a post-launch write failure as launch failure.
           let inputData = input.data(using: .utf8) ?? Data()
-          stdinPipe.fileHandleForWriting.write(inputData)
-          stdinPipe.fileHandleForWriting.closeFile()
+          do {
+            try stdinPipe.fileHandleForWriting.write(contentsOf: inputData)
+          } catch {
+            logger.debug("Script stdin write ended: \(error)")
+          }
+          try? stdinPipe.fileHandleForWriting.close()
         } catch {
           guard state.completeAfterLaunchFailure() else { return }
           stdoutCollector.stop()

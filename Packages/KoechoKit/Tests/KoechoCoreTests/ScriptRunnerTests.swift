@@ -44,6 +44,33 @@ nonisolated struct ScriptRunnerTests {
     #expect(result.output == "ORIGINAL")
   }
 
+  @Test func passesLargeUTF8InputWithoutTruncation() async throws {
+    let input = String(repeating: "日本語🗣 line\n", count: 100000) + "end"
+    let result = try await ScriptRunner().run(scriptPath: "cat", input: input)
+    #expect(result.output == input)
+  }
+
+  @Test(arguments: ["success", "nonzero", "empty"])
+  func earlyStdinClosurePreservesExitResult(resultKind: String) async throws {
+    // Exceed pipe capacity so closure interrupts an active write, not just an empty send.
+    let input = String(repeating: "日本語🗣", count: 100000)
+    let command = "exec 0<&-; \(resultKind == "empty" ? ":" : "printf done"); printf diagnostic >&2; exit \(resultKind == "nonzero" ? 2 : 0)"
+    let runner = ScriptRunner()
+    switch resultKind {
+    case "success":
+      let result = try await runner.run(scriptPath: command, input: input)
+      #expect(result == ScriptRunnerResult(output: "done", stderr: "diagnostic"))
+    case "nonzero":
+      await #expect(throws: ScriptRunnerError.nonZeroExit(code: 2, stderr: "diagnostic")) {
+        try await runner.run(scriptPath: command, input: input)
+      }
+    default:
+      await #expect(throws: ScriptRunnerError.emptyOutput) {
+        try await runner.run(scriptPath: command, input: input)
+      }
+    }
+  }
+
   @Test func repeatsShortLivedCustomScripts() async throws {
     let runner = ScriptRunner(timeout: 0.2, killDelay: 0.1)
     for _ in 0..<30 {
@@ -250,6 +277,36 @@ nonisolated struct ScriptRunnerTests {
     task.cancel()
     await #expect(throws: CancellationError.self) { try await task.value }
     #expect(start.duration(to: .now) < .seconds(2))
+  }
+
+  @Test func cancellationInterruptsLargeStdinWrite() async throws {
+    let marker = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: marker) }
+    let input = String(repeating: "日本語🗣", count: 100000)
+    let task = Task {
+      try await ScriptRunner(timeout: 20, killDelay: 0.1).run(
+        scriptPath: "echo $$ > '\(marker.path)'; while :; do :; done", input: input)
+    }
+    defer { task.cancel() }
+    let deadline = ContinuousClock.now + .seconds(5)
+    var processID: Int32?
+    while processID == nil, ContinuousClock.now < deadline {
+      processID = (try? String(contentsOf: marker, encoding: .utf8))
+        .flatMap { Int32($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+      if processID == nil { try await Task.sleep(for: .milliseconds(10)) }
+    }
+    let pid = try #require(processID)
+    task.cancel()
+    await #expect(throws: CancellationError.self) { try await task.value }
+    #expect(kill(pid, 0) == -1 && errno == ESRCH)
+  }
+
+  @Test func timeoutInterruptsLargeStdinWrite() async throws {
+    await #expect(throws: ScriptRunnerError.timeout) {
+      try await ScriptRunner(timeout: 0.1, killDelay: 0.1).run(
+        scriptPath: "trap '' TERM; while :; do :; done",
+        input: String(repeating: "日本語🗣", count: 100000))
+    }
   }
 
   @Test func cancellationRacingLaunchAndExitCompletesOnce() async {

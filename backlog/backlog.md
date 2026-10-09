@@ -141,7 +141,7 @@
 
 発生条件・実環境での影響・対応要否を確認してから、修正・仕様整理・見送りを判断する。改修は確約しない。実害・頻度と、調査・実装・維持のコストを比べて採否を決める。対象を絞った確認で未再現なら、その条件と限界を記録して見送りを判断できる。再現だけのための新しい基盤や網羅的な調査は要求しない。
 
-- [ ] ScriptRunner の取消・終了競合時の stdin Broken pipe を調べる
+- [x] ScriptRunner の取消・終了競合時の stdin Broken pipe を調べる
 
   優先度・調査の区切り: 実 Runner の abort が観測されているため、本節で先に扱う。既存の取消レースと早期終了時の stdin 書込みに絞り、実アプリからの到達性と局所的な対処の可否を判断する。常時再現ではないため、短い再実行の成功だけで解消済みとはしない。
 
@@ -150,6 +150,16 @@
   目的・調査範囲: script の終了または取消と stdin 書込みの競合条件、実アプリで到達する入力・操作、プロセス全体の終了リスクを特定する。F1 の旧結果遮断や既存 EOF timeout とは別に扱う。
 
   作業・完了条件: 再現条件・実環境への影響・修正または見送りの判断を記録する。修正を採用する場合は取消・早期終了時に app を abort せず、Runner の既存完了・取消契約と通常 stdin 送信を維持することを実 Runner の回帰で確認する。
+
+  結果（2026-10-10）: 旧 Runner を独立プロセスで動かし、pipe 容量超の UTF-8 本文と `exec 0<&-; printf done` で SIGPIPE 終了（signal 13）を再現した。これは上記の Objective-C 例外の再観測とは区別する。元の `caret-preview-package-01/02` はこの checkout に存在せず未確認。throwing write だけでも SIGPIPE 終了したため、stdin writer に限った `F_SETNOSIGPIPE` と throwing write / close を採用した。launch 後の書込み失敗は既存 RunState の取消・timeout・exit / EOF 判定に委ねる。実アプリでは本文を送る Custom Script / auto script と、パネル取消 → task.cancel から到達する。全 scheduling interleaving は網羅しない。
+
+  検証: 通常の大きい UTF-8 本文の完全一致、stdin 早期閉鎖時の成功・nonzero / stderr・empty output、送信中の取消と owned process 停止、送信中の timeout、既存 race / EOF 回帰を実 Runner で確認した。Package 337件、通常 build、専用署名 build が成功（失敗・未完了・timeout・残留 process なし）。証拠は `.tmp/workflow/orchestrator-20261010-backlog/changes/T05/evidence/`、`.tmp/verification/cli/t05-package-02/` と `t05-build-01/`。専用版は起動・doctor・cleanup のみ確認し、CUA が `timeoutReached` で実画面操作は未確認。本人確認を次項へ分離した。
+
+- [ ] ScriptRunner の stdin 修正を専用検証版の実画面で確認する
+
+  残る確認: T05 の実 Runner 回帰と build は成功したが、専用版の CUA 選択が `timeoutReached` となり、Custom Script とパネル取消の実操作は未確認。プロセス起動を実画面成功として扱わない。証拠: `.tmp/verification/verify-koecho/t05-script-ui-01/`（所有 process は cleanup 済み）。
+
+  手順・完了条件: [verify-koecho](../.agents/skills/verify-koecho/SKILL.md) の未使用 run で専用版を prepare → build → launch（voice off）→ doctor し、本人が Settings → Scripts に一時的な Custom Script を登録する。通常の `tr a-z A-Z` で `original` → `ORIGINAL` を確認する。容量超の disposable 本文（例: 100万文字）をパネルに貼り、`exec 0<&-; printf done` が `done` を返して app が生存すること、`exec 0<&-; printf diagnostic >&2; exit 2` がエラーを表示して app と本文を保つことを確認する。`while :; do :; done` 実行中に Escape でパネルを取消し、app の生存・再表示・通常 script の再実行を確認する。実施者・日時・入力サイズ・操作・結果・署名 / PID・必要な権限と再許可有無を保存し、一時 script を削除して所有 run を cleanup する。通常版・通常履歴・TCC を自動変更しない。
 
 - [ ] 置換ルールの日本語変換入力不能を調べる
 
