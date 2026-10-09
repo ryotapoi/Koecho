@@ -43,15 +43,15 @@
 
 #### 高難度対応
 
-- [ ] F1 旧セッションのスクリプト結果を遮断する
+- [x] F1 旧セッションのスクリプト結果を遮断する
 
-  目的・発生条件: 遅い手動スクリプトまたは auto-run の実行中に Escape でキャンセルし、完了前にパネルを再表示すると、新しい本文・prompt が旧結果や旧本文で上書きされる。auto-run では別の対象アプリへ旧本文を貼り付け、履歴にも記録し得る。
+  完了内容: F19 の先行修正 `eeca1dd` で解消済み。遅い手動スクリプトまたは auto-run を Escape で取り消し、旧処理の完了前に再表示しても、新しい本文・prompt・Undo・実行状態へ旧処理が干渉せず、auto-run の旧結果を貼り付けたり履歴へ追加したりしない。
 
-  根拠: `KM-01-C04` / `KM-04-C01`。`R02-C01` / `R06-C01`。[`InputPanelController.swift`](../Koecho/InputPanelController.swift) の cancel は実行を無効化せず、[`PanelLifecycleManager.swift`](../Koecho/PanelLifecycleManager.swift) の再表示は visibility・対象アプリ・本文を更新する。[`ScriptExecutionService.swift`](../Koecho/ScriptExecutionService.swift) と confirm の await 後は現在の visibility だけで旧処理の結果を受け入れ、手動処理の cleanup は新しい prompt・実行フラグも消す。paste は現在の対象アプリを使う。
+  根拠: `KM-01-C04` / `KM-04-C01`、`R02-C01` / `R06-C01`。[`ScriptExecutionService.swift`](../Koecho/ScriptExecutionService.swift) の取消は実行 ID を無効化し、手動の成功・失敗・cleanup は ID 一致を要求する。auto-run の旧完了も CancellationError となり、[`InputPanelController.swift`](../Koecho/InputPanelController.swift) が貼付・履歴記録前に捨てる。先行修正からの差分を照合し、これらの保護と競合回帰の保持を確認した。
 
-  作業・完了条件: キャンセル前の処理完了が再表示後の本文・prompt・Undo・実行状態を変更せず、auto-run の旧結果を新しい対象へ貼り付けたり履歴へ追加したりしないことを確認する。手動・auto-run の成功と失敗、再表示後に新しい処理を始めた場合を既存のテストと実操作で確認する。
+  検証: [`InputPanelControllerScriptTests.swift`](../KoechoTests/InputPanelControllerScriptTests.swift) の `escapeStopsScriptAndOldCompletionCannotClearNextRun(autoRun:)` は手動・auto-run の Escape→再表示→新実行→旧完了で本文・実行状態・新 Process 生存、貼付・履歴への非干渉と回復を確認する。通常成功・失敗、prompt・Undo は [`ScriptExecutionServiceTests.swift`](../KoechoTests/ScriptExecutionServiceTests.swift) 等の既存テストが保護する。F19 の保存結果は hosted tests 200件成功（上記競合2ケースを含む）。本人実操作は手動・auto-run の Escape と実 Process 停止、再表示後の正常回復を確認した。証拠は `.tmp/workflow/orchestrator-20261005-f28-f5-f19-fresh/changes/F19/` の `report.md` と `validation/{hosted-tests,human-manual-escape,human-auto-escape,human-recovery}.json`。
 
-  限界: 実行未確認。旧処理が完了する前に再表示するタイミングが条件。2候補の auto-run 部分は同じ問題として統合した。
+  完了判断・限界: F19 時点では F1 全体を未完了としていたが、今回指定された検証方針に従い、共通 ID ガード・代表回帰・既存実操作を十分な証拠として完了とする。prompt / Undo 個別の再表示競合、旧成功・旧失敗の全順序は個別実測していない。実操作は専用署名 fixture と safe fake paster の範囲であり、通常版の実ペースト等の保証ではない。今回は文書だけを更新し、追加テスト・build・実操作は行っていない。
 
 - [ ] F3 スクリプト待機中の音声入力を止める
 
