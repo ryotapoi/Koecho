@@ -115,13 +115,15 @@
 
 - [ ] F17 言語切替中の取消を正しく扱う
 
-  目的・発生条件: 音声入力中にメニューバーの言語を変更し、stop の await 中に Escape する。言語変更 task は cancel されずその後継続する。
+  目的・発生条件: 音声入力中にメニューバーの言語を変更し、旧 engine.stop の await 中に Escape する。旧切替の遅い復帰で非表示のマイクが起動しないことを確認する。F4 の engine 内開始待ちとは別の、coordinator の停止→再生成経路を対象とする。
 
-  根拠: `KM-01-C06` / `KM-02-C06`。[`KoechoApp.swift`](../Koecho/KoechoApp.swift):37-46; [`InputPanelController.swift`](../Koecho/InputPanelController.swift):259-275; [`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift):93-111; [`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift):81-118。switchEngine は await 前にだけ visibility を確認し、coordinator は stop 後に無条件で engine 再生成/start する。待機中の cancel は当時の旧 engine を対象とし、新 engine に届かない。
+  現在の対策: [`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) の switchEngine は stop 後に lifecycleID・入力 suspension・visibility・音声入力設定を確認する。[`InputPanelController.swift`](../Koecho/InputPanelController.swift) の Escape は cancel と resetState によって旧 lifecycle を失効させ、次回表示も新 lifecycle に切り替える。
 
-  作業・完了条件: 言語切替の stop 待機中に Escape した後、新しい engine が開始せず、非表示のままマイクが起動しないことを確認する。通常切替と次回パネル表示を既存テストと実マイクで確認する。F4 の engine 内開始待ちとは別の、coordinator の停止→再生成経路を対象とする。
+  自動確認: [`InputPanelControllerTests.swift`](../KoechoTests/InputPanelControllerTests.swift) で stop 到達と復帰を明示的に制御し、Escape 後の engine 非生成・非開始と非表示維持、旧 stop 復帰前に再表示した次セッションの engine・本文・選択位置・未確定本文の保持と認識継続、通常切替と次回表示で選択言語の engine が開始することを検証済み。全 App tests 227 件が成功し、失敗・skip・timeout・残留 process はない。
 
-  限界: 実マイクと UI の時系列は未実施。start 成功は権限・モデル・デバイスが利用可能なことが条件。
+  残作業・完了条件: 専用署名検証版で実際に音声入力し、メニューの言語変更→stop 待機中の Escape→非表示後のマイク非起動を確認する。通常の言語切替と、次回パネル表示で保存済みの選択言語による録音・認識も本人と確認する。実マイク/UI の確認が済むまでは未完了とする。
+
+  未実施理由・証拠: 本人の発声・権限判断と実マイクが必要なため、睡眠中の自動作業では実環境受入を確定しない。権限・モデル・デバイスの利用可能性と UI の時系列は mock の保証外。対象 OS/hardware・実施者・日時、操作順序と観測結果、専用版 identity/doctor、取得可能な screenshot/log、cleanup 結果を専用検証 run に保存する。
 
 - [x] F29 hosted test の設定を隔離する
 

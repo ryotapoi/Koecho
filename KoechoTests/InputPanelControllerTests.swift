@@ -119,6 +119,126 @@ struct InputPanelControllerTests {
     #expect(ctx.controller.panel.isVisible)
   }
 
+  // MARK: - Language switching
+
+  @Test(arguments: [false, true])
+  func escapeDuringLanguageSwitchDiscardsLateStop(reopen: Bool) async throws {
+    var engines: [MockVoiceInputEngine] = []
+    let ctx = makeController(makeEngine: {
+      let engine = MockVoiceInputEngine()
+      engines.append(engine)
+      return engine
+    })
+    ctx.controller.showPanel()
+    await Task.yield()
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller))
+    let oldEngine = try #require(engines.last)
+    #expect(oldEngine.state == .listening)
+    let stopStarted = AsyncStream<Void>.makeStream()
+    let finishStop = AsyncStream<Void>.makeStream()
+    defer {
+      finishStop.continuation.finish()
+      stopStarted.continuation.finish()
+      ctx.controller.cancel()
+    }
+    oldEngine.onStop = {
+      stopStarted.continuation.yield(())
+      for await _ in finishStop.stream { break }
+    }
+    ctx.appState.settings.voiceInput.speechAnalyzerLocale = "en-US"
+    let switchTask = Task { await ctx.controller.switchEngine() }
+    for await _ in stopStarted.stream { break }
+    #expect(oldEngine.state == .stopping)
+    ctx.controller.panel.onEscape?()
+    #expect(!ctx.appState.isInputPanelVisible)
+    #expect(!ctx.controller.panel.isVisible)
+    #expect(oldEngine.cancelCallCount == 1)
+
+    if reopen {
+      ctx.controller.showPanel()
+      await Task.yield()
+      textView.replaceText("next session")
+      ctx.appState.setInputText("next session")
+      textView.setSelectedRange(NSRange(location: 2, length: 0))
+      ctx.controller.voiceCoordinator.handleCursorMoved(2)
+      textView.setVolatileText("draft", at: 2)
+    }
+    let expectedEngines = engines.count
+    let currentEngine = try #require(engines.last)
+    let expectedText = textView.string
+    let expectedSelection = textView.selectedRange()
+    let expectedVolatileRange = textView.volatileRange
+    finishStop.continuation.yield(())
+    await switchTask.value
+
+    #expect(engines.count == expectedEngines)
+    #expect(oldEngine.startCallCount == 1)
+    #expect(ctx.appState.isInputPanelVisible == reopen)
+    #expect(ctx.controller.panel.isVisible == reopen)
+    if reopen {
+      #expect(ctx.controller.voiceCoordinator.engine === currentEngine)
+      #expect(currentEngine.state == .listening)
+      #expect(textView.string == expectedText)
+      #expect(textView.selectedRange() == expectedSelection)
+      #expect(textView.volatileRange == expectedVolatileRange)
+      #expect(ctx.appState.inputText == "next session")
+      #expect(ctx.controller.voiceCoordinator.voiceInsertionPoint == 2)
+      currentEngine.delegate?.voiceInput(didFinalize: "new")
+      #expect(ctx.appState.inputText == "nenewxt session")
+    } else {
+      #expect(oldEngine.state == .idle)
+      #expect(ctx.appState.inputText.isEmpty)
+    }
+  }
+
+  @Test func languageSwitchStartsSelectedEngineAndNextShowUsesSelection() async throws {
+    var appState: AppState?
+    var engines: [MockVoiceInputEngine] = []
+    var locales: [String?] = []
+    let ctx = makeController(makeEngine: {
+      let engine = MockVoiceInputEngine()
+      engines.append(engine)
+      locales.append(appState?.settings.voiceInput.speechAnalyzerLocale)
+      return engine
+    })
+    appState = ctx.appState
+    ctx.appState.settings.voiceInput.speechAnalyzerLocale = "ja-JP"
+    ctx.controller.showPanel()
+    await Task.yield()
+    let oldEngine = try #require(engines.last)
+    let stopStarted = AsyncStream<Void>.makeStream()
+    let finishStop = AsyncStream<Void>.makeStream()
+    defer {
+      finishStop.continuation.finish()
+      stopStarted.continuation.finish()
+      ctx.controller.cancel()
+    }
+    oldEngine.onStop = {
+      stopStarted.continuation.yield(())
+      for await _ in finishStop.stream { break }
+    }
+    ctx.appState.settings.voiceInput.speechAnalyzerLocale = "en-US"
+    let countBeforeSwitch = engines.count
+    let switchTask = Task { await ctx.controller.switchEngine() }
+    for await _ in stopStarted.stream { break }
+    #expect(engines.count == countBeforeSwitch)
+    finishStop.continuation.yield(())
+    await switchTask.value
+    let switchedEngine = try #require(engines.last)
+    #expect(switchedEngine !== oldEngine)
+    #expect(oldEngine.state == .idle)
+    #expect(switchedEngine.state == .listening)
+    #expect(locales.last == "en-US")
+
+    ctx.controller.panel.onEscape?()
+    ctx.controller.showPanel()
+    await Task.yield()
+    let nextEngine = try #require(engines.last)
+    #expect(nextEngine !== switchedEngine)
+    #expect(nextEngine.state == .listening)
+    #expect(locales.last == "en-US")
+  }
+
   // MARK: - Selected Text as Initial Input
 
   @Test func showPanelWithSelectedTextSetsInputText() async throws {
