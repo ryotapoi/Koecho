@@ -61,15 +61,21 @@
 
   完了判断・限界: 自動回帰と手動成功・失敗の実音声による結果保持・正常再開を核心の証拠として完了とする。auto-run、取消→再表示、待機中 Voice off の個別本人実操作は未確認であり、自動回帰で裏付けた。OS 初期起動中の全競合、全発話順序、通常版の実ペースト、再ビルド後の権限維持は保証しない。
 
-- [ ] F4 終了後のマイク起動を防ぐ
+- [x] F4 終了後のマイク起動を防ぐ
 
-  目的・発生条件: パネル表示直後のマイク許可・モデル準備・音声 format 決定待ち中に Escape、確定、Voice 無効化を行うと、終了後の処理がマイクや認識リソースを起動し得る。
+  完了内容: 許可・モデル・format の開始準備と認識結果の Task を分離し、開始ごとの所有者と取消を確認する。準備中の stop は待機せず終了し、cancel/stop 後に OS の待機が遅れて戻っても旧開始を再開しない。旧開始・旧 stop/restart の後処理は次の開始へ作用しない。モデル準備の取消は cache hit・request・download 復帰で伝播し、通常エラーや検証成功へ変換しない。未採用 analyzer/stream と中間 audio engine を終了し、設置済み tap のみ除去する。終了時 status を即時クリアし、通常 stop の最終結果回収経路は維持した。
 
-  根拠: `KM-03-C01`。`R04-C01`。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) の startRecognition は await 後に取消・state を確認せず、session activate・exclusive access acquire・audioEngine.start へ進む。cancel は既存フィールドを破棄するが開始 Task 内の self・ローカル engine は残る。[`SpeechModelPreparation.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechModelPreparation.swift) の検証済み early return も取消を確認しない。stop の開始待ち timeout 後も後続起動を防げない。
+  検証: [`SpeechAnalyzerEngineTests.swift`](../Packages/KoechoKit/Tests/KoechoPlatformTests/SpeechAnalyzerEngineTests.swift) は非協調的な許可・モデル・format 待機の cancel/stop→次の開始→旧成功/失敗復帰（12 cases）で、後続準備・排他 acquire・録音の非起動、旧 audio engine の解放、state/status/error の次開始保護を確認する。[`SpeechModelPreparationTests.swift`](../Packages/KoechoKit/Tests/KoechoPlatformTests/SpeechModelPreparationTests.swift) は取消済み cache hit、request/download の取消後成功・失敗復帰、既存の成功・失敗を確認する。Package 両 target 全323 tests と通常 build が成功（失敗・skip・timeout・残留なし）。証拠は `.tmp/verification/cli/f4-generator-{package,build}-status-final/` と `.tmp/workflow/orchestrator-20261010-backlog/changes/F4/node-results/generator.md`。
 
-  作業・完了条件: 開始待ち中の取消・確定・無効化・停止 timeout 後に処理が復帰しても、マイクと認識リソースが再起動せず、終了状態とリソース状態が一致することを確認する。待機と終了の順序を確認し、実環境で開始途中の終了と次の開始を確認する。
+  完了判断・限界: 実装と必須自動 gate の完了を記録する。実 OS の取消応答、録音継続時間、通常録音の最終結果回収と実マイクでの次回開始は未検証。本人・hardware 依存の実環境確認は明示承認に従い F4-V に分離した。
 
-  限界: OS の await が取消に応じて返す値、実録音継続時間、hardware 挙動は未確認。許可・モデル・format が成功して復帰する経路を静的に確認した。
+- [ ] F4-V 開始準備中の終了と次回開始を実マイクで確認する
+
+  対象・前提: macOS 27.0+、マイクと対象言語モデルが使える環境の専用署名 Koecho Verification（`com.ryotapoi.Koecho.Verification`）。[verify-koecho](../.agents/skills/verify-koecho/SKILL.md) に従い固定 path/署名を確認し、通常版の権限・履歴・入力を変更しない。スキルの実画面自動操作は blocked であり、許可判断と発話は本人が行う。
+
+  手順・完了条件: マイク許可待ち、モデル準備待ち、再現可能な format 決定待ちでパネルを開き、各待機中に Escape、確定、Voice off を行う。OS の待機を成功/拒否/失敗で復帰させ、従来の開始待ち timeout（1秒）より遅い復帰でも、マイク使用表示と認識が終了状態を保ち、遅い status/error が次のパネルへ出ないことを確認する。次のパネルを開いて Voice on で発話し正常認識を確認し、通常確定で末尾の最終結果が回収され、Escape では破棄されること、必要な transcriber 再開が動くことも確認する。各終了操作後のマイク表示・認識停止・次回正常開始と、再現できなかった待機条件を個別記録する。
+
+  証拠: OS/Xcode・入力デバイス・言語・許可/モデル状態、実施者・日時、操作と復帰の順序、マイク表示/認識本文の観測、待機と録音終了の所要時間、専用版 doctor/log/可能な screenshot、cleanup 結果を専用検証 run に保存する。build や自動回帰の成功だけで hardware 検証済みとしない。
 
 - [ ] F9 再接続後のマイク対象を合わせる
 

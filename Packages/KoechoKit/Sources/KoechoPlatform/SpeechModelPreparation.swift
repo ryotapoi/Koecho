@@ -8,18 +8,25 @@ enum SpeechModelPreparation {
     markVerified: (String) -> Void,
     installationRequest: () async throws -> (() async throws -> Void)?,
     updateStatus: (VoiceInputEngineStatus?) -> Void
-  ) async -> VoiceInputEngineError? {
+  ) async throws -> VoiceInputEngineError? {
+    try Task.checkCancellation()
     guard !isVerified(localeKey) else { return nil }
 
     do {
-      if let downloadAndInstall = try await installationRequest() {
+      let downloadAndInstall = try await installationRequest()
+      try Task.checkCancellation()
+      if let downloadAndInstall {
         updateStatus(.downloadingModel)
+        try Task.checkCancellation()
         try await downloadAndInstall()
+        try Task.checkCancellation()
         updateStatus(nil)
       }
       markVerified(localeKey)
       return nil
     } catch {
+      try Task.checkCancellation()
+      if error is CancellationError { throw error }
       updateStatus(nil)
       return .modelDownloadFailed(description: error.localizedDescription)
     }

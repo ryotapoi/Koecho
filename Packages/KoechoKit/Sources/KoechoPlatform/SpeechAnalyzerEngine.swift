@@ -16,12 +16,34 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
   private var analyzer: SpeechAnalyzer?
   private var audioEngine: AVAudioEngine?
   private var inputContinuation: AsyncStream<AnalyzerInput>.Continuation?
+  private(set) var startTask: Task<Void, Never>?
+  private var owner: UUID?
+  private let dependencies: Dependencies
   private var resultTask: Task<Void, Never>?
   private var transcriber: DictationTranscriber?
   private var acquiredAudioInput = false
   private var converter: AVAudioConverter?
   private var analyzerFormat: AVAudioFormat?
   private var isRestarting = false
+  private var hasAudioTap = false
+
+  // Keep the OS suspension points injectable without replacing the engine lifecycle.
+  struct Dependencies {
+    var permissionAction: @MainActor () -> MicrophonePermissionRule.Action = {
+      MicrophonePermissionRule.action(for: AVCaptureDevice.authorizationStatus(for: .audio))
+    }
+    var requestAccess: @MainActor () async -> Bool = { await AVCaptureDevice.requestAccess(for: .audio) }
+    var installationRequest: @MainActor (DictationTranscriber) async throws -> (() async throws -> Void)? = {
+      transcriber in
+      guard let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber])
+      else { return nil }
+      return { try await request.downloadAndInstall() }
+    }
+    var inputFormat: @MainActor (AVAudioEngine, String?) -> AVAudioFormat = configureAudioInput
+    var bestFormat: @MainActor (DictationTranscriber, AVAudioFormat) async -> AVAudioFormat? = {
+      await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [$0], considering: $1)
+    }
+  }
 
   private struct RecognitionSession {
     let transcriber: DictationTranscriber
@@ -56,8 +78,10 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     locale: Locale,
     deviceUID: String?,
     verificationCache: SpeechModelVerificationCache,
-    audioInputExclusiveAccess: AudioInputExclusiveAccess
+    audioInputExclusiveAccess: AudioInputExclusiveAccess,
+    dependencies: Dependencies = Dependencies()
   ) {
+    self.dependencies = dependencies
     self.locale = locale
     self.deviceUID = deviceUID
     self.verificationCache = verificationCache
@@ -69,23 +93,38 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     case .listening, .stopping: return
     case .idle, .error: break
     }
+    let owner = UUID()
+    self.owner = owner
     state = .listening
     logger.info("Starting SpeechAnalyzer with locale: \(self.locale.identifier, privacy: .public)")
 
-    resultTask = Task { @MainActor [weak self] in
+    startTask = Task { @MainActor [weak self] in
       guard let self else { return }
-      await self.startRecognition()
+      await self.startRecognition(owner: owner)
+      if self.owner == owner { self.startTask = nil }
     }
   }
 
   public func stop() async {
     guard state != .idle, state != .stopping else { return }
+    guard let owner else {
+      state = .idle
+      return
+    }
     state = .stopping
+    // Preparation has no audio to finalize. Do not wait for non-cooperative OS calls.
+    startTask?.cancel()
+    if analyzer == nil {
+      tearDown()
+      state = .idle
+      delegate?.voiceInput(didUpdateStatus: nil)
+      return
+    }
     logger.debug("Stopping SpeechAnalyzer")
 
     // Stop audio input
     if let audioEngine {
-      audioEngine.inputNode.removeTap(onBus: 0)
+      removeAudioTap(from: audioEngine)
       audioEngine.stop()
     }
     inputContinuation?.finish()
@@ -111,6 +150,8 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       }
     }
 
+    guard self.owner == owner else { return }
+
     // Wait for result task with timeout
     if let resultTask {
       if case .timedOut = await TaskTimeout.wait(resultTask, seconds: 1) {
@@ -119,89 +160,33 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       }
     }
 
+    guard self.owner == owner else { return }
     tearDown()
     state = .idle
+    delegate?.voiceInput(didUpdateStatus: nil)
     logger.info("SpeechAnalyzer stopped")
   }
 
   public func cancel() {
     logger.debug("Cancelling SpeechAnalyzer")
+    startTask?.cancel()
     inputContinuation?.finish()
     resultTask?.cancel()
     if let audioEngine {
-      audioEngine.inputNode.removeTap(onBus: 0)
+      removeAudioTap(from: audioEngine)
       audioEngine.stop()
-    }
-    if let analyzer {
-      Task { [analyzer] in
-        await analyzer.cancelAndFinishNow()
-      }
     }
     tearDown()
     state = .idle
+    delegate?.voiceInput(didUpdateStatus: nil)
   }
 
   // MARK: - Private
 
-  private func startRecognition() async {
-    // 1. Check microphone permission
-    let status = AVCaptureDevice.authorizationStatus(for: .audio)
-    switch MicrophonePermissionRule.action(for: status) {
-    case .requestAccess:
-      delegate?.voiceInput(didUpdateStatus: .requestingMicrophoneAccess)
-      let granted = await AVCaptureDevice.requestAccess(for: .audio)
-      delegate?.voiceInput(didUpdateStatus: nil)
-      if !granted {
-        reportError(.microphoneAccessDenied)
-        return
-      }
-    case .deny:
-      reportError(.microphoneAccessDenied)
-      return
-    case .proceed:
-      break
-    }
-
-    // 2. Create transcriber
-    let preset = Self.defaultPreset
-    logger.info(
-      "Preset reportingOptions: \(String(describing: preset.reportingOptions), privacy: .public)")
-    logger.info(
-      "Preset transcriptionOptions: \(String(describing: preset.transcriptionOptions), privacy: .public)"
-    )
-    let transcriber = makeTranscriber(preset: preset)
-
-    // 3. Check / download model (skip if already verified this session)
-    let localeKey = SpeechLocale.normalizationKey(locale)
-    let modelError = await SpeechModelPreparation.ensureModelAvailable(
-      localeKey: localeKey,
-      isVerified: verificationCache.isVerified(localeKey:),
-      markVerified: verificationCache.markVerified(localeKey:),
-      installationRequest: { [transcriber, logger] in
-        if let request = try await AssetInventory.assetInstallationRequest(
-          supporting: [transcriber]
-        ) {
-          logger.info("Downloading speech model...")
-          return {
-            try await request.downloadAndInstall()
-            logger.info("Speech model downloaded")
-          }
-        }
-        return nil
-      },
-      updateStatus: { [delegate] status in
-        delegate?.voiceInput(didUpdateStatus: status)
-      }
-    )
-    if let modelError {
-      reportError(modelError)
-      return
-    }
-
-    // 4. Setup audio engine
-    let audioEngine = AVAudioEngine()
-    self.audioEngine = audioEngine
-
+  private static func configureAudioInput(
+    _ audioEngine: AVAudioEngine, _ deviceUID: String?
+  ) -> AVAudioFormat {
+    let logger = Logger(subsystem: Logger.koechoSubsystem, category: "SpeechAnalyzerEngine")
     if let deviceUID {
       let resolvedID = AudioDeviceListing.resolveDeviceID(forUID: deviceUID)
       audioEngine.inputNode.withAudioUnit { audioUnit in
@@ -231,16 +216,97 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     let inputNode = audioEngine.inputNode
     let inputFormat = inputNode.outputFormat(forBus: 0)
 
+    return inputFormat
+  }
+
+  private func canStart(owner: UUID) -> Bool {
+    self.owner == owner && state == .listening && !Task.isCancelled
+  }
+
+  private func startRecognition(owner: UUID) async {
+    guard canStart(owner: owner) else { return }
+    // 1. Check microphone permission
+    switch dependencies.permissionAction() {
+    case .requestAccess:
+      delegate?.voiceInput(didUpdateStatus: .requestingMicrophoneAccess)
+      guard canStart(owner: owner) else { return }
+      let granted = await dependencies.requestAccess()
+      guard canStart(owner: owner) else { return }
+      delegate?.voiceInput(didUpdateStatus: nil)
+      guard canStart(owner: owner) else { return }
+      if !granted {
+        reportError(.microphoneAccessDenied)
+        return
+      }
+    case .deny:
+      reportError(.microphoneAccessDenied)
+      return
+    case .proceed:
+      break
+    }
+
+    guard canStart(owner: owner) else { return }
+
+    // 2. Create transcriber
+    let preset = Self.defaultPreset
+    logger.info(
+      "Preset reportingOptions: \(String(describing: preset.reportingOptions), privacy: .public)")
+    logger.info(
+      "Preset transcriptionOptions: \(String(describing: preset.transcriptionOptions), privacy: .public)"
+    )
+    let transcriber = makeTranscriber(preset: preset)
+
+    // 3. Check / download model (skip if already verified this session)
+    let localeKey = SpeechLocale.normalizationKey(locale)
+    let modelError: VoiceInputEngineError?
+    do {
+      modelError = try await SpeechModelPreparation.ensureModelAvailable(
+        localeKey: localeKey,
+        isVerified: verificationCache.isVerified(localeKey:),
+        markVerified: verificationCache.markVerified(localeKey:),
+        installationRequest: { [dependencies] in
+          try await dependencies.installationRequest(transcriber)
+        },
+        updateStatus: { [weak self] status in
+          guard let self, self.canStart(owner: owner) else { return }
+          self.delegate?.voiceInput(didUpdateStatus: status)
+        }
+      )
+    } catch {
+      return // Model preparation only throws cancellation.
+    }
+    guard canStart(owner: owner) else { return }
+    if let modelError {
+      reportError(modelError)
+      return
+    }
+
+    // 4. Setup audio engine
+    let audioEngine = AVAudioEngine()
+    self.audioEngine = audioEngine
+
+    let inputFormat = dependencies.inputFormat(audioEngine, deviceUID)
+
+    guard canStart(owner: owner) else { return }
     guard inputFormat.channelCount > 0 else {
       reportError(.noAudioInputDevice)
       return
     }
 
     // 5. Create the recognition session using the best compatible format.
-    guard let session = await makeRecognitionSession(
+    let session = await makeRecognitionSession(
       transcriber: transcriber,
-      format: .determine(from: inputFormat)
-    ) else {
+      format: .determine(from: inputFormat),
+      owner: owner
+    )
+    guard canStart(owner: owner) else {
+      if let session {
+        session.inputContinuation.finish()
+        await session.analyzer.cancelAndFinishNow()
+      }
+      return
+    }
+    guard let session else {
       reportError(.noCompatibleAudioFormat)
       return
     }
@@ -260,10 +326,15 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
     // 7. Install audio tap and start
     audioInputExclusiveAccess.acquire()
+    guard canStart(owner: owner) else {
+      audioInputExclusiveAccess.release()
+      return
+    }
     acquiredAudioInput = true
 
     do {
       try installAudioTap()
+      guard canStart(owner: owner) else { return }
       try audioEngine.start()
       logger.info("Audio engine started, listening...")
     } catch {
@@ -271,11 +342,12 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     }
   }
 
-  private func startResultTask(transcriber: DictationTranscriber) {
+  private func startResultTask(transcriber: DictationTranscriber, owner: UUID) {
     let resultsTask = Task { @MainActor [weak self] in
       do {
         for try await result in transcriber.results {
-          guard let self, self.state == .listening || self.state == .stopping else { break }
+          guard let self, self.owner == owner, !Task.isCancelled,
+            self.state == .listening || self.state == .stopping else { break }
           let text = String(result.text.characters)
           self.logger.debug("Result: isFinal=\(result.isFinal)")
           if result.isFinal {
@@ -287,7 +359,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       } catch is CancellationError {
         // Normal during stop/cancel
       } catch {
-        guard let self, self.state != .stopping, self.state != .idle else { return }
+        guard let self, self.owner == owner, !Task.isCancelled, self.state != .stopping, self.state != .idle else { return }
         self.reportError(.recognitionError(description: error.localizedDescription))
       }
     }
@@ -296,16 +368,14 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
   private func makeRecognitionSession(
     transcriber: DictationTranscriber,
-    format: RecognitionSessionFormat
+    format: RecognitionSessionFormat,
+    owner: UUID
   ) async -> RecognitionSession? {
     let analyzerFormat: AVAudioFormat
 
     switch format {
     case let .determine(inputFormat):
-      guard let bestFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
-        compatibleWith: [transcriber],
-        considering: inputFormat
-      ) else {
+      guard let bestFormat = await dependencies.bestFormat(transcriber, inputFormat) else {
         return nil
       }
       analyzerFormat = bestFormat
@@ -313,6 +383,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       analyzerFormat = existingFormat
     }
 
+    guard canStart(owner: owner) else { return nil }
     let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
     let analyzer = SpeechAnalyzer(inputSequence: stream, modules: [transcriber])
     return RecognitionSession(
@@ -328,13 +399,19 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     analyzerFormat = session.analyzerFormat
     inputContinuation = session.inputContinuation
     analyzer = session.analyzer
-    startResultTask(transcriber: session.transcriber)
+    if let owner { startResultTask(transcriber: session.transcriber, owner: owner) }
   }
 
   private func makeTranscriber(
     preset: DictationTranscriber.Preset
   ) -> DictationTranscriber {
     DictationTranscriber(locale: locale, preset: preset)
+  }
+
+  private func removeAudioTap(from audioEngine: AVAudioEngine) {
+    guard hasAudioTap else { return }
+    audioEngine.inputNode.removeTap(onBus: 0)
+    hasAudioTap = false
   }
 
   private func installAudioTap() throws {
@@ -386,25 +463,26 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       }
       localContinuation.yield(AnalyzerInput(buffer: inputBuffer))
     }
+    hasAudioTap = true
   }
 
   /// Restart the transcriber to clear segment buffer.
   /// Returns `true` if restart was actually performed.
   @discardableResult
   public func restartTranscriber() async -> Bool {
-    guard state == .listening, !isRestarting, let audioEngine else { return false }
+    guard state == .listening, !isRestarting, let audioEngine, let owner else { return false }
     isRestarting = true
-    defer { isRestarting = false }
+    defer { if self.owner == owner { isRestarting = false } }
     logger.info("Restarting transcriber to clear segment buffer")
 
     // 1. Stop old: remove tap, stop audio engine, finish stream, cancel analyzer
-    audioEngine.inputNode.removeTap(onBus: 0)
+    removeAudioTap(from: audioEngine)
     audioEngine.stop()
     inputContinuation?.finish()
+    let oldResultTask = resultTask
     if let analyzer {
       await analyzer.cancelAndFinishNow()
     }
-    let oldResultTask = resultTask
     oldResultTask?.cancel()
     if let oldResultTask {
       if case .timedOut = await TaskTimeout.wait(oldResultTask, seconds: 1) {
@@ -414,23 +492,28 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     }
 
     // 2. Re-check state (stop/cancel may have run during await)
-    guard state == .listening else { return false }
+    guard canStart(owner: owner) else { return false }
 
     // 3. Create a new session with the format selected at initial start.
     guard let analyzerFormat else { return false }
     guard let session = await makeRecognitionSession(
       transcriber: makeTranscriber(preset: Self.defaultPreset),
-      format: .reuse(analyzerFormat)
+      format: .reuse(analyzerFormat),
+      owner: owner
     ) else {
       return false
     }
-    guard state == .listening else { return false }
+    guard canStart(owner: owner) else {
+      session.inputContinuation.finish()
+      await session.analyzer.cancelAndFinishNow()
+      return false
+    }
     activate(session)
 
     // 4. Re-install audio tap and restart audio engine
     do {
       try installAudioTap()
-      guard state == .listening else { return false }
+      guard canStart(owner: owner) else { return false }
       try audioEngine.start()
     } catch {
       resultTask?.cancel()
@@ -451,8 +534,17 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
   }
 
   private func tearDown() {
+    owner = nil
+    startTask?.cancel()
+    startTask = nil
+    resultTask?.cancel()
+    inputContinuation?.finish()
+    if let analyzer {
+      Task { await analyzer.cancelAndFinishNow() }
+    }
+    isRestarting = false
     if let audioEngine {
-      audioEngine.inputNode.removeTap(onBus: 0)
+      removeAudioTap(from: audioEngine)
       audioEngine.stop()
     }
     audioEngine = nil
