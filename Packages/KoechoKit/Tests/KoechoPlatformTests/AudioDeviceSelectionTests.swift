@@ -4,6 +4,111 @@ import Testing
 @testable import KoechoPlatform
 
 struct AudioDeviceSelectionTests {
+  @Test func monitoringRequestSurvivesFallbackReconnectAndDeviceIDChanges() {
+    var state = AudioDeviceSelection.MonitoringState()
+    state.start(requestedUID: "external-mic", monitorInputLevel: true)
+
+    var targetChanged = state.refresh(resolvedID: nil, systemDefaultID: 7)
+    #expect(targetChanged)
+    #expect(state.requestedUID == "external-mic")
+    #expect(state.target?.deviceID == 7)
+    #expect(state.target?.explicitDeviceID == nil)
+
+    targetChanged = state.refresh(resolvedID: 42, systemDefaultID: 7)
+    #expect(targetChanged)
+    #expect(state.target?.deviceID == 42)
+    #expect(state.target?.explicitDeviceID == 42)
+    #expect(state.isInputLevelEnabled)
+
+    targetChanged = state.refresh(resolvedID: nil, systemDefaultID: 7)
+    #expect(targetChanged)
+    #expect(state.target?.deviceID == 7)
+    #expect(state.requestedUID == "external-mic")
+    targetChanged = state.refresh(resolvedID: 43, systemDefaultID: 7)
+    #expect(targetChanged)
+    #expect(state.target?.deviceID == 43)
+    #expect(state.target?.explicitDeviceID == 43)
+  }
+
+  @Test func fallbackDefaultChangePreservesExplicitRequest() {
+    var state = AudioDeviceSelection.MonitoringState()
+    state.start(requestedUID: "external-mic", monitorInputLevel: true)
+    var targetChanged = state.refresh(resolvedID: nil, systemDefaultID: 7)
+    #expect(targetChanged)
+    targetChanged = state.refresh(resolvedID: nil, systemDefaultID: 8)
+    #expect(targetChanged)
+    #expect(state.target?.deviceID == 8)
+    #expect(state.requestedUID == "external-mic")
+    targetChanged = state.refresh(resolvedID: 42, systemDefaultID: 8)
+    #expect(targetChanged)
+    #expect(state.target?.explicitDeviceID == 42)
+
+    // A connected explicit selection is unaffected by unrelated/default changes.
+    targetChanged = state.refresh(resolvedID: 42, systemDefaultID: 9)
+    #expect(!targetChanged)
+    #expect(state.target?.deviceID == 42)
+  }
+
+  @Test func volumeOnlyMonitoringFollowsReconnectWithoutEnablingLevel() {
+    var state = AudioDeviceSelection.MonitoringState()
+    state.start(requestedUID: "external-mic", monitorInputLevel: false)
+    var targetChanged = state.refresh(resolvedID: nil, systemDefaultID: 7)
+    #expect(targetChanged)
+    targetChanged = state.refresh(resolvedID: 42, systemDefaultID: 7)
+    #expect(targetChanged)
+    #expect(state.target?.deviceID == 42)
+    #expect(!state.isInputLevelEnabled)
+
+    state.isInputLevelEnabled = true
+    targetChanged = state.refresh(resolvedID: nil, systemDefaultID: 7)
+    #expect(targetChanged)
+    #expect(state.isInputLevelEnabled)
+    state.isInputLevelEnabled = false
+    targetChanged = state.refresh(resolvedID: 42, systemDefaultID: 7)
+    #expect(targetChanged)
+    #expect(!state.isInputLevelEnabled)
+  }
+
+  @Test func unavailableTargetRetainsRequestButStopPreventsNotificationRestart() {
+    var state = AudioDeviceSelection.MonitoringState()
+    state.start(requestedUID: "external-mic", monitorInputLevel: true)
+    var targetChanged = state.refresh(resolvedID: nil, systemDefaultID: nil)
+    #expect(!targetChanged)
+    #expect(state.isRequested)
+    #expect(state.requestedUID == "external-mic")
+    targetChanged = state.refresh(resolvedID: 42, systemDefaultID: nil)
+    #expect(targetChanged)
+    targetChanged = state.refresh(resolvedID: nil, systemDefaultID: nil)
+    #expect(targetChanged)
+    #expect(state.target == nil)
+    #expect(state.isRequested)
+    targetChanged = state.refresh(resolvedID: 43, systemDefaultID: nil)
+    #expect(targetChanged)
+
+    state.stop()
+    targetChanged = state.refresh(resolvedID: 43, systemDefaultID: 7)
+    #expect(!targetChanged)
+    #expect(!state.isRequested)
+    #expect(state.target == nil)
+    #expect(state.requestedUID == nil)
+    #expect(!state.isInputLevelEnabled)
+  }
+
+  @Test func systemDefaultMonitoringFollowsDefaultChangesWithoutUnnecessaryRestart() {
+    var state = AudioDeviceSelection.MonitoringState()
+    state.start(requestedUID: nil, monitorInputLevel: true)
+    var targetChanged = state.refresh(resolvedID: nil, systemDefaultID: 7)
+    #expect(targetChanged)
+    targetChanged = state.refresh(resolvedID: nil, systemDefaultID: 7)
+    #expect(!targetChanged)
+    targetChanged = state.refresh(resolvedID: nil, systemDefaultID: 8)
+    #expect(targetChanged)
+    #expect(state.target?.deviceID == 8)
+    #expect(state.target?.explicitDeviceID == nil)
+    #expect(state.requestedUID == nil)
+    #expect(state.isInputLevelEnabled)
+  }
+
   @Test func monitoringTargetUsesResolvedDeviceWhenUIDResolves() {
     let target = AudioDeviceSelection.monitoringTarget(
       requestedUID: "external-mic",

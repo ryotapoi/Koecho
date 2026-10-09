@@ -77,15 +77,25 @@
 
   証拠: OS/Xcode・入力デバイス・言語・許可/モデル状態、実施者・日時、操作と復帰の順序、マイク表示/認識本文の観測、待機と録音終了の所要時間、専用版 doctor/log/可能な screenshot、cleanup 結果を専用検証 run に保存する。build や自動回帰の成功だけで hardware 検証済みとしない。
 
-- [ ] F9 再接続後のマイク対象を合わせる
+- [x] F9 再接続後のマイク対象を合わせる
 
   目的・発生条件: 保存済み外部マイクが切断中に Settings を開き、別の system default を変えずに再接続すると、Picker は外部マイクを示す一方、メーターと音量 slider は既定マイクに残る。
 
-  根拠: `KM-03-C03`。`R05-C02`。[`AudioDeviceSelection.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioDeviceSelection.swift) の fallback は effectiveUID=nil となり、[`AudioDeviceManager.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioDeviceManager.swift) は元の requested UID を失う。デバイス一覧更新は選択対象を再解決せず、[`VoiceInputSection.swift`](../Koecho/VoiceInputSection.swift) の選択 UID も変わらないため再開せず、音量書き込みも fallback の対象を使う。
+  根拠: `KM-03-C03`。`R05-C02`。fallback 中に保存済み UID の監視要求を失い、デバイス一覧更新でも監視対象を再解決しなかった。
 
-  作業・完了条件: Settings を開いたまま保存済みマイクを再接続した後、表示・レベルメーター・入力音量の対象が選択マイクに一致することを確認する。切断時の fallback を維持し、対象解決を既存テストと実デバイスの切断・再接続で確認する。
+  完了内容: requested UID と現在の監視対象を分け、一覧・既定デバイス通知で同じ要求を再解決する。切断時の default fallback と選択 UID を維持し、再接続で新しい AudioDeviceID になってもレベル・音量読取・書込・listener の対象を一緒に切り替える。対象なしでは旧監視を解除し、要求を保持する。Voice off と明示停止を維持し、同じ対象への無関係な通知では再起動しない。
 
-  限界: hardware 再現未確認。system default が変わらず View も再表示されない条件。既存 D2 の fallback 注意表示の検討とは別に扱う。
+  検証: [`AudioDeviceSelectionTests.swift`](../Packages/KoechoKit/Tests/KoechoPlatformTests/AudioDeviceSelectionTests.swift) で production が使う監視状態の不在→再接続→再切断→別 ID での再接続、不在中の default 変更、Voice off、対象なし、stop 後の通知、default 選択と明示選択の追随範囲を確認する。Package 両 target 全328 tests、通常 build、App 全225 tests（266 cases）が成功（失敗・skip・timeout・残留なし）。証拠は `.tmp/verification/cli/f9-generator-{package-final,build,app}/` と `.tmp/workflow/orchestrator-20261010-backlog/changes/F9/node-results/generator.json`。
+
+  完了判断・限界: チェックは実装と自動検証の完了を示す。実際の CoreAudio 通知順序、再接続後の AUHAL capture と OS の入力音量書込は未確認であり、全受入を実測済みとはしない。本人・hardware 依存の受入確認は明示承認に従い F9-V に分離した。F10 の認識終了後の再開、D2 の注意表示は含めない。
+
+- [ ] F9-V 再接続後の選択表示・メーター・入力音量を実マイクで確認する
+
+  対象・前提: macOS 27.0+、保存済み外部マイクと別の system default が使える環境の専用署名 Koecho Verification（`com.ryotapoi.Koecho.Verification`）。[verify-koecho](../.agents/skills/verify-koecho/SKILL.md) の固定 path/署名・doctor・cleanup に従う。実画面自動操作は blocked であり、本人が必要な許可判断と物理抜き差しを行う。音量書込の確認には入力音量制御に対応する外部マイクを使い、非対応ならその範囲を未確認とする。
+
+  手順・完了条件: 外部マイクを選択・保存して切断し、別の既定マイクが一定のまま Settings を開く。同じ画面を開いたまま再接続し、Picker が外部マイクを示すこと、外部マイクへの発話にメーターが応答すること、slider 操作が外部マイクの入力音量へ書き込まれることを OS の音量表示でも確認する。再切断で既定へ戻り、再接続で再び選択対象へ戻ることも確認する。Voice off では音量対象だけ追随してメーターを開始せず、Settings を閉じた後の通知で監視が再開しないことを確認する。不在中の default 変更後の再接続、default 選択時の追随と接続済み明示選択の維持も確認する。
+
+  証拠: 対象 hardware/OS・Xcode、実施者・日時、接続前後の選択・既定と AudioDeviceID（取得できる場合）、手順・通知/操作順序・観測結果、メーター応答と入力音量書込先、専用版 identity/doctor・可能な screenshot/log、cleanup 結果を専用検証 run に保存する。再現できなかった条件や非対応音量制御は個別に未確認と記録し、自動回帰の成功で hardware 検証を代替しない。
 
 - [ ] F10 認識終了後にメーターを再開する
 

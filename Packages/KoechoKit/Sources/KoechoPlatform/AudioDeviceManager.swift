@@ -11,16 +11,17 @@ public final class AudioDeviceManager {
   public private(set) var inputDevices: [AudioInputDevice] = []
   public var inputLevel: Float { levelMonitor.inputLevel }
   public private(set) var inputVolume: Float = 0
-  public private(set) var isMonitoring: Bool = false
+  public var isMonitoring: Bool { monitoringState.target != nil }
   public private(set) var monitoredDeviceSupportsVolume: Bool = false
 
   private let levelMonitor = AudioInputLevelMonitor()
 
   // MARK: - Private state
 
-  private var monitoringDeviceUID: String?
-  private var monitoredDeviceID: AudioDeviceID = kAudioObjectUnknown
-  private var isInputLevelMonitoringEnabled = false
+  private var monitoringState = AudioDeviceSelection.MonitoringState()
+  private var monitoredDeviceID: AudioDeviceID {
+    monitoringState.target?.deviceID ?? kAudioObjectUnknown
+  }
   private var isUpdatingVolume = false
 
   // CoreAudio listener blocks (retained for removal in deinit).
@@ -74,59 +75,60 @@ public final class AudioDeviceManager {
 
   public func refreshDevices() {
     inputDevices = AudioDeviceListing.enumerateInputDevices()
+    refreshMonitoringTarget()
   }
 
   public func startMonitoring(deviceUID: String?, monitorInputLevel: Bool = true) {
     stopMonitoring()
-    isInputLevelMonitoringEnabled = monitorInputLevel
+    monitoringState.start(requestedUID: deviceUID, monitorInputLevel: monitorInputLevel)
+    refreshMonitoringTarget()
+    if monitoringState.target == nil {
+      logger.warning("No input device available for monitoring")
+    }
+  }
 
-    let resolvedID = deviceUID.flatMap(AudioDeviceListing.resolveDeviceID(forUID:))
-    let systemDefaultID = AudioDeviceListing.defaultInputDeviceID()
+  private func refreshMonitoringTarget() {
+    guard monitoringState.isRequested else { return }
+    let resolvedID = monitoringState.requestedUID.flatMap(
+      AudioDeviceListing.resolveDeviceID(forUID:))
+    guard monitoringState.refresh(
+      resolvedID: resolvedID,
+      systemDefaultID: AudioDeviceListing.defaultInputDeviceID()
+    ) else { return }
 
-    if let uid = deviceUID, resolvedID == nil {
+    tearDownMonitoringTarget()
+    guard let target = monitoringState.target else { return }
+    if let uid = monitoringState.requestedUID, target.effectiveUID == nil {
       logger.warning(
         "Device UID '\(uid, privacy: .public)' not found, falling back to system default")
     }
-
-    guard
-      let target = AudioDeviceSelection.monitoringTarget(
-        requestedUID: deviceUID,
-        resolvedID: resolvedID,
-        systemDefaultID: systemDefaultID)
-    else {
-      logger.warning("No input device available for monitoring")
-      return
-    }
-
-    monitoringDeviceUID = target.effectiveUID
-    monitoredDeviceID = target.deviceID
     setupVolumeMonitoring(for: target.deviceID)
-    isMonitoring = true
-    if monitorInputLevel {
+    if monitoringState.isInputLevelEnabled {
       levelMonitor.start(deviceID: target.explicitDeviceID)
     }
   }
 
   public func setInputLevelMonitoring(_ enabled: Bool) {
-    isInputLevelMonitoringEnabled = enabled
+    monitoringState.isInputLevelEnabled = enabled
 
     guard isMonitoring else { return }
     if enabled {
-      levelMonitor.start(deviceID: monitoringDeviceUID == nil ? nil : monitoredDeviceID)
+      levelMonitor.start(deviceID: monitoringState.target?.explicitDeviceID)
     } else {
       levelMonitor.stop()
     }
   }
 
   public func stopMonitoring() {
+    monitoringState.stop()
+    tearDownMonitoringTarget()
+  }
+
+  private func tearDownMonitoringTarget() {
     levelMonitor.stop()
     removeVolumeListener()
-    monitoringDeviceUID = nil
-    monitoredDeviceID = kAudioObjectUnknown
-    isInputLevelMonitoringEnabled = false
     monitoredDeviceSupportsVolume = false
     inputVolume = 0
-    isMonitoring = false
   }
 
   public func setInputVolume(_ volume: Float) {
@@ -221,11 +223,7 @@ public final class AudioDeviceManager {
     )
     let block: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
       Task { @MainActor [weak self] in
-        guard let self, self.isMonitoring, self.monitoringDeviceUID == nil else { return }
-        self.startMonitoring(
-          deviceUID: nil,
-          monitorInputLevel: self.isInputLevelMonitoringEnabled
-        )
+        self?.refreshMonitoringTarget()
       }
     }
     defaultDeviceListenerBlock = block
