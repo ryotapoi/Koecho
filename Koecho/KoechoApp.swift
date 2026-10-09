@@ -26,13 +26,14 @@ struct KoechoApp: App {
   static func makeInitialAppState(
     isTesting: Bool = isTesting,
     normalDefaults: @autoclosure () -> UserDefaults = .standard,
-    testingSuiteName: String = "com.ryotapoi.Koecho.hosted-tests-\(UUID().uuidString)"
+    testingSuiteName: String? = nil
   ) -> AppState {
     let defaults: UserDefaults
     if isTesting {
       // Select the suite before Settings can read or normalize app preferences.
       // Never fall back to .standard if the isolated suite cannot be created.
-      defaults = UserDefaults(suiteName: testingSuiteName)!
+      defaults = testingSuiteName.map { UserDefaults(suiteName: $0)! }
+        ?? HostedTestDefaults.launch.defaults
     } else {
       defaults = normalDefaults()
     }

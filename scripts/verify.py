@@ -8,6 +8,7 @@ import re
 import signal
 import subprocess
 import time
+import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -27,7 +28,59 @@ def processes():
     return result
 
 
-def run_logged(command, evidence, timeout=600, owned_path=None):
+def cleanup_hosted_defaults(records, run_id=None, owned_path=None):
+    """Recover exact launch records only, after the recorded host has stopped."""
+    outcomes = []
+    for path in records:
+        outcome = {'record': str(path), 'success': False}
+        try:
+            record = json.loads(path.read_text())
+            launch = str(uuid.UUID(record['launchID'])).upper()
+            suite = 'com.ryotapoi.Koecho.hosted-tests-' + launch
+            if (record.get('version') != 1 or record['launchID'] != launch
+                    or path.stem != launch or record['suiteName'] != suite
+                    or not isinstance(record['pid'], int) or record['pid'] <= 0
+                    or not record.get('started') or not record.get('command')
+                    or (run_id is not None and record.get('runID') != run_id)
+                    or (owned_path is not None and str(owned_path) not in record['command'])):
+                raise ValueError('Ownership mismatch')
+            outcome['suite'] = suite
+            # Refuse even a reused PID; recovery never stops processes itself.
+            if record['pid'] in processes():
+                raise RuntimeError('Recorded host PID is still present; stop and verify it first')
+            def read_domain():
+                result = subprocess.run(['/usr/bin/defaults', 'read', suite],
+                                        capture_output=True, text=True, timeout=30)
+                if result.returncode == 0:
+                    return re.sub(r'\s', '', result.stdout) != '{}'
+                if result.returncode == 1 and ('does not exist' in result.stderr
+                        or f"Domain '{suite}' not found" in result.stderr):
+                    return False
+                raise RuntimeError('Cannot inspect domain: ' + result.stderr)
+            present = read_domain()
+            outcome['present_before'] = present
+            outcome['app_cleanup'] = record.get('appCleanup') is True
+            plist = Path.home() / 'Library/Preferences' / (suite + '.plist')
+            outcome['plist_before'] = plist.exists()
+            if present:
+                deleted = subprocess.run(['/usr/bin/defaults', 'delete', suite],
+                                         capture_output=True, text=True, timeout=30)
+                if deleted.returncode != 0:
+                    raise RuntimeError('Cannot delete domain: ' + deleted.stderr)
+            # Foundation can leave an empty plist that defaults delete refuses to remove.
+            if not read_domain() and plist.exists():
+                plist.unlink()
+            outcome['present_after'] = read_domain()
+            outcome['plist_remaining'] = plist.exists()
+            outcome['success'] = not (outcome['present_after'] or outcome['plist_remaining'])
+            outcome['recovered_by_helper'] = (present or outcome['plist_before']) and outcome['success']
+        except Exception as error:
+            outcome['error'] = str(error)
+        outcomes.append(outcome)
+    return {'success': bool(outcomes) and all(o['success'] for o in outcomes), 'domains': outcomes}
+
+
+def run_logged(command, evidence, timeout=600, owned_path=None, environment=None):
     """A unique output path and new process group identify this command's residue."""
     before = processes()
     if owned_path and any(str(owned_path) in p['command'] for p in before.values()):
@@ -37,7 +90,7 @@ def run_logged(command, evidence, timeout=600, owned_path=None):
     interrupted = False
     with (evidence / 'build.log').open('w') as log:
         child = subprocess.Popen(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
-                                 start_new_session=True)
+                                 start_new_session=True, env=environment)
         try:
             child.wait(timeout=timeout)
         except (subprocess.TimeoutExpired, KeyboardInterrupt) as error:
@@ -120,7 +173,8 @@ def app_list(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('action', choices=['build', 'app-tests', 'app-list', 'package-tests',
-                                         'package-list', 'results', 'log'])
+                                         'package-list', 'results', 'log', 'cleanup-hosted-defaults'])
+    parser.add_argument('--record', type=Path, action='append', default=[])
     parser.add_argument('--run')
     parser.add_argument('--only', action='append', default=[])
     parser.add_argument('--filter')
@@ -130,6 +184,12 @@ def main():
     parser.add_argument('--pattern', default=r'error:|warning:|failed|failure|timed out')
     parser.add_argument('--limit', type=int, default=30)
     ns = parser.parse_args()
+    if ns.action == 'cleanup-hosted-defaults':
+        if not ns.record:
+            parser.error('--record must explicitly name each launch ownership JSON')
+        result = cleanup_hosted_defaults(ns.record)
+        print(json.dumps(result, indent=2))
+        raise SystemExit(0 if result['success'] else 1)
     if ns.action == 'results':
         print(json.dumps(xcresult(ns.path, 'test-details' if ns.test_id else 'summary', ns.test_id), indent=2))
         return
@@ -179,7 +239,20 @@ def main():
                 command.extend(['-resultBundlePath', str(evidence / 'tests.xcresult'),
                                 '-test-timeouts-enabled', 'YES',
                                 '-default-test-execution-time-allowance', '60', 'test'])
-    result = run_logged(command, evidence, ns.timeout, scratch)
+    environment = None
+    if ns.action == 'app-tests':
+        ownership = evidence / 'hosted-defaults'
+        ownership.mkdir()
+        environment = dict(os.environ)
+        # xcodebuild forwards TEST_RUNNER_ variables to the actual test host without the prefix.
+        environment['TEST_RUNNER_KOECHO_HOSTED_DEFAULTS_DIRECTORY'] = str(ownership)
+        environment['TEST_RUNNER_KOECHO_HOSTED_DEFAULTS_RUN'] = ns.run
+    result = run_logged(command, evidence, ns.timeout, scratch, environment)
+    if ns.action == 'app-tests':
+        cleanup = cleanup_hosted_defaults(sorted(ownership.glob('*.json')), ns.run, scratch)
+        save(evidence / 'hosted-defaults-cleanup.json', cleanup)
+        result['hosted_defaults'] = cleanup
+        result['success'] = result['success'] and cleanup['success']
     try:
         if ns.action == 'app-list':
             tests = app_list(evidence / 'tests.json')

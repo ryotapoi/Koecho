@@ -7,6 +7,31 @@ import Testing
 
 @MainActor
 struct AppStartupSettingsTests {
+  @Test func ownedHostedDefaultsCleanupPreservesOtherSuitesAndOwnership() throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("koecho-owned-defaults-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let owner = try HostedTestDefaults(directory: directory, runID: "fixture-run")
+    let other = try HostedTestDefaults(directory: directory, runID: "other-run")
+    defer { try? owner.cleanup(); try? other.cleanup() }
+    owner.defaults.set("owned", forKey: "sentinel")
+    other.defaults.set("preserved", forKey: "sentinel")
+    let record = try JSONDecoder().decode(HostedTestDefaults.Record.self, from: Data(contentsOf: owner.recordURL))
+    #expect(record.suiteName == "com.ryotapoi.Koecho.hosted-tests-\(record.launchID)")
+    #expect(record.runID == "fixture-run")
+    #expect(record.pid == ProcessInfo.processInfo.processIdentifier)
+    #expect(!record.started.isEmpty && !record.command.isEmpty)
+    #expect(try owner.cleanup())
+    #expect(owner.defaults.persistentDomain(forName: record.suiteName)?.isEmpty != false)
+    let plist = FileManager.default.homeDirectoryForCurrentUser
+      .appendingPathComponent("Library/Preferences/\(record.suiteName).plist")
+    #expect(!FileManager.default.fileExists(atPath: plist.path))
+    #expect(other.defaults.string(forKey: "sentinel") == "preserved")
+    #expect(try owner.cleanup())
+    let completed = try JSONDecoder().decode(HostedTestDefaults.Record.self, from: Data(contentsOf: owner.recordURL))
+    #expect(completed.appCleanup)
+  }
+
   @Test func historyUsesRuntimeIdentityAndVerificationOperationsAreIsolated() throws {
     let support = FileManager.default.temporaryDirectory
       .appendingPathComponent("koecho-history-startup-\(UUID().uuidString)")

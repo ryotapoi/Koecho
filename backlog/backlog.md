@@ -223,13 +223,11 @@
 
 #### その他
 
-- [ ] hosted tests の UserDefaults domain を片付ける
+- [x] hosted tests の UserDefaults domain を片付ける
 
-  優先度・時期: hosted test の起動・隔離を次に扱う際に併せて対応する。通常版の設定隔離は F29 で対応済みであり、この残件だけを理由に開発・検証を止めない。
+  対応: 起動の launch UUID・exact suite・host identity を Settings 構築前に記録し、終了時の削除と停止後の明示回収を実装した。[回収手順](../docs/xcode.md#hosted-test-の設定回収) に従い、その起動の記録だけを使う。UUID prefix による一括削除はしない。
 
-  根拠: [`KoechoApp.makeInitialAppState`](../Koecho/KoechoApp.swift) は起動ごとの UUID suite を生成するが、run との所有記録と終了時の削除は実装されていない。2026-10-06 の実行時間帯に該当 plist が6件あったが、その時間帯の全ファイルが今回の run のものとは確定できず一括削除していない。
-
-  作業・完了条件: 起動が生成した domain を識別できるようにし、その domain だけを終了・後片付け時に削除する。通常版と別 run の設定を維持し、通常終了と中断後の回収で残存・削除対象を確認する。UUID の共通 prefix による一括削除はしない。F29 の隔離契約と [検証ルール](../docs/verification.md) を維持する。
+  確認: 通常 build、全 App tests（228 tests / 270 cases）、helper 回帰が成功。実 host と helper の強制終了後の回収・再回収、生存 host の拒否、通常相当・別 launch・所有記録なしの sentinel 保持を確認した。正常終了後に OS が再生成した空 plist は helper の回収として区別した。F29 の隔離契約を維持し、所有不明の過去 domain は削除していない。
 
 - [ ] D2 非ブロッキングの注意 UI を検討する
 

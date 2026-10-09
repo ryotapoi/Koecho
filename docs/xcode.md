@@ -43,6 +43,18 @@ scripts/verify.py log --path .tmp/verification/cli/app-all/build.log --pattern '
 
 log 出力は全一致件数・表示上限・全文 path を返す。上限を超えた失敗を消さない。run の残留がないことを `result.json` で確認してから、その run の scratch だけ削除し、証拠は保持する。helper の回帰確認は `python3 -B -m unittest discover -s scripts -p 'test_*.py' -v`。
 
+## hosted test の設定回収
+
+`app-tests` の所有記録は run evidence の `hosted-defaults/<launch UUID>.json`、回収結果は `hosted-defaults-cleanup.json` と `result.json` に保存する。App 終了処理で設定値を削除した `appCleanup` と helper が残存を回収した `recovered_by_helper` を区別する。OS が終了後に空 plist を再生成する場合も後者で回収する。helper を使わない正常終了では、空 plist が残った場合に同じ記録で明示回収する。記録・結果が空、所有不一致、生存 host、削除失敗は成功としない。記録は回収後も保持する。
+
+helper 自体の強制終了後は、記録の `pid`・`started`・`command` を `ps` と照合し、その run の host だけを停止してから、対象記録を明示指定する。回収コマンド自身は process を停止しない。正常回収済みの記録は再実行できる。失敗時は記録を削除せず、標準出力の結果を run evidence に保存する。
+
+```sh
+scripts/verify.py cleanup-hosted-defaults --record .tmp/verification/cli/<run>/hosted-defaults/<launch UUID>.json
+```
+
+通常の Xcode / `xcodebuild` 起動にも同じ終了処理を適用する。helper を使わない起動の所有記録は host の一時ディレクトリ内の `koecho-hosted-defaults/<launch UUID>.json` に残る。対象起動の identity を確認し、その exact 記録で同じ回収コマンドを使う。UUID prefix、時刻、所有記録のない plist を根拠に一括削除しない。
+
 ## 補助ツールと未実測の範囲
 
 Apple 文書検索は `DocumentationSearch`、snippet は `RunCodeSnippet`、Preview は `RenderPreview`、診断は `XcodeRefreshCodeIssuesInFile`。必要な場合に利用可能性を確かめる。schema の入口が存在することと実証済みであることを区別する。Preview の SPM 依存は事前 build を行い、返された画像を確認する。
