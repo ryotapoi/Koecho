@@ -1,5 +1,6 @@
 import AudioToolbox
 import CoreAudio
+import Foundation
 import KoechoCore
 import Observation
 import os
@@ -8,6 +9,13 @@ import os
 final class AudioInputLevelMonitor {
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "AudioInputLevelMonitor")
   @ObservationIgnored private let exclusiveAccess: AudioInputExclusiveAccess
+
+  @ObservationIgnored private var resumeID: UUID?
+  @ObservationIgnored private var activeID: UUID?
+  @ObservationIgnored private var requestedDeviceID: AudioDeviceID?
+  @ObservationIgnored private let audioInput: (
+    start: (AudioDeviceID?) -> Bool, stop: () -> Void
+  )?
 
   private(set) var inputLevel: Float = 0
 
@@ -20,8 +28,12 @@ final class AudioInputLevelMonitor {
   @ObservationIgnored private nonisolated(unsafe) var lastLevelUpdate: ContinuousClock.Instant =
     .now
 
-  init(exclusiveAccess: AudioInputExclusiveAccess = .shared) {
+  init(
+    exclusiveAccess: AudioInputExclusiveAccess = .shared,
+    audioInput: (start: (AudioDeviceID?) -> Bool, stop: () -> Void)? = nil
+  ) {
     self.exclusiveAccess = exclusiveAccess
+    self.audioInput = audioInput
   }
 
   nonisolated static func inputLevel(
@@ -55,16 +67,34 @@ final class AudioInputLevelMonitor {
   func start(deviceID: AudioDeviceID?) {
     stop()
 
+    requestedDeviceID = deviceID
+    resumeID = exclusiveAccess.resumeMonitoringOnRelease { [weak self] in
+      self?.resume()
+    }
+    resume()
+  }
+
+  private func resume() {
+    guard resumeID != nil, activeID == nil, !exclusiveAccess.isInUse else { return }
+    let started = audioInput.map { $0.start(requestedDeviceID) }
+      ?? startAudioInput(deviceID: requestedDeviceID)
+    guard started else { return }
+    activeID = exclusiveAccess.markAsActive { [weak self] in
+      self?.stopCapture()
+    }
+  }
+
+  private func startAudioInput(deviceID: AudioDeviceID?) -> Bool {
     guard !exclusiveAccess.isInUse else {
       logger.info("Audio input in use by another component, skipping level monitoring")
-      return
+      return false
     }
 
     let effectiveDeviceID =
       deviceID ?? AudioDeviceListing.defaultInputDeviceID() ?? kAudioObjectUnknown
     guard effectiveDeviceID != kAudioObjectUnknown else {
       logger.warning("No input device available for level monitoring")
-      return
+      return false
     }
 
     logger.info(
@@ -80,13 +110,13 @@ final class AudioInputLevelMonitor {
     )
     guard let component = AudioComponentFindNext(nil, &desc) else {
       logger.warning("AUHAL component not found")
-      return
+      return false
     }
 
     var unit: AudioComponentInstance?
     guard AudioComponentInstanceNew(component, &unit) == noErr, let unit else {
       logger.warning("Failed to create AUHAL instance")
-      return
+      return false
     }
 
     // On any failure below, dispose the unit and clean up buffers
@@ -114,7 +144,7 @@ final class AudioInputLevelMonitor {
       ) == noErr
     else {
       logger.warning("Failed to enable AUHAL input")
-      return
+      return false
     }
 
     var disableOutput: UInt32 = 0
@@ -126,7 +156,7 @@ final class AudioInputLevelMonitor {
       ) == noErr
     else {
       logger.warning("Failed to disable AUHAL output")
-      return
+      return false
     }
 
     // 3. Set the input device (after enabling IO, before AudioUnitInitialize)
@@ -139,7 +169,7 @@ final class AudioInputLevelMonitor {
       ) == noErr
     else {
       logger.warning("Failed to set AUHAL input device")
-      return
+      return false
     }
 
     // 4. Get device's native format (Input scope of Element 1)
@@ -153,7 +183,7 @@ final class AudioInputLevelMonitor {
       ) == noErr, deviceFormat.mChannelsPerFrame > 0
     else {
       logger.warning("Failed to get AUHAL device format or no channels")
-      return
+      return false
     }
 
     // 5. Set desired output format (Output scope of Element 1): non-interleaved Float32
@@ -176,7 +206,7 @@ final class AudioInputLevelMonitor {
       ) == noErr
     else {
       logger.warning("Failed to set AUHAL desired format")
-      return
+      return false
     }
 
     // 6. Allocate AudioBufferList (one buffer per channel, non-interleaved)
@@ -214,72 +244,56 @@ final class AudioInputLevelMonitor {
       ) == noErr
     else {
       logger.warning("Failed to set AUHAL input callback")
-      return
+      return false
     }
 
     // 8. Initialize and start
     guard AudioUnitInitialize(unit) == noErr else {
       logger.warning("Failed to initialize AUHAL")
-      return
+      return false
     }
     initialized = true
 
     guard AudioOutputUnitStart(unit) == noErr else {
       logger.warning("Failed to start AUHAL")
-      return
+      return false
     }
 
     // Success — transfer ownership
     monitoringAudioUnit = unit
-    exclusiveAccess.markAsActive { [weak self] in
-      self?.stop()
-    }
     logger.info("Level monitoring AUHAL started")
+    return true
   }
 
   func stop() {
-    guard let unit = monitoringAudioUnit else { return }
-    AudioOutputUnitStop(unit)
-    AudioUnitUninitialize(unit)
-    AudioComponentInstanceDispose(unit)
-    monitoringAudioUnit = nil
-    deallocateBufferList()
-    exclusiveAccess.clearActive()
-    inputLevel = 0
-    logger.info("Level monitoring AUHAL stopped")
+    if let resumeID { exclusiveAccess.cancelMonitoringResume(resumeID) }
+    resumeID = nil
+    requestedDeviceID = nil
+    stopCapture()
   }
 
-  deinit {
-    // deinit is nonisolated — call CoreAudio C API directly.
-    stopSync()
-  }
-
-  // MARK: - Private
-
-  private nonisolated func stopSync() {
-    let hadAudioUnit = monitoringAudioUnit != nil
-    if let unit = monitoringAudioUnit {
+  private func stopCapture() {
+    guard let activeID else { return }
+    if let audioInput {
+      audioInput.stop()
+    } else if let unit = monitoringAudioUnit {
       AudioOutputUnitStop(unit)
       AudioUnitUninitialize(unit)
       AudioComponentInstanceDispose(unit)
       monitoringAudioUnit = nil
+      deallocateBufferList()
     }
-    if let abl = monitoringBufferList {
-      for i in 0..<abl.count {
-        free(abl[i].mData)
-      }
-      abl.unsafeMutablePointer.deallocate()
-      monitoringBufferList = nil
-    }
-
-    // AudioInputExclusiveAccess is @MainActor so dispatch asynchronously.
-    if hadAudioUnit {
-      let exclusiveAccess = exclusiveAccess
-      Task { @MainActor in
-        exclusiveAccess.clearActive()
-      }
-    }
+    exclusiveAccess.clearActive(activeID)
+    self.activeID = nil
+    inputLevel = 0
+    logger.info("Level monitoring AUHAL stopped")
   }
+
+  isolated deinit {
+    stop()
+  }
+
+  // MARK: - Private
 
   private func deallocateBufferList() {
     guard let abl = monitoringBufferList else { return }

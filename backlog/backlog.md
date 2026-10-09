@@ -97,15 +97,21 @@
 
   証拠: 対象 hardware/OS・Xcode、実施者・日時、接続前後の選択・既定と AudioDeviceID（取得できる場合）、手順・通知/操作順序・観測結果、メーター応答と入力音量書込先、専用版 identity/doctor・可能な screenshot/log、cleanup 結果を専用検証 run に保存する。再現できなかった条件や非対応音量制御は個別に未確認と記録し、自動回帰の成功で hardware 検証を代替しない。
 
-- [ ] F10 認識終了後にメーターを再開する
+- [x] F10 認識終了後にメーターを再開する
 
-  目的・発生条件: Settings のマイク設定を開いたまま入力パネルで認識し、確定または Escape で閉じると、利用可能になったマイクのメーターが0のままになる。認識中に Settings を開いた場合も該当する。
+  目的・発生条件: Settings のマイク設定を認識前から表示する場合も認識中に表示する場合も、確定または Escape による認識終了後に、ページ再表示や選択変更なしでメーターを再開する。
 
-  根拠: `KM-03-C04`。`R05-C01`。[`AudioInputExclusiveAccess.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioInputExclusiveAccess.swift) の acquire は monitor を止めるが release は isInUse を戻すだけ。[`AudioInputLevelMonitor.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioInputLevelMonitor.swift) の開始は使用中 guard で返り、[`AudioDeviceManager.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioDeviceManager.swift) と [`VoiceInputSection.swift`](../Koecho/VoiceInputSection.swift) には release に応じた再開経路がない。
+  実装: `AudioInputLevelMonitor` は監視要求と capture を分け、認識 acquire は capture のみ停止する。release で最新の要求対象を再開し、`stop()`（Settings 閉鎖・Voice off・対象なし）と owner 終了で再開購読も破棄する。`AudioInputExclusiveAccess` は認識の占有と token 付き monitor 占有を分け、monitor cleanup は認識の占有を解除しない。
 
-  作業・完了条件: 認識終了後、ページ再表示や選択変更を行わずメーターが再開することを確認する。認識中の排他を維持し、Settings を先に開く場合と認識中に開く場合の双方を既存テストと実マイクで確認する。
+  検証: Platform の回帰テストで双方の開始順、繰り返す認識、stop 後の非再開と再有効化、保留中の対象変更・対象なし、owner 終了、古い cleanup の非干渉を確認する。Package 両 target 全333 tests、通常 build、App 全225 tests（266 cases）が成功（失敗・skip・timeout・残留なし）。証拠は `.tmp/verification/cli/f10-generator-{package-pass,build,app}/` と `.tmp/workflow/orchestrator-20261010-backlog/changes/F10/node-results/generator.json`。
 
-  限界: hardware 実測未確認。監視停止と再開契機の欠如を静的に確認した。
+  完了判断・限界: チェックは実装と自動検証の完了を示す。実マイクの AUHAL 再開、認識中の排他、確定 / Escape の操作は未実測。本人・hardware 依存の受入確認は明示承認に従い F10-V に分離した。
+
+- [ ] F10-V 認識終了後のメーター再開を実マイクで確認する
+
+  手順: verify-koecho の専用署名版で Voice on にし、① Settings のマイク設定を先に表示してから認識開始、② 認識を開始してから Settings のマイク設定を表示、の各順序で確定 / Escape の両方を確認する（2 × 2）。認識中はメーターが停止し、終了後はページ再表示・選択変更なしでメーターが動くことを実際に発声して確認する。同じ操作を繰り返す。認識中に Voice off または Settings を閉じた場合は終了後も計測が再開しないこと、再有効化・再表示で計測できることも確認する。
+
+  未実施理由・証拠: 本人の発声・権限判断と実マイクが必要であり、睡眠中の自動作業では確定できない。対象 hardware/OS・Xcode、実施者・日時、各順序・終了操作と観測結果、専用版 identity/doctor、可能な screenshot/log、cleanup 結果を専用検証 run に保存する。未確認条件を個別に残し、自動回帰を実マイク受入の代替にしない。
 
 - [ ] F17 言語切替中の取消を正しく扱う
 

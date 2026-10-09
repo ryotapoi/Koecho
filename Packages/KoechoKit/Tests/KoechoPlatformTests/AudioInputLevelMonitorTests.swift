@@ -5,6 +5,95 @@ import Testing
 
 @MainActor
 struct AudioInputLevelMonitorTests {
+  @Test(arguments: [false, true])
+  func recognitionReleaseResumesRequestedCapture(recognitionFirst: Bool) {
+    let access = AudioInputExclusiveAccess()
+    let capture = Capture()
+    let monitor = AudioInputLevelMonitor(
+      exclusiveAccess: access, audioInput: (capture.start, capture.stop))
+    if recognitionFirst { access.acquire() }
+    monitor.start(deviceID: 11)
+    if !recognitionFirst { access.acquire() }
+    #expect(capture.deviceID == nil)
+    #expect(access.isInUse)
+
+    access.release()
+    #expect(capture.deviceID == 11)
+    #expect(access.isInUse)
+    access.acquire()
+    #expect(capture.deviceID == nil)
+    access.release()
+    #expect(capture.deviceID == 11)
+    // A duplicate release must not clear the active monitor or restart its capture.
+    access.release()
+    #expect(capture.deviceID == 11)
+    monitor.stop()
+    #expect(!access.isInUse)
+  }
+
+  @Test func stoppedRequestDoesNotResumeButCanBeEnabledAgain() {
+    let access = AudioInputExclusiveAccess()
+    let capture = Capture()
+    let monitor = AudioInputLevelMonitor(
+      exclusiveAccess: access, audioInput: (capture.start, capture.stop))
+    monitor.start(deviceID: 11)
+    access.acquire()
+    // Used by both Settings disappearance and Voice off.
+    monitor.stop()
+    access.release()
+    #expect(capture.deviceID == nil)
+    #expect(!access.isInUse)
+    monitor.start(deviceID: 22)
+    #expect(capture.deviceID == 22)
+  }
+
+  @Test func pendingRequestUsesLatestTargetAndCanBeRemoved() {
+    let access = AudioInputExclusiveAccess()
+    let capture = Capture()
+    let monitor = AudioInputLevelMonitor(
+      exclusiveAccess: access, audioInput: (capture.start, capture.stop))
+    access.acquire()
+    monitor.start(deviceID: 11)
+    monitor.start(deviceID: 22)
+    #expect(capture.deviceID == nil)
+    #expect(access.isInUse)
+    access.release()
+    #expect(capture.deviceID == 22)
+    access.acquire()
+    // AudioDeviceManager tears down the request when no target remains.
+    monitor.stop()
+    access.release()
+    #expect(capture.deviceID == nil)
+  }
+
+  @Test(arguments: [false, true])
+  func ownerDestructionCancelsCaptureAndResume(recognitionActive: Bool) {
+    let access = AudioInputExclusiveAccess()
+    let capture = Capture()
+    var monitor: AudioInputLevelMonitor? = AudioInputLevelMonitor(
+      exclusiveAccess: access, audioInput: (capture.start, capture.stop))
+    monitor?.start(deviceID: 11)
+    if recognitionActive { access.acquire() }
+    monitor = nil
+    #expect(capture.deviceID == nil)
+    #expect(access.isInUse == recognitionActive)
+    access.release()
+    #expect(capture.deviceID == nil)
+    #expect(!access.isInUse)
+  }
+
+  @MainActor
+  private final class Capture {
+    var deviceID: AudioDeviceID?
+
+    func start(_ deviceID: AudioDeviceID?) -> Bool {
+      self.deviceID = deviceID
+      return true
+    }
+
+    func stop() { deviceID = nil }
+  }
+
   @Test func stopWithoutStartKeepsInputLevelZero() {
     let monitor = AudioInputLevelMonitor()
     monitor.stop()

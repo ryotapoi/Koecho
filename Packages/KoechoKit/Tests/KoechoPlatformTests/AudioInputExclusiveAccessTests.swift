@@ -29,13 +29,27 @@ struct AudioInputExclusiveAccessTests {
   @Test func clearActiveResetsState() {
     let access = AudioInputExclusiveAccess()
     var called = false
-    access.markAsActive { called = true }
+    let id = access.markAsActive { called = true }
     #expect(access.isInUse == true)
 
-    access.clearActive()
+    access.clearActive(id)
     #expect(access.isInUse == false)
     access.acquire()
     #expect(!called)
+  }
+
+  @Test func staleMonitorCleanupDoesNotReleaseRecognitionOrNewMonitor() {
+    let access = AudioInputExclusiveAccess()
+    let oldID = access.markAsActive {}
+    access.acquire()
+    access.clearActive(oldID)
+    #expect(access.isInUse)
+    access.release()
+    let newID = access.markAsActive {}
+    access.clearActive(oldID)
+    #expect(access.isInUse)
+    access.clearActive(newID)
+    #expect(!access.isInUse)
   }
 
   @Test func separateInstancesDoNotShareExclusiveAccessState() {

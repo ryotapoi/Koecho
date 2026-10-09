@@ -53,7 +53,7 @@ extension SpeechAnalyzerEngineTests {
     let delegate = PreparationDelegate()
     let access = AudioInputExclusiveAccess()
     var acquires = 0
-    access.markAsActive { acquires += 1 }
+    let monitorID = access.markAsActive { acquires += 1 }
     var permissionCalls = 0
     var modelCalls = 0
     var inputCalls = 0
@@ -123,7 +123,7 @@ extension SpeechAnalyzerEngineTests {
     #expect(engine.state == .idle)
     #expect(delegate.errors.isEmpty)
     #expect(acquires == 0)
-    access.clearActive()
+    access.clearActive(monitorID)
   }
 
   @Test func activePreparationStillReportsFormatFailure() async throws {
