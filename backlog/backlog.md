@@ -53,17 +53,13 @@
 
   完了判断・限界: F19 時点では F1 全体を未完了としていたが、今回指定された検証方針に従い、共通 ID ガード・代表回帰・既存実操作を十分な証拠として完了とする。prompt / Undo 個別の再表示競合、旧成功・旧失敗の全順序は個別実測していない。実操作は専用署名 fixture と safe fake paster の範囲であり、通常版の実ペースト等の保証ではない。今回は文書だけを更新し、追加テスト・build・実操作は行っていない。
 
-- [ ] F3 スクリプト待機中の音声入力を止める
+- [x] F3 スクリプト待機中の音声入力を止める
 
-  目的・発生条件: 音声入力を有効にしたまま追加入力なしの custom スクリプトを実行し、実行中に話し始めて成功時にも volatile text が残ると、加工結果が表示されず後続の音声確定で失われる。
+  完了内容: custom の実行開始時に本文・追加入力の未確定音声を取り込んで入力を固定し、停止待ちと実行待ちの音声入力を遮断する。追加入力の編集中は音声入力を許可する。手動成功・失敗後は本文と表示を同期し、同じ入力セッションが表示中かつ Voice 有効の場合だけ認識を再開する。成功時 Undo は固定した元本文へ戻る。auto-run の停止待ちも音声入力を遮断し、停止待ち・実行待ちの取消、再表示、Voice off で旧処理が本文や認識再開へ干渉しない。
 
-  根拠: `KM-02-C08` / `KM-04-C03`。`R03-C01`。[`ScriptExecutionService.swift`](../Koecho/ScriptExecutionService.swift) は開始時にだけ volatile を除去し、成功結果を AppState へ設定する。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) は実行中も音声プレビューを挿入し、[`VoiceInputTextEditor.swift`](../Koecho/VoiceInputTextEditor.swift) は volatileRange があると結果の表示同期を抑止する。その後の確定音声が古い表示本文を AppState へ書き戻す。
+  検証: [`ScriptExecutionServiceTests.swift`](../KoechoTests/ScriptExecutionServiceTests.swift) は制御した停止で本文・prompt の固定、成功・失敗と再開後の本文、Voice off、取消後の新セッション保護を確認する。[`InputPanelControllerScriptTests.swift`](../KoechoTests/InputPanelControllerScriptTests.swift) は実 TextView の加工結果が最初の再開音声で失われないこと、auto-run 停止待ちの取消→再表示で本文と貼付・履歴が守られること、既存 F1 の実 Process 競合を確認する。通常 build と全 App tests は成功（225 tests / 266 cases、失敗・skip・timeout・残留なし）。2026-10-09 の専用署名版で本人が手動成功・失敗の未確定音声取込み、待機中の発話遮断、完了後の音声再開、成功加工結果と失敗元本文の保持を確認した。証拠は `.tmp/workflow/f3-20261009/changes/F3/` の `node-results/generator.md` と `validation/human-voice.md`、`.tmp/verification/cli/f3-generator-{build,tests}-final/`。
 
-  対応方針: 実行前の追加入力中は音声入力を許可する。custom スクリプトの実行開始時に既存の未確定音声を本文へ取り込み、音声入力を停止して実行対象を固定する。実行待機中は既存のキーボード編集無効化と合わせて本文への入力を止め、加工結果と並行発話を合成する仕組みは作らない。
-
-  作業・完了条件: 手動実行の成功・失敗後は、同じ入力セッションが表示中かつ音声入力が有効な場合だけ認識を再開する。確定時 auto-run の待機中も新しい音声を受け付けない。音声停止待ち・実行待ち中の Escape、再表示、音声無効化で旧処理が本文を書き換えたり認識を再開したりしないことを F1 と整合させて確認する。既存テストと実音声・遅いスクリプトで結果保持と再開を確認する。
-
-  限界: 実画面未確認。成功後の SwiftUI 同期より先に finalize が来る場合もあり、全実行で必ず起きるとは判断していない。
+  完了判断・限界: 自動回帰と手動成功・失敗の実音声による結果保持・正常再開を核心の証拠として完了とする。auto-run、取消→再表示、待機中 Voice off の個別本人実操作は未確認であり、自動回帰で裏付けた。OS 初期起動中の全競合、全発話順序、通常版の実ペースト、再ビルド後の権限維持は保証しない。
 
 - [ ] F4 終了後のマイク起動を防ぐ
 

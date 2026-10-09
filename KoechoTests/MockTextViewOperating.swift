@@ -62,6 +62,7 @@ final class MockTextViewOperating: TextViewOperating {
   var finalizeVolatileTextCallCount = 0
   func finalizeVolatileText() {
     finalizeVolatileTextCallCount += 1
+    finalizedString = string
     volatileRange = nil
   }
 

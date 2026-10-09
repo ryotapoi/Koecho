@@ -197,6 +197,61 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "RECOVERY")
   }
 
+  @Test func autoRunStopCancellationProtectsRedisplayedPanel() async throws {
+    let engine = MockVoiceInputEngine()
+    let ctx = makeController(makeEngine: { engine })
+    let script = Script(name: "Upper", scriptPath: "tr a-z A-Z")
+    ctx.appState.settings.script.scripts = [script]
+    ctx.appState.settings.script.autoRunScriptId = script.id
+    ctx.controller.showPanel()
+    await Task.yield()
+    let view = try #require(findVoiceInputTextView(in: ctx.controller))
+    view.replaceText("original")
+    ctx.appState.setInputText("original")
+    let entered = AsyncStream<Void>.makeStream()
+    let release = AsyncStream<Void>.makeStream()
+    engine.onStop = {
+      entered.continuation.yield(())
+      for await _ in release.stream { break }
+    }
+    let task = Task { await ctx.controller.confirm() }
+    for await _ in entered.stream { break }
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: "ignored")
+    #expect(ctx.appState.inputText == "original")
+    ctx.controller.cancel()
+    ctx.controller.showPanel()
+    await Task.yield()
+    ctx.appState.setInputText("new")
+    view.replaceText("new")
+    release.continuation.yield(())
+    await task.value
+    #expect(view.string == "new")
+    #expect(ctx.appState.inputText == "new")
+    #expect(ctx.appState.isInputPanelVisible)
+    #expect(ctx.paster.pastedTexts.isEmpty)
+    #expect(ctx.historyStore.entries.isEmpty)
+  }
+
+  @Test func manualResultIsInRealEditorBeforeFirstResumedFinalization() async throws {
+    let ctx = makeController()
+    let key = ShortcutKey(modifiers: [.control], character: "s")
+    ctx.appState.settings.script.scripts = [Script(name: "Upper", scriptPath: "tr a-z A-Z", shortcutKey: key)]
+    ctx.controller.showPanel()
+    await Task.yield()
+    let view = try #require(findVoiceInputTextView(in: ctx.controller))
+    view.replaceText("original")
+    ctx.appState.setInputText("original")
+    ctx.controller.voiceCoordinator.moveVoiceInsertionPoint(toEndOf: "original")
+    ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: " draft")
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    await ctx.controller.shortcutScriptTask?.value
+    #expect(view.string == "ORIGINAL DRAFT")
+    #expect(ctx.appState.scriptUndoText == "original draft")
+    ctx.controller.voiceCoordinator.voiceInput(didFinalize: " new")
+    #expect(ctx.appState.inputText == "ORIGINAL DRAFT new")
+    #expect(view.string == ctx.appState.inputText)
+  }
+
   // MARK: - Script shortcuts
 
   @Test func cmdShiftShortcutExecutesScript() async throws {

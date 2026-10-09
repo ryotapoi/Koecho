@@ -20,6 +20,32 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   private static let replaySuppressionDuration: TimeInterval = 2.0
   private var transcriberAlreadyRestarted = false
   private(set) var isStoppingEngine = false
+  private var lifecycleID = UUID()
+  private var inputSuspensionID: UUID?
+
+  private var isInputSuspended: Bool { inputSuspensionID != nil }
+
+  func suspendInput() -> UUID {
+    let id = UUID()
+    inputSuspensionID = id
+    lifecycleID = UUID()
+    restartTranscriberTask?.cancel()
+    finalizeRemainingVolatile()
+    return id
+  }
+
+  func finishSuspension(_ id: UUID, resume: Bool) {
+    guard inputSuspensionID == id else { return }
+    inputSuspensionID = nil
+    isStoppingEngine = false
+    currentVoiceTarget = .textEditor
+    clearReplayState()
+    accumulatedFinalizedText = ""
+    moveVoiceInsertionPoint(toEndOf: appState.inputText)
+    if resume, appState.isInputPanelVisible, appState.settings.voiceInput.isVoiceInputEnabled {
+      startEngine()
+    }
+  }
   private(set) var restartTranscriberTask: Task<Void, Never>?
 
   var onReplacementInput: (() -> Void)?
@@ -81,21 +107,29 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   // MARK: - Engine lifecycle
 
   func startEngine() {
+    guard !isInputSuspended, appState.settings.voiceInput.isVoiceInputEnabled else { return }
     engine.start()
   }
 
   func stopEngine() async {
+    let id = lifecycleID
     isStoppingEngine = true
     await engine.stop()
+    guard lifecycleID == id else { return }
     isStoppingEngine = false
   }
 
   func cancelEngine() {
+    engine.delegate = nil
     engine.cancel()
   }
 
   func switchEngine() async {
+    guard !isInputSuspended else { return }
+    let id = lifecycleID
     await engine.stop()
+    guard lifecycleID == id, !isInputSuspended, appState.isInputPanelVisible,
+      appState.settings.voiceInput.isVoiceInputEnabled else { return }
     textView?.clearVolatileText()
     if let textView {
       appState.setInputText(textView.finalizedString)
@@ -110,7 +144,10 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   func disableEngine() async {
+    lifecycleID = UUID()
+    let id = lifecycleID
     await engine.stop()
+    guard lifecycleID == id, !isInputSuspended, appState.isInputPanelVisible else { return }
     textView?.clearVolatileText()
     if let textView {
       appState.setInputText(textView.finalizedString)
@@ -121,6 +158,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   func prepareForShow() {
+    resetState()
     regenerateEngine()
     resetShowState()
   }
@@ -170,6 +208,10 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   func resetState() {
+    lifecycleID = UUID()
+    inputSuspensionID = nil
+    isStoppingEngine = false
+    restartTranscriberTask?.cancel()
     clearReplayState()
     accumulatedFinalizedText = ""
   }
@@ -208,7 +250,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   // MARK: - VoiceInputDelegate
 
   func voiceInput(didFinalize text: String) {
-    guard appState.isInputPanelVisible else { return }
+    guard appState.isInputPanelVisible, !isInputSuspended else { return }
 
     switch currentVoiceTarget {
     case .prompt:
@@ -253,7 +295,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   func voiceInput(didUpdateVolatile text: String) {
-    guard appState.isInputPanelVisible else { return }
+    guard appState.isInputPanelVisible, !isInputSuspended else { return }
 
     switch replayState {
     case .idle:
@@ -330,6 +372,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   // MARK: - Private helpers
 
   private func regenerateEngine() {
+    engine.delegate = nil
     engine = makeEngine()
     engine.delegate = self
   }
@@ -340,14 +383,16 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   private func restartTranscriberIfNeeded() {
-    guard !transcriberAlreadyRestarted,
+    guard !isInputSuspended, !transcriberAlreadyRestarted,
       let restartableEngine = engine as? any TranscriberRestartable
     else { return }
+    let id = lifecycleID
     let shouldSuppressReplay = replayState != .idle
     // Set synchronously to prevent duplicate Task creation from handleCursorMoved + handleTextChanged
     transcriberAlreadyRestarted = true
     restartTranscriberTask = Task { @MainActor in
       let didRestart = await restartableEngine.restartTranscriber()
+      guard self.lifecycleID == id, !Task.isCancelled else { return }
       if didRestart {
         if shouldSuppressReplay {
           self.replayState.beginSuppression(

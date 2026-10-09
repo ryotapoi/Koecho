@@ -6,7 +6,7 @@ import KoechoPlatform
 final class ScriptExecutionService {
   var textView: (any TextViewOperating)?
 
-  private var activeExecution: (id: UUID, task: Task<ScriptRunnerResult, any Error>)?
+  private var activeExecution: (id: UUID, task: Task<ScriptRunnerResult, any Error>?)?
 
   private let appState: AppState
   private let makeScriptRunner: () -> ScriptRunner
@@ -43,40 +43,40 @@ final class ScriptExecutionService {
       return
     }
 
-    textView?.clearVolatileText()
-    if let textView {
-      let tvString = textView.finalizedString
-      if !tvString.isEmpty {
-        appState.setInputText(tvString)
-      }
+    let id = UUID()
+    activeExecution = (id, nil)
+    appState.isRunningScript = true
+    let suspensionID = voiceCoordinator.suspendInput()
+    if let textView, !textView.finalizedString.isEmpty {
+      appState.setInputText(textView.finalizedString)
     }
-
     let originalText = appState.inputText
-    let execution = startExecution(
-      script, input: appState.inputText,
-      context: makeScriptContext(prompt: appState.promptText + appState.volatilePromptText)
-    )
+    let context = makeScriptContext(prompt: appState.promptText + appState.volatilePromptText)
+    appState.errorMessage = nil
     defer {
-      if activeExecution?.id == execution.id {
+      if activeExecution?.id == id {
         activeExecution = nil
         appState.isRunningScript = false
         appState.promptScript = nil
         appState.promptText = ""
         appState.volatilePromptText = ""
+        voiceCoordinator.finishSuspension(suspensionID, resume: true)
       }
     }
 
-    appState.errorMessage = nil
-
+    await voiceCoordinator.stopEngine()
+    guard activeExecution?.id == id, appState.isInputPanelVisible else { return }
+    let execution = startExecution(script, input: originalText, context: context, id: id)
     do {
       let result = try await execution.task.value
-      guard activeExecution?.id == execution.id, appState.isInputPanelVisible else { return }
+      guard activeExecution?.id == id, appState.isInputPanelVisible else { return }
       appState.setInputText(result.output)
-      voiceCoordinator.moveVoiceInsertionPoint(toEndOf: result.output)
+      textView?.replaceText(result.output)
       appState.offerScriptUndo(restoring: originalText)
     } catch {
-      guard activeExecution?.id == execution.id, appState.isInputPanelVisible else { return }
+      guard activeExecution?.id == id, appState.isInputPanelVisible else { return }
       appState.setInputText(originalText)
+      textView?.replaceText(originalText)
       appState.errorMessage = scriptErrorMessage(for: error, script: script)
     }
   }
@@ -132,16 +132,16 @@ final class ScriptExecutionService {
   }
 
   func cancelExecution() {
-    activeExecution?.task.cancel()
+    activeExecution?.task?.cancel()
     activeExecution = nil
     appState.isRunningScript = false
   }
 
   private func startExecution(
-    _ script: Script, input: String, context: ScriptRunnerContext
+    _ script: Script, input: String, context: ScriptRunnerContext, id: UUID = UUID()
   ) -> (id: UUID, task: Task<ScriptRunnerResult, any Error>) {
     let runner = makeScriptRunner()
-    let execution = (id: UUID(), task: Task {
+    let execution = (id: id, task: Task {
       try await runner.run(scriptPath: script.scriptPath, input: input, context: context)
     })
     activeExecution = execution

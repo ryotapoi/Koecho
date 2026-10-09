@@ -131,7 +131,21 @@ final class InputPanelController {
     }
     appState.discardScriptUndo()
 
-    let rawText = await finalizeVoiceInput()
+    let suspensionID: UUID?
+    if appState.settings.script.autoRunScript != nil {
+      textView?.commitMarkedTextIfNeeded()
+      suspensionID = voiceCoordinator.suspendInput()
+      appState.isRunningScript = true
+    } else {
+      suspensionID = nil
+    }
+    defer {
+      if processingConfirmationID == confirmationID {
+        appState.isRunningScript = false
+        if let suspensionID { voiceCoordinator.finishSuspension(suspensionID, resume: false) }
+      }
+    }
+    guard let rawText = await finalizeVoiceInput(confirmationID: confirmationID) else { return }
     let replacedText = appState.settings.replacement.isAutoReplacementEnabled
       ? replacementService.applyRules(to: rawText) : rawText
     let text = replacedText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -140,17 +154,19 @@ final class InputPanelController {
       return
     }
 
-    guard let preparedText = await applyAutoRunScript(to: text) else { return }
+    guard let preparedText = await applyAutoRunScript(to: text, confirmationID: confirmationID) else { return }
+    guard processingConfirmationID == confirmationID else { return }
     await pasteAndRecord(preparedText)
   }
 
   /// Confirm phase 1: stop voice input and collect the finalized text,
   /// clearing the text view.
-  private func finalizeVoiceInput() async -> String {
+  private func finalizeVoiceInput(confirmationID: UUID) async -> String? {
     // Commit IME text before stopping voice input so finalization cannot discard it.
     textView?.commitMarkedTextIfNeeded()
     replacementService.clearPreviews()
     await voiceCoordinator.stopEngine()
+    guard processingConfirmationID == confirmationID, appState.isInputPanelVisible else { return nil }
     voiceCoordinator.finalizeRemainingVolatile()
 
     let rawText: String
@@ -182,7 +198,7 @@ final class InputPanelController {
   /// Confirm phase 3: run the configured auto-run script on `text`.
   /// Returns the text to paste, or nil when the confirm was cancelled
   /// mid-flight or the script failed (the error is surfaced here).
-  private func applyAutoRunScript(to text: String) async -> String? {
+  private func applyAutoRunScript(to text: String, confirmationID: UUID) async -> String? {
     guard let autoScript = appState.settings.script.autoRunScript else { return text }
     guard appState.isInputPanelVisible else { return nil }
 
@@ -191,12 +207,12 @@ final class InputPanelController {
 
     do {
       let transformed = try await scriptService.runAutoScript(autoScript, on: text)
-      guard appState.isInputPanelVisible else { return nil }
+      guard appState.isInputPanelVisible, processingConfirmationID == confirmationID else { return nil }
       return transformed
     } catch is CancellationError {
       return nil
     } catch {
-      guard appState.isInputPanelVisible else { return nil }
+      guard appState.isInputPanelVisible, processingConfirmationID == confirmationID else { return nil }
       appState.setInputText(text)
       textView?.replaceText(text)
       appState.errorMessage = scriptService.scriptErrorMessage(for: error, script: autoScript)
@@ -267,7 +283,7 @@ final class InputPanelController {
       return
     }
 
-    if appState.isRunningScript { processingConfirmationID = nil }
+    processingConfirmationID = nil
     scriptService.cancelExecution()
     voiceCoordinator.cancelEngine()
     paster.restoreClipboard()
@@ -289,8 +305,8 @@ final class InputPanelController {
       appState.settings.voiceInput.isVoiceInputEnabled = true
       await voiceCoordinator.switchEngine()
     } else {
-      await voiceCoordinator.disableEngine()
       appState.settings.voiceInput.isVoiceInputEnabled = false
+      await voiceCoordinator.disableEngine()
     }
   }
 

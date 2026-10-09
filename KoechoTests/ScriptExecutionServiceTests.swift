@@ -46,6 +46,92 @@ import Testing
     #expect(!state.isRunningScript)
   }
 
+  @Test(arguments: [false, true])
+  func customFreezesVolatileAndPromptBeforeStopAndResumesAfterResult(fails: Bool) async {
+    let engine = MockVoiceInputEngine()
+    let (service, state, view, voice) = makeService(inputText: "old", makeEngine: { engine })
+    view.string = "old draft"
+    view.volatileRange = NSRange(location: 3, length: 6)
+    let script = Script(name: "Prompt", scriptPath: fails ? "exit 1" : "cat; printf '|%s' \"$KOECHO_PROMPT\"", requiresPrompt: true)
+    await service.execute(script)
+    voice.currentVoiceTarget = .prompt
+    voice.voiceInput(didFinalize: "make ")
+    voice.voiceInput(didUpdateVolatile: "short")
+    let entered = AsyncStream<Void>.makeStream()
+    let release = AsyncStream<Void>.makeStream()
+    engine.onStop = {
+      entered.continuation.yield(())
+      for await _ in release.stream { break }
+    }
+    let task = Task { await service.execute(script) }
+    for await _ in entered.stream { break }
+    #expect(state.isRunningScript)
+    voice.voiceInput(didUpdateVolatile: "ignored")
+    voice.voiceInput(didFinalize: "ignored")
+    #expect(state.promptText == "make ")
+    #expect(state.volatilePromptText == "short")
+    voice.currentVoiceTarget = .textEditor
+    voice.voiceInput(didFinalize: "ignored")
+    #expect(state.inputText == "old draft")
+    release.continuation.yield(())
+    await task.value
+    let expected = fails ? "old draft" : "old draft|make short"
+    #expect(state.inputText == expected)
+    #expect(view.string == expected)
+    #expect(state.scriptUndoText == (fails ? nil : "old draft"))
+    #expect(engine.state == .listening)
+    voice.voiceInput(didFinalize: " new")
+    #expect(state.inputText == expected + " new")
+  }
+
+  @Test func disablingVoiceDuringStopKeepsScriptResultWithoutRestart() async {
+    let engine = MockVoiceInputEngine()
+    let (service, state, view, voice) = makeService(inputText: "original", makeEngine: { engine })
+    let entered = AsyncStream<Void>.makeStream()
+    let release = AsyncStream<Void>.makeStream()
+    engine.onStop = {
+      guard engine.stopCallCount == 1 else { return }
+      entered.continuation.yield(())
+      for await _ in release.stream { break }
+    }
+    let task = Task { await service.execute(Script(name: "Upper", scriptPath: "tr a-z A-Z")) }
+    for await _ in entered.stream { break }
+    state.settings.voiceInput.isVoiceInputEnabled = false
+    await voice.disableEngine()
+    release.continuation.yield(())
+    await task.value
+    #expect(state.inputText == "ORIGINAL")
+    #expect(view.string == "ORIGINAL")
+    #expect(state.scriptUndoText == "original")
+    #expect(engine.startCallCount == 0)
+  }
+
+  @Test func cancellationDuringStopCannotStartRunnerOrChangeNextSession() async {
+    let engine = MockVoiceInputEngine()
+    let (service, state, view, voice) = makeService(inputText: "old", makeEngine: { engine })
+    let entered = AsyncStream<Void>.makeStream()
+    let release = AsyncStream<Void>.makeStream()
+    engine.onStop = {
+      entered.continuation.yield(())
+      for await _ in release.stream { break }
+    }
+    let task = Task { await service.execute(Script(name: "Old", scriptPath: "echo stale")) }
+    for await _ in entered.stream { break }
+    service.cancelExecution()
+    voice.resetState()
+    state.setInputText("new")
+    view.replaceText("new")
+    state.promptText = "new prompt"
+    state.offerScriptUndo(restoring: "new undo")
+    release.continuation.yield(())
+    await task.value
+    #expect(state.inputText == "new")
+    #expect(state.promptText == "new prompt")
+    #expect(state.scriptUndoText == "new undo")
+    #expect(!state.isRunningScript)
+    #expect(engine.startCallCount == 0)
+  }
+
   // MARK: - Prompt flow
 
   @Test func executeWithPromptSetsPromptScript() async {
