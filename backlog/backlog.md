@@ -41,13 +41,13 @@
 
 [不具合修正・検証](v2.0.0-bugfixes.md)
 
-- [ ] F4-V 開始準備中の終了と次回開始を実マイクで確認する
+- [x] F4-V 開始準備中の終了と次回開始を実マイクで確認する
 
-  対象・前提: macOS 27.0+、マイクと対象言語モデルが使える環境の専用署名 Koecho Verification（`com.ryotapoi.Koecho.Verification`）。[verify-koecho](../.agents/skills/verify-koecho/SKILL.md) に従い固定 path/署名を確認し、通常版の権限・履歴・入力を変更しない。スキルの実画面自動操作は blocked であり、許可判断と発話は本人が行う。
+  完了: 2026-10-10、専用署名 Koecho Verification（`com.ryotapoi.Koecho.Verification`）を macOS 27.0.1 / Xcode 27.1 で準備し、本人が内蔵マイク・日本語で手動操作した。通常確定、Escape と次回開始、Voice off/on の手順を案内し、本人の「特に問題が見つけられなかったとして完了でいい」という判断に基づき完了した。
 
-  手順・完了条件: マイク許可待ち、モデル準備待ち、再現可能な format 決定待ちでパネルを開き、各待機中に Escape、確定、Voice off を行う。OS の待機を成功/拒否/失敗で復帰させ、従来の開始待ち timeout（1秒）より遅い復帰でも、マイク使用表示と認識が終了状態を保ち、遅い status/error が次のパネルへ出ないことを確認する。次のパネルを開いて Voice on で発話し正常認識を確認し、通常確定で末尾の最終結果が回収され、Escape では破棄されること、必要な transcriber 再開が動くことも確認する。各終了操作後のマイク表示・認識停止・次回正常開始と、再現できなかった待機条件を個別記録する。
+  検証限界: 本人報告では目立つ開始待ちがなく、許可・モデル・format の開始待機 × Escape / 確定 / Voice off の9条件と1秒超の復帰は未再現。OS 復帰の成功・拒否・失敗、録音終了時間、旧 status/error の非漏出、末尾最終結果回収、必要な transcriber 再開を個別に実証したものではない。
 
-  証拠: OS/Xcode・入力デバイス・言語・許可/モデル状態、実施者・日時、操作と復帰の順序、マイク表示/認識本文の観測、待機と録音終了の所要時間、専用版 doctor/log/可能な screenshot、cleanup 結果を専用検証 run に保存する。build や自動回帰の成功だけで hardware 検証済みとしない。
+  証拠: 専用 run `20261010-f4-v-r2`（`.tmp/verification/verify-koecho/20261010-f4-v-r2/`）に署名 build、doctor、所有 PID 限定ログ、本人報告、cleanup を保存した。[verify-koecho](../.agents/skills/verify-koecho/SKILL.md) の cleanup で所有 PID 23476 を停止し固定 build を除去、証拠・設定・TCC を保持した。通常版の終了は本人が行った。
 
 - [ ] F9-V 再接続後の選択表示・メーター・入力音量を実マイクで確認する
 
