@@ -49,14 +49,6 @@
 
   証拠: 専用 run `20261010-f4-v-r2`（`.tmp/verification/verify-koecho/20261010-f4-v-r2/`）に署名 build、doctor、所有 PID 限定ログ、本人報告、cleanup を保存した。[verify-koecho](../.agents/skills/verify-koecho/SKILL.md) の cleanup で所有 PID 23476 を停止し固定 build を除去、証拠・設定・TCC を保持した。通常版の終了は本人が行った。
 
-- [ ] F9-V 再接続後の選択表示・メーター・入力音量を実マイクで確認する
-
-  対象・前提: macOS 27.0+、保存済み外部マイクと別の system default が使える環境の専用署名 Koecho Verification（`com.ryotapoi.Koecho.Verification`）。[verify-koecho](../.agents/skills/verify-koecho/SKILL.md) の固定 path/署名・doctor・cleanup に従う。実画面自動操作は blocked であり、本人が必要な許可判断と物理抜き差しを行う。音量書込の確認には入力音量制御に対応する外部マイクを使い、非対応ならその範囲を未確認とする。
-
-  手順・完了条件: 外部マイクを選択・保存して切断し、別の既定マイクが一定のまま Settings を開く。同じ画面を開いたまま再接続し、Picker が外部マイクを示すこと、外部マイクへの発話にメーターが応答すること、slider 操作が外部マイクの入力音量へ書き込まれることを OS の音量表示でも確認する。再切断で既定へ戻り、再接続で再び選択対象へ戻ることも確認する。Voice off では音量対象だけ追随してメーターを開始せず、Settings を閉じた後の通知で監視が再開しないことを確認する。不在中の default 変更後の再接続、default 選択時の追随と接続済み明示選択の維持も確認する。
-
-  証拠: 対象 hardware/OS・Xcode、実施者・日時、接続前後の選択・既定と AudioDeviceID（取得できる場合）、手順・通知/操作順序・観測結果、メーター応答と入力音量書込先、専用版 identity/doctor・可能な screenshot/log、cleanup 結果を専用検証 run に保存する。再現できなかった条件や非対応音量制御は個別に未確認と記録し、自動回帰の成功で hardware 検証を代替しない。
-
 - [ ] F10-V 認識終了後のメーター再開を実マイクで確認する
 
   手順: verify-koecho の専用署名版で Voice on にし、① Settings のマイク設定を先に表示してから認識開始、② 認識を開始してから Settings のマイク設定を表示、の各順序で確定 / Escape の両方を確認する（2 × 2）。認識中はメーターが停止し、終了後はページ再表示・選択変更なしでメーターが動くことを実際に発声して確認する。同じ操作を繰り返す。認識中に Voice off または Settings を閉じた場合は終了後も計測が再開しないこと、再有効化・再表示で計測できることも確認する。
