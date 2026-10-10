@@ -85,11 +85,13 @@
 
   検証: 通常の大きい UTF-8 本文の完全一致、stdin 早期閉鎖時の成功・nonzero / stderr・empty output、送信中の取消と owned process 停止、送信中の timeout、既存 race / EOF 回帰を実 Runner で確認した。Package 337件、通常 build、専用署名 build が成功（失敗・未完了・timeout・残留 process なし）。証拠は `.tmp/workflow/orchestrator-20261010-backlog/changes/T05/evidence/`、`.tmp/verification/cli/t05-package-02/` と `t05-build-01/`。専用版は起動・doctor・cleanup のみ確認し、CUA が `timeoutReached` で実画面操作は未確認。本人確認を次項へ分離した。
 
-- [ ] ScriptRunner の stdin 修正を専用検証版の実画面で確認する
+- [x] ScriptRunner の stdin 修正を専用検証版の実画面で確認する
 
-  残る確認: T05 の実 Runner 回帰と build は成功したが、専用版の CUA 選択が `timeoutReached` となり、Custom Script とパネル取消の実操作は未確認。プロセス起動を実画面成功として扱わない。証拠: `.tmp/verification/verify-koecho/t05-script-ui-01/`（所有 process は cleanup 済み）。
+  起票時の未確認: T05 の実 Runner 回帰と build は成功したが、専用版の CUA 選択が `timeoutReached` となり、Custom Script とパネル取消の実操作は未確認だった。プロセス起動を実画面成功として扱わない。証拠: `.tmp/verification/verify-koecho/t05-script-ui-01/`（所有 process は cleanup 済み）。
 
   手順・完了条件: [verify-koecho](../.agents/skills/verify-koecho/SKILL.md) の未使用 run で専用版を prepare → build → launch（voice off）→ doctor し、本人が Settings → Scripts に一時的な Custom Script を登録する。通常の `tr a-z A-Z` で `original` → `ORIGINAL` を確認する。容量超の disposable 本文（例: 100万文字）をパネルに貼り、`exec 0<&-; printf done` が `done` を返して app が生存すること、`exec 0<&-; printf diagnostic >&2; exit 2` がエラーを表示して app と本文を保つことを確認する。`while :; do :; done` 実行中に Escape でパネルを取消し、app の生存・再表示・通常 script の再実行を確認する。実施者・日時・入力サイズ・操作・結果・署名 / PID・必要な権限と再許可有無を保存し、一時 script を削除して所有 run を cleanup する。通常版・通常履歴・TCC を自動変更しない。
+
+  結果（2026-10-10）: 本人操作で通常の uppercase 変換、100万文字を使った stdin 早期閉鎖時の `done` 反映と app 生存、nonzero 終了時のエラー表示・本文保持・app 生存、実行中 Escape 取消後の再表示と通常 script 再実行を確認した。権限の再許可なし。一時 script 削除は本人報告、所有 PID 75807 の生存・専用署名は doctor で確認し、cleanup で停止した。専用 build 成功、timeout・残留 process なし。証拠: `.tmp/verification/verify-koecho/t05-user-ui-20261010-01/`（`manual-results.md`、`session.json`、build / identity 記録）。画面の直接観測と権限項目ごとの設定状態・再ビルド後の権限維持は未確認。
 
 - [ ] 置換ルールの日本語変換入力不能を調べる
 
