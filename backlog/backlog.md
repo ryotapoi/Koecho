@@ -41,32 +41,6 @@
 
 [不具合修正・検証](v2.0.0-bugfixes.md)
 
-- [x] F4-V 開始準備中の終了と次回開始を実マイクで確認する
-
-  完了: 2026-10-10、専用署名 Koecho Verification（`com.ryotapoi.Koecho.Verification`）を macOS 27.0.1 / Xcode 27.1 で準備し、本人が内蔵マイク・日本語で手動操作した。通常確定、Escape と次回開始、Voice off/on の手順を案内し、本人の「特に問題が見つけられなかったとして完了でいい」という判断に基づき完了した。
-
-  検証限界: 本人報告では目立つ開始待ちがなく、許可・モデル・format の開始待機 × Escape / 確定 / Voice off の9条件と1秒超の復帰は未再現。OS 復帰の成功・拒否・失敗、録音終了時間、旧 status/error の非漏出、末尾最終結果回収、必要な transcriber 再開を個別に実証したものではない。
-
-  証拠: 専用 run `20261010-f4-v-r2`（`.tmp/verification/verify-koecho/20261010-f4-v-r2/`）に署名 build、doctor、所有 PID 限定ログ、本人報告、cleanup を保存した。[verify-koecho](../.agents/skills/verify-koecho/SKILL.md) の cleanup で所有 PID 23476 を停止し固定 build を除去、証拠・設定・TCC を保持した。通常版の終了は本人が行った。
-
-- [x] F10-V 認識終了後のメーター再開を実マイクで確認する
-
-  完了: 本人が通常版で認識終了後に Settings の音量メーターが再開することを確認し、「F10-V確認した、動いたのでOK」と受け入れた。
-
-  検証限界: 操作順序・終了操作別の網羅確認や、Voice off・Settings を閉じた場合の結果は本人報告に含まれていない。
-
-- [x] F17 言語切替中の取消を正しく扱う
-
-  目的・発生条件: 音声入力中にメニューバーの言語を変更し、旧 engine.stop の await 中に Escape する。旧切替の遅い復帰で非表示のマイクが起動しないことを確認する。F4 の engine 内開始待ちとは別の、coordinator の停止→再生成経路を対象とする。
-
-  現在の対策: [`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) の switchEngine は stop 後に lifecycleID・入力 suspension・visibility・音声入力設定を確認する。[`InputPanelController.swift`](../Koecho/InputPanelController.swift) の Escape は cancel と resetState によって旧 lifecycle を失効させ、次回表示も新 lifecycle に切り替える。
-
-  自動確認: [`InputPanelControllerTests.swift`](../KoechoTests/InputPanelControllerTests.swift) で stop 到達と復帰を明示的に制御し、Escape 後の engine 非生成・非開始と非表示維持、旧 stop 復帰前に再表示した次セッションの engine・本文・選択位置・未確定本文の保持と認識継続、通常切替と次回表示で選択言語の engine が開始することを検証済み。全 App tests 227 件が成功し、失敗・skip・timeout・残留 process はない。
-
-  完了: 本人が通常版で音声入力し、メニューから準備済みの別言語へ切替→直後に Escape→待ってマイクが再起動しないことを確認→再表示して選択言語で認識、の手順を実施し、「問題なし、完了にしてコミットしよう」と受け入れた。
-
-  検証限界: 旧 engine.stop の await 中に Escape が入る競合を実環境で再現したかは未確認。具体的な待機時間・hardware・権限状態は本人報告に含まれていない。
-
 #### 調査・対応判断
 
 発生条件・実環境での影響・対応要否を確認してから、修正・仕様整理・見送りを判断する。改修は確約しない。実害・頻度と、調査・実装・維持のコストを比べて採否を決める。対象を絞った確認で未再現なら、その条件と限界を記録して見送りを判断できる。再現だけのための新しい基盤や網羅的な調査は要求しない。
