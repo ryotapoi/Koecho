@@ -79,7 +79,7 @@
 
   結果（2026-10-10）: 本人が現在の環境では日本語変換入力が正常に動作し、再現しないと確認したため、修正を見送り調査を完了した。以前試した開発中の版に起因した可能性は本人の推測であり、原因は未特定。今回の確認対象の版・欄・具体的な変換操作とルール保存の確認有無は未記録。
 
-- [ ] 貼り付け後に残る IME 変換候補と旧本文の復活を修正する
+- [x] 貼り付け後に残る IME 変換候補と旧本文の復活を修正する
 
   対応判断: 貼り付け本文は正常だが、再表示後に残る候補を Enter で確定すると旧本文が復活するため、修正対象とする。入力不能やデータ消失は観測しておらず、それらを前提に対応を広げない。
 
@@ -87,13 +87,13 @@
 
   本人確認（2026-10-10）: 未確定の「こんにちは」は正常に貼り付けられ、再表示直後の本文は空だが古い候補が残る。候補だけが表示された状態で Enter を押すと本文に「こんにちは」が入り、その後も入力できる。Fn と Confirm ボタンのどちらでも候補が残る。確認対象のアプリ版・macOS 版・入力ソース・音声入力等の設定は未記録。
 
-  静的な根拠と仮説: [`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift) の `commitMarkedTextIfNeeded()` は marked text がある場合に `unmarkText()` を呼ぶ。[`InputPanelController.swift`](../Koecho/InputPanelController.swift) の `finalizeVoiceInput()` は同メソッドで確定してから本文を採取し、text view を空にする。この経路と実 IME セッションとの不整合は調査対象の仮説であり、原因と断定しない。[`VoiceInputTextViewTests.swift`](../KoechoTests/VoiceInputTextViewTests.swift) の `commitMarkedTextKeepsJapaneseComposition` は programmatic な marked text の確認であり、OS の候補窓が終了することを保証しない。
+  実装: [`VoiceInputTextView.swift`](../Koecho/VoiceInputTextView.swift) の `commitMarkedTextIfNeeded()` は marked text がある場合に `unmarkText()` で本文を保持してから `inputContext?.discardMarkedText()` で IME セッションを終了する。[`InputPanelController.swift`](../Koecho/InputPanelController.swift) の `finalizeVoiceInput()` は同メソッドで確定してから本文を採取し、text view を空にする。自動 script 有効時も、その前に同メソッドで確定してから入力を停止する。[`VoiceInputTextViewTests.swift`](../KoechoTests/VoiceInputTextViewTests.swift) の `commitMarkedTextKeepsJapaneseComposition` は programmatic な marked text の確認であり、OS の候補窓が終了することを保証しない。
 
   比較検証（2026-10-11）: 製品 commit `9b62ff6` の変更前専用版では、本人が Confirm 後の候補残存と Enter による旧本文復活を再確認した。一時コピーで `unmarkText()` 直後に `inputContext?.discardMarkedText()` だけを追加し、既存の処理順序を維持した専用版に切替。Confirm と Fn で未確定本文の貼り付け・再表示時の候補・Enter 後の旧本文・後続の日本語入力と貼り付けを案内し、本人は「問題なしでした」と報告した。項目別の詳細回答・画面の直接観測はない。macOS 27.0.1、音声 off。入力ソース名と権限再許可有無は未報告。両版の build・署名確認と所有 PID の cleanup は完了。証拠: `.tmp/verification/verify-koecho/ime-baseline-20261010-01/` と `ime-api-20261010-01/` の `manual-results.md`、build / identity / session 記録。追加差分は `.tmp/ime-investigation/api-after-unmark/variant.patch`。
 
-  修正方針: 既存の `commitMarkedTextIfNeeded()` で本文を保持したまま marked 状態を解除した後、IME の変換セッションも明示的に終了させる最小変更を進める。API 追加の効果は本人の比較確認で支持された。順序のみを変える比較は未実施であり、別 API が唯一の解決法とは断定しない。同メソッドは貼り付け時にすでに呼ばれており、文字入力から音声入力への切替に流用可能な別の IME セッション終了処理は現行コードでは見つからなかった。製品コードへの適用と直接の呼出し元への影響確認は未実施。
+  修正・完了確認（2026-10-11）: 比較版と同じ一行追加を製品コードへ適用した。API 追加の効果は本人の比較確認で支持された。順序のみを変える比較は未実施であり、別 API が唯一の解決法とは断定しない。同メソッドは貼り付け時にすでに呼ばれており、文字入力から音声入力への切替に流用可能な別の IME セッション終了処理は現行コードでは見つからなかった。通常確定と自動 script 前確定の両呼出し元を確認し、既存の本文保持テストに加えて、自動 script が未確定の日本語本文を受け取り、その加工結果を貼り付けるテストを通した。Fn と Confirm ボタンは同じ `confirm()` に集約される。
 
-  作業・完了条件: 未確定本文の正しい貼り付けを維持し、専用検証版の実 IME 操作で Fn と Confirm ボタンの両方について、再表示時に候補が残らず、Enter で旧本文が復活せず、後続の日本語入力ができることを確認する。確認対象の版・入力ソース・設定を記録する。既存メソッドを変更する場合は直接の呼出し元への影響も確認し、通常 build と app tests を通す。
+  gate: 通常 build と全 app tests が成功（229 tests、parameterized case を含む271実行、失敗・skip・timeout・残留 host・設定回収失敗なし）。証拠: `.tmp/verification/cli/ime-session-build-20261011-02/` と `ime-session-app-tests-20261011-01/`。実 IME 操作は製品差分と同一の既存比較証拠を再利用した。候補終了を programmatic な自動テストの回帰検出とは扱わず、未報告の入力ソース・権限再許可有無、他 OS・他入力ソース・実音声併用は保証しない。
 
 - [ ] F7 認識再開中の発話欠落を調べる
 

@@ -320,6 +320,29 @@ extension InputPanelControllerTests {
 
   // MARK: - Auto-Run Script
 
+  @Test func confirmWithAutoRunScriptKeepsMarkedJapaneseText() async throws {
+    let scriptPath = try makeScript("printf 'processed: '; cat")
+    let script = Script(name: "Prefix", scriptPath: scriptPath)
+    let ctx = makeController()
+    ctx.appState.settings.script.scripts = [script]
+    ctx.appState.settings.script.autoRunScriptId = script.id
+    ctx.controller.showPanel()
+    await Task.yield()
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller))
+    textView.setMarkedText(
+      "こんにちは",
+      selectedRange: NSRange(location: 5, length: 0),
+      replacementRange: NSRange(location: NSNotFound, length: 0)
+    )
+    #expect(textView.hasMarkedText())
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+
+    await ctx.controller.confirm()
+
+    #expect(ctx.paster.pastedTexts == ["processed: こんにちは"])
+    #expect(!ctx.appState.isInputPanelVisible)
+  }
+
   @Test(arguments: [true, false])
   func confirmWithAutoRunScriptHonorsAutoReplacement(isAutomatic: Bool) async throws {
     let scriptPath = try makeScript("tr a-z A-Z")

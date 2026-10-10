@@ -38,6 +38,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   func commitMarkedTextIfNeeded() {
     guard hasMarkedText() else { return }
     unmarkText()
+    inputContext?.discardMarkedText()
   }
 
   func replaceText(_ text: String) {
