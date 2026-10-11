@@ -50,22 +50,22 @@ private struct SpeechAnalyzerLanguageSection: View {
             }
           }
 
-          HStack {
-            Button("Manage Languages…") { isManageSheetPresented = true }
-              .buttonStyle(.link)
-            Spacer()
-            if manager.isDownloading {
-              HStack(spacing: 6) {
-                ProgressView().controlSize(.small)
-                Text("Downloading model…")
-                  .font(.caption).foregroundStyle(.secondary)
-              }
-            } else if let downloadError = manager.downloadError {
-              Text(downloadError)
-                .font(.caption).foregroundStyle(.red)
+          if manager.isDownloading {
+            HStack(spacing: 6) {
+              ProgressView().controlSize(.small)
+              Text("Downloading model…")
+                .font(.caption).foregroundStyle(.secondary)
             }
+          } else if let downloadError = manager.downloadError {
+            Text(downloadError)
+              .font(.caption).foregroundStyle(.red)
           }
-          .frame(height: 20)
+        }
+
+        HStack {
+          Spacer()
+          Button("Manage Languages…") { isManageSheetPresented = true }
+            .buttonStyle(.bordered)
         }
       }
     }
