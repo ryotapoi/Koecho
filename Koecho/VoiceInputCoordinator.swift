@@ -101,6 +101,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
 
   func switchEngine() async {
     guard !isInputSuspended else { return }
+    lifecycleID = UUID()
     let id = lifecycleID
     await engine.stop()
     guard lifecycleID == id, !isInputSuspended, appState.isInputPanelVisible,

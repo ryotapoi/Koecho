@@ -144,6 +144,72 @@ import Testing
 
   // MARK: - disableEngine
 
+  @Test func reenabledSessionSurvivesPreviousDisableCompletion() async {
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    let appState = AppState(settings: Settings(defaults: defaults))
+    appState.isInputPanelVisible = true
+    appState.setInputText("base")
+    let oldEngine = MockVoiceInputEngine()
+    let newEngine = MockVoiceInputEngine()
+    var isInitialEngine = true
+    let coordinator = makeTestVoiceCoordinator(appState: appState) {
+      defer { isInitialEngine = false }
+      return isInitialEngine ? oldEngine : newEngine
+    }
+    let textView = VoiceInputTextView()
+    textView.replaceText("base", selecting: NSRange(location: 4, length: 0))
+    coordinator.textView = textView
+    coordinator.startEngine()
+
+    let stopStarted = AsyncStream<Void>.makeStream()
+    let finishStop = AsyncStream<Void>.makeStream()
+    defer {
+      stopStarted.continuation.finish()
+      finishStop.continuation.finish()
+    }
+    var isFirstStop = true
+    oldEngine.onStop = {
+      // SpeechAnalyzerEngine returns immediately when stop is already in progress.
+      guard isFirstStop else { return }
+      isFirstStop = false
+      stopStarted.continuation.yield(())
+      for await _ in finishStop.stream { break }
+    }
+
+    appState.settings.voiceInput.isVoiceInputEnabled = false
+    let disableTask = Task { await coordinator.disableEngine() }
+    for await _ in stopStarted.stream { break }
+    appState.settings.voiceInput.isVoiceInputEnabled = true
+    await coordinator.switchEngine()
+
+    #expect(newEngine.state == .listening)
+    newEngine.delegate?.voiceInput(didFinalize: " new")
+    newEngine.delegate?.voiceInput(didUpdateVolatile: " draft")
+    coordinator.recordLocalFinalization()
+    let selection = textView.selectedRange()
+    let insertionPoint = coordinator.voiceInsertionPoint
+    #expect(textView.string == "base new draft")
+    #expect(textView.volatileRange == NSRange(location: 8, length: 6))
+    #expect(appState.inputText == "base new")
+    #expect(coordinator.localFinalizationState == .awaitingRestart)
+
+    finishStop.continuation.yield(())
+    await disableTask.value
+
+    #expect(textView.string == "base new draft")
+    #expect(textView.volatileRange == NSRange(location: 8, length: 6))
+    #expect(appState.inputText == "base new")
+    #expect(coordinator.localFinalizationState == .awaitingRestart)
+    #expect(textView.selectedRange() == selection)
+    #expect(coordinator.voiceInsertionPoint == insertionPoint)
+    #expect(newEngine.state == .listening)
+    newEngine.delegate?.voiceInput(didFinalize: " next")
+    #expect(textView.string == "base new next")
+    #expect(appState.inputText == "base new next")
+  }
+
   @Test func disableEngineWaitsForStopThenClearsVolatileAndSyncsFinalizedText() async {
     let (coordinator, appState, mockTV, engine) = makeCoordinator(inputText: "old")
     mockTV.string = "confirmed draft"
