@@ -69,11 +69,15 @@
 
   完了条件: 局所置換と全文置換の挿入位置補正で Unicode 境界を保ち、置換直後の音声入力で絵文字・複合文字を分断しないことを確認する。
 
-- [ ] 選択範囲の置換検証で全文候補を繰り返し構築しないようにする
+- [x] 選択範囲の置換検証で全文候補を繰り返し構築しないようにする
 
   問題: 選択した候補ごとに全文の候補を再構築し、非重複 N 件の検証で三次の比較処理を MainActor 上で行う。1,000 件では重なり比較だけで約 4.995 億回になる。実時間は未計測。対象: [`ReplacementService.swift`](../Koecho/ReplacementService.swift)、[`ReplacementEngine.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift)。
 
   完了条件: 同じ本文・ルールに対する候補構築を検証対象ごとに繰り返さず、既存の候補失効検証・選択範囲・置換順を維持する。多数候補の全選択置換で計算量と応答時間の改善を確認する。
+
+  実装・計測済み: 300件の全選択置換は Debug hosted test で旧版の中央値 605.2 ms → 新版 6.67 ms。[計測条件・再実行手順](../cache/replacement-selection-measurement.md)に比較版、値、検証結果を記録。1,000件、Release は未計測。
+
+  実画面確認: 専用 build・起動・doctor 成功後、CUA の `timeoutReached` により本人操作へ引き継ぎ、変更後について「大丈夫だと思う」と報告された。旧版との体感比較は行っておらず、性能改善の根拠は上記 A/B 計測。個別操作の詳細は未確認。検証版は後片付け済み。証拠: `.tmp/verification/verify-koecho/20261011-replacement-ui-retry/`。
 
 #### 調査・対応判断
 

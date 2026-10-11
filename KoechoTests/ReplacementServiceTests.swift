@@ -357,6 +357,22 @@ import Testing
     #expect(view.replacementCandidates.isEmpty)
   }
 
+  @Test func mixedCandidateActionRejectsStaleMatchWithoutPartialEdit() {
+    let (service, state, view, _) = makeService(inputText: "a a")
+    state.settings.replacement.isAutoReplacementEnabled = false
+    state.settings.replacement.addReplacementRule(ReplacementRule(pattern: "a", replacement: "long"))
+    service.refreshCandidates()
+    let valid = view.replacementCandidates[0]
+    let stale = ReplacementMatch(range: view.replacementCandidates[1].range, replacement: "other")
+
+    view.onReplaceCandidate?([valid, stale])
+
+    #expect(state.inputText == "a a")
+    #expect(view.string == "a a")
+    #expect(view.replaceTextSelectingCalls.isEmpty)
+    #expect(view.replacementCandidates.count == 2)
+  }
+
   @Test func candidateActionCannotEditDuringMarkedVolatileScriptOrAutomaticMode() {
     let (service, state, view, _) = makeService(inputText: "a")
     state.settings.replacement.isAutoReplacementEnabled = false

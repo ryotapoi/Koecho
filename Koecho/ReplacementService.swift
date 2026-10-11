@@ -88,13 +88,17 @@ final class ReplacementService {
       appState.isInputPanelVisible, !appState.isRunningScript,
       !textView.hasMarkedText(), textView.volatileRange == nil,
       textView.string == text, appState.inputText == text,
-      appState.settings.replacement.replacementRules == rules,
-      matches.allSatisfy({ findReplacementCandidates(rules, in: text).contains($0) })
+      appState.settings.replacement.replacementRules == rules
     else {
       refreshCandidates()
       return
     }
     guard !matches.isEmpty else { return }
+    let currentCandidates = findReplacementCandidates(rules, in: text)
+    guard matches.allSatisfy({ currentCandidates.contains($0) }) else {
+      refreshCandidates()
+      return
+    }
     let application = applyReplacementMatches(
       matches, to: text, insertionPoint: voiceCoordinator.voiceInsertionPoint)
     let selection = textView.selectedRange()
