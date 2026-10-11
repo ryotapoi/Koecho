@@ -8,9 +8,9 @@ struct AudioInputExclusiveAccessTests {
     let access = AudioInputExclusiveAccess()
 
     #expect(access.isInUse == false)
-    access.acquire()
+    let id = access.acquire()
     #expect(access.isInUse == true)
-    access.release()
+    access.release(id)
     #expect(access.isInUse == false)
   }
 
@@ -41,10 +41,10 @@ struct AudioInputExclusiveAccessTests {
   @Test func staleMonitorCleanupDoesNotReleaseRecognitionOrNewMonitor() {
     let access = AudioInputExclusiveAccess()
     let oldID = access.markAsActive {}
-    access.acquire()
+    let recognitionID = access.acquire()
     access.clearActive(oldID)
     #expect(access.isInUse)
-    access.release()
+    access.release(recognitionID)
     let newID = access.markAsActive {}
     access.clearActive(oldID)
     #expect(access.isInUse)

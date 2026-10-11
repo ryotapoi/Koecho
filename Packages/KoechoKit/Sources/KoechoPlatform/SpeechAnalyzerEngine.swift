@@ -21,7 +21,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
   private let dependencies: Dependencies
   private var resultTask: Task<Void, Never>?
   private var transcriber: DictationTranscriber?
-  private var acquiredAudioInput = false
+  private var audioInputAcquisitionID: UUID?
   private var converter: AVAudioConverter?
   private var analyzerFormat: AVAudioFormat?
   private var isRestarting = false
@@ -325,12 +325,12 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     activate(session)
 
     // 7. Install audio tap and start
-    audioInputExclusiveAccess.acquire()
+    let acquisitionID = audioInputExclusiveAccess.acquire()
     guard canStart(owner: owner) else {
-      audioInputExclusiveAccess.release()
+      audioInputExclusiveAccess.release(acquisitionID)
       return
     }
-    acquiredAudioInput = true
+    audioInputAcquisitionID = acquisitionID
 
     do {
       try installAudioTap()
@@ -554,9 +554,9 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     resultTask = nil
     converter = nil
     analyzerFormat = nil
-    if acquiredAudioInput {
-      audioInputExclusiveAccess.release()
-      acquiredAudioInput = false
+    if let acquisitionID = audioInputAcquisitionID {
+      audioInputAcquisitionID = nil
+      audioInputExclusiveAccess.release(acquisitionID)
     }
   }
 }

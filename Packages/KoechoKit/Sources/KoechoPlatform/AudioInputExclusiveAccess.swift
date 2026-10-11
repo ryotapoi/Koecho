@@ -4,22 +4,24 @@ import Foundation
 public final class AudioInputExclusiveAccess {
   public static let shared = AudioInputExclusiveAccess()
 
-  public var isInUse: Bool { isAcquired || activeMonitorID != nil }
-  private var isAcquired = false
+  public var isInUse: Bool { !recognitionIDs.isEmpty || activeMonitorID != nil }
+  private var recognitionIDs: Set<UUID> = []
   private var activeMonitorID: UUID?
   private var onAcquire: (() -> Void)?
   private var releaseHandler: (id: UUID, handler: () -> Void)?
 
   /// Acquire audio input. Stops any active level monitor first.
-  public func acquire() {
-    isAcquired = true
+  @discardableResult
+  public func acquire() -> UUID {
+    let id = UUID()
+    recognitionIDs.insert(id)
     onAcquire?()
+    return id
   }
 
   /// Release recognition input after its capture has stopped.
-  public func release() {
-    guard isAcquired else { return }
-    isAcquired = false
+  public func release(_ id: UUID) {
+    guard recognitionIDs.remove(id) != nil, recognitionIDs.isEmpty else { return }
     releaseHandler?.handler()
   }
 

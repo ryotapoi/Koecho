@@ -1,4 +1,5 @@
 import AudioToolbox
+import Foundation
 import Testing
 
 @testable import KoechoPlatform
@@ -6,26 +7,63 @@ import Testing
 @MainActor
 struct AudioInputLevelMonitorTests {
   @Test(arguments: [false, true])
+  func overlappingRecognitionResumesOnlyAfterLastRelease(newRecognitionEndsFirst: Bool) {
+    let access = AudioInputExclusiveAccess()
+    let capture = Capture()
+    let monitor = AudioInputLevelMonitor(
+      exclusiveAccess: access, audioInput: (capture.start, capture.stop))
+    monitor.start(deviceID: 11)
+    let oldID = access.acquire()
+    let newID = access.acquire()
+    // A device change while recognition owns input must update the pending request.
+    monitor.start(deviceID: 22)
+    let firstID = newRecognitionEndsFirst ? newID : oldID
+    let lastID = newRecognitionEndsFirst ? oldID : newID
+
+    access.release(firstID)
+    #expect(capture.deviceID == nil)
+    #expect(capture.starts == [11])
+    access.release(firstID)
+    #expect(capture.deviceID == nil)
+    #expect(capture.starts == [11])
+
+    access.release(lastID)
+    #expect(capture.deviceID == 22)
+    #expect(capture.starts == [11, 22])
+    access.release(lastID)
+    access.release(firstID)
+    #expect(capture.deviceID == 22)
+    #expect(capture.starts == [11, 22])
+    monitor.stop()
+    #expect(!access.isInUse)
+  }
+
+  @Test(arguments: [false, true])
   func recognitionReleaseResumesRequestedCapture(recognitionFirst: Bool) {
     let access = AudioInputExclusiveAccess()
     let capture = Capture()
     let monitor = AudioInputLevelMonitor(
       exclusiveAccess: access, audioInput: (capture.start, capture.stop))
-    if recognitionFirst { access.acquire() }
-    monitor.start(deviceID: 11)
-    if !recognitionFirst { access.acquire() }
+    var recognitionID: UUID
+    if recognitionFirst {
+      recognitionID = access.acquire()
+      monitor.start(deviceID: 11)
+    } else {
+      monitor.start(deviceID: 11)
+      recognitionID = access.acquire()
+    }
     #expect(capture.deviceID == nil)
     #expect(access.isInUse)
 
-    access.release()
+    access.release(recognitionID)
     #expect(capture.deviceID == 11)
     #expect(access.isInUse)
-    access.acquire()
+    recognitionID = access.acquire()
     #expect(capture.deviceID == nil)
-    access.release()
+    access.release(recognitionID)
     #expect(capture.deviceID == 11)
     // A duplicate release must not clear the active monitor or restart its capture.
-    access.release()
+    access.release(recognitionID)
     #expect(capture.deviceID == 11)
     monitor.stop()
     #expect(!access.isInUse)
@@ -37,10 +75,10 @@ struct AudioInputLevelMonitorTests {
     let monitor = AudioInputLevelMonitor(
       exclusiveAccess: access, audioInput: (capture.start, capture.stop))
     monitor.start(deviceID: 11)
-    access.acquire()
+    let recognitionID = access.acquire()
     // Used by both Settings disappearance and Voice off.
     monitor.stop()
-    access.release()
+    access.release(recognitionID)
     #expect(capture.deviceID == nil)
     #expect(!access.isInUse)
     monitor.start(deviceID: 22)
@@ -52,17 +90,17 @@ struct AudioInputLevelMonitorTests {
     let capture = Capture()
     let monitor = AudioInputLevelMonitor(
       exclusiveAccess: access, audioInput: (capture.start, capture.stop))
-    access.acquire()
+    var recognitionID = access.acquire()
     monitor.start(deviceID: 11)
     monitor.start(deviceID: 22)
     #expect(capture.deviceID == nil)
     #expect(access.isInUse)
-    access.release()
+    access.release(recognitionID)
     #expect(capture.deviceID == 22)
-    access.acquire()
+    recognitionID = access.acquire()
     // AudioDeviceManager tears down the request when no target remains.
     monitor.stop()
-    access.release()
+    access.release(recognitionID)
     #expect(capture.deviceID == nil)
   }
 
@@ -73,11 +111,11 @@ struct AudioInputLevelMonitorTests {
     var monitor: AudioInputLevelMonitor? = AudioInputLevelMonitor(
       exclusiveAccess: access, audioInput: (capture.start, capture.stop))
     monitor?.start(deviceID: 11)
-    if recognitionActive { access.acquire() }
+    let recognitionID = recognitionActive ? access.acquire() : nil
     monitor = nil
     #expect(capture.deviceID == nil)
     #expect(access.isInUse == recognitionActive)
-    access.release()
+    if let recognitionID { access.release(recognitionID) }
     #expect(capture.deviceID == nil)
     #expect(!access.isInUse)
   }
@@ -85,9 +123,11 @@ struct AudioInputLevelMonitorTests {
   @MainActor
   private final class Capture {
     var deviceID: AudioDeviceID?
+    var starts: [AudioDeviceID?] = []
 
     func start(_ deviceID: AudioDeviceID?) -> Bool {
       self.deviceID = deviceID
+      starts.append(deviceID)
       return true
     }
 

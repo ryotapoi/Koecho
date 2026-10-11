@@ -33,11 +33,13 @@
 
   検証: 旧停止完了後の本文・未確定範囲・ローカル確定状態の保持を回帰テストで確認。通常 build、App tests、専用署名 build は成功。2026-10-11 に本人が専用検証版でショートカットによる連続 off→on を操作し、再有効化後の認識本文の保持と後続入力の反映を確認。実際の OS 停止順序は本人操作から推定せず、回帰テストで検証した。
 
-- [ ] 停止中の音声エンジンの解放で新エンジンのマイク排他を解除しないようにする
+- [x] 停止中の音声エンジンの解放で新エンジンのマイク排他を解除しないようにする
 
   問題: Settings のメーターが要求されている状態で音声を素早く off→on にすると、新エンジンの取得後に停止中のエンジンが共有 Bool を解除し、認識中にメーターの録音を再開できる。実機の発生頻度とハードウェア依存の認識失敗は未確認。対象: [`AudioInputExclusiveAccess.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioInputExclusiveAccess.swift)、[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift)、[`AudioInputLevelMonitor.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioInputLevelMonitor.swift)。
 
   完了条件: 新エンジンの取得後に停止中のエンジンを解放しても認識中のメーター取得を抑止し、認識側の取得が終了した時点で要求中のメーターを再開できることを確認する。
+
+  検証: 取得の両解放順・重複解放・最新デバイスへのメーター再開を回帰テストで確認。Package tests、通常 build、App tests は成功。2026-10-11 に本人が専用検証版で Mac 内蔵マイクを使い、認識中と素早い off→on 後のメーター停止、認識の成功、Voice を有効に保ってパネルを閉じた後のメーター再開を確認。権限の再要求はなかった。実際の OS 取得・解放順は本人操作から推定せず、回帰テストで検証した。
 
 - [x] フォーカス復帰テストの NSHostingView 警告を解消する
 
