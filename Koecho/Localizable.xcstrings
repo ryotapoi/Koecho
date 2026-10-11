@@ -374,12 +374,12 @@
         }
       }
     },
-    "Copy Last History" : {
+    "Copy Last Content" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最後の履歴をコピー"
+            "value" : "最後の内容をコピー"
           }
         }
       }

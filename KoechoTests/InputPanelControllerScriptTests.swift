@@ -94,6 +94,7 @@ extension InputPanelControllerTests {
     ctx.appState.volatilePromptText = "volatile"
     ctx.controller.voiceCoordinator.currentVoiceTarget = .prompt
 
+    ctx.appState.retainLastContent("previous")
     // Simulate Escape via onEscape callback
     ctx.controller.panel.onEscape?()
 
@@ -101,6 +102,7 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.promptScript == nil)
     #expect(ctx.appState.promptText == "")
     #expect(ctx.appState.volatilePromptText == "")
+    #expect(ctx.appState.lastContent == "previous")
     #expect(ctx.controller.voiceCoordinator.currentVoiceTarget == .textEditor)
     #expect(ctx.appState.isInputPanelVisible == true)
   }
@@ -166,6 +168,7 @@ extension InputPanelControllerTests {
       firstTask = try #require(ctx.controller.shortcutScriptTask)
     }
     let firstPID = try await waitForPID("first")
+    findVoiceInputTextView(in: ctx.controller)?.replaceText("original")
     ctx.controller.panel.onEscape?()
     ctx.controller.showPanel()
     let second = script("second")
@@ -179,6 +182,7 @@ extension InputPanelControllerTests {
     await firstTask.value
     try await waitForExit(firstPID)
     #expect(ctx.appState.isRunningScript)
+    #expect(ctx.appState.lastContent == "original")
     #expect(ctx.appState.inputText == "new text")
     #expect(ctx.appState.errorMessage == nil)
     #expect(kill(secondPID, 0) == 0)
@@ -186,6 +190,7 @@ extension InputPanelControllerTests {
     #expect(ctx.historyStore.entries.isEmpty)
     ctx.controller.panel.onEscape?()
     await secondTask.value
+    #expect(ctx.appState.lastContent == "new text")
     try await waitForExit(secondPID)
     #expect(!ctx.appState.isRunningScript)
     ctx.controller.showPanel()
@@ -225,6 +230,7 @@ extension InputPanelControllerTests {
     view.replaceText("new")
     release.continuation.yield(())
     await task.value
+    #expect(ctx.appState.lastContent == "original")
     #expect(view.string == "new")
     #expect(ctx.appState.inputText == "new")
     #expect(ctx.appState.isInputPanelVisible)
@@ -367,6 +373,7 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.isInputPanelVisible == false)
     #expect(ctx.historyStore.entries.count == 1)
     #expect(ctx.historyStore.entries[0].text == expected)
+    #expect(ctx.appState.lastContent == expected)
     #expect(ctx.appState.scriptUndoText == nil)
   }
 
@@ -414,6 +421,7 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.isInputPanelVisible == true)
     #expect(ctx.appState.errorMessage != nil)
     #expect(paster.pastedTexts.isEmpty)
+    #expect(ctx.appState.lastContent == nil)
     #expect(ctx.appState.inputText == "hello")
     #expect(ctx.appState.scriptUndoText == nil)
   }
@@ -436,7 +444,23 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.isInputPanelVisible == true)
     #expect(ctx.appState.errorMessage?.contains("Empty") == true)
     #expect(paster.pastedTexts.isEmpty)
+    #expect(ctx.appState.lastContent == nil)
     #expect(ctx.appState.inputText == "hello")
+  }
+
+  @Test func whitespaceAutoRunOutputDoesNotReplaceLastContent() async throws {
+    let script = Script(name: "Whitespace", scriptPath: "printf ' \\n'")
+    let ctx = makeController()
+    ctx.appState.retainLastContent("previous")
+    ctx.appState.settings.script.scripts = [script]
+    ctx.appState.settings.script.autoRunScriptId = script.id
+    ctx.controller.showPanel()
+    ctx.appState.setInputText("hello")
+    ctx.appState.frontmostApplication = NSRunningApplication.current
+    await ctx.controller.confirm()
+    #expect(ctx.appState.lastContent == "previous")
+    #expect(ctx.paster.pastedTexts.isEmpty)
+    #expect(ctx.appState.errorMessage != nil)
   }
 
   @Test func cancelDuringAutoRun() async throws {

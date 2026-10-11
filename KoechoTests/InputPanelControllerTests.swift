@@ -71,15 +71,32 @@ struct InputPanelControllerTests {
     #expect(!ctx.controller.panel.isVisible)
   }
 
-  @Test func closeButtonCancelsPanel() {
+  @Test(arguments: [false, true])
+  func closingPanelRetainsDisplayedMarkedAndVolatileContent(closeButton: Bool) async throws {
     let ctx = makeController()
-
     ctx.controller.showPanel()
-    ctx.appState.setInputText("some text")
-    ctx.controller.panel.close()
-
-    #expect(ctx.appState.isInputPanelVisible == false)
-    #expect(ctx.appState.inputText == "")
+    await Task.yield()
+    let view = try #require(findVoiceInputTextView(in: ctx.controller))
+    view.replaceText("  body")
+    ctx.appState.setInputText("stale finalized text")
+    view.setVolatileText(" voice", at: (view.string as NSString).length)
+    view.setMarkedText(
+      "変換中", selectedRange: NSRange(location: 3, length: 0),
+      replacementRange: NSRange(location: (view.string as NSString).length, length: 0))
+    let displayed = view.string
+    #expect(displayed.contains(" voice"))
+    #expect(displayed.contains("変換中"))
+    if closeButton { ctx.controller.panel.close() } else { ctx.controller.panel.onEscape?() }
+    #expect(!ctx.appState.isInputPanelVisible)
+    #expect(ctx.appState.lastContent == displayed)
+    #expect(ctx.historyStore.entries.isEmpty)
+    ctx.controller.showPanel()
+    await Task.yield()
+    #expect(ctx.appState.lastContent == displayed)
+    ctx.appState.setInputText("stale state must not replace empty editor")
+    view.replaceText("")
+    ctx.controller.cancel()
+    #expect(ctx.appState.lastContent == displayed)
   }
 
   @Test func showPanelTwicePreservesText() {
@@ -102,6 +119,7 @@ struct InputPanelControllerTests {
     #expect(ctx.appState.isInputPanelVisible == false)
     #expect(ctx.appState.inputText == "retained")
     #expect(ctx.paster.restoreClipboardCallCount == 0)
+    #expect(ctx.appState.lastContent == nil)
   }
 
   @Test func showCancelShowCycle() {

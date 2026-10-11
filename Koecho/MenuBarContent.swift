@@ -24,10 +24,10 @@ struct MenuBarContent: View {
 
     recognitionLanguageMenu
 
-    Button("Copy Last History") {
-      historyStore.copyLatestToClipboard()
+    Button("Copy Last Content") {
+      copyLastContentToClipboard()
     }
-    .disabled(historyStore.entries.isEmpty)
+    .disabled(contentToCopy == nil)
 
     Divider()
 
@@ -43,6 +43,17 @@ struct MenuBarContent: View {
     Button("Quit Koecho") {
       NSApplication.shared.terminate(nil)
     }
+  }
+
+  var contentToCopy: String? {
+    appState.lastContent ?? historyStore.entries.first?.text
+  }
+
+  @discardableResult
+  func copyLastContentToClipboard(using pasteboard: NSPasteboard = .general) -> Bool {
+    guard let contentToCopy else { return false }
+    pasteboard.clearContents()
+    return pasteboard.setString(contentToCopy, forType: .string)
   }
 
   /// LSUIElement apps can open Settings behind another app after the menu

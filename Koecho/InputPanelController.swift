@@ -155,7 +155,8 @@ final class InputPanelController {
     }
 
     guard let preparedText = await applyAutoRunScript(to: text, confirmationID: confirmationID) else { return }
-    guard processingConfirmationID == confirmationID else { return }
+    guard processingConfirmationID == confirmationID, appState.isInputPanelVisible else { return }
+    appState.retainLastContent(preparedText)
     await pasteAndRecord(preparedText)
   }
 
@@ -283,6 +284,7 @@ final class InputPanelController {
       return
     }
 
+    appState.retainLastContent(textView?.string ?? appState.inputText)
     processingConfirmationID = nil
     scriptService.cancelExecution()
     voiceCoordinator.cancelEngine()

@@ -11,6 +11,7 @@ public final class AppState {
 
   public private(set) var inputText: String = ""
   public private(set) var scriptUndoText: String?
+  public private(set) var lastContent: String?
   public var isInputPanelVisible: Bool = false
   public var frontmostApplication: NSRunningApplication?
   public var errorMessage: String?
@@ -34,6 +35,19 @@ public final class AppState {
       scriptUndoText = nil
     }
     inputText = text
+  }
+
+  public func retainLastContent(_ text: String) {
+    // Closing an empty panel must not discard the previous recoverable content.
+    guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+    lastContent = text
+  }
+
+  @discardableResult
+  public func copyLastContentToClipboard(using pasteboard: NSPasteboard = .general) -> Bool {
+    guard let lastContent else { return false }
+    pasteboard.clearContents()
+    return pasteboard.setString(lastContent, forType: .string)
   }
 
   public func offerScriptUndo(restoring text: String) {

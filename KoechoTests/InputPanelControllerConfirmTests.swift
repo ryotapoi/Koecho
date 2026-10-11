@@ -72,6 +72,7 @@ extension InputPanelControllerTests {
     let expected = initialText.isEmpty ? "world" : "hello world"
     #expect(ctx.paster.pastedTexts == [expected])
     #expect(ctx.historyStore.entries.map(\.text) == [expected])
+    #expect(ctx.appState.lastContent == expected)
     #expect(!ctx.appState.isInputPanelVisible)
 
     ctx.controller.showPanel()
@@ -99,6 +100,7 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.frontmostApplication == nil)
     #expect(ctx.appState.errorMessage == nil)
     #expect(paster.pastedTexts == ["hello"])
+    #expect(ctx.appState.lastContent == "hello")
   }
 
   @Test func confirmFailureShowsError() async {
@@ -146,6 +148,7 @@ extension InputPanelControllerTests {
     #expect(textView.string == "こんにちは")
     #expect(ctx.appState.errorMessage != nil)
     #expect(ctx.historyStore.entries.isEmpty)
+    #expect(ctx.appState.lastContent == "こんにちは")
     #expect(paster.restoreClipboardCallCount == 1)
     #expect(ctx.appState.frontmostApplication === targetApp)
     #expect(engine.startCallCount == startCallCountBeforeFailure)
@@ -254,6 +257,7 @@ extension InputPanelControllerTests {
     await ctx.controller.confirm()
 
     #expect(paster.restoreClipboardCallCount == 1)
+    #expect(ctx.appState.lastContent == "hello")
     #expect(ctx.appState.isInputPanelVisible == true)
     #expect(ctx.appState.frontmostApplication == nil)
     #expect(ctx.appState.inputText == "")
@@ -266,6 +270,7 @@ extension InputPanelControllerTests {
     let ctx = makeController(ducker: ducker)
 
     ctx.controller.showPanel()
+    ctx.appState.retainLastContent("hello")
     ctx.appState.setInputText("   \n  ")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
@@ -276,6 +281,7 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.frontmostApplication == nil)
     #expect(ctx.paster.restoreClipboardCallCount == 1)
     #expect(ctx.historyStore.entries.isEmpty)
+    #expect(ctx.appState.lastContent == "hello")
     #expect(ducker.restoreCallCount == 1)
   }
 
@@ -302,6 +308,7 @@ extension InputPanelControllerTests {
 
     await ctx.controller.confirm()
 
+    #expect(ctx.appState.lastContent == "hello")
     #expect(ctx.appState.errorMessage == String(localized: "No target application"))
     #expect(ctx.appState.isInputPanelVisible == true)
     #expect(ctx.appState.scriptUndoText == nil)
@@ -336,6 +343,7 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.isInputPanelVisible == false)
     #expect(ctx.appState.inputText == "")
     #expect(paster.pastedTexts == ["hello"])
+    #expect(ctx.appState.lastContent == "hello")
   }
 
   @Test func cancelCallsRestoreClipboard() {
@@ -363,6 +371,7 @@ extension InputPanelControllerTests {
     await ctx.controller.confirm()
 
     #expect(ctx.historyStore.entries.isEmpty)
+    #expect(ctx.appState.lastContent == "hello")
   }
 
   @Test func confirmDoesNotRecordOnPasteFailure() async {
@@ -378,6 +387,7 @@ extension InputPanelControllerTests {
     await ctx.controller.confirm()
 
     #expect(ctx.historyStore.entries.isEmpty)
+    #expect(ctx.appState.lastContent == "hello")
     #expect(ctx.appState.scriptUndoText == nil)
   }
 }
