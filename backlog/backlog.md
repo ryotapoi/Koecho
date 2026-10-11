@@ -53,7 +53,7 @@
 
 [調査・対応判断](v2.0.0-investigations.md)
 
-#### その他
+### 将来の改善
 
 - [x] hosted tests の UserDefaults domain を片付ける
 
