@@ -172,14 +172,17 @@ private struct HistoryRow: View {
           .font(.body)
           .frame(maxWidth: .infinity, alignment: .leading)
 
-        if isCopied {
-          Text("Copied!")
-            .font(.caption)
-            .foregroundStyle(.green)
-        } else {
+        HStack {
+          if isCopied {
+            Text("Copied!")
+              .font(.caption)
+              .foregroundStyle(.green)
+          }
+
           Text(entry.timestamp, format: .dateTime)
             .font(.caption)
             .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
       }
       .padding(.vertical, 4)
