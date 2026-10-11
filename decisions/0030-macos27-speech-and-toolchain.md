@@ -6,7 +6,7 @@ status: current
 
 ## 判断
 
-App と KoechoKit の対応下限を macOS 27.0 とする。音声認識には Speech framework の `SpeechAnalyzer` と、自動句読点を持つ `DictationTranscriber` を採用する。音声の未確定結果を入力欄に表示し、キーボード入力との併用を保つ。音声の有効・無効と保存値は [ADR 0025](0025-speechanalyzer-only-voice-input.md) が定める。
+App と KoechoKit の対応下限を macOS 27.0 とする。音声認識には Speech framework の `SpeechAnalyzer` と、自動句読点を持つ `DictationTranscriber` を採用する。音声の未確定結果を入力欄に表示し、キーボード入力との併用を保つ。音声の有効・無効と保存値は [ADR 0038](0038-preserve-repeated-speech.md) が定める。
 
 Swift の言語モードと Package tools version は 6.0 を維持する。App target の MainActor default isolation と、Xcode の全 target の approachable concurrency の設定も維持する。Xcode / SDK を更新しただけで言語モードや並行性の契約を変えない。
 
@@ -24,4 +24,4 @@ macOS 標準 Dictation の `startDictation:` は開始成功を確認できず�
 
 ## 境界
 
-音声セッションは入力デバイス、モデル、locale、音声 callback に関わる。`VoiceInputEngine` をエンジンと controller の境界とし、入力欄と音声エンジンの所有はそれぞれの実装境界に置く。再生成と重複抑制の判断は [ADR 0032](0032-speech-overlap-defense.md) が定める。入力パネルの script strip では macOS 27 の並べ替え API を使い、Settings の Scripts 一覧で `.onMove` を維持する理由は [ADR 0026](0026-settings-script-list-reordering.md) が定める。
+音声セッションは入力デバイス、モデル、locale、音声 callback に関わる。`VoiceInputEngine` をエンジンと controller の境界とし、入力欄と音声エンジンの所有はそれぞれの実装境界に置く。再生成と反復発話の保持は [ADR 0038](0038-preserve-repeated-speech.md) が定める。入力パネルの script strip では macOS 27 の並べ替え API を使い、Settings の Scripts 一覧で `.onMove` を維持する理由は [ADR 0026](0026-settings-script-list-reordering.md) が定める。

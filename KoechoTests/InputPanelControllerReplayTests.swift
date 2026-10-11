@@ -10,7 +10,7 @@ import Testing
 // volatile finalization, and cursor movement through the panel wiring.
 
 extension InputPanelControllerTests {
-  @Test func overlapRemovalResetOnShowPanel() {
+  @Test func repeatedSpeechAfterReopeningPanelIsInserted() {
     let ctx = makeController()
     ctx.controller.showPanel()
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
@@ -19,12 +19,12 @@ extension InputPanelControllerTests {
     ctx.controller.cancel()
     ctx.controller.showPanel()
 
-    // After reopen, accumulated should be reset — no stripping
+    // The reopened panel accepts the same speech again.
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
     #expect(ctx.appState.inputText == "hello")
   }
 
-  // MARK: - Replay Volatile Suppression
+  // MARK: - Speech after local finalization
 
   @Test func completedMouseSelectionFinalizesVolatileAndMovesFollowingSpeech() async throws {
     let engine = MockRestartableVoiceInputEngine()
@@ -49,22 +49,13 @@ extension InputPanelControllerTests {
     #expect(coordinator.voiceInsertionPoint == 6)
     await coordinator.restartTranscriberTask?.value
     #expect(engine.restartTranscriberCallCount == 1)
-    guard case .suppressing = coordinator.replayState else {
-      Issue.record("Expected replay suppression after cursor-triggered restart")
-      return
-    }
+    #expect(coordinator.localFinalizationState == .restarted)
 
-    coordinator.voiceInput(didUpdateVolatile: " again")
-    #expect(textView.volatileRange == nil)
-    coordinator.voiceInput(didFinalize: " again")
-    #expect(ctx.appState.inputText == "hello world again")
-    #expect(coordinator.replayState == .idle)
-    coordinator.voiceInput(didFinalize: " again")
-    #expect(ctx.appState.inputText == "hello world again")
     coordinator.voiceInput(didUpdateVolatile: "dear ")
     #expect(textView.volatileRange != nil)
     coordinator.voiceInput(didFinalize: "dear ")
     #expect(ctx.appState.inputText == "hello dear world again")
+    #expect(coordinator.localFinalizationState == .idle)
   }
 
   @Test func completedSelectionKeepsCaretThroughVolatileAutoReplacement() throws {
@@ -91,6 +82,24 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "hi dear world again")
   }
 
+  @Test func cursorMoveKeepsFollowingSpeechThroughFinalization() throws {
+    let ctx = makeController()
+    ctx.controller.showPanel()
+    let textView = try #require(findVoiceInputTextView(in: ctx.controller))
+    let coordinator = try #require(ctx.controller.voiceCoordinator)
+    coordinator.voiceInput(didFinalize: "今日は晴れです")
+
+    textView.setSelectedRanges(
+      [NSValue(range: NSRange(location: 6, length: 0))],
+      affinity: .downstream, stillSelecting: false)
+    coordinator.voiceInput(didUpdateVolatile: "明日も晴れです")
+    #expect(textView.string == "今日は晴れで明日も晴れですす")
+    coordinator.voiceInput(didFinalize: "明日も晴れです")
+
+    #expect(textView.volatileRange == nil)
+    #expect(ctx.appState.inputText == "今日は晴れで明日も晴れですす")
+  }
+
   @Test func newFinalizeWhileLocallyFinalizedInsertsText() throws {
     let ctx = makeController()
     ctx.controller.showPanel()
@@ -101,12 +110,12 @@ extension InputPanelControllerTests {
 
     ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: "こんにちは")
     textView.finalizeVolatileText()
-    textView.onVolatileFinalized?("こんにちは")
-    ctx.controller.voiceCoordinator.replayState.beginSuppression(deadline: Date.now + 10)
+    textView.onVolatileFinalized?()
+    ctx.controller.voiceCoordinator.localFinalizationState.finishRestart()
 
-    // New speech finalize with no overlap — should be inserted
+    // New speech after local finalization should be inserted.
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "ありがとう")
     #expect(ctx.appState.inputText.contains("ありがとう"))
-    #expect(ctx.controller.voiceCoordinator.replayState == .idle)
+    #expect(ctx.controller.voiceCoordinator.localFinalizationState == .idle)
   }
 }

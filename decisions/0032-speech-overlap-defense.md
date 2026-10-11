@@ -1,5 +1,6 @@
 ---
-status: current
+status: superseded
+superseded_by: 0038-preserve-repeated-speech.md
 ---
 
 # 音声セグメントの再配信に再生成と蓄積比較で対処する

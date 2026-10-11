@@ -199,7 +199,7 @@ import Testing
     #expect(appState.errorMessage == nil)
   }
 
-  @Test func executeBuiltinSuppressesReplayedVolatileFinalization() async {
+  @Test func executeBuiltinPreservesFollowingRepeatedSpeech() async {
     let engine = MockRestartableVoiceInputEngine()
     let (service, appState, textView, coordinator) = makeService(
       inputText: "one",
@@ -219,8 +219,9 @@ import Testing
     coordinator.voiceInput(didFinalize: " two")
 
     #expect(engine.restartTranscriberCallCount == 1)
-    #expect(appState.inputText == "> one two")
-    #expect(textView.insertFinalizedTextCalls.isEmpty)
+    #expect(appState.inputText == "> one two two")
+    #expect(textView.insertFinalizedTextCalls.count == 1)
+    #expect(textView.insertFinalizedTextCalls[0].text == " two")
   }
 
   @Test func executeBuiltinDoesNotUseCustomRunnerFailurePath() async {

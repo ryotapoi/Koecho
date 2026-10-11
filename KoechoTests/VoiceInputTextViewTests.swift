@@ -321,7 +321,7 @@ struct VoiceInputTextViewTests {
     textView.setVolatileText(" world", at: 5)
 
     var finalizeCalled = false
-    textView.onVolatileFinalized = { _ in
+    textView.onVolatileFinalized = {
       finalizeCalled = true
     }
 

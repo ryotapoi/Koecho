@@ -15,9 +15,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   private(set) var voiceInsertionPoint: Int = 0
   var currentVoiceTarget: VoiceTarget = .textEditor
 
-  var replayState: ReplayState = .idle
-  private var accumulatedFinalizedText: String = ""
-  private static let replaySuppressionDuration: TimeInterval = 2.0
+  var localFinalizationState: LocalFinalizationState = .idle
   private var transcriberAlreadyRestarted = false
   private(set) var isStoppingEngine = false
   private var lifecycleID = UUID()
@@ -39,8 +37,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     inputSuspensionID = nil
     isStoppingEngine = false
     currentVoiceTarget = .textEditor
-    clearReplayState()
-    accumulatedFinalizedText = ""
+    clearLocalFinalizationState()
     moveVoiceInsertionPoint(toEndOf: appState.inputText)
     if resume, appState.isInputPanelVisible, appState.settings.voiceInput.isVoiceInputEnabled {
       startEngine()
@@ -56,41 +53,19 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     case prompt
   }
 
-  /// Replay suppression lifecycle for SpeechAnalyzer transcriber restarts.
-  /// Locally finalized text would otherwise be re-delivered (replayed) by the
-  /// restarted transcriber; this state machine tracks what to suppress.
-  /// See decisions/0021.
-  enum ReplayState: Equatable {
-    /// No local finalization pending; volatile and finalized text flow normally.
+  /// Keep volatile updates out of the editor while a local finalization awaits
+  /// a transcriber restart. After restarting, recognition results flow unchanged.
+  enum LocalFinalizationState {
     case idle
-    /// Text was finalized locally and the transcriber restart has not
-    /// completed yet. All volatile updates are suppressed.
-    case restartInProgress(localText: String)
-    /// A restart completed; replayed text matching `localText` is suppressed
-    /// until `deadline`. A re-finalization during the window swaps `localText`
-    /// but keeps the deadline (see `recordLocalFinalization`).
-    case suppressing(localText: String, deadline: Date)
+    case awaitingRestart
+    case restarted
 
-    /// Transition for a local finalization (cursor move / Enter over volatile
-    /// text). An existing suppression window keeps its deadline.
-    mutating func recordLocalFinalization(_ text: String) {
-      switch self {
-      case .idle, .restartInProgress:
-        self = .restartInProgress(localText: text)
-      case .suppressing(_, let deadline):
-        self = .suppressing(localText: text, deadline: deadline)
-      }
+    mutating func record() {
+      if self != .restarted { self = .awaitingRestart }
     }
 
-    /// Transition for a completed transcriber restart. No-op when idle:
-    /// a suppression window only makes sense for a recorded finalization.
-    mutating func beginSuppression(deadline: Date) {
-      switch self {
-      case .idle:
-        break
-      case .restartInProgress(let localText), .suppressing(let localText, _):
-        self = .suppressing(localText: localText, deadline: deadline)
-      }
+    mutating func finishRestart() {
+      if self != .idle { self = .restarted }
     }
   }
 
@@ -129,7 +104,8 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     let id = lifecycleID
     await engine.stop()
     guard lifecycleID == id, !isInputSuspended, appState.isInputPanelVisible,
-      appState.settings.voiceInput.isVoiceInputEnabled else { return }
+      appState.settings.voiceInput.isVoiceInputEnabled
+    else { return }
     textView?.clearVolatileText()
     if let textView {
       appState.setInputText(textView.finalizedString)
@@ -137,8 +113,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     regenerateEngine()
     voiceInsertionPoint =
       textView?.selectedRange().location ?? (appState.inputText as NSString).length
-    clearReplayState()
-    accumulatedFinalizedText = ""
+    clearLocalFinalizationState()
     engine.start()
     logger.info("Engine switched while panel visible")
   }
@@ -152,8 +127,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     if let textView {
       appState.setInputText(textView.finalizedString)
     }
-    clearReplayState()
-    accumulatedFinalizedText = ""
+    clearLocalFinalizationState()
     logger.info("Engine disabled while panel visible")
   }
 
@@ -166,8 +140,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   private func resetShowState() {
     moveVoiceInsertionPoint(toEndOf: appState.inputText)
     currentVoiceTarget = .textEditor
-    clearReplayState()
-    accumulatedFinalizedText = ""
+    clearLocalFinalizationState()
   }
 
   // MARK: - Voice insertion point
@@ -189,8 +162,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   /// Finalize volatile editor text before a whole-document operation.
-  /// SpeechAnalyzer restarts replay locally finalized text, so preserve the
-  /// same suppression lifecycle used by cursor-driven finalization.
+  /// Wait for the transcriber restart before displaying more volatile text.
   func finalizeVolatileForTextOperation() {
     guard let textView, let range = textView.volatileRange else {
       textView?.finalizeVolatileText()
@@ -201,9 +173,8 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
       return
     }
 
-    let volatileText = (textView.string as NSString).substring(with: range)
     textView.finalizeVolatileText()
-    recordLocalFinalization(volatileText)
+    recordLocalFinalization()
     restartTranscriberIfNeeded()
   }
 
@@ -212,8 +183,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     inputSuspensionID = nil
     isStoppingEngine = false
     restartTranscriberTask?.cancel()
-    clearReplayState()
-    accumulatedFinalizedText = ""
+    clearLocalFinalizationState()
   }
 
   // MARK: - Text editing hooks
@@ -224,9 +194,8 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
       if let range = textView.volatileRange,
         range.location + range.length <= (textView.string as NSString).length
       {
-        let volatileText = (textView.string as NSString).substring(with: range)
         textView.finalizeVolatileText()
-        recordLocalFinalization(volatileText)
+        recordLocalFinalization()
       } else {
         textView.clearVolatileText()
       }
@@ -240,11 +209,9 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     restartTranscriberIfNeeded()
   }
 
-  /// Record that volatile text was finalized locally (cursor move or typing
-  /// over volatile text). The restarted transcriber replays this text, so it
-  /// must be tracked for suppression.
-  func recordLocalFinalization(_ text: String) {
-    replayState.recordLocalFinalization(text)
+  /// Record local finalization before the input operation restarts recognition.
+  func recordLocalFinalization() {
+    localFinalizationState.record()
   }
 
   // MARK: - VoiceInputDelegate
@@ -264,30 +231,14 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
 
     textView?.clearVolatileText()
 
-    switch replayState {
-    case .idle:
-      break
-    case .restartInProgress(let localText):
-      clearReplayState()
-      accumulatedFinalizedText += localText
-    case .suppressing(let localText, _):
-      clearReplayState()
-      accumulatedFinalizedText += localText
-      if text == localText {
-        if !isStoppingEngine { onReplacementInput?() }
-        return
-      }
-    }
-    transcriberAlreadyRestarted = false
+    clearLocalFinalizationState()
 
-    let newText = stripOverlappingPrefix(text, accumulated: accumulatedFinalizedText)
-    guard !newText.isEmpty else {
+    guard !text.isEmpty else {
       if !isStoppingEngine { onReplacementInput?() }
       return
     }
 
-    let inserted = insertFinalizedText(newText, at: voiceInsertionPoint)
-    accumulatedFinalizedText += inserted
+    insertFinalizedText(text, at: voiceInsertionPoint)
 
     if !isStoppingEngine {
       onReplacementInput?()
@@ -297,21 +248,13 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   func voiceInput(didUpdateVolatile text: String) {
     guard appState.isInputPanelVisible, !isInputSuspended else { return }
 
-    switch replayState {
+    switch localFinalizationState {
     case .idle:
       break
-    case .restartInProgress:
-      // Restart is async (handleCursorMoved / onVolatileFinalized path);
-      // suppress all volatile until it completes.
+    case .awaitingRestart:
       return
-    case .suppressing(let localText, let deadline):
-      if Date.now < deadline,
-        currentVoiceTarget == .textEditor,
-        localText.hasPrefix(text) || text.hasPrefix(localText)
-      {
-        return
-      }
-      clearReplayState()
+    case .restarted:
+      clearLocalFinalizationState()
     }
 
     switch currentVoiceTarget {
@@ -377,8 +320,8 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
     engine.delegate = self
   }
 
-  private func clearReplayState() {
-    replayState = .idle
+  private func clearLocalFinalizationState() {
+    localFinalizationState = .idle
     transcriberAlreadyRestarted = false
   }
 
@@ -387,50 +330,31 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
       let restartableEngine = engine as? any TranscriberRestartable
     else { return }
     let id = lifecycleID
-    let shouldSuppressReplay = replayState != .idle
+    let hadLocalFinalization = localFinalizationState != .idle
     // Set synchronously to prevent duplicate Task creation from handleCursorMoved + handleTextChanged
     transcriberAlreadyRestarted = true
     restartTranscriberTask = Task { @MainActor in
       let didRestart = await restartableEngine.restartTranscriber()
       guard self.lifecycleID == id, !Task.isCancelled else { return }
       if didRestart {
-        if shouldSuppressReplay {
-          self.replayState.beginSuppression(
-            deadline: Date.now + Self.replaySuppressionDuration)
+        if hadLocalFinalization {
+          self.localFinalizationState.finishRestart()
         }
       } else {
         // Restart failed (e.g. not listening): reset flag so next attempt can retry.
-        // Don't clearReplayState() here — a concurrent restart may be in flight.
-        // replayState will be cleared by didFinalize or clearReplayState elsewhere.
+        // Don't clearLocalFinalizationState() here — a concurrent restart may be in flight.
+        // localFinalizationState will be cleared by didFinalize or clearLocalFinalizationState elsewhere.
         self.transcriberAlreadyRestarted = false
       }
     }
   }
 
-  func stripOverlappingPrefix(_ newText: String, accumulated: String) -> String {
-    guard !accumulated.isEmpty, !newText.isEmpty else { return newText }
-    let accNS = accumulated as NSString
-    let newNS = newText as NSString
-    let maxSuffixLen = min(min(accNS.length, newNS.length), 512)
-    for suffixLen in stride(from: maxSuffixLen, through: 1, by: -1) {
-      let suffix = accNS.substring(from: accNS.length - suffixLen)
-      let prefix = newNS.substring(to: suffixLen)
-      if suffix == prefix {
-        if suffixLen == 1, let char = suffix.first, !char.isPunctuation { continue }
-        return newNS.substring(from: suffixLen)
-      }
-    }
-    return newText
-  }
-
-  @discardableResult
-  private func insertFinalizedText(_ text: String, at insertionPoint: Int) -> String {
-    guard let textView else { return "" }
+  private func insertFinalizedText(_ text: String, at insertionPoint: Int) {
+    guard let textView else { return }
     let clampedPoint = min(insertionPoint, (textView.string as NSString).length)
     let insertedText = textView.insertFinalizedText(text, at: clampedPoint)
     let nsText = insertedText as NSString
     voiceInsertionPoint = clampedPoint + nsText.length
     appState.setInputText(textView.finalizedString)
-    return insertedText
   }
 }

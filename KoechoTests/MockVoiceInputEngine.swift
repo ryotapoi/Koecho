@@ -36,6 +36,7 @@ final class MockRestartableVoiceInputEngine: VoiceInputEngine, TranscriberRestar
   private(set) var state: VoiceInputState = .idle
   weak var delegate: (any VoiceInputDelegate)?
 
+  var onRestart: (() async -> Void)?
   var restartResult = true
   var stopCallCount = 0
   var restartTranscriberCallCount = 0
@@ -57,6 +58,7 @@ final class MockRestartableVoiceInputEngine: VoiceInputEngine, TranscriberRestar
   @discardableResult
   func restartTranscriber() async -> Bool {
     restartTranscriberCallCount += 1
+    await onRestart?()
     return restartResult
   }
 }

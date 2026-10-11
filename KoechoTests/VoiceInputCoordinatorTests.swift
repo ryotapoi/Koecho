@@ -119,13 +119,13 @@ import Testing
     let (coordinator, appState, _, _) = makeCoordinator(inputText: "hello")
     coordinator.handleCursorMoved(3)
     coordinator.currentVoiceTarget = .prompt
-    coordinator.replayState = .restartInProgress(localText: "some text")
+    coordinator.localFinalizationState = .awaitingRestart
 
     coordinator.prepareForShow()
 
     #expect(coordinator.voiceInsertionPoint == (appState.inputText as NSString).length)
     #expect(coordinator.currentVoiceTarget == .textEditor)
-    #expect(coordinator.replayState == .idle)
+    #expect(coordinator.localFinalizationState == .idle)
   }
 
   // MARK: - switchEngine
@@ -149,7 +149,7 @@ import Testing
     mockTV.string = "confirmed draft"
     mockTV.finalizedString = "confirmed"
     mockTV.volatileRange = NSRange(location: 9, length: 6)
-    coordinator.replayState = .restartInProgress(localText: "draft")
+    coordinator.localFinalizationState = .awaitingRestart
 
     let stopStarted = AsyncStream<Void>.makeStream()
     let finishStop = AsyncStream<Void>.makeStream()
@@ -162,7 +162,7 @@ import Testing
       guard let coordinator, let appState, let engine else { return }
       #expect(engine.state == .idle)
       #expect(appState.inputText == "old")
-      #expect(coordinator.replayState == .restartInProgress(localText: "draft"))
+      #expect(coordinator.localFinalizationState == .awaitingRestart)
       clearedBeforeRead = true
     }
     mockTV.onReadFinalizedString = { [weak coordinator, weak appState, weak mockTV] in
@@ -170,7 +170,7 @@ import Testing
       #expect(clearedBeforeRead)
       #expect(mockTV.clearVolatileTextCallCount == 1)
       #expect(appState.inputText == "old")
-      #expect(coordinator.replayState == .restartInProgress(localText: "draft"))
+      #expect(coordinator.localFinalizationState == .awaitingRestart)
     }
 
     let disableTask = Task { await coordinator.disableEngine() }
@@ -180,7 +180,7 @@ import Testing
     #expect(mockTV.clearVolatileTextCallCount == 0)
     #expect(mockTV.volatileRange != nil)
     #expect(appState.inputText == "old")
-    #expect(coordinator.replayState == .restartInProgress(localText: "draft"))
+    #expect(coordinator.localFinalizationState == .awaitingRestart)
 
     finishStop.continuation.yield(())
     await disableTask.value
@@ -189,10 +189,10 @@ import Testing
     #expect(clearedBeforeRead)
     #expect(mockTV.volatileRange == nil)
     #expect(appState.inputText == "confirmed")
-    #expect(coordinator.replayState == .idle)
+    #expect(coordinator.localFinalizationState == .idle)
   }
 
-  @Test func disableEngineClearsAccumulatedFinalizedText() async {
+  @Test func disableEnginePreservesFollowingRepeatedSpeech() async {
     let (coordinator, _, mockTV, _) = makeCoordinator()
     coordinator.voiceInput(didFinalize: "hello.")
     #expect(mockTV.insertFinalizedTextCalls.count == 1)
@@ -220,13 +220,13 @@ import Testing
 
   // MARK: - resetState
 
-  @Test func resetStateClearsReplayFlags() {
+  @Test func resetStateClearsLocalFinalization() {
     let (coordinator, _, _, _) = makeCoordinator()
-    coordinator.replayState = .suppressing(localText: "text", deadline: Date.now)
+    coordinator.localFinalizationState = .restarted
 
     coordinator.resetState()
 
-    #expect(coordinator.replayState == .idle)
+    #expect(coordinator.localFinalizationState == .idle)
   }
 
   // MARK: - VoiceInputDelegate: didFinalize
@@ -297,21 +297,26 @@ import Testing
     #expect(mockTV.setVolatileTextCalls.isEmpty)
   }
 
-  // MARK: - Replay suppression
+  @Test func consecutiveFinalResultsPreserveRepeatedSpeech() {
+    let (coordinator, appState, _, _) = makeCoordinator()
 
-  @Test func replayFinalizeIsSkippedInReplayContext() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    coordinator.handleCursorMoved(5)
+    coordinator.voiceInput(didFinalize: "そうです")
+    coordinator.voiceInput(didFinalize: "そうです")
 
-    // Simulate locally finalized state with replay context
-    coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
+    #expect(appState.inputText == "そうですそうです")
+  }
 
-    // This should be treated as replay and skipped
-    coordinator.voiceInput(didFinalize: "hello")
+  @Test func repeatedFinalAfterLocalFinalizationIsInserted() async {
+    let (coordinator, appState, mockTV, _) = makeRestartableCoordinator()
+    mockTV.string = "そうです"
+    mockTV.volatileRange = NSRange(location: 0, length: 4)
+    coordinator.handleCursorMoved(4)
+    await coordinator.restartTranscriberTask?.value
 
-    // Text should not be inserted again
-    #expect(mockTV.insertFinalizedTextCalls.isEmpty)
-    #expect(mockTV.string == "hello")
+    coordinator.voiceInput(didFinalize: "そうです")
+
+    #expect(appState.inputText == "そうですそうです")
+    #expect(coordinator.localFinalizationState == .idle)
   }
 
   // MARK: - VoiceInputDelegate: didUpdateVolatile
@@ -332,72 +337,6 @@ import Testing
     #expect(appState.scriptUndoText == nil)
   }
 
-  @Test func didUpdateVolatileSuppressesReplayWithinDeadline() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    coordinator.handleCursorMoved(5)
-    coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
-
-    coordinator.voiceInput(didUpdateVolatile: "hel")
-
-    #expect(mockTV.setVolatileTextCalls.isEmpty)
-  }
-
-  // MARK: - Overlap stripping
-
-  @Test func stripOverlappingPrefixReturnsOriginalForEmptyInputs() {
-    let (coordinator, _, _, _) = makeCoordinator()
-
-    #expect(coordinator.stripOverlappingPrefix("hello", accumulated: "") == "hello")
-    #expect(coordinator.stripOverlappingPrefix("", accumulated: "hello") == "")
-  }
-
-  @Test func stripOverlappingPrefixRemovesLongestOverlapUpTo512Characters() {
-    let (coordinator, _, _, _) = makeCoordinator()
-    let overlap = "a" + String(repeating: "b", count: 511)
-
-    let result = coordinator.stripOverlappingPrefix(
-      overlap + " tail",
-      accumulated: "prefix " + overlap
-    )
-
-    #expect(result == " tail")
-  }
-
-  @Test func stripOverlappingPrefixDoesNotCheckBeyond512Characters() {
-    let (coordinator, _, _, _) = makeCoordinator()
-    let overlap = "a" + String(repeating: "b", count: 512)
-    let newText = overlap + " tail"
-
-    let result = coordinator.stripOverlappingPrefix(
-      newText,
-      accumulated: "prefix " + overlap
-    )
-
-    #expect(result == newText)
-  }
-
-  @Test func stripOverlappingPrefixKeepsSingleNonPunctuationOverlap() {
-    let (coordinator, _, _, _) = makeCoordinator()
-
-    let result = coordinator.stripOverlappingPrefix(
-      "apple",
-      accumulated: "banana"
-    )
-
-    #expect(result == "apple")
-  }
-
-  @Test func stripOverlappingPrefixRemovesSinglePunctuationOverlap() {
-    let (coordinator, _, _, _) = makeCoordinator()
-
-    let result = coordinator.stripOverlappingPrefix(
-      ". world",
-      accumulated: "hello."
-    )
-
-    #expect(result == " world")
-  }
-
   // MARK: - handleCursorMoved
 
   @Test func handleCursorMovedFinalizesVolatile() {
@@ -410,21 +349,10 @@ import Testing
     coordinator.handleCursorMoved(3)
 
     #expect(mockTV.finalizeVolatileTextCallCount == 1)
-    #expect(coordinator.replayState == .restartInProgress(localText: " world"))
+    #expect(coordinator.localFinalizationState == .awaitingRestart)
   }
 
-  // MARK: - Volatile suppression during cursor move (replay state without deadline)
-
-  @Test func didUpdateVolatileClearsStateWhenDeadlineExpired() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    coordinator.handleCursorMoved(5)
-    coordinator.replayState = .suppressing(localText: "world", deadline: Date.distantPast)
-
-    coordinator.voiceInput(didUpdateVolatile: "new text")
-
-    #expect(coordinator.replayState == .idle)
-    #expect(mockTV.setVolatileTextCalls.count == 1)
-  }
+  // MARK: - Volatile updates around a transcriber restart
 
   @Test func handleCursorMovedThenVolatileIsSuppressed() {
     let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
@@ -434,26 +362,85 @@ import Testing
 
     coordinator.handleCursorMoved(3)
     // The non-restartable mock leaves restartTranscriberIfNeeded() as a no-op.
-    // This tests the restartInProgress suppression path (all volatile suppressed).
+    // All volatile updates wait for the restart to finish.
     coordinator.voiceInput(didUpdateVolatile: "replay")
 
     #expect(mockTV.setVolatileTextCalls.isEmpty)
   }
 
-  @Test func restartTranscriberSuccessBeginsReplaySuppression() async {
-    let (coordinator, _, _, engine) = makeRestartableCoordinator()
-    coordinator.replayState = .restartInProgress(localText: "hello")
-
-    coordinator.handleTextChanged()
+  @Test func restartTranscriberSuccessAllowsRepeatedVolatileSpeech() async {
+    let (coordinator, _, mockTV, engine) = makeRestartableCoordinator()
+    mockTV.string = "hello"
+    mockTV.volatileRange = NSRange(location: 0, length: 5)
+    coordinator.handleCursorMoved(5)
     await coordinator.restartTranscriberTask?.value
 
     #expect(engine.restartTranscriberCallCount == 1)
-    guard case .suppressing(let localText, let deadline) = coordinator.replayState else {
-      Issue.record("Expected replay suppression after successful transcriber restart")
-      return
+    #expect(coordinator.localFinalizationState == .restarted)
+    coordinator.voiceInput(didUpdateVolatile: "hello")
+    #expect(mockTV.setVolatileTextCalls.count == 1)
+    #expect(coordinator.localFinalizationState == .idle)
+  }
+
+  @Test func finalDuringRestartIsInsertedAndCompletionDoesNotRestoreWaiting() async {
+    let (coordinator, appState, _, engine) = makeRestartableCoordinator()
+    let started = AsyncStream<Void>.makeStream()
+    let finish = AsyncStream<Void>.makeStream()
+    engine.onRestart = {
+      started.continuation.yield(())
+      for await _ in finish.stream { break }
     }
-    #expect(localText == "hello")
-    #expect(deadline > Date.now)
+    coordinator.recordLocalFinalization()
+    coordinator.handleTextChanged()
+    for await _ in started.stream { break }
+
+    coordinator.voiceInput(didFinalize: "new speech")
+    #expect(appState.inputText == "new speech")
+    #expect(coordinator.localFinalizationState == .idle)
+    finish.continuation.yield(())
+    await coordinator.restartTranscriberTask?.value
+    #expect(coordinator.localFinalizationState == .idle)
+  }
+
+  @Test func localFinalizationAfterRestartDoesNotSuppressNewVolatile() async {
+    let (coordinator, _, mockTV, _) = makeRestartableCoordinator()
+    coordinator.recordLocalFinalization()
+    coordinator.handleTextChanged()
+    await coordinator.restartTranscriberTask?.value
+    coordinator.recordLocalFinalization()
+
+    coordinator.voiceInput(didUpdateVolatile: "new text")
+
+    #expect(mockTV.setVolatileTextCalls.count == 1)
+    #expect(coordinator.localFinalizationState == .idle)
+  }
+
+  @Test(arguments: [false, true])
+  func resetIgnoresDelayedRestartCompletion(cancelEngine: Bool) async {
+    let (coordinator, _, mockTV, engine) = makeRestartableCoordinator()
+    let started = AsyncStream<Void>.makeStream()
+    let finish = AsyncStream<Void>.makeStream()
+    engine.onRestart = {
+      started.continuation.yield(())
+      for await _ in finish.stream { break }
+    }
+    coordinator.recordLocalFinalization()
+    coordinator.handleTextChanged()
+    let restart = coordinator.restartTranscriberTask
+    for await _ in started.stream { break }
+    if cancelEngine { coordinator.cancelEngine() }
+    coordinator.resetState()
+    // A new local finalization must not be released by the old completion.
+    coordinator.recordLocalFinalization()
+    finish.continuation.yield(())
+    await restart?.value
+
+    #expect(coordinator.localFinalizationState == .awaitingRestart)
+    coordinator.voiceInput(didUpdateVolatile: "old result")
+    #expect(mockTV.setVolatileTextCalls.isEmpty)
+    coordinator.resetState()
+    coordinator.voiceInput(didUpdateVolatile: "new text")
+    #expect(mockTV.setVolatileTextCalls.count == 1)
   }
 
   @Test func restartTranscriberFailureAllowsRetry() async {
@@ -475,17 +462,6 @@ import Testing
     await coordinator.restartTranscriberTask?.value
 
     #expect(engine.restartTranscriberCallCount == 1)
-  }
-
-  @Test func didUpdateVolatileClearsStateOnNonMatchingTextWithinDeadline() {
-    let (coordinator, _, mockTV, _) = makeCoordinator(inputText: "hello")
-    coordinator.handleCursorMoved(5)
-    coordinator.replayState = .suppressing(localText: "hello", deadline: Date.now + 10)
-
-    coordinator.voiceInput(didUpdateVolatile: "completely different")
-
-    #expect(coordinator.replayState == .idle)
-    #expect(mockTV.setVolatileTextCalls.count == 1)
   }
 
 }

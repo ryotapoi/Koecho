@@ -12,7 +12,7 @@ import Testing
 /// - InputPanelControllerConfirmTests.swift — confirm / history
 /// - InputPanelControllerScriptTests.swift — script execution / auto-run
 /// - InputPanelControllerReplacementTests.swift — replacement rules
-/// - InputPanelControllerReplayTests.swift — overlap removal / replay suppression
+/// - InputPanelControllerReplayTests.swift — speech after local finalization
 @MainActor
 @Suite(.serialized)
 struct InputPanelControllerTests {

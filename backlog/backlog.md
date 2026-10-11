@@ -109,7 +109,7 @@
 
   優先度・調査の区切り: 低優先度。D1 の実音声確認と同じ機会に通常の入力操作で確認する。実害が見えなければ現行方式を維持し、録音継続のための buffering や認識構成の変更へ進まない。
 
-  根拠: `KM-03-C02`。`R04-C02`。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) のテキスト操作は restartTranscriber へ到達する。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) は tap を除去し AVAudioEngine を停止した後、analyzer と旧 resultTask の終了を await し、その間の入力を保持しない。割り込みと重複防止の現行判断は [ADR 0032](../decisions/0032-speech-overlap-defense.md) を参照。
+  根拠: `KM-03-C02`。`R04-C02`。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) のテキスト操作は restartTranscriber へ到達する。[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift) は tap を除去し AVAudioEngine を停止した後、analyzer と旧 resultTask の終了を await し、その間の入力を保持しない。割り込みと認識結果の保持の現行判断は [ADR 0038](../decisions/0038-preserve-repeated-speech.md) を参照。
 
   作業・完了条件: 実音声で認識再開時の録音停止時間・発話欠落を確認し、利用者への影響と対応要否を判断して記録する。改修を採用する場合は、採用した範囲で発話の取り込みを確認する。再開前後の結果同期を既存テストで確認し、実音声とカーソル移動・キーボード入力で影響を確認する。
 
@@ -131,19 +131,21 @@
 
   検証・限界: 100ms 内に focus 切替が成立したかは計測しておらず、未再現を競合が存在しない証明とはしない。A/B のアプリ名、試行数、Tap Mode、履歴追加、クリップボード復元、権限再許可有無は未報告。画面の直接観測はない。専用 build・署名・起動前後の doctor と所有 PID 66873 の cleanup が成功。製品コード・テストの変更なし。証拠: `.tmp/verification/verify-koecho/f26-focus-20261011-01/`（`manual-results.md`、build / identity / session 記録）。
 
-- [ ] D1 反復発話と再配信防御の対応要否を判断する
+- [x] D1 反復発話と再配信防御の対応要否を判断する
 
-  優先度・調査の区切り: 低優先度。F7 と同じ実音声確認で、通常の反復発話と入力操作後の再配信を確認する。実害が見えない場合や、安全に区別する変更が大きい場合は現行防御を維持して見送りを判断する。
+  目的・完了条件: 意図した反復発話と入力操作後の再配信を実音声で確認し、文字列に基づく防御の修正／維持を判断する。確認条件・結果・限界と、採用した変更の検証を記録する。
 
-  背景・根拠: `SpeechAnalyzer` が別々に返す確定結果でも、蓄積済みテキストの末尾と新しい結果の先頭が重なると、現在は重複として後者から除去する。これはキーボード入力・カーソル移動の割り込み後に前セグメントが再配信される既知の問題への防御であり、ユーザーが同じ言葉を繰り返して入力したい意図を削除するためではない。[`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift) の `stripOverlappingPrefix`、[ADR 0032](../decisions/0032-speech-overlap-defense.md)
+  原因確認（2026-10-11）: 製品 commit `c040439` の専用版（macOS 27.0.1、Xcode 27.1、音声 on）で、本人が「そうです」を間を空けて反復すると1回分になると報告した。一時計測版で、2回目も表示中の未確定文字と同一の4文字の確定結果が届き、replay idle の蓄積比較で4文字全除去・挿入0となったことを確認した。OS が2回目を認識しなかった現象とは区別する。
 
-  例: 独立した確定結果が「あい」「あい」と続くと、現在は後者が除去される。将来は、認識結果の再配信と意図した反復発話を区別できるかを調査する。
+  比較・採用判断: 一時コピーで蓄積の重複除去、ローカル確定本文との一致による破棄、再開後の未確定結果の先頭一致抑止を無効にした。認識器再生成と再生成中の未確定表示抑止は維持した。本人は反復、文字入力x、カーソル左、改行を挟んだ発話の全パターンが入力した通りに動いたと報告した。反復は同一認識sessionの別々の音声時間範囲から届き、両方4文字ずつ挿入された。後続発話も各7文字挿入された。文字列による防御を撤去し、時間範囲による新たな防御は追加しない。[ADR 0038](../decisions/0038-preserve-repeated-speech.md) に判断を残す。
 
-  実装時の判断・確認: 実際の SDK・対応 runtime で `SpeechAnalyzer` の挙動を確認し、重複除去を外せるか、または対象を狭められるかを判断する。macOS 27 専用化および対応下限の変更は決定済みとし、ライブラリ側で解消済みかどうかは未決定とする。採用する範囲で必要な場合だけ仕様と確認項目を更新し、既存の手段で確認する。新しいテスト基盤は要求しない。
+  別の観察と限界: 基準版では、カーソル移動後に「今日は晴れです」→「今日は晴れで明日も晴れですす」→「今日は晴れです」と後続の未確定表示が消える現象を本人が報告した。挙動を変えない計測版の3試行と防御なし比較では再現せず、原因未確定であり修正済みとは断定しない。OS側の過去問題の解消、他のOS・マイク・認識言語での無重複を保証しない。マイク・入力ソース・権限再許可有無は未報告。画面の直接観測なし。本文は診断ログへ出さず、文字数・分岐・音声時間範囲で確認した。
 
-  併せて見る観点: 確定音声の直後、次の volatile 到着前にカーソルを移した場合の旧本文の再表示（旧 F30）は未観測。D1 の確認中に現れた場合だけ影響を判断し、独立した再現調査は行わない。512 UTF-16 code units を超える再配信も、実際に観測した場合だけ扱う。
+  証拠: `.tmp/verification/verify-koecho/d1-speech-20261011-01/`、`d1-probe-20261011-01/`、`d1-no-dedup-20261011-01/` の本人記録・診断ログ・差分・build / identity / session記録。各専用buildと所有app・ログ収集processのcleanup成功。
 
-  完了条件: 確認した条件・結果・限界と、修正／仕様整理／見送りの判断を記録する。
+  製品反映とgate: 文字列による3つの防御、蓄積本文、再配信判定のdeadlineを削除し、ローカル確定後の再開待ち状態だけを残した。通常buildと全App tests成功（226 tests / 269 cases、失敗・skip・timeout・残留host・設定回収失敗なし）。反復保持、カーソル位置の後続確定、スクリプト後の反復、再開中の未確定抑止、reset/cancel後の遅延完了を検証した。実音声は比較版と製品の状態遷移・挿入挙動を照合して既存の本人確認を再利用した。証拠: `.tmp/verification/cli/d1-production-build-20261011-02/`、`d1-production-app-tests-20261011-02/`、比較版証拠の `production-equivalence.md`。
+
+  検証中の問題: 初回App testsでは旧削除仕様を期待したスクリプトテストを更新した。未変更の取消テストもPID marker読取で1件失敗し、別process groupに残った所有shellを識別して回収した。全体再実行で成功したが、この一過性失敗の原因修正は含めない。初回の結果と回収記録は `d1-production-app-tests-20261011-01/` に保持。既知のNSHostingView警告は本backlogの別項目で継続する。
 
 #### その他
 

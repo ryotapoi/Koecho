@@ -1,5 +1,6 @@
 ---
-status: current
+status: superseded
+superseded_by: 0038-preserve-repeated-speech.md
 ---
 
 # ADR 0021: Replay 抑制状態の enum 状態機械化

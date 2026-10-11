@@ -27,7 +27,7 @@ Key design choices:
 ## Consequences
 
 - **Positive**: Each service is independently unit-testable with mock TextViewOperating. 49 new unit tests added. Cognitive load reduced when working on a single concern.
-- **Positive**: Clear ownership of state — replay suppression lives in VoiceInputCoordinator, replacement previews in ReplacementService, script running state in ScriptExecutionService.
+- **Positive**: Clear ownership of state — local speech finalization and restart coordination live in VoiceInputCoordinator, replacement previews in ReplacementService, script running state in ScriptExecutionService.
 - **Negative**: textView reference is stored in 4 places (coordinator + 3 services), requiring synchronized setup in onTextViewCreated.
 - **Negative**: Coordinator is ~430 lines rather than the planned ~250, primarily due to confirm() orchestration and init callback wiring that must remain centralized.
 - **Neutral**: Existing InputPanelControllerTests continue to serve as integration tests unchanged.

@@ -1,5 +1,6 @@
 ---
-status: current
+status: superseded
+superseded_by: 0038-preserve-repeated-speech.md
 ---
 
 # ADR 0025: SpeechAnalyzer 専用の音声入力

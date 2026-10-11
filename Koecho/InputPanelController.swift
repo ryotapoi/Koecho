@@ -19,7 +19,7 @@ final class InputPanelController {
   private var scriptService: ScriptExecutionService!
   private(set) var shortcutScriptTask: Task<Void, Never>?
   private(set) var voiceShortcutTask: Task<Void, Never>?
-  // Internal getter so tests can reach replay state directly instead of
+  // Internal getter so tests can reach local finalization state directly instead of
   // production-unused forwarding properties on the controller.
   private(set) var voiceCoordinator: VoiceInputCoordinator!
   private var lifecycleManager: PanelLifecycleManager!
@@ -444,8 +444,8 @@ final class InputPanelController {
     view.onCursorMoved = { [weak self] position in
       self?.voiceCoordinator.handleCursorMoved(position)
     }
-    view.onVolatileFinalized = { [weak self] volatileText in
-      self?.voiceCoordinator.recordLocalFinalization(volatileText)
+    view.onVolatileFinalized = { [weak self] in
+      self?.voiceCoordinator.recordLocalFinalization()
     }
   }
 
