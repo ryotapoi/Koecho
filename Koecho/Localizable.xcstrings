@@ -862,6 +862,16 @@
         }
       }
     },
+    "Microphone Settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイク設定"
+          }
+        }
+      }
+    },
     "Microphone access denied. Open System Settings > Privacy & Security > Microphone." : {
       "extractionState" : "manual",
       "localizations" : {

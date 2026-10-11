@@ -14,6 +14,8 @@ struct VoiceInputSection: View {
         selection: $voiceInput.speechAnalyzerLocale,
         onSpeechLocalesChanged: onSpeechLocalesChanged
       )
+    }
+    Section("Microphone Settings") {
       AudioInputDeviceSection(
         deviceUID: $voiceInput.audioInputDeviceUID,
         deviceName: $voiceInput.audioInputDeviceName,
