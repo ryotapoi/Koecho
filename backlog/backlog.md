@@ -25,6 +25,18 @@
 
 [信頼性改善](v2.0.0-reliability.md)
 
+- [ ] 音声の off→on で停止中の処理が新セッションを消去しないようにする
+
+  問題: 音声を off にした停止処理の完了前に on へ戻すと、停止中の処理と新エンジンが同じ lifecycle ID を共有する。停止中の処理の復帰後に新セッションの volatile テキストとローカル確定状態が消去される経路がある。実機での発生頻度と恒久的な本文欠落は未確認。対象: [`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift)、[`InputPanelController.swift`](../Koecho/InputPanelController.swift)。
+
+  完了条件: 音声エンジンの停止中に再有効化し、新セッションが認識結果を受け取った後に先行する停止処理が完了しても、新セッションの本文・状態が保持されることを確認する。
+
+- [ ] 停止中の音声エンジンの解放で新エンジンのマイク排他を解除しないようにする
+
+  問題: Settings のメーターが要求されている状態で音声を素早く off→on にすると、新エンジンの取得後に停止中のエンジンが共有 Bool を解除し、認識中にメーターの録音を再開できる。実機の発生頻度とハードウェア依存の認識失敗は未確認。対象: [`AudioInputExclusiveAccess.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioInputExclusiveAccess.swift)、[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift)、[`AudioInputLevelMonitor.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioInputLevelMonitor.swift)。
+
+  完了条件: 新エンジンの取得後に停止中のエンジンを解放しても認識中のメーター取得を抑止し、認識側の取得が終了した時点で要求中のメーターを再開できることを確認する。
+
 - [x] フォーカス復帰テストの NSHostingView 警告を解消する
 
   対応: [`InputPanelControllerConfirmTests.swift`](../KoechoTests/InputPanelControllerConfirmTests.swift) の `accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput()` で、表示前に通常の NSView を共通の親として NSHostingView と focusSink を配置した。貼り付け試行中は view 構成を変更せず、フォーカス移動だけを模擬する。本文・選択・フォーカスの復帰と音声エンジン非再起動の既存検証を維持し、製品コードは変更していない。
@@ -46,6 +58,18 @@
 #### 不具合修正・検証
 
 [不具合修正・検証](v2.0.0-bugfixes.md)
+
+- [ ] 置換後の音声挿入位置を Unicode 境界に保つ
+
+  問題: Auto-replace off で `ab → 😀` を登録し、`a` と `b` の間から局所置換すると、音声挿入位置が置換後も UTF-16 の位置 1 に残る。次の音声入力が絵文字のサロゲートペア内部を編集する経路がある。実 AppKit の描画・貼り付け結果は未確認。対象: [`ReplacementEngine.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift)、[`ReplacementService.swift`](../Koecho/ReplacementService.swift)。
+
+  完了条件: 局所置換と全文置換の挿入位置補正で Unicode 境界を保ち、置換直後の音声入力で絵文字・複合文字を分断しないことを確認する。
+
+- [ ] 選択範囲の置換検証で全文候補を繰り返し構築しないようにする
+
+  問題: 選択した候補ごとに全文の候補を再構築し、非重複 N 件の検証で三次の比較処理を MainActor 上で行う。1,000 件では重なり比較だけで約 4.995 億回になる。実時間は未計測。対象: [`ReplacementService.swift`](../Koecho/ReplacementService.swift)、[`ReplacementEngine.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift)。
+
+  完了条件: 同じ本文・ルールに対する候補構築を検証対象ごとに繰り返さず、既存の候補失効検証・選択範囲・置換順を維持する。多数候補の全選択置換で計算量と応答時間の改善を確認する。
 
 #### 調査・対応判断
 
