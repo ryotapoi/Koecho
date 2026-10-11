@@ -199,6 +199,51 @@ import Testing
     #expect(coordinator.voiceInsertionPoint == 6)
   }
 
+  @Test(arguments: [true, false])
+  func unicodeReplacementFeedsSelectionAndFollowingVoice(local: Bool) {
+    let (service, appState, _, coordinator) = makeService(inputText: "abZ")
+    appState.settings.replacement.isAutoReplacementEnabled = false
+    appState.settings.replacement.addReplacementRule(ReplacementRule(pattern: "ab", replacement: "👩‍💻"))
+    let textView = VoiceInputTextView()
+    textView.replaceText("abZ", selecting: NSRange(location: 1, length: 0))
+    service.textView = textView
+    coordinator.textView = textView
+    coordinator.handleCursorMoved(1)
+
+    if local {
+      service.replaceSelection()
+    } else {
+      service.applyOrPreview()
+    }
+
+    #expect(appState.inputText == "👩‍💻Z")
+    #expect(coordinator.voiceInsertionPoint == 5)
+    #expect(textView.selectedRange() == NSRange(location: 5, length: 0))
+    coordinator.voiceInput(didUpdateVolatile: "voice")
+    #expect(textView.string == "👩‍💻voiceZ")
+    #expect(textView.volatileRange == NSRange(location: 5, length: 5))
+    coordinator.voiceInput(didFinalize: "voice")
+    #expect(textView.string == "👩‍💻voiceZ")
+    #expect(textView.volatileRange == nil)
+    #expect(appState.inputText == "👩‍💻voiceZ")
+    #expect(coordinator.voiceInsertionPoint == 10)
+  }
+
+  @Test func localUnicodeReplacementMapsBothSelectionEndpoints() {
+    let (service, state, view, coordinator) = makeService(inputText: "abZ")
+    state.settings.replacement.isAutoReplacementEnabled = false
+    state.settings.replacement.addReplacementRule(ReplacementRule(pattern: "ab", replacement: "😀"))
+    coordinator.handleCursorMoved(1)
+    view.selectedRangeValue = NSRange(location: 1, length: 1)
+    service.refreshCandidates()
+
+    view.onReplaceCandidate?([view.replacementCandidates[0]])
+
+    #expect(state.inputText == "😀Z")
+    #expect(coordinator.voiceInsertionPoint == 2)
+    #expect(view.selectedRange() == NSRange(location: 2, length: 0))
+  }
+
   @Test func deletionInsideMatchUpdatesSelectionAndVoiceTogether() {
     let (service, appState, textView, coordinator) = makeService(inputText: "abcFILLERz")
     appState.settings.replacement.addReplacementRule(ReplacementRule(pattern: "FILLER", replacement: ""))

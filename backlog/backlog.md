@@ -63,7 +63,7 @@
 
 [不具合修正・検証](v2.0.0-bugfixes.md)
 
-- [ ] 置換後の音声挿入位置を Unicode 境界に保つ
+- [x] 置換後の音声挿入位置を Unicode 境界に保つ
 
   問題: Auto-replace off で `ab → 😀` を登録し、`a` と `b` の間から局所置換すると、音声挿入位置が置換後も UTF-16 の位置 1 に残る。次の音声入力が絵文字のサロゲートペア内部を編集する経路がある。実 AppKit の描画・貼り付け結果は未確認。対象: [`ReplacementEngine.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift)、[`ReplacementService.swift`](../Koecho/ReplacementService.swift)。
 

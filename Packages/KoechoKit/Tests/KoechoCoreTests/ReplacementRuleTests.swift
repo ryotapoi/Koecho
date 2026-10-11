@@ -532,12 +532,61 @@ struct ReplacementRuleTests {
       ReplacementMatch(range: NSRange(location: 2, length: 2), replacement: "LONG"),
       ReplacementMatch(range: NSRange(location: 5, length: 3), replacement: "x"),
       ReplacementMatch(range: NSRange(location: 9, length: 1), replacement: "")]
-    let expected = [0, 1, 2, 3, 6, 7, 8, 8, 8, 9, 9, 10]
+    let expected = [0, 2, 2, 3, 6, 7, 8, 8, 8, 9, 9, 10]
     for point in 0...11 {
       let result = applyReplacementMatches(matches, to: text, insertionPoint: point)
       #expect(result.text == "😀LONG x Z")
       #expect(result.insertionPoint == expected[point])
     }
+  }
+
+  @Test(arguments: ["😀", "e\u{301}", "👩‍💻"])
+  func replacementPointsAdvanceToFinalCharacterBoundary(replacement: String) {
+    let rule = ReplacementRule(pattern: "ab", replacement: replacement)
+    let match = ReplacementMatch(range: NSRange(location: 0, length: 2), replacement: replacement)
+    for (point, expected) in [(0, 0), (1, replacement.utf16.count), (2, replacement.utf16.count)] {
+      let local = applyReplacementMatch(match, to: "ab", insertionPoint: point)
+      let whole = applyReplacementRules([rule], to: "ab", insertionPoint: point)
+      #expect(local.text == replacement)
+      #expect(local.insertionPoint == expected)
+      #expect(whole.text == replacement)
+      #expect(whole.insertionPoint == expected)
+    }
+  }
+
+  @Test func replacementPointsUseClustersAcrossEditJunctions() {
+    let rule = ReplacementRule(pattern: "ab", replacement: "e")
+    let match = ReplacementMatch(range: NSRange(location: 0, length: 2), replacement: "e")
+    let local = applyReplacementMatch(match, to: "ab\u{301}Z", insertionPoint: 1)
+    let whole = applyReplacementRules([rule], to: "ab\u{301}Z", insertionPoint: 1)
+    #expect(local.text == "e\u{301}Z")
+    #expect(local.insertionPoint == 2)
+    #expect(whole.text == local.text)
+    #expect(whole.insertionPoint == 2)
+  }
+
+  @Test func multipleEditsCorrectOnlyTheFinalMappedPoint() {
+    let rules = [
+      ReplacementRule(pattern: "ab", replacement: "😀"),
+      ReplacementRule(pattern: "😀", replacement: "XY"),
+    ]
+    let whole = applyReplacementRules(rules, to: "ab", insertionPoint: 1)
+    #expect(whole.text == "XY")
+    #expect(whole.insertionPoint == 1)
+    let matches = [
+      ReplacementMatch(range: NSRange(location: 0, length: 1), replacement: "x"),
+      ReplacementMatch(range: NSRange(location: 1, length: 2), replacement: "\u{301}"),
+    ]
+    let local = applyReplacementMatches(matches, to: "eab", insertionPoint: 1)
+    #expect(local.text == "x\u{301}")
+    #expect(local.insertionPoint == 2)
+    let deletingLeft = [
+      ReplacementMatch(range: NSRange(location: 0, length: 1), replacement: ""),
+      matches[1],
+    ]
+    let deleted = applyReplacementMatches(deletingLeft, to: "eab", insertionPoint: 1)
+    #expect(deleted.text == "\u{301}")
+    #expect(deleted.insertionPoint == 0)
   }
 
 }

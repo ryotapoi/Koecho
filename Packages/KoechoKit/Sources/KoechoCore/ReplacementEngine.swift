@@ -35,6 +35,7 @@ public func applyReplacementRules(_ rules: [ReplacementRule], to text: String) -
 /// Apply rules in registration order, mapping a UTF-16 insertion point through
 /// each intermediate document. A point inside a match retains its relative
 /// offset up to the replacement's end; a deletion maps it to the match's start.
+/// A point inside a final extended grapheme cluster advances to its end.
 public func applyReplacementRules(
   _ rules: [ReplacementRule], to text: String, insertionPoint: Int
 ) -> (text: String, insertionPoint: Int) {
@@ -56,7 +57,7 @@ public func applyReplacementRules(
     point += shift
     result = application.result
   }
-  return (result, point)
+  return (result, characterBoundary(atOrAfter: point, in: result))
 }
 
 /// Find editable, non-overlapping occurrences in the current document.
@@ -81,6 +82,13 @@ public func findReplacementCandidates(_ rules: [ReplacementRule], in text: Strin
 /// Apply one current-document match, using the same UTF-16 point mapping as
 /// whole-document replacement. The caller must validate the match's snapshot.
 public func applyReplacementMatch(
+  _ match: ReplacementMatch, to text: String, insertionPoint: Int
+) -> (text: String, insertionPoint: Int) {
+  let application = applyReplacementMatchMapping(match, to: text, insertionPoint: insertionPoint)
+  return (application.text, characterBoundary(atOrAfter: application.insertionPoint, in: application.text))
+}
+
+private func applyReplacementMatchMapping(
   _ match: ReplacementMatch, to text: String, insertionPoint: Int
 ) -> (text: String, insertionPoint: Int) {
   let result = (text as NSString).replacingCharacters(in: match.range, with: match.replacement)
@@ -115,9 +123,21 @@ public func replacementTargets(
 public func applyReplacementMatches(
   _ matches: [ReplacementMatch], to text: String, insertionPoint: Int
 ) -> (text: String, insertionPoint: Int) {
-  matches.sorted { $0.range.location > $1.range.location }.reduce((text, insertionPoint)) {
-    applyReplacementMatch($1, to: $0.0, insertionPoint: $0.1)
+  let application = matches.sorted { $0.range.location > $1.range.location }.reduce((text, insertionPoint)) {
+    applyReplacementMatchMapping($1, to: $0.0, insertionPoint: $0.1)
   }
+  return (application.0, characterBoundary(atOrAfter: application.1, in: application.0))
+}
+
+/// Preserve mapped coordinates until all edits finish: intermediate clusters
+/// can change when a later replacement edits an adjacent character.
+private func characterBoundary(atOrAfter point: Int, in text: String) -> Int {
+  var boundary = 0
+  for character in text {
+    if boundary >= point { return boundary }
+    boundary += character.utf16.count
+  }
+  return boundary
 }
 
 /// Find non-overlapping preview regions in the original UTF-16 coordinates.
