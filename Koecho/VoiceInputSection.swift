@@ -227,18 +227,17 @@ private struct AudioInputDeviceSection: View {
     }
 
     if deviceManager.monitoredDeviceSupportsVolume {
-      HStack {
-        Image(systemName: "mic")
-          .foregroundStyle(.secondary)
+      AudioVolumeSettingsRow(label: Text("Input volume")) {
         Slider(
           value: Binding(
             get: { deviceManager.inputVolume },
             set: { deviceManager.setInputVolume($0) }
           ),
           in: 0...1
-        )
-        Image(systemName: "mic.fill")
-          .foregroundStyle(.secondary)
+        ) {
+          Text("Input volume")
+        }
+        .labelsHidden()
       }
     }
 

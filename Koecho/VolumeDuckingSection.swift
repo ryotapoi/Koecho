@@ -10,15 +10,19 @@ struct VolumeDuckingSection: View {
         "Lower system volume while input panel is open", isOn: $volumeDucking.isVolumeDuckingEnabled
       )
       if volumeDucking.isVolumeDuckingEnabled {
-        HStack {
-          Text("Target volume")
-          Slider(
-            value: $volumeDucking.volumeDuckingLevel,
-            in: 0...1
-          )
-          Text("\(Int(round(volumeDucking.volumeDuckingLevel * 100)))%")
-            .monospacedDigit()
-            .frame(width: 40, alignment: .trailing)
+        AudioVolumeSettingsRow(label: Text("Target volume")) {
+          HStack {
+            Slider(
+              value: $volumeDucking.volumeDuckingLevel,
+              in: 0...1
+            ) {
+              Text("Target volume")
+            }
+            .labelsHidden()
+            Text("\(Int(round(volumeDucking.volumeDuckingLevel * 100)))%")
+              .monospacedDigit()
+              .frame(width: 40, alignment: .trailing)
+          }
         }
         Text(
           "System output volume will be lowered to this level (or kept as-is if already lower) while the input panel is visible."

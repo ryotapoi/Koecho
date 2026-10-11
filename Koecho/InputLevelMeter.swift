@@ -4,10 +4,11 @@ struct InputLevelMeter: View {
   let level: Float
 
   var body: some View {
-    HStack(spacing: 2) {
-      Text("Input Level")
+    AudioVolumeSettingsRow(
+      label: Text("Input Level")
         .font(.caption)
         .foregroundStyle(.secondary)
+    ) {
       GeometryReader { geometry in
         RoundedRectangle(cornerRadius: 2)
           .fill(levelColor.color)
