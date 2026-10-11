@@ -25,28 +25,6 @@
 
 [信頼性改善](v2.0.0-reliability.md)
 
-- [x] 音声の off→on で停止中の処理が新セッションを消去しないようにする
-
-  問題: 音声を off にした停止処理の完了前に on へ戻すと、停止中の処理と新エンジンが同じ lifecycle ID を共有する。停止中の処理の復帰後に新セッションの volatile テキストとローカル確定状態が消去される経路がある。実機での発生頻度と恒久的な本文欠落は未確認。対象: [`VoiceInputCoordinator.swift`](../Koecho/VoiceInputCoordinator.swift)、[`InputPanelController.swift`](../Koecho/InputPanelController.swift)。
-
-  完了条件: 音声エンジンの停止中に再有効化し、新セッションが認識結果を受け取った後に先行する停止処理が完了しても、新セッションの本文・状態が保持されることを確認する。
-
-  検証: 旧停止完了後の本文・未確定範囲・ローカル確定状態の保持を回帰テストで確認。通常 build、App tests、専用署名 build は成功。2026-10-11 に本人が専用検証版でショートカットによる連続 off→on を操作し、再有効化後の認識本文の保持と後続入力の反映を確認。実際の OS 停止順序は本人操作から推定せず、回帰テストで検証した。
-
-- [x] 停止中の音声エンジンの解放で新エンジンのマイク排他を解除しないようにする
-
-  問題: Settings のメーターが要求されている状態で音声を素早く off→on にすると、新エンジンの取得後に停止中のエンジンが共有 Bool を解除し、認識中にメーターの録音を再開できる。実機の発生頻度とハードウェア依存の認識失敗は未確認。対象: [`AudioInputExclusiveAccess.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioInputExclusiveAccess.swift)、[`SpeechAnalyzerEngine.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/SpeechAnalyzerEngine.swift)、[`AudioInputLevelMonitor.swift`](../Packages/KoechoKit/Sources/KoechoPlatform/AudioInputLevelMonitor.swift)。
-
-  完了条件: 新エンジンの取得後に停止中のエンジンを解放しても認識中のメーター取得を抑止し、認識側の取得が終了した時点で要求中のメーターを再開できることを確認する。
-
-  検証: 取得の両解放順・重複解放・最新デバイスへのメーター再開を回帰テストで確認。Package tests、通常 build、App tests は成功。2026-10-11 に本人が専用検証版で Mac 内蔵マイクを使い、認識中と素早い off→on 後のメーター停止、認識の成功、Voice を有効に保ってパネルを閉じた後のメーター再開を確認。権限の再要求はなかった。実際の OS 取得・解放順は本人操作から推定せず、回帰テストで検証した。
-
-- [x] フォーカス復帰テストの NSHostingView 警告を解消する
-
-  対応: [`InputPanelControllerConfirmTests.swift`](../KoechoTests/InputPanelControllerConfirmTests.swift) の `accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput()` で、表示前に通常の NSView を共通の親として NSHostingView と focusSink を配置した。貼り付け試行中は view 構成を変更せず、フォーカス移動だけを模擬する。本文・選択・フォーカスの復帰と音声エンジン非再起動の既存検証を維持し、製品コードは変更していない。
-
-  検証: 全 app tests 成功（226 tests / 269 cases、失敗・skip 0）。対象テストの成功と、build.log 全文および runtimeWarnings に該当警告がないことを確認した。証拠: `.tmp/verification/cli/focus-warning-app-tests-20261011-02/`。
-
 #### 機能改善
 
 [機能改善](v2.0.0-features.md)
@@ -63,33 +41,11 @@
 
 [不具合修正・検証](v2.0.0-bugfixes.md)
 
-- [x] 置換後の音声挿入位置を Unicode 境界に保つ
-
-  問題: Auto-replace off で `ab → 😀` を登録し、`a` と `b` の間から局所置換すると、音声挿入位置が置換後も UTF-16 の位置 1 に残る。次の音声入力が絵文字のサロゲートペア内部を編集する経路がある。実 AppKit の描画・貼り付け結果は未確認。対象: [`ReplacementEngine.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift)、[`ReplacementService.swift`](../Koecho/ReplacementService.swift)。
-
-  完了条件: 局所置換と全文置換の挿入位置補正で Unicode 境界を保ち、置換直後の音声入力で絵文字・複合文字を分断しないことを確認する。
-
-- [x] 選択範囲の置換検証で全文候補を繰り返し構築しないようにする
-
-  問題: 選択した候補ごとに全文の候補を再構築し、非重複 N 件の検証で三次の比較処理を MainActor 上で行う。1,000 件では重なり比較だけで約 4.995 億回になる。実時間は未計測。対象: [`ReplacementService.swift`](../Koecho/ReplacementService.swift)、[`ReplacementEngine.swift`](../Packages/KoechoKit/Sources/KoechoCore/ReplacementEngine.swift)。
-
-  完了条件: 同じ本文・ルールに対する候補構築を検証対象ごとに繰り返さず、既存の候補失効検証・選択範囲・置換順を維持する。多数候補の全選択置換で計算量と応答時間の改善を確認する。
-
-  実装・計測済み: 300件の全選択置換は Debug hosted test で旧版の中央値 605.2 ms → 新版 6.67 ms。[計測条件・再実行手順](../cache/replacement-selection-measurement.md)に比較版、値、検証結果を記録。1,000件、Release は未計測。
-
-  実画面確認: 専用 build・起動・doctor 成功後、CUA の `timeoutReached` により本人操作へ引き継ぎ、変更後について「大丈夫だと思う」と報告された。旧版との体感比較は行っておらず、性能改善の根拠は上記 A/B 計測。個別操作の詳細は未確認。検証版は後片付け済み。証拠: `.tmp/verification/verify-koecho/20261011-replacement-ui-retry/`。
-
 #### 調査・対応判断
 
 [調査・対応判断](v2.0.0-investigations.md)
 
 ### 将来の改善
-
-- [x] hosted tests の UserDefaults domain を片付ける
-
-  対応: 起動の launch UUID・exact suite・host identity を Settings 構築前に記録し、終了時の削除と停止後の明示回収を実装した。[回収手順](../docs/xcode.md#hosted-test-の設定回収) に従い、その起動の記録だけを使う。UUID prefix による一括削除はしない。
-
-  確認: 通常 build、全 App tests（228 tests / 270 cases）、helper 回帰が成功。実 host と helper の強制終了後の回収・再回収、生存 host の拒否、通常相当・別 launch・所有記録なしの sentinel 保持を確認した。正常終了後に OS が再生成した空 plist は helper の回収として区別した。F29 の隔離契約を維持し、所有不明の過去 domain は削除していない。
 
 - [ ] D2 非ブロッキングの注意 UI を検討する
 
