@@ -172,6 +172,21 @@ extension InputPanelControllerTests {
     let ctx = makeController(paster: paster, makeEngine: { engine })
     let targetApp = NSRunningApplication.current
 
+    let hostingView = try #require(ctx.controller.panel.contentView)
+    let contentView = NSView(frame: hostingView.frame)
+    let focusSink = NSTextView(frame: .zero)
+    // NSHostingView only supports SwiftUI-managed subviews, so use a shared parent.
+    ctx.controller.panel.contentView = contentView
+    hostingView.translatesAutoresizingMaskIntoConstraints = false
+    contentView.addSubview(hostingView)
+    contentView.addSubview(focusSink)
+    NSLayoutConstraint.activate([
+      hostingView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+      hostingView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+      hostingView.topAnchor.constraint(equalTo: contentView.topAnchor),
+      hostingView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+    ])
+
     ctx.controller.showPanel()
     await Task.yield()
     let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
@@ -183,11 +198,10 @@ extension InputPanelControllerTests {
     ctx.appState.frontmostApplication = targetApp
     // orderOut does not clear NSWindow.firstResponder in this test host, so
     // model the focus transfer that occurs while the target app is activated.
-    let focusSink = NSTextView(frame: .zero)
     paster.onPasteAttempt = {
-      ctx.controller.panel.contentView?.addSubview(focusSink)
       ctx.controller.panel.initialFirstResponder = focusSink
       ctx.controller.panel.makeFirstResponder(nil)
+      #expect(ctx.controller.panel.firstResponder !== textView)
     }
 
     await ctx.controller.confirm()

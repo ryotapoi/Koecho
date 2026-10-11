@@ -25,13 +25,11 @@
 
 [信頼性改善](v2.0.0-reliability.md)
 
-- [ ] フォーカス復帰テストの NSHostingView 警告を解消する
+- [x] フォーカス復帰テストの NSHostingView 警告を解消する
 
-  優先度・目的: 低優先度。テスト専用の未サポートな view 構成を直し、貼り付け失敗後のフォーカス復帰を警告なしで検証できるようにする。製品での view 破損やテスト失敗は確認されていない。
+  対応: [`InputPanelControllerConfirmTests.swift`](../KoechoTests/InputPanelControllerConfirmTests.swift) の `accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput()` で、表示前に通常の NSView を共通の親として NSHostingView と focusSink を配置した。貼り付け試行中は view 構成を変更せず、フォーカス移動だけを模擬する。本文・選択・フォーカスの復帰と音声エンジン非再起動の既存検証を維持し、製品コードは変更していない。
 
-  根拠: [`InputPanelControllerConfirmTests.swift`](../KoechoTests/InputPanelControllerConfirmTests.swift) の `accessibilityFailureRehydratesEditorForImmediateRetryWithoutRestartingVoiceInput()` が、フォーカス移動を模擬する `focusSink`（NSTextView）を `panel.contentView`（NSHostingView）へ直接追加している。全 app tests で「Adding 'NSTextView' as a subview of NSHostingView is not supported and may result in a broken view hierarchy」という警告を観測した。証拠: `.tmp/verification/cli/ime-session-app-tests-20261011-01/build.log:2509`。同じ警告は IME 修正前の `.tmp/verification/cli/f3-generator-tests-1/build.log:2485` にもある。
-
-  作業・完了条件: テストの focusSink の配置をサポートされる構成へ変更する（例: 通常の NSView を共通の親にして NSHostingView と並べる）。本文・選択・フォーカスの復帰と音声エンジンを再起動しない既存の検証を維持する。全 app tests を通し、該当警告がログに出ないことを確認する。警告の抑制・テスト削除で済ませず、製品コードの変更は前提にしない。
+  検証: 全 app tests 成功（226 tests / 269 cases、失敗・skip 0）。対象テストの成功と、build.log 全文および runtimeWarnings に該当警告がないことを確認した。証拠: `.tmp/verification/cli/focus-warning-app-tests-20261011-02/`。
 
 #### 機能改善
 
