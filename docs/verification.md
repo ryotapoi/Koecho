@@ -14,7 +14,7 @@
 | Package と App の境界をまたぐ振る舞い | Package の `swift test`、通常 build、`xcodebuild -only-testing:KoechoTests test` |
 | SwiftUI の表示・レイアウト | 該当する上記 gate に加え、適切な `#Preview` があれば Apple Xcode MCP の `RenderPreview`、なければ専用検証アプリを起動して実画面を確認する。 |
 | ウィンドウ lifecycle、focus、入力、メニュー、操作フロー | 該当する上記 gate に加え、専用検証アプリで操作を確認する。Preview だけでは代替しない。 |
-| 権限、実際のディクテーション、ペースト、global hotkey、audio device、外部 script など OS / 外部環境との連携 | 該当する自動 gate に加え、専用検証アプリと実環境で対象操作を確認する。自力で確定できない権限・hardware・外部 app 依存だけをユーザー確認に回す。 |
+| 権限、実際の音声認識、ペースト、global hotkey、audio device、外部 script など OS / 外部環境との連携 | 該当する自動 gate に加え、専用検証アプリと実環境で対象操作を確認する。自力で確定できない権限・hardware・外部 app 依存だけをユーザー確認に回す。 |
 
 テスト可能な振る舞い変更や bug fix には unit test / regression test を追加または更新する。追加できない場合は理由と未検証範囲を報告する。必須 gate を実行できず、代替証拠でも裏付けられない High-risk 変更は完了扱いにしない。
 
