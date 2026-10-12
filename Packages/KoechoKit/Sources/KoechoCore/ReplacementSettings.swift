@@ -44,7 +44,7 @@ public final class ReplacementSettings {
     self.defaults = defaults
     _replacementRules = []
     _replacementShortcutKey = Self.defaultReplacementShortcutKey
-    _isAutoReplacementEnabled = true
+    _isAutoReplacementEnabled = false
 
     if let storedRules = defaults.object(forKey: "replacementRules") {
       if let data = storedRules as? Data {
@@ -87,10 +87,10 @@ public final class ReplacementSettings {
         _isAutoReplacementEnabled = enabled
       } else {
         loadFailures.insert(.isAutoReplacementEnabled)
-        _isAutoReplacementEnabled = true
+        _isAutoReplacementEnabled = false
       }
     } else {
-      _isAutoReplacementEnabled = true
+      _isAutoReplacementEnabled = false
     }
 
     save()

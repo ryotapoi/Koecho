@@ -60,6 +60,7 @@ extension InputPanelControllerTests {
 
   @Test func completedSelectionKeepsCaretThroughVolatileAutoReplacement() throws {
     let ctx = makeController()
+    ctx.appState.settings.replacement.isAutoReplacementEnabled = true
     ctx.controller.showPanel()
     let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
     let coordinator = try #require(ctx.controller.voiceCoordinator)

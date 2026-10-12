@@ -236,6 +236,7 @@ extension InputPanelControllerTests {
 
   @Test func autoReplacementAppliesMultipleInputs() {
     let ctx = makeController()
+    ctx.appState.settings.replacement.isAutoReplacementEnabled = true
     ctx.appState.settings.replacement.addReplacementRule(
       ReplacementRule(pattern: "えーと", replacement: "")
     )

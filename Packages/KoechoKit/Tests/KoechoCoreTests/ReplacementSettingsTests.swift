@@ -152,14 +152,16 @@ struct ReplacementSettingsTests {
   }
 
   @Test func malformedReplacementScalarsAreRecordedAndDefaulted() {
-    let defaults = makeDefaults()
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
     defaults.set("not shortcut data", forKey: "replacementShortcut")
     defaults.set("not a boolean", forKey: "isAutoReplacementEnabled")
 
     let settings = ReplacementSettings(defaults: defaults)
 
     #expect(settings.replacementShortcutKey == ReplacementSettings.defaultReplacementShortcutKey)
-    #expect(settings.isAutoReplacementEnabled)
+    #expect(!settings.isAutoReplacementEnabled)
     #expect(settings.loadFailures == [.replacementShortcut, .isAutoReplacementEnabled])
 
     settings.isAutoReplacementEnabled = false
@@ -190,9 +192,29 @@ struct ReplacementSettingsTests {
     #expect(settings.replacementShortcutKey == ReplacementSettings.defaultReplacementShortcutKey)
   }
 
-  @Test func defaultAutoReplacementEnabled() {
-    let settings = ReplacementSettings(defaults: makeDefaults())
-    #expect(settings.isAutoReplacementEnabled == true)
+  @Test func defaultAutoReplacementDisabledWhenUnset() {
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    #expect(defaults.object(forKey: "isAutoReplacementEnabled") == nil)
+
+    let settings = ReplacementSettings(defaults: defaults)
+
+    #expect(!settings.isAutoReplacementEnabled)
+    #expect(settings.loadFailures.isEmpty)
+  }
+
+  @Test(arguments: [true, false])
+  func loadsSavedAutoReplacementEnabled(enabled: Bool) {
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    defaults.set(enabled, forKey: "isAutoReplacementEnabled")
+
+    let settings = ReplacementSettings(defaults: defaults)
+
+    #expect(settings.isAutoReplacementEnabled == enabled)
+    #expect(settings.loadFailures.isEmpty)
   }
 
   @Test func persistsReplacementShortcutKey() {
@@ -215,14 +237,18 @@ struct ReplacementSettingsTests {
     #expect(reloaded.replacementShortcutKey == nil)
   }
 
-  @Test func persistsAutoReplacementEnabled() {
-    let defaults = makeDefaults()
+  @Test(arguments: [true, false])
+  func persistsAutoReplacementEnabled(enabled: Bool) {
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
 
     let settings = ReplacementSettings(defaults: defaults)
-    settings.isAutoReplacementEnabled = false
+    settings.isAutoReplacementEnabled = !enabled
+    settings.isAutoReplacementEnabled = enabled
 
     let reloaded = ReplacementSettings(defaults: defaults)
-    #expect(reloaded.isAutoReplacementEnabled == false)
+    #expect(reloaded.isAutoReplacementEnabled == enabled)
   }
 
   // MARK: - Legacy format rejection
