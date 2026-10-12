@@ -29,6 +29,12 @@
             "state" : "new",
             "value" : "%1$@ (%2$lld)"
           }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@（%2$lld）"
+          }
         }
       }
     },
@@ -58,36 +64,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld%%"
-          }
-        }
-      }
-    },
-    "Plain Text" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通常"
-          }
-        }
-      }
-    },
-    "Regular Expression" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正規表現"
-          }
-        }
-      }
-    },
-    "Replacement Method" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "置換方式"
           }
         }
       }
@@ -144,23 +120,6 @@
         }
       }
     },
-    "Add text" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add text"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "置換前の文字列を追加"
-          }
-        }
-      }
-    },
     "Add Replacement Rule" : {
       "localizations" : {
         "ja" : {
@@ -198,6 +157,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "スクリプトを追加"
+          }
+        }
+      }
+    },
+    "Add text" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add text"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換前の文字列を追加"
           }
         }
       }
@@ -310,7 +286,14 @@
       }
     },
     "Built-in Feature" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "組み込み機能"
+          }
+        }
+      }
     },
     "Cancel" : {
       "localizations" : {
@@ -465,7 +448,14 @@
       }
     },
     "Custom Script" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カスタムスクリプト"
+          }
+        }
+      }
     },
     "Cycle auto-run script selection" : {
       "extractionState" : "manual",
@@ -602,7 +592,14 @@
       }
     },
     "Enable Koecho in System Settings > Privacy & Security > Accessibility, then retry. If it is already enabled, remove and add the current Koecho again. Restart Koecho only if the permission still does not take effect." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "システム設定 > プライバシーとセキュリティ > アクセシビリティで Koecho を許可してから、もう一度お試しください。すでに許可されている場合は、Koecho を削除して現在のアプリを再追加してください。それでも許可が反映されない場合に限り、Koecho を再起動してください。"
+          }
+        }
+      }
     },
     "Enable voice input" : {
       "localizations" : {
@@ -668,7 +665,14 @@
       }
     },
     "Feature" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "機能"
+          }
+        }
+      }
     },
     "Fn (Globe)" : {
       "extractionState" : "manual",
@@ -704,7 +708,14 @@
       }
     },
     "History Could Not Be Cleared" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴を削除できませんでした"
+          }
+        }
+      }
     },
     "History could not be loaded. It is protected, and new entries are not being recorded. Reset it from the History settings page to resume recording." : {
       "localizations" : {
@@ -748,6 +759,7 @@
       }
     },
     "Icon" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -763,16 +775,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "アイコン: %@"
-          }
-        }
-      }
-    },
-    "Input volume" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "入力音量"
           }
         }
       }
@@ -799,6 +801,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "入力パネル"
+          }
+        }
+      }
+    },
+    "Input volume" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入力音量"
           }
         }
       }
@@ -928,16 +940,6 @@
         }
       }
     },
-    "Microphone Settings" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "マイク設定"
-          }
-        }
-      }
-    },
     "Microphone access denied. Open System Settings > Privacy & Security > Microphone." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -945,6 +947,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "マイクのアクセスが拒否されています。システム設定 > プライバシーとセキュリティ > マイク を開いてください。"
+          }
+        }
+      }
+    },
+    "Microphone Settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイク設定"
           }
         }
       }
@@ -1132,6 +1144,16 @@
         }
       }
     },
+    "Plain Text" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通常"
+          }
+        }
+      }
+    },
     "Press shortcut..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1173,6 +1195,16 @@
         }
       }
     },
+    "Regular Expression" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正規表現"
+          }
+        }
+      }
+    },
     "Release" : {
       "localizations" : {
         "ja" : {
@@ -1184,7 +1216,31 @@
       }
     },
     "Remove pattern" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パターンを削除"
+          }
+        }
+      }
+    },
+    "Replace All shortcut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replace All"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換（全体）"
+          }
+        }
+      }
     },
     "Replace Selection" : {
       "localizations" : {
@@ -1217,6 +1273,16 @@
         }
       }
     },
+    "Replacement Method" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換方式"
+          }
+        }
+      }
+    },
     "Replacement rules" : {
       "localizations" : {
         "ja" : {
@@ -1244,23 +1310,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "初期化するまで置換ルールは保護されています。"
-          }
-        }
-      }
-    },
-    "Replace All shortcut" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Replace All"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "置換（全体）"
           }
         }
       }
@@ -1515,7 +1564,14 @@
       }
     },
     "SCRIPTS" : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリプト"
+          }
+        }
+      }
     },
     "Scripts are protected until you reset them." : {
       "localizations" : {
@@ -1840,9 +1896,6 @@
         }
       }
     },
-    "Type" : {
-
-    },
     "Undo Script" : {
       "comment" : "Button that restores the input text from before the most recent manually run script.",
       "localizations" : {
@@ -1942,7 +1995,14 @@
       }
     },
     "Your history has not been cleared. Check available disk space and write permissions, then try again." : {
-
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴は削除されていません。ディスクの空き容量と書き込み権限を確認して、もう一度お試しください。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
