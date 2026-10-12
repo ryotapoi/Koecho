@@ -24,7 +24,10 @@ struct AddReplacementRuleView: View {
       Text("Add Replacement Rule")
         .font(.headline)
 
-      TextField("Pattern", text: .constant(pattern))
+      TextField(
+        usesRegularExpression ? LocalizedStringResource("Pattern") : .textToReplace,
+        text: .constant(pattern)
+      )
         .disabled(true)
 
       TextField("Replacement", text: $replacement)
@@ -75,6 +78,14 @@ struct AddReplacementRuleView: View {
 #Preview("Default") {
   AddReplacementRuleView(
     pattern: "えーと",
+    onAdd: { _ in },
+    onCancel: {}
+  )
+}
+
+#Preview("Empty") {
+  AddReplacementRuleView(
+    pattern: "",
     onAdd: { _ in },
     onCancel: {}
   )

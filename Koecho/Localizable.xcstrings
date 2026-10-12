@@ -114,8 +114,22 @@
         }
       }
     },
-    "Add Pattern" : {
-
+    "Add text" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add text"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換前の文字列を追加"
+          }
+        }
+      }
     },
     "Add Replacement Rule" : {
       "localizations" : {
@@ -1066,9 +1080,6 @@
         }
       }
     },
-    "Patterns" : {
-
-    },
     "Press shortcut..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1700,6 +1711,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "テキスト"
+          }
+        }
+      }
+    },
+    "Text to replace" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text to replace"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換前"
           }
         }
       }

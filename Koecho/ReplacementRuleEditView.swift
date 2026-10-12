@@ -48,13 +48,13 @@ struct ReplacementRuleEditView: View {
 
   @ViewBuilder
   private var plainPatternSection: some View {
-    Section("Patterns") {
+    Section(.textToReplace) {
       // Removing an empty row in onChange can discard uncommitted Japanese input.
       // Keep row removal explicit while a TextField is being edited.
       ForEach($rule.patterns) { $pattern in
         HStack {
           TextField(
-            "Pattern",
+            .textToReplace,
             text: $pattern.text
           )
           Button {
@@ -70,7 +70,7 @@ struct ReplacementRuleEditView: View {
       Button {
         rule.patterns.append(ReplacementRulePattern(text: ""))
       } label: {
-        Label("Add Pattern", systemImage: "plus")
+        Label(.addText, systemImage: "plus")
       }
       .buttonStyle(.borderless)
     }
