@@ -22,12 +22,38 @@ struct ScriptEditView: View {
 
   var body: some View {
     Form {
-      LabeledContent("Type") {
-        if script.kind == .custom {
-          Text("Custom Script")
-        } else {
-          Text("Built-in Feature")
+      HStack(spacing: 12) {
+        Text(script.kind == .custom ? LocalizedStringResource("Custom") : LocalizedStringResource("Built-in"))
+          .frame(width: 100, alignment: .leading)
+
+        HStack(spacing: 8) {
+          Button {
+            isIconPickerPresented = true
+          } label: {
+            Image(systemName: symbolName.isEmpty ? "plus" : symbolName)
+              .frame(width: 18)
+          }
+          .accessibilityLabel(iconDescription)
+          .help(iconDescription)
+          .popover(isPresented: $isIconPickerPresented, arrowEdge: .trailing) {
+            ScriptIconPicker(
+              selectedSymbol: symbolName,
+              canChooseNone: !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ) { selected in
+              symbolName = selected
+              saveDisplayIfValid()
+              isIconPickerPresented = false
+            }
+          }
+
+          TextField("Display Name", text: $displayName)
+            .labelsHidden()
+            .accessibilityLabel("Display Name")
+            .textFieldStyle(.roundedBorder)
+            .frame(minWidth: 0, maxWidth: .infinity)
+            .onChange(of: displayName) { _, _ in saveDisplayIfValid() }
         }
+        .frame(minWidth: 0, maxWidth: .infinity)
       }
 
       if script.kind == .custom {
@@ -50,30 +76,6 @@ struct ScriptEditView: View {
             } else {
               Text(builtin.feature.displayName)
             }
-          }
-        }
-      }
-
-      TextField("Display Name", text: $displayName)
-        .onChange(of: displayName) { _, _ in saveDisplayIfValid() }
-
-      LabeledContent("Icon") {
-        Button {
-          isIconPickerPresented = true
-        } label: {
-          Image(systemName: symbolName.isEmpty ? "plus" : symbolName)
-            .frame(width: 28, height: 24)
-        }
-        .accessibilityLabel(iconDescription)
-        .help(iconDescription)
-        .popover(isPresented: $isIconPickerPresented, arrowEdge: .trailing) {
-          ScriptIconPicker(
-            selectedSymbol: symbolName,
-            canChooseNone: !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-          ) { selected in
-            symbolName = selected
-            saveDisplayIfValid()
-            isIconPickerPresented = false
           }
         }
       }
@@ -282,4 +284,13 @@ private struct ScriptIconGroup: View {
 
 #Preview("Icon Picker") {
   ScriptIconPicker(selectedSymbol: "star", canChooseNone: true) { _ in }
+}
+
+#Preview("Long Display Name - Narrow") {
+  @Previewable @State var script = Script(
+    name: "A long display name that stays inside the editable field without widening the row",
+    scriptPath: "'/usr/local/bin/format.sh'"
+  )
+  ScriptEditView(script: $script)
+    .frame(width: 400, height: 480)
 }

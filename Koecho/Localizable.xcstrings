@@ -299,6 +299,16 @@
         }
       }
     },
+    "Built-in" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "組み込み"
+          }
+        }
+      }
+    },
     "Built-in Feature" : {
 
     },
