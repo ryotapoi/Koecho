@@ -225,10 +225,16 @@
     },
     "Auto-run cycle shortcut" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-run cycle"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自動実行の切り替えショートカット"
+            "value" : "自動実行の切り替え"
           }
         }
       }
@@ -743,10 +749,16 @@
     },
     "Input panel shortcuts" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input panel"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "入力パネル内のショートカット"
+            "value" : "入力パネル"
           }
         }
       }
@@ -1202,7 +1214,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Replace All shortcut"
+            "value" : "Replace All"
           }
         },
         "ja" : {
@@ -1215,10 +1227,16 @@
     },
     "Replacement shortcut" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replacement"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "置換ショートカット"
+            "value" : "置換"
           }
         }
       }
@@ -1859,10 +1877,16 @@
     },
     "Voice input shortcut" : {
       "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voice input"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "音声入力切替ショートカット"
+            "value" : "音声入力切替"
           }
         }
       }
