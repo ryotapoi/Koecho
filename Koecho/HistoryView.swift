@@ -4,6 +4,7 @@ import SwiftUI
 
 struct HistoryView: View {
   var historyStore: HistoryStore
+  private let horizontalInset: CGFloat = 8
   @State private var searchText = ""
   @State private var filteredEntries: [HistoryEntry]
   @State private var copiedEntryID: UUID?
@@ -81,8 +82,12 @@ struct HistoryView: View {
           ) {
             FullTextPopoverContent(text: entry.text)
           }
+          .listRowInsets(.horizontal, 0)
+          .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
+          .alignmentGuide(.listRowSeparatorTrailing) { $0[.trailing] }
         }
       }
+      .contentMargins(.horizontal, horizontalInset, for: .scrollContent)
       .searchable(text: $searchText, placement: .sidebar, prompt: "Search history")
 
       HStack {
@@ -97,7 +102,8 @@ struct HistoryView: View {
           .foregroundStyle(.secondary)
           .font(.caption)
       }
-      .padding(8)
+      .padding(.horizontal, 16)  // Align with the list separator edges.
+      .padding(.vertical, 8)
     }
     .onAppear(perform: updateFilteredEntries)
     .onChange(of: searchText) {
