@@ -4,7 +4,7 @@ import SwiftUI
 
 struct HistoryView: View {
   var historyStore: HistoryStore
-  private let horizontalInset: CGFloat = 8
+  var historySettings: HistorySettings
   @State private var searchText = ""
   @State private var filteredEntries: [HistoryEntry]
   @State private var copiedEntryID: UUID?
@@ -14,8 +14,9 @@ struct HistoryView: View {
   @State private var isShowingResetError = false
   @State private var isShowingClearError = false
 
-  init(historyStore: HistoryStore) {
+  init(historyStore: HistoryStore, historySettings: HistorySettings) {
     self.historyStore = historyStore
+    self.historySettings = historySettings
     _filteredEntries = State(
       initialValue: HistoryViewLogic.filteredEntries(
         searchText: "",
@@ -25,14 +26,42 @@ struct HistoryView: View {
   }
 
   var body: some View {
-    Group {
+    VStack(spacing: 8) {
+      HistorySettingsGroup(settings: historySettings)
+        .layoutPriority(1)
+
       if historyStore.isUnavailable {
         HistoryUnavailableContent(
           onReset: { isShowingResetConfirmation = true }
         )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
-        historyContent
+        HistorySearchField(searchText: $searchText)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.horizontal, 20)
+        HistoryList(
+          entries: filteredEntries,
+          copiedEntryID: copiedEntryID,
+          popoverEntryID: $popoverEntryID,
+          onCopy: copyEntry
+        )
+        .padding(.horizontal, 20)
       }
+    }
+    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
+    .safeAreaInset(edge: .bottom, spacing: 0) {
+      if !historyStore.isUnavailable {
+        HistoryFooter(entryCount: historyStore.entries.count, onClear: clearHistory)
+          .padding(.horizontal, 20)
+          .padding(.vertical, 12)
+      }
+    }
+    .onAppear(perform: updateFilteredEntries)
+    .onChange(of: searchText) {
+      updateFilteredEntries()
+    }
+    .onChange(of: historyStore.entries) {
+      updateFilteredEntries()
     }
     .confirmationDialog(
       "Reset History?",
@@ -59,58 +88,9 @@ struct HistoryView: View {
     }
   }
 
-  private var historyContent: some View {
-    VStack(spacing: 0) {
-      List {
-        ForEach(filteredEntries) { entry in
-          HistoryRow(
-            entry: entry,
-            isCopied: copiedEntryID == entry.id,
-            onCopy: { copyEntry(entry) }
-          )
-          .contextMenu {
-            Button("Copy") { copyEntry(entry) }
-            Button("Show Full Text") {
-              popoverEntryID = entry.id
-            }
-          }
-          .popover(
-            isPresented: Binding(
-              get: { popoverEntryID == entry.id },
-              set: { if !$0 { popoverEntryID = nil } }
-            )
-          ) {
-            FullTextPopoverContent(text: entry.text)
-          }
-          .listRowInsets(.horizontal, 0)
-          .alignmentGuide(.listRowSeparatorLeading) { $0[.leading] }
-          .alignmentGuide(.listRowSeparatorTrailing) { $0[.trailing] }
-        }
-      }
-      .contentMargins(.horizontal, horizontalInset, for: .scrollContent)
-      .searchable(text: $searchText, placement: .sidebar, prompt: "Search history")
-
-      HStack {
-        Button("Clear All") {
-          if !historyStore.clear() {
-            isShowingClearError = true
-          }
-        }
-        .disabled(historyStore.entries.isEmpty)
-        Spacer()
-        Text("\(historyStore.entries.count) entries")
-          .foregroundStyle(.secondary)
-          .font(.caption)
-      }
-      .padding(.horizontal, 16)  // Align with the list separator edges.
-      .padding(.vertical, 8)
-    }
-    .onAppear(perform: updateFilteredEntries)
-    .onChange(of: searchText) {
-      updateFilteredEntries()
-    }
-    .onChange(of: historyStore.entries) {
-      updateFilteredEntries()
+  private func clearHistory() {
+    if !historyStore.clear() {
+      isShowingClearError = true
     }
   }
 
@@ -165,61 +145,6 @@ enum HistoryViewLogic {
   }
 }
 
-private struct HistoryRow: View {
-  let entry: HistoryEntry
-  let isCopied: Bool
-  let onCopy: () -> Void
-
-  var body: some View {
-    Button(action: onCopy) {
-      VStack(alignment: .leading, spacing: 4) {
-        Text(entry.text)
-          .lineLimit(2)
-          .font(.body)
-          .frame(maxWidth: .infinity, alignment: .leading)
-
-        HStack {
-          if isCopied {
-            Text("Copied!")
-              .font(.caption)
-              .foregroundStyle(.green)
-          }
-
-          Text(entry.timestamp, format: .dateTime)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-        }
-      }
-      .padding(.vertical, 4)
-      .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-  }
-}
-
-private struct FullTextPopoverContent: View {
-  let text: String
-  private let maxPopoverHeight: CGFloat = 600
-  @State private var contentHeight: CGFloat = 0
-
-  var body: some View {
-    ScrollView {
-      Text(text)
-        .textSelection(.enabled)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(minWidth: 300, maxWidth: 500, alignment: .leading)
-        .padding()
-        .onGeometryChange(for: CGFloat.self) { proxy in
-          proxy.size.height
-        } action: { height in
-          contentHeight = height
-        }
-    }
-    .frame(height: contentHeight > 0 ? min(contentHeight, maxPopoverHeight) : nil)
-  }
-}
-
 // MARK: - Previews
 
 #Preview("With Entries") {
@@ -237,7 +162,7 @@ private struct FullTextPopoverContent: View {
       "A longer entry that might wrap to multiple lines. This tests the line limit behavior of the history row.",
     settings: historySettings
   )
-  return HistoryView(historyStore: store)
+  return HistoryView(historyStore: store, historySettings: historySettings)
     .frame(width: 400, height: 400)
 }
 
@@ -246,6 +171,9 @@ private struct FullTextPopoverContent: View {
     .appendingPathComponent("preview-history-empty")
   try? FileManager.default.removeItem(at: dir)
   let store = HistoryStore(directoryURL: dir)
-  return HistoryView(historyStore: store)
+  let historySettings = HistorySettings(
+    defaults: UserDefaults(suiteName: "preview-history-empty")!
+  )
+  return HistoryView(historyStore: store, historySettings: historySettings)
     .frame(width: 400, height: 400)
 }

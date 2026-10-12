@@ -31,7 +31,6 @@ struct SettingsView: View {
       case .general:
         GeneralSettingsView(
           voiceInput: settings.voiceInput,
-          history: settings.history,
           paste: settings.paste,
           volumeDucking: settings.volumeDucking,
           onSpeechLocalesChanged: onSpeechLocalesChanged
@@ -48,7 +47,7 @@ struct SettingsView: View {
       case .scripts:
         ScriptManagementView(settings: settings.script)
       case .history:
-        HistoryView(historyStore: historyStore)
+        HistoryView(historyStore: historyStore, historySettings: settings.history)
       }
     }
     .frame(minWidth: 600, minHeight: 400)
