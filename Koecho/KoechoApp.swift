@@ -113,10 +113,6 @@ struct KoechoApp: App {
       guard !Self.isTesting else { return }
       Task { await refreshDownloadedLocales() }
     }
-    .onChange(of: appState.settings.appIcon.selectedAppIcon, initial: true) {
-      guard !Self.isTesting else { return }
-      AppIconApplicator.apply(appState.settings.appIcon.selectedAppIcon)
-    }
 
     Window("Settings", id: "settings") {
       SettingsView(

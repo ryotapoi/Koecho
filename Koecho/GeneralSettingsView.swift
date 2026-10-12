@@ -6,7 +6,6 @@ struct GeneralSettingsView: View {
   @Bindable var history: HistorySettings
   @Bindable var paste: PasteSettings
   @Bindable var volumeDucking: VolumeDuckingSettings
-  @Bindable var appIcon: AppIconSettings
   let onSpeechLocalesChanged: @MainActor () async -> Void
 
   var body: some View {
@@ -23,13 +22,6 @@ struct GeneralSettingsView: View {
         Toggle("Enable History", isOn: $history.isHistoryEnabled)
         TextField("Max entries", value: $history.historyMaxCount, format: .number)
         TextField("Retention days", value: $history.historyRetentionDays, format: .number)
-      }
-      Section("App Icon") {
-        Picker("App icon", selection: $appIcon.selectedAppIcon) {
-          Text("Current").tag(AppIconVariant.current)
-          Text("Legacy (v1.4.2)").tag(AppIconVariant.legacy)
-        }
-        .pickerStyle(.segmented)
       }
     }
     .formStyle(.grouped)
@@ -48,7 +40,6 @@ struct GeneralSettingsView: View {
     history: HistorySettings(defaults: defaults),
     paste: PasteSettings(defaults: defaults),
     volumeDucking: VolumeDuckingSettings(defaults: defaults),
-    appIcon: AppIconSettings(defaults: defaults),
     onSpeechLocalesChanged: {}
   )
   .frame(width: 500, height: 600)

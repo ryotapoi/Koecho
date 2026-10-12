@@ -178,26 +178,6 @@
         }
       }
     },
-    "App icon" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリアイコン"
-          }
-        }
-      }
-    },
-    "App Icon" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリアイコン"
-          }
-        }
-      }
-    },
     "Arrows" : {
       "localizations" : {
         "ja" : {
@@ -423,16 +403,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最後の内容をコピー"
-          }
-        }
-      }
-    },
-    "Current" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "現在"
           }
         }
       }
@@ -856,16 +826,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "左"
-          }
-        }
-      }
-    },
-    "Legacy (v1.4.2)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "旧アイコン（v1.4.2）"
           }
         }
       }

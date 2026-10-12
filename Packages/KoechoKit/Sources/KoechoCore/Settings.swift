@@ -11,7 +11,6 @@ public final class Settings {
   public let history: HistorySettings
   public let paste: PasteSettings
   public let volumeDucking: VolumeDuckingSettings
-  public let appIcon: AppIconSettings
 
   public var loadFailures: Set<SettingsLoadFailure> {
     script.loadFailures.union(replacement.loadFailures).union(voiceInput.loadFailures)
@@ -29,6 +28,5 @@ public final class Settings {
     history = HistorySettings(defaults: defaults)
     paste = PasteSettings(defaults: defaults)
     volumeDucking = VolumeDuckingSettings(defaults: defaults)
-    appIcon = AppIconSettings(defaults: defaults)
   }
 }
