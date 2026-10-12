@@ -8,6 +8,14 @@ struct ReplacementRuleEditView: View {
 
   var body: some View {
     Form {
+      Section {
+        Picker("Replacement Method", selection: $rule.usesRegularExpression) {
+          Text("Plain Text").tag(false)
+          Text("Regular Expression").tag(true)
+        }
+        .pickerStyle(.menu)
+      }
+
       if rule.usesRegularExpression {
         regexPatternSection
       } else {
@@ -20,8 +28,6 @@ struct ReplacementRuleEditView: View {
           .font(.caption)
           .foregroundStyle(.secondary)
       }
-
-      Toggle("Use Regular Expression", isOn: $rule.usesRegularExpression)
 
       if !rule.usesRegularExpression {
         Toggle("Match Whole Word", isOn: $rule.matchesWholeWord)
@@ -48,7 +54,7 @@ struct ReplacementRuleEditView: View {
 
   @ViewBuilder
   private var plainPatternSection: some View {
-    Section(.textToReplace) {
+    Section {
       // Removing an empty row in onChange can discard uncommitted Japanese input.
       // Keep row removal explicit while a TextField is being edited.
       ForEach($rule.patterns) { $pattern in

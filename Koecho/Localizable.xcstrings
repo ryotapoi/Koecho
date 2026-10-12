@@ -62,6 +62,36 @@
         }
       }
     },
+    "Plain Text" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通常"
+          }
+        }
+      }
+    },
+    "Regular Expression" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正規表現"
+          }
+        }
+      }
+    },
+    "Replacement Method" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換方式"
+          }
+        }
+      }
+    },
     "✓ %@" : {
       "localizations" : {
         "ja" : {
