@@ -31,7 +31,6 @@ struct SettingsView: View {
       case .general:
         GeneralSettingsView(
           voiceInput: settings.voiceInput,
-          replacement: settings.replacement,
           history: settings.history,
           paste: settings.paste,
           volumeDucking: settings.volumeDucking,

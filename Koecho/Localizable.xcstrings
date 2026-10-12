@@ -1314,6 +1314,17 @@
         }
       }
     },
+    "Replacement Settings" : {
+      "comment" : "Accessibility label for the gear button below the replacement rule list.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置換設定"
+          }
+        }
+      }
+    },
     "Replacement shortcut" : {
       "localizations" : {
         "en" : {

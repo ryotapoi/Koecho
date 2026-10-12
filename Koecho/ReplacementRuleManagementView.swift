@@ -6,6 +6,7 @@ struct ReplacementRuleManagementView: View {
   @State private var selection: UUID?
   @State private var duplicatePatterns: Set<String>
   @State private var isResetConfirmationPresented = false
+  @State private var isAutoReplacementPopoverPresented = false
 
   init(settings: ReplacementSettings) {
     self.settings = settings
@@ -71,23 +72,36 @@ struct ReplacementRuleManagementView: View {
         settings.moveReplacementRules(from: source, to: destination)
       }
     }
+    .disabled(settings.isReplacementRulesProtected)
     .safeAreaInset(edge: .bottom) {
       HStack {
         Button(action: addRule) {
           Label("Add Rule", systemImage: "plus")
             .frame(width: 16, height: 16)
         }
+        .disabled(settings.isReplacementRulesProtected)
         Button(action: deleteSelectedRule) {
           Label("Delete Rule", systemImage: "minus")
             .frame(width: 16, height: 16)
         }
-        .disabled(selection == nil)
+        .disabled(settings.isReplacementRulesProtected || selection == nil)
         Spacer()
+        Button {
+          isAutoReplacementPopoverPresented = true
+        } label: {
+          Label("Replacement Settings", systemImage: "gearshape")
+            .frame(width: 16, height: 16)
+        }
+        .popover(isPresented: $isAutoReplacementPopoverPresented) {
+          Toggle("Auto-replace", isOn: $settings.isAutoReplacementEnabled)
+            .labelStyle(.titleAndIcon)
+            .fixedSize()
+            .padding()
+        }
       }
       .labelStyle(.iconOnly)
       .padding(8)
     }
-    .disabled(settings.isReplacementRulesProtected)
   }
 
   private func updateDuplicatePatterns() {
