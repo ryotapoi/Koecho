@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import subprocess
 import uuid
 
@@ -12,6 +12,60 @@ import verify
 
 
 class VerificationTests(unittest.TestCase):
+    def test_detached_residue_cleanup_leaves_other_hosts_in_shared_cache_running(self):
+        with tempfile.TemporaryDirectory() as directory:
+            evidence = Path(directory)
+            records = evidence / 'hosted-defaults'
+            records.mkdir()
+            launch = str(uuid.uuid4()).upper()
+            process = {'group': 9, 'started': 'owned start', 'command': '/shared/Koecho'}
+            (records / (launch + '.json')).write_text(json.dumps({
+                'version': 1, 'launchID': launch,
+                'suiteName': 'com.ryotapoi.Koecho.hosted-tests-' + launch,
+                'pid': 12345, 'started': process['started'], 'command': process['command'],
+                'runID': 'owned-run'}))
+            running = {}
+            child = Mock(pid=1000, returncode=0)
+
+            def launch_command(*args, **kwargs):
+                running.update({12345: process, 54321: dict(process)})
+                return child
+
+            def terminate(pid, sig):
+                running.pop(pid)
+
+            with patch.object(verify, 'processes', side_effect=lambda: dict(running)), \
+                 patch.object(verify.subprocess, 'Popen', side_effect=launch_command), \
+                 patch.object(verify.subprocess, 'check_output', return_value='/Xcode/Developer'), \
+                 patch.object(verify.os, 'kill', side_effect=terminate) as kill:
+                result = verify.run_logged(['fake-command'], evidence,
+                                           hosted_records=records, run_id='owned-run')
+            kill.assert_called_once_with(12345, verify.signal.SIGTERM)
+            self.assertEqual(set(running), {54321})
+            self.assertEqual(set(result['residue_detected']), {12345})
+            self.assertFalse(result['remaining'])
+            self.assertFalse(result['success'])
+
+    def test_detached_host_ownership_uses_launch_identity_not_shared_build_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            launch = str(uuid.uuid4()).upper()
+            path = directory / (launch + '.json')
+            process = {'group': 9, 'started': 'owned start',
+                       'command': '/shared/DerivedData/Koecho.app/Contents/MacOS/Koecho'}
+            record = {'version': 1, 'launchID': launch,
+                      'suiteName': 'com.ryotapoi.Koecho.hosted-tests-' + launch,
+                      'pid': 12345, 'started': process['started'], 'command': process['command'],
+                      'runID': 'owned-run'}
+            path.write_text(json.dumps(record))
+            current = {12345: process, 54321: dict(process)}
+            self.assertEqual(verify.recorded_hosts(directory, 'owned-run', current), {12345: process})
+            self.assertEqual(verify.recorded_hosts(directory, 'another-run', current), {})
+            self.assertEqual(verify.recorded_hosts(directory, 'owned-run', {
+                12345: {**process, 'started': 'reused PID'}}), {})
+            path.write_text('{unfinished')
+            self.assertEqual(verify.recorded_hosts(directory, 'owned-run', current), {})
+
     def test_owned_defaults_cleanup_checks_ownership_liveness_and_recovery(self):
         with tempfile.TemporaryDirectory() as directory:
             launch = str(uuid.uuid4()).upper()

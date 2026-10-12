@@ -28,22 +28,43 @@ def processes():
     return result
 
 
+def load_host_record(path, run_id=None, owned_path=None):
+    record = json.loads(path.read_text())
+    launch = str(uuid.UUID(record['launchID'])).upper()
+    suite = 'com.ryotapoi.Koecho.hosted-tests-' + launch
+    if (record.get('version') != 1 or record['launchID'] != launch
+            or path.stem != launch or record['suiteName'] != suite
+            or not isinstance(record['pid'], int) or record['pid'] <= 0
+            or not record.get('started') or not record.get('command')
+            or (run_id is not None and record.get('runID') != run_id)
+            or (owned_path is not None and str(owned_path) not in record['command'])):
+        raise ValueError('Ownership mismatch')
+    return record
+
+
+def recorded_hosts(directory, run_id, current):
+    """Identify detached hosts by this run's launch records, never by a shared cache path."""
+    owned = {}
+    for path in directory.glob('*.json') if directory else []:
+        try:
+            record = load_host_record(path, run_id)
+            process = current.get(record['pid'])
+            if process and all(process[key] == record[key] for key in ('started', 'command')):
+                owned[record['pid']] = process
+        except (OSError, ValueError, KeyError, TypeError):
+            # Invalid or incomplete records are reported by defaults recovery after exit.
+            continue
+    return owned
+
+
 def cleanup_hosted_defaults(records, run_id=None, owned_path=None):
     """Recover exact launch records only, after the recorded host has stopped."""
     outcomes = []
     for path in records:
         outcome = {'record': str(path), 'success': False}
         try:
-            record = json.loads(path.read_text())
-            launch = str(uuid.UUID(record['launchID'])).upper()
-            suite = 'com.ryotapoi.Koecho.hosted-tests-' + launch
-            if (record.get('version') != 1 or record['launchID'] != launch
-                    or path.stem != launch or record['suiteName'] != suite
-                    or not isinstance(record['pid'], int) or record['pid'] <= 0
-                    or not record.get('started') or not record.get('command')
-                    or (run_id is not None and record.get('runID') != run_id)
-                    or (owned_path is not None and str(owned_path) not in record['command'])):
-                raise ValueError('Ownership mismatch')
+            record = load_host_record(path, run_id, owned_path)
+            suite = record['suiteName']
             outcome['suite'] = suite
             # Refuse even a reused PID; recovery never stops processes itself.
             if record['pid'] in processes():
@@ -80,8 +101,9 @@ def cleanup_hosted_defaults(records, run_id=None, owned_path=None):
     return {'success': bool(outcomes) and all(o['success'] for o in outcomes), 'domains': outcomes}
 
 
-def run_logged(command, evidence, timeout=600, owned_path=None, environment=None):
-    """A unique output path and new process group identify this command's residue."""
+def run_logged(command, evidence, timeout=600, owned_path=None, environment=None,
+               hosted_records=None, run_id=None):
+    """Identify residue by process group, launch records, or an exclusive output path."""
     before = processes()
     if owned_path and any(str(owned_path) in p['command'] for p in before.values()):
         raise RuntimeError('Output path is in use; do not touch another run')
@@ -97,8 +119,10 @@ def run_logged(command, evidence, timeout=600, owned_path=None, environment=None
             timed_out = isinstance(error, subprocess.TimeoutExpired)
             interrupted = not timed_out
         current = processes()
+        hosts = recorded_hosts(hosted_records, run_id, current)
         residue = {pid: p for pid, p in current.items() if pid != os.getpid()
                    and (p['group'] == child.pid or
+                        (pid not in before and pid in hosts) or
                         (pid not in before and owned_path and str(owned_path) in p['command']))}
         for pid, process in residue.items():
             if processes().get(pid) == process:
@@ -110,8 +134,11 @@ def run_logged(command, evidence, timeout=600, owned_path=None, environment=None
             if processes().get(pid) == process:
                 os.kill(pid, signal.SIGKILL)
         child.wait(timeout=5)
-        remaining = {pid: p for pid, p in processes().items() if pid != os.getpid()
+        current = processes()
+        hosts = recorded_hosts(hosted_records, run_id, current)
+        remaining = {pid: p for pid, p in current.items() if pid != os.getpid()
                      and (p['group'] == child.pid or
+                          (pid not in before and pid in hosts) or
                           (pid not in before and owned_path and str(owned_path) in p['command']))}
     result = {'command': command, 'cwd': str(ROOT), 'developer_dir': os.environ.get('DEVELOPER_DIR'),
               'selected_developer_dir': subprocess.check_output(['xcode-select', '-p'], text=True).strip(),
@@ -211,12 +238,8 @@ def main():
         parser.error('--only must be a discovered KoechoTests/<suite>/<test> identifier')
     evidence = ROOT / '.tmp/verification/cli' / ns.run
     evidence.mkdir(parents=True, exist_ok=False)
-    scratch = ROOT / '.tmp/verification-scratch' / ns.run
-    if scratch.exists():
-        parser.error('Scratch already exists')
     if ns.action.startswith('package'):
-        command = ['xcrun', 'swift', 'test', '--package-path', str(ROOT / 'Packages/KoechoKit'),
-                   '--scratch-path', str(scratch)]
+        command = ['xcrun', 'swift', 'test', '--package-path', str(ROOT / 'Packages/KoechoKit')]
         if ns.action == 'package-list':
             command.append('list')
         else:
@@ -225,8 +248,7 @@ def main():
                 command.extend(['--filter', ns.filter])
     else:
         command = ['xcrun', 'xcodebuild', '-project', str(ROOT / 'Koecho.xcodeproj'),
-                   '-scheme', 'Koecho', '-configuration', 'Debug', '-destination', 'platform=macOS',
-                   '-derivedDataPath', str(scratch)]
+                   '-scheme', 'Koecho', '-configuration', 'Debug', '-destination', 'platform=macOS']
         if ns.action == 'build':
             command.append('build')
         else:
@@ -240,6 +262,7 @@ def main():
                                 '-test-timeouts-enabled', 'YES',
                                 '-default-test-execution-time-allowance', '60', 'test'])
     environment = None
+    ownership = None
     if ns.action == 'app-tests':
         ownership = evidence / 'hosted-defaults'
         ownership.mkdir()
@@ -247,9 +270,11 @@ def main():
         # xcodebuild forwards TEST_RUNNER_ variables to the actual test host without the prefix.
         environment['TEST_RUNNER_KOECHO_HOSTED_DEFAULTS_DIRECTORY'] = str(ownership)
         environment['TEST_RUNNER_KOECHO_HOSTED_DEFAULTS_RUN'] = ns.run
-    result = run_logged(command, evidence, ns.timeout, scratch, environment)
+    result = run_logged(command, evidence, ns.timeout, environment=environment,
+                        hosted_records=ownership, run_id=ns.run)
+    result['build_cache'] = 'package_default' if ns.action.startswith('package') else 'xcode_default'
     if ns.action == 'app-tests':
-        cleanup = cleanup_hosted_defaults(sorted(ownership.glob('*.json')), ns.run, scratch)
+        cleanup = cleanup_hosted_defaults(sorted(ownership.glob('*.json')), ns.run)
         save(evidence / 'hosted-defaults-cleanup.json', cleanup)
         result['hosted_defaults'] = cleanup
         result['success'] = result['success'] and cleanup['success']

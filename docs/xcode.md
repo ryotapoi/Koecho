@@ -17,7 +17,7 @@ MCP の full path は一時ファイルなので、必要な log・summary・xcr
 
 ## CLI の保存済み入口
 
-repository root から実行する。run 名は毎回未使用の一つのディレクトリ名。出力は `.tmp/verification/cli/<run>`、成果物は `.tmp/verification-scratch/<run>`。他 checkout と共有しない。通常は現在の `xcode-select`、Beta が必要な run だけ `DEVELOPER_DIR` を指定する（`xcode-select --switch` はしない）。実行に必要な cache / process 読取が sandbox に拒否された場合はその command だけ escalation する。
+repository root から実行する。run 名は毎回未使用の一つのディレクトリ名。ログ・結果は `.tmp/verification/cli/<run>` に分け、ビルド成果物は Xcode の通常の DerivedData と Package の既定 `.build` を再利用する。`-derivedDataPath` / `--scratch-path` は指定しない。同じ checkout の build / test は直列に実行し、Xcode からの build / test とも重ねない。通常は現在の `xcode-select`、Beta が必要な run だけ `DEVELOPER_DIR` を指定する（`xcode-select --switch` はしない）。実行に必要な cache / process 読取が sandbox に拒否された場合はその command だけ escalation する。
 
 ```sh
 scripts/verify.py build --run build-check
@@ -29,9 +29,9 @@ scripts/verify.py package-tests --run package-all
 scripts/verify.py package-tests --run package-focused --filter VoiceInputSettingsTests
 ```
 
-helper は `xcrun xcodebuild -project <checkout>/Koecho.xcodeproj -scheme Koecho -configuration Debug -destination platform=macOS` を使用する。App tests は `-only-testing:KoechoTests` と `-skip-testing:KoechoUITests`、選択時は発見した ID を使用する。UI tests を変更した場合は対象を明示した別 command として実行・記録する。Package は `xcrun swift test --package-path Packages/KoechoKit` に専用 scratch と event stream 出力を付ける。`--xunit-output` だけでは Swift Testing の結果を得られない。
+helper は `xcrun xcodebuild -project <checkout>/Koecho.xcodeproj -scheme Koecho -configuration Debug -destination platform=macOS` を使用する。App tests は `-only-testing:KoechoTests` と `-skip-testing:KoechoUITests`、選択時は発見した ID を使用する。UI tests を変更した場合は対象を明示した別 command として実行・記録する。Package は `xcrun swift test --package-path Packages/KoechoKit` に run ごとの event stream 出力を付ける。`--xunit-output` だけでは Swift Testing の結果を得られない。
 
-既定の command timeout は600秒（`--timeout` で指定）、App の各 test timeout は60秒。新しい process group と専用出力 path で run の残留を識別し、所有する process だけ TERM →5秒→KILL で回収する。中断・残留を検出した run は、回収できても失敗として記録する。App は xcresult summary、Package は全 event stream から件数・全失敗を保存する。通常 Package gate は両 test target の実行も確認する。終了コード0でも結果欠損、0件、失敗、skip、未完了 run は失敗とする。
+既定の command timeout は600秒（`--timeout` で指定）、App の各 test timeout は60秒。新しい process group と run ごとの hosted test 起動記録（PID・開始時刻・command）で残留を識別し、所有する process だけ TERM →5秒→KILL で回収する。共有の DerivedData / `.build` path だけを根拠に process を停止しない。中断・残留を検出した run は、回収できても失敗として記録する。App は xcresult summary、Package は全 event stream から件数・全失敗を保存する。通常 Package gate は両 test target の実行も確認する。終了コード0でも結果欠損、0件、失敗、skip、未完了 run は失敗とする。
 
 全文を毎回読まず、まず `result.json` / `test-summary.json` の件数と全失敗を確認する。App の parameterized tests は論理 test 数と case 数が異なるため、過去の件数を固定しない。必要な詳細だけ取得する。
 
@@ -41,7 +41,7 @@ scripts/verify.py results --path .tmp/verification/cli/app-focused/tests.xcresul
 scripts/verify.py log --path .tmp/verification/cli/app-all/build.log --pattern 'error:|warning:|failed' --limit 30
 ```
 
-log 出力は全一致件数・表示上限・全文 path を返す。上限を超えた失敗を消さない。run の残留がないことを `result.json` で確認してから、その run の scratch だけ削除し、証拠は保持する。helper の回帰確認は `python3 -B -m unittest discover -s scripts -p 'test_*.py' -v`。
+log 出力は全一致件数・表示上限・全文 path を返す。上限を超えた失敗を消さない。run の残留がないことを `result.json` で確認する。通常の確認後は共有ビルドキャッシュを削除せず、次回の差分 build に使う。過去の `.tmp/verification-scratch/<run>` は旧方式の成果物であり、残留確認後に削除できる。証拠は保持する。helper の回帰確認は `python3 -B -m unittest discover -s scripts -p 'test_*.py' -v`。
 
 ## hosted test の設定回収
 
