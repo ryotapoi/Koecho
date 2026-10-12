@@ -3,7 +3,6 @@ import SwiftUI
 
 struct GeneralSettingsView: View {
   @Bindable var voiceInput: VoiceInputSettings
-  @Bindable var script: ScriptSettings
   @Bindable var replacement: ReplacementSettings
   @Bindable var history: HistorySettings
   @Bindable var paste: PasteSettings
@@ -20,9 +19,6 @@ struct GeneralSettingsView: View {
       VolumeDuckingSection(volumeDucking: volumeDucking)
       Section("Clipboard") {
         TextField("Clipboard restore delay (sec)", value: $paste.pasteDelay, format: .number)
-      }
-      Section("Scripts") {
-        TextField("Timeout (sec)", value: $script.scriptTimeout, format: .number)
       }
       Section("Replacement Rules") {
         Toggle("Auto-replace", isOn: $replacement.isAutoReplacementEnabled)
@@ -53,7 +49,6 @@ struct GeneralSettingsView: View {
   voiceInput.isVoiceInputEnabled = true
   return GeneralSettingsView(
     voiceInput: voiceInput,
-    script: ScriptSettings(defaults: defaults),
     replacement: ReplacementSettings(defaults: defaults),
     history: HistorySettings(defaults: defaults),
     paste: PasteSettings(defaults: defaults),

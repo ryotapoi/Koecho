@@ -5,6 +5,7 @@ struct ScriptManagementView: View {
   @Bindable var settings: ScriptSettings
   @State private var selection: UUID?
   @State private var isResetConfirmationPresented = false
+  @State private var isTimeoutPopoverPresented = false
 
   var body: some View {
     VStack(spacing: 0) {
@@ -51,7 +52,8 @@ struct ScriptManagementView: View {
         settings.moveScripts(from: source, to: destination)
       }
     }
-      .safeAreaInset(edge: .bottom) {
+    .disabled(settings.isScriptsProtected)
+    .safeAreaInset(edge: .bottom) {
       HStack {
         Menu {
           Button("Custom Script", action: addCustomScript)
@@ -68,17 +70,33 @@ struct ScriptManagementView: View {
           Label("Add Script", systemImage: "plus")
             .frame(width: 16, height: 16)
         }
+        .disabled(settings.isScriptsProtected)
         Button(action: deleteSelectedScript) {
           Label("Delete Script", systemImage: "minus")
             .frame(width: 16, height: 16)
         }
-        .disabled(selection == nil)
+        .disabled(settings.isScriptsProtected || selection == nil)
         Spacer()
+        Button {
+          isTimeoutPopoverPresented = true
+        } label: {
+          Label("Script Settings", systemImage: "gearshape")
+            .frame(width: 16, height: 16)
+        }
+        .popover(isPresented: $isTimeoutPopoverPresented) {
+          HStack {
+            Text("Timeout")
+            TextField("Timeout", value: $settings.scriptTimeout, format: .number)
+              .textFieldStyle(.roundedBorder)
+              .frame(width: 60)
+            Text("sec")
+          }
+          .padding()
+        }
       }
       .labelStyle(.iconOnly)
       .padding(8)
     }
-    .disabled(settings.isScriptsProtected)
   }
 
   @ViewBuilder

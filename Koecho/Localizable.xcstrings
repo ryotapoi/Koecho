@@ -1542,6 +1542,17 @@
         }
       }
     },
+    "Script Settings" : {
+      "comment" : "Accessibility label for the gear button below the script list.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリプト設定"
+          }
+        }
+      }
+    },
     "Script timeout" : {
       "localizations" : {
         "ja" : {
@@ -1886,12 +1897,12 @@
         }
       }
     },
-    "Timeout (sec)" : {
+    "Timeout" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "タイムアウト（秒）"
+            "value" : "タイムアウト"
           }
         }
       }
@@ -1990,6 +2001,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "音量ダッキング"
+          }
+        }
+      }
+    },
+    "sec" : {
+      "comment" : "Seconds unit after the script timeout input.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "秒"
           }
         }
       }
