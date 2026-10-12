@@ -432,7 +432,8 @@ import Testing
     #expect(view.replacementCandidates.isEmpty)
   }
 
-  @Test func selectedSnapshotMapsMultipleEditsAndNextVoiceWithoutChaining() {
+  @Test(arguments: [true, false])
+  func selectedSnapshotMapsMultipleEditsAndNextVoiceWithoutChaining(local: Bool) {
     let (service, state, view, coordinator) = makeService(inputText: "😀a b cZ")
     state.settings.replacement.isAutoReplacementEnabled = false
     state.settings.replacement.replacementRules = [
@@ -443,7 +444,7 @@ import Testing
     coordinator.textView = view
     coordinator.handleCursorMoved(7)
     view.selectedRangeValue = NSRange(location: 2, length: 5)
-    service.replaceSelection()
+    if local { service.replaceSelection() } else { service.replaceAll() }
     #expect(state.inputText == "😀long  xZ")
     #expect(view.string == state.inputText)
     #expect(view.selectedRange() == NSRange(location: 2, length: 7))
@@ -462,6 +463,27 @@ import Testing
     view.volatileRange = marked ? nil : NSRange(location: 0, length: 1)
     service.replaceSelection()
     #expect(state.inputText == "aZ")
+    #expect(view.selectedRange() == NSRange(location: 1, length: 0))
+    #expect(coordinator.voiceInsertionPoint == 1)
+  }
+
+  @Test(arguments: ["marked", "volatile", "script", "snapshot", "hidden"])
+  func wholeDocumentShortcutRejectsUnsafeEditing(reason: String) {
+    let (service, state, view, coordinator) = makeService(inputText: "aZ")
+    state.settings.replacement.replacementRules = [ReplacementRule(pattern: "a", replacement: "long")]
+    view.selectedRangeValue = NSRange(location: 1, length: 0)
+    coordinator.handleCursorMoved(1)
+    switch reason {
+    case "marked": view.markedText = true
+    case "volatile": view.volatileRange = NSRange(location: 0, length: 1)
+    case "script": state.isRunningScript = true
+    case "snapshot": view.string = "a different snapshot"
+    default: state.isInputPanelVisible = false
+    }
+    let snapshot = view.string
+    service.replaceAll()
+    #expect(state.inputText == "aZ")
+    #expect(view.string == snapshot)
     #expect(view.selectedRange() == NSRange(location: 1, length: 0))
     #expect(coordinator.voiceInsertionPoint == 1)
   }

@@ -83,6 +83,13 @@ final class ReplacementService {
     replaceOccurrences(targets, in: text, rules: rules)
   }
 
+  func replaceAll() {
+    guard let textView else { return }
+    let text = textView.string
+    let rules = appState.settings.replacement.replacementRules
+    replaceOccurrences(findReplacementCandidates(rules, in: text), in: text, rules: rules)
+  }
+
   private func replaceOccurrences(_ matches: [ReplacementMatch], in text: String, rules: [ReplacementRule]) {
     guard let textView,
       appState.isInputPanelVisible, !appState.isRunningScript,

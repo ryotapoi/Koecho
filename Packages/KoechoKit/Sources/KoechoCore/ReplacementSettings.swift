@@ -6,6 +6,8 @@ import os
 public final class ReplacementSettings {
   static let defaultReplacementShortcutKey = ShortcutKey(modifiers: [.control], character: "r")
 
+  static let defaultReplacementAllShortcutKey = ShortcutKey(modifiers: [.control, .shift], character: "r")
+
   private let defaults: UserDefaults
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ReplacementSettings")
 
@@ -31,6 +33,15 @@ public final class ReplacementSettings {
     }
   }
 
+  private var _replacementAllShortcutKey: ShortcutKey?
+  public var replacementAllShortcutKey: ShortcutKey? {
+    get { _replacementAllShortcutKey }
+    set {
+      _replacementAllShortcutKey = newValue
+      save()
+    }
+  }
+
   private var _isAutoReplacementEnabled: Bool
   public var isAutoReplacementEnabled: Bool {
     get { _isAutoReplacementEnabled }
@@ -44,6 +55,7 @@ public final class ReplacementSettings {
     self.defaults = defaults
     _replacementRules = []
     _replacementShortcutKey = Self.defaultReplacementShortcutKey
+    _replacementAllShortcutKey = Self.defaultReplacementAllShortcutKey
     _isAutoReplacementEnabled = false
 
     if let storedRules = defaults.object(forKey: "replacementRules") {
@@ -80,6 +92,23 @@ public final class ReplacementSettings {
       }
     } else {
       _replacementShortcutKey = Self.defaultReplacementShortcutKey
+    }
+
+    if let storedShortcut = defaults.object(forKey: "replacementAllShortcut") {
+      if let data = storedShortcut as? Data {
+        do {
+          _replacementAllShortcutKey = try ShortcutKey.decodeOptional(from: data)
+        } catch {
+          logger.warning("Failed to decode replacementAllShortcut, using default")
+          loadFailures.insert(.replacementAllShortcut)
+          _replacementAllShortcutKey = Self.defaultReplacementAllShortcutKey
+        }
+      } else {
+        loadFailures.insert(.replacementAllShortcut)
+        _replacementAllShortcutKey = Self.defaultReplacementAllShortcutKey
+      }
+    } else {
+      _replacementAllShortcutKey = Self.defaultReplacementAllShortcutKey
     }
 
     if let enabled = defaults.object(forKey: "isAutoReplacementEnabled") {
@@ -138,6 +167,12 @@ public final class ReplacementSettings {
       defaults.set(data, forKey: "replacementShortcut")
     } catch {
       logger.error("Failed to encode replacementShortcut: \(error.localizedDescription)")
+    }
+    do {
+      let data = try ShortcutKey.encodeOptional(_replacementAllShortcutKey)
+      defaults.set(data, forKey: "replacementAllShortcut")
+    } catch {
+      logger.error("Failed to encode replacementAllShortcut: \(error.localizedDescription)")
     }
     defaults.set(_isAutoReplacementEnabled, forKey: "isAutoReplacementEnabled")
   }

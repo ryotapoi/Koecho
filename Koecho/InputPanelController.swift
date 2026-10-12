@@ -415,6 +415,13 @@ final class InputPanelController {
         self.replacementService.replaceSelection()
         return true
       }
+      if let shortcutKey = self.appState.settings.replacement.replacementAllShortcutKey,
+        shortcut == shortcutKey,
+        !self.appState.settings.replacement.replacementRules.isEmpty
+      {
+        self.replacementService.replaceAll()
+        return true
+      }
       if let script = self.appState.settings.script.scripts.first(where: {
         $0.shortcutKey == shortcut
       }) {

@@ -10,6 +10,43 @@ struct ReplacementSettingsTests {
     return UserDefaults(suiteName: suiteName)!
   }
 
+  @Test func wholeDocumentShortcutPersistsIndependently() throws {
+    let suite = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let local = ShortcutKey(modifiers: [.command], character: "x")
+    let savedLocal = try ShortcutKey.encodeOptional(local)
+    defaults.set(savedLocal, forKey: "replacementShortcut")
+    let settings = ReplacementSettings(defaults: defaults)
+    #expect(settings.replacementShortcutKey == local)
+    #expect(defaults.data(forKey: "replacementShortcut") == savedLocal)
+    #expect(settings.replacementAllShortcutKey == ShortcutKey(modifiers: [.control, .shift], character: "r"))
+    let all = ShortcutKey(modifiers: [.control], character: "g")
+    settings.replacementAllShortcutKey = all
+    #expect(ReplacementSettings(defaults: defaults).replacementAllShortcutKey == all)
+    settings.replacementShortcutKey = nil
+    #expect(ReplacementSettings(defaults: defaults).replacementAllShortcutKey == all)
+    settings.replacementAllShortcutKey = nil
+    #expect(defaults.data(forKey: "replacementAllShortcut") == Data())
+    let disabled = ReplacementSettings(defaults: defaults)
+    #expect(disabled.replacementShortcutKey == nil)
+    #expect(disabled.replacementAllShortcutKey == nil)
+    #expect(disabled.loadFailures.isEmpty)
+  }
+
+  @Test(arguments: [true, false])
+  func invalidWholeDocumentShortcutReportsFailureAndRestoresDefault(isData: Bool) {
+    let suite = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    if isData { defaults.set(Data("invalid json".utf8), forKey: "replacementAllShortcut") }
+    else { defaults.set("invalid type", forKey: "replacementAllShortcut") }
+    let settings = ReplacementSettings(defaults: defaults)
+    #expect(settings.replacementAllShortcutKey == ReplacementSettings.defaultReplacementAllShortcutKey)
+    #expect(settings.loadFailures == [.replacementAllShortcut])
+    #expect(ReplacementSettings(defaults: defaults).loadFailures.isEmpty)
+  }
+
   @Test func defaultReplacementRulesEmpty() {
     let settings = ReplacementSettings(defaults: makeDefaults())
     #expect(settings.replacementRules.isEmpty)

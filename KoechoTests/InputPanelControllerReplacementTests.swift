@@ -132,6 +132,66 @@ extension InputPanelControllerTests {
     #expect(ctx.appState.inputText == "x longZ")
   }
 
+  @Test(arguments: [0, 1])
+  func wholeDocumentShortcutIgnoresSelectionAndDoesNotChain(selectionLength: Int) throws {
+    let ctx = makeController()
+    ctx.appState.settings.replacement.replacementRules = [
+      ReplacementRule(pattern: "a", replacement: "long"),
+      ReplacementRule(pattern: "long", replacement: "x")]
+    ctx.controller.showPanel()
+    let view = try #require(findVoiceInputTextView(in: ctx.controller))
+    ctx.appState.setInputText("a aZ")
+    view.replaceText("a aZ", selecting: NSRange(location: 0, length: selectionLength))
+    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control, .shift], character: "r")) == true)
+    #expect(ctx.appState.inputText == "long longZ")
+    #expect(view.string == "long longZ")
+    #expect(view.selectedRange() == NSRange(location: 0, length: selectionLength * 4))
+    ctx.appState.setInputText("a aZ")
+    view.replaceText("a aZ", selecting: NSRange(location: 0, length: 4))
+    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "r")) == true)
+    #expect(ctx.appState.inputText == "long longZ")
+  }
+
+  @Test func wholeDocumentShortcutSupportsCustomDisabledAndLocalPriority() throws {
+    let ctx = makeController()
+    ctx.appState.settings.replacement.replacementRules = [ReplacementRule(pattern: "a", replacement: "long")]
+    ctx.controller.showPanel()
+    let view = try #require(findVoiceInputTextView(in: ctx.controller))
+    let key = ShortcutKey(modifiers: [.control], character: "g")
+    ctx.appState.settings.replacement.replacementAllShortcutKey = key
+    ctx.appState.setInputText("a aZ")
+    view.replaceText("a aZ", selecting: NSRange(location: 0, length: 1))
+    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control, .shift], character: "r")) == false)
+    #expect(ctx.appState.inputText == "a aZ")
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    #expect(ctx.appState.inputText == "long longZ")
+    ctx.appState.settings.replacement.replacementAllShortcutKey = nil
+    #expect(ctx.controller.panel.onShortcutKey?(key) == false)
+    ctx.appState.settings.replacement.replacementAllShortcutKey = ShortcutKey(modifiers: [.control], character: "r")
+    ctx.appState.setInputText("a aZ")
+    view.replaceText("a aZ", selecting: NSRange(location: 0, length: 1))
+    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "r")) == true)
+    #expect(ctx.appState.inputText == "long aZ")
+  }
+
+  @Test func wholeDocumentShortcutFallsThroughToScriptOnlyWhenRulesAreEmpty() async throws {
+    let key = ShortcutKey(modifiers: [.control, .shift], character: "r")
+    let ctx = makeController()
+    ctx.appState.settings.script.scripts = [Script(name: "All", scriptPath: try makeScript("echo 'script output'"), shortcutKey: key)]
+    ctx.controller.showPanel()
+    let view = try #require(findVoiceInputTextView(in: ctx.controller))
+    ctx.appState.settings.replacement.replacementRules = [ReplacementRule(pattern: "a", replacement: "long")]
+    ctx.appState.setInputText("a")
+    view.replaceText("a", selecting: NSRange(location: 0, length: 0))
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    #expect(ctx.appState.inputText == "long")
+    #expect(ctx.controller.shortcutScriptTask == nil)
+    ctx.appState.settings.replacement.replacementRules = []
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    await ctx.controller.shortcutScriptTask?.value
+    #expect(ctx.appState.inputText == "script output")
+  }
+
   @Test func shortcutRFallsBackToScriptWhenNoRules() async throws {
     let scriptPath = try makeScript("echo 'script output'")
     let ctrlR = ShortcutKey(modifiers: [.control], character: "r")

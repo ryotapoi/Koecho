@@ -175,6 +175,7 @@ struct KoechoApp: App {
     case .autoRunShortcut: String(localized: "Auto-run shortcut")
     case .scriptTimeout: String(localized: "Script timeout")
     case .replacementRules: String(localized: "Replacement rules")
+    case .replacementAllShortcut: String(localized: .replaceAllShortcut)
     case .replacementShortcut: String(localized: "Replacement shortcut")
     case .isAutoReplacementEnabled: String(localized: "Auto-replace")
     case .voiceInputShortcut: String(localized: "Voice input shortcut")
