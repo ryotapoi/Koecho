@@ -320,7 +320,7 @@ struct InputPanelControllerTests {
   @Test func voiceShortcutTogglesOnlyInsidePanel() async {
     let ctx = makeController()
     let key = ShortcutKey(modifiers: [.control], character: "v")
-    ctx.appState.settings.voiceInput.voiceInputShortcutKey = key
+    #expect(ctx.appState.settings.voiceInput.voiceInputShortcutKey == key)
     #expect(ctx.controller.panel.onShortcutKey?(key) == false)
 
     ctx.controller.showPanel()
@@ -339,6 +339,7 @@ struct InputPanelControllerTests {
   @Test func voiceShortcutDoesNotHandleUnassignedOrDifferentKey() {
     let ctx = makeController()
     let key = ShortcutKey(modifiers: [.control], character: "v")
+    ctx.appState.settings.voiceInput.voiceInputShortcutKey = nil
     ctx.controller.showPanel()
     #expect(ctx.controller.panel.onShortcutKey?(key) == false)
     ctx.appState.settings.voiceInput.voiceInputShortcutKey = key

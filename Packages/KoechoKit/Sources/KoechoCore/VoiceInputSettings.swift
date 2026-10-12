@@ -78,6 +78,8 @@ public final class VoiceInputSettings {
       } else {
         loadFailures.insert(.voiceInputShortcut)
       }
+    } else {
+      _voiceInputShortcutKey = ShortcutKey(modifiers: [.control], character: "v")
     }
 
     save()

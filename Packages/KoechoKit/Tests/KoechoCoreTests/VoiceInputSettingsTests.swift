@@ -10,20 +10,47 @@ struct VoiceInputSettingsTests {
     return UserDefaults(suiteName: suiteName)!
   }
 
-  @Test func voiceShortcutDefaultsToNilAndRoundTripsClearing() {
-    let defaults = makeDefaults()
+  @Test func voiceShortcutDefaultsToControlVAndRoundTripsClearing() {
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
     let key = ShortcutKey(modifiers: [.control], character: "v")
     let settings = VoiceInputSettings(defaults: defaults)
-    #expect(settings.voiceInputShortcutKey == nil)
-    settings.voiceInputShortcutKey = key
+    #expect(settings.voiceInputShortcutKey == key)
     #expect(VoiceInputSettings(defaults: defaults).voiceInputShortcutKey == key)
     settings.voiceInputShortcutKey = nil
     #expect(VoiceInputSettings(defaults: defaults).voiceInputShortcutKey == nil)
   }
 
-  @Test func malformedVoiceShortcutIsReportedAndReset() {
-    let defaults = makeDefaults()
-    defaults.set(Data("invalid".utf8), forKey: "voiceInputShortcut")
+  @Test func savedVoiceShortcutIsPreserved() throws {
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    let key = ShortcutKey(modifiers: [.option], character: "s")
+    defaults.set(try ShortcutKey.encodeOptional(key), forKey: "voiceInputShortcut")
+    #expect(VoiceInputSettings(defaults: defaults).voiceInputShortcutKey == key)
+    #expect(VoiceInputSettings(defaults: defaults).voiceInputShortcutKey == key)
+  }
+
+  @Test func savedUnassignedVoiceShortcutIsPreserved() {
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    defaults.set(Data(), forKey: "voiceInputShortcut")
+    #expect(VoiceInputSettings(defaults: defaults).voiceInputShortcutKey == nil)
+    #expect(VoiceInputSettings(defaults: defaults).voiceInputShortcutKey == nil)
+  }
+
+  @Test(arguments: [false, true])
+  func malformedVoiceShortcutIsReportedAndReset(usingInvalidType: Bool) {
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    if usingInvalidType {
+      defaults.set("invalid", forKey: "voiceInputShortcut")
+    } else {
+      defaults.set(Data("invalid".utf8), forKey: "voiceInputShortcut")
+    }
     let settings = Settings(defaults: defaults)
     #expect(settings.voiceInput.voiceInputShortcutKey == nil)
     #expect(settings.loadFailures.contains(.voiceInputShortcut))

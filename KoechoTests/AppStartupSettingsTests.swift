@@ -127,7 +127,10 @@ struct AppStartupSettingsTests {
     #expect(state.settings.loadFailures.isEmpty)
     #expect(hosted.string(forKey: "voiceInputMode") == "on")
     #expect(hosted.double(forKey: "scriptTimeout") == 30)
-    #expect(hosted.data(forKey: "voiceInputShortcut") == Data())
+    let shortcutData = try #require(hosted.data(forKey: "voiceInputShortcut"))
+    #expect(
+      try JSONDecoder().decode(ShortcutKey.self, from: shortcutData)
+        == ShortcutKey(modifiers: [.control], character: "v"))
 
     state.settings.script.scriptTimeout = 17
     state.settings.voiceInput.isVoiceInputEnabled = false
