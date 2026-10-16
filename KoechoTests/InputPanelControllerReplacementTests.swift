@@ -62,7 +62,7 @@ extension InputPanelControllerTests {
     ctx.appState.setInputText("a a")
     view.replaceText("a a", selecting: NSRange(location: 0, length: 1))
     #expect(ctx.controller.panel.onShortcutKey?(
-      ShortcutKey(modifiers: [.control], character: "r")) == true)
+      ShortcutKey(modifiers: [.command], character: "r")) == true)
     #expect(ctx.appState.inputText == "long a")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
@@ -105,7 +105,7 @@ extension InputPanelControllerTests {
     findVoiceInputTextView(in: ctx.controller)?.replaceText("えーと天気", selecting: NSRange(location: 1, length: 0))
 
     let handled = ctx.controller.panel.onShortcutKey?(
-      ShortcutKey(modifiers: [.control], character: "r"))
+      ShortcutKey(modifiers: [.command], character: "r"))
 
     #expect(handled == true)
     #expect(ctx.appState.inputText == "天気")
@@ -121,7 +121,7 @@ extension InputPanelControllerTests {
     let view = try #require(findVoiceInputTextView(in: ctx.controller))
     ctx.appState.setInputText("a aZ")
     view.replaceText("a aZ", selecting: NSRange(location: 1, length: 0))
-    let key = ShortcutKey(modifiers: [.control], character: "r")
+    let key = ShortcutKey(modifiers: [.command], character: "r")
     #expect(ctx.controller.panel.onShortcutKey?(key) == true)
     #expect(ctx.appState.inputText == "long aZ")
     view.setSelectedRange(NSRange(location: 0, length: 6))
@@ -142,13 +142,13 @@ extension InputPanelControllerTests {
     let view = try #require(findVoiceInputTextView(in: ctx.controller))
     ctx.appState.setInputText("a aZ")
     view.replaceText("a aZ", selecting: NSRange(location: 0, length: selectionLength))
-    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control, .shift], character: "r")) == true)
+    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.command, .shift], character: "r")) == true)
     #expect(ctx.appState.inputText == "long longZ")
     #expect(view.string == "long longZ")
     #expect(view.selectedRange() == NSRange(location: 0, length: selectionLength * 4))
     ctx.appState.setInputText("a aZ")
     view.replaceText("a aZ", selecting: NSRange(location: 0, length: 4))
-    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "r")) == true)
+    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.command], character: "r")) == true)
     #expect(ctx.appState.inputText == "long longZ")
   }
 
@@ -161,21 +161,21 @@ extension InputPanelControllerTests {
     ctx.appState.settings.replacement.replacementAllShortcutKey = key
     ctx.appState.setInputText("a aZ")
     view.replaceText("a aZ", selecting: NSRange(location: 0, length: 1))
-    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control, .shift], character: "r")) == false)
+    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.command, .shift], character: "r")) == false)
     #expect(ctx.appState.inputText == "a aZ")
     #expect(ctx.controller.panel.onShortcutKey?(key) == true)
     #expect(ctx.appState.inputText == "long longZ")
     ctx.appState.settings.replacement.replacementAllShortcutKey = nil
     #expect(ctx.controller.panel.onShortcutKey?(key) == false)
-    ctx.appState.settings.replacement.replacementAllShortcutKey = ShortcutKey(modifiers: [.control], character: "r")
+    ctx.appState.settings.replacement.replacementAllShortcutKey = ShortcutKey(modifiers: [.command], character: "r")
     ctx.appState.setInputText("a aZ")
     view.replaceText("a aZ", selecting: NSRange(location: 0, length: 1))
-    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.control], character: "r")) == true)
+    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.command], character: "r")) == true)
     #expect(ctx.appState.inputText == "long aZ")
   }
 
   @Test func wholeDocumentShortcutFallsThroughToScriptOnlyWhenRulesAreEmpty() async throws {
-    let key = ShortcutKey(modifiers: [.control, .shift], character: "r")
+    let key = ShortcutKey(modifiers: [.command, .shift], character: "r")
     let ctx = makeController()
     ctx.appState.settings.script.scripts = [Script(name: "All", scriptPath: try makeScript("echo 'script output'"), shortcutKey: key)]
     ctx.controller.showPanel()
@@ -194,16 +194,16 @@ extension InputPanelControllerTests {
 
   @Test func shortcutRFallsBackToScriptWhenNoRules() async throws {
     let scriptPath = try makeScript("echo 'script output'")
-    let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
-    let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
+    let cmdR = ShortcutKey(modifiers: [.command], character: "r")
+    let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: cmdR)
     let ctx = makeController()
     ctx.appState.settings.script.scripts = [script]
-    // No replacement rules — Ctrl+R should fall through to script
+    // No replacement rules — Cmd+R should fall through to script
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("original")
 
-    let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
+    let handled = ctx.controller.panel.onShortcutKey?(cmdR)
 
     #expect(handled == true)
     await ctx.controller.shortcutScriptTask?.value
@@ -212,8 +212,8 @@ extension InputPanelControllerTests {
 
   @Test func shortcutRTakesPriorityOverScript() async throws {
     let scriptPath = try makeScript("echo 'script output'")
-    let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
-    let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
+    let cmdR = ShortcutKey(modifiers: [.command], character: "r")
+    let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: cmdR)
     let ctx = makeController()
     ctx.appState.settings.script.scripts = [script]
     ctx.appState.settings.replacement.addReplacementRule(
@@ -224,7 +224,7 @@ extension InputPanelControllerTests {
     ctx.appState.setInputText("えーと天気")
     findVoiceInputTextView(in: ctx.controller)?.replaceText("えーと天気", selecting: NSRange(location: 1, length: 0))
 
-    let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
+    let handled = ctx.controller.panel.onShortcutKey?(cmdR)
 
     #expect(handled == true)
     // Text should be replaced by replacement rules, not by script
@@ -249,18 +249,18 @@ extension InputPanelControllerTests {
     #expect(handledX == true)
     #expect(ctx.appState.inputText == "天気")
 
-    // Ctrl+R should NOT apply replacement rules (no longer the shortcut)
+    // Cmd+R should NOT apply replacement rules (no longer the shortcut)
     ctx.appState.setInputText("えーと天気")
     findVoiceInputTextView(in: ctx.controller)?.replaceText("えーと天気", selecting: NSRange(location: 1, length: 0))
     let handledR = ctx.controller.panel.onShortcutKey?(
-      ShortcutKey(modifiers: [.control], character: "r"))
+      ShortcutKey(modifiers: [.command], character: "r"))
     #expect(handledR == false)
   }
 
   @Test func nilShortcutKeyDisablesShortcut() async throws {
     let scriptPath = try makeScript("echo 'script output'")
-    let ctrlR = ShortcutKey(modifiers: [.control], character: "r")
-    let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: ctrlR)
+    let cmdR = ShortcutKey(modifiers: [.command], character: "r")
+    let script = Script(name: "R Script", scriptPath: scriptPath, shortcutKey: cmdR)
     let ctx = makeController()
     ctx.appState.settings.script.scripts = [script]
     ctx.appState.settings.replacement.replacementShortcutKey = nil
@@ -272,8 +272,8 @@ extension InputPanelControllerTests {
     ctx.appState.setInputText("えーと天気")
     findVoiceInputTextView(in: ctx.controller)?.replaceText("えーと天気", selecting: NSRange(location: 1, length: 0))
 
-    // Ctrl+R should fall through to script (replacement shortcut is nil)
-    let handled = ctx.controller.panel.onShortcutKey?(ctrlR)
+    // Cmd+R should fall through to script (replacement shortcut is nil)
+    let handled = ctx.controller.panel.onShortcutKey?(cmdR)
     #expect(handled == true)
     await ctx.controller.shortcutScriptTask?.value
     #expect(ctx.appState.inputText == "script output")

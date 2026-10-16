@@ -20,13 +20,14 @@ struct ReplacementSettingsTests {
     let settings = ReplacementSettings(defaults: defaults)
     #expect(settings.replacementShortcutKey == local)
     #expect(defaults.data(forKey: "replacementShortcut") == savedLocal)
-    #expect(settings.replacementAllShortcutKey == ShortcutKey(modifiers: [.control, .shift], character: "r"))
+    #expect(settings.replacementAllShortcutKey == ShortcutKey(modifiers: [.command, .shift], character: "r"))
     let all = ShortcutKey(modifiers: [.control], character: "g")
     settings.replacementAllShortcutKey = all
     #expect(ReplacementSettings(defaults: defaults).replacementAllShortcutKey == all)
     settings.replacementShortcutKey = nil
     #expect(ReplacementSettings(defaults: defaults).replacementAllShortcutKey == all)
     settings.replacementAllShortcutKey = nil
+    #expect(defaults.data(forKey: "replacementShortcut") == Data())
     #expect(defaults.data(forKey: "replacementAllShortcut") == Data())
     let disabled = ReplacementSettings(defaults: defaults)
     #expect(disabled.replacementShortcutKey == nil)
@@ -42,7 +43,7 @@ struct ReplacementSettingsTests {
     if isData { defaults.set(Data("invalid json".utf8), forKey: "replacementAllShortcut") }
     else { defaults.set("invalid type", forKey: "replacementAllShortcut") }
     let settings = ReplacementSettings(defaults: defaults)
-    #expect(settings.replacementAllShortcutKey == ReplacementSettings.defaultReplacementAllShortcutKey)
+    #expect(settings.replacementAllShortcutKey == ShortcutKey(modifiers: [.command, .shift], character: "r"))
     #expect(settings.loadFailures == [.replacementAllShortcut])
     #expect(ReplacementSettings(defaults: defaults).loadFailures.isEmpty)
   }
@@ -197,7 +198,7 @@ struct ReplacementSettingsTests {
 
     let settings = ReplacementSettings(defaults: defaults)
 
-    #expect(settings.replacementShortcutKey == ReplacementSettings.defaultReplacementShortcutKey)
+    #expect(settings.replacementShortcutKey == ShortcutKey(modifiers: [.command], character: "r"))
     #expect(!settings.isAutoReplacementEnabled)
     #expect(settings.loadFailures == [.replacementShortcut, .isAutoReplacementEnabled])
 
@@ -206,9 +207,38 @@ struct ReplacementSettingsTests {
     #expect(!reloaded.isAutoReplacementEnabled)
   }
 
-  @Test func defaultReplacementShortcutKey() {
-    let settings = ReplacementSettings(defaults: makeDefaults())
-    #expect(settings.replacementShortcutKey == ReplacementSettings.defaultReplacementShortcutKey)
+  @Test func defaultReplacementShortcutKeys() {
+    let suite = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let settings = ReplacementSettings(defaults: defaults)
+    #expect(settings.replacementShortcutKey == ShortcutKey(modifiers: [.command], character: "r"))
+    #expect(settings.replacementAllShortcutKey == ShortcutKey(modifiers: [.command, .shift], character: "r"))
+    let reloaded = ReplacementSettings(defaults: defaults)
+    #expect(reloaded.replacementShortcutKey == settings.replacementShortcutKey)
+    #expect(reloaded.replacementAllShortcutKey == settings.replacementAllShortcutKey)
+    #expect(reloaded.loadFailures.isEmpty)
+  }
+
+  @Test func savedControlShortcutsAreNotMigrated() throws {
+    let suite = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let local = ShortcutKey(modifiers: [.control], character: "r")
+    let all = ShortcutKey(modifiers: [.control, .shift], character: "r")
+    let localData = try ShortcutKey.encodeOptional(local)
+    let allData = try ShortcutKey.encodeOptional(all)
+    defaults.set(localData, forKey: "replacementShortcut")
+    defaults.set(allData, forKey: "replacementAllShortcut")
+
+    for _ in 0..<2 {
+      let settings = ReplacementSettings(defaults: defaults)
+      #expect(settings.replacementShortcutKey == local)
+      #expect(settings.replacementAllShortcutKey == all)
+      #expect(settings.loadFailures.isEmpty)
+      #expect(defaults.data(forKey: "replacementShortcut") == localData)
+      #expect(defaults.data(forKey: "replacementAllShortcut") == allData)
+    }
   }
 
   @Test func emptyReplacementShortcutDataRemainsDisabled() {
@@ -221,12 +251,14 @@ struct ReplacementSettingsTests {
   }
 
   @Test func corruptReplacementShortcutDataUsesDefault() {
-    let defaults = makeDefaults()
+    let suite = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
     defaults.set(Data("invalid json".utf8), forKey: "replacementShortcut")
 
     let settings = ReplacementSettings(defaults: defaults)
 
-    #expect(settings.replacementShortcutKey == ReplacementSettings.defaultReplacementShortcutKey)
+    #expect(settings.replacementShortcutKey == ShortcutKey(modifiers: [.command], character: "r"))
   }
 
   @Test func defaultAutoReplacementDisabledWhenUnset() {

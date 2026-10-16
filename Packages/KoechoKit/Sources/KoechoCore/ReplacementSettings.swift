@@ -4,9 +4,9 @@ import os
 
 @MainActor @Observable
 public final class ReplacementSettings {
-  static let defaultReplacementShortcutKey = ShortcutKey(modifiers: [.control], character: "r")
+  static let defaultReplacementShortcutKey = ShortcutKey(modifiers: [.command], character: "r")
 
-  static let defaultReplacementAllShortcutKey = ShortcutKey(modifiers: [.control, .shift], character: "r")
+  static let defaultReplacementAllShortcutKey = ShortcutKey(modifiers: [.command, .shift], character: "r")
 
   private let defaults: UserDefaults
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ReplacementSettings")
