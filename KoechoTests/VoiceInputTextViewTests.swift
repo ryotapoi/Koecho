@@ -14,6 +14,56 @@ struct VoiceInputTextViewTests {
     return textView
   }
 
+  @Test(arguments: [false, true])
+  func voiceInsertionScrollsToItsEndWithoutMovingSelection(finalized: Bool) throws {
+    let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 320, height: 120))
+    let textView = makeTextView()
+    textView.frame = scrollView.bounds
+    textView.font = .systemFont(ofSize: NSFont.systemFontSize)
+    textView.isVerticallyResizable = true
+    textView.isHorizontallyResizable = false
+    textView.minSize = .zero
+    textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+    textView.textContainer?.widthTracksTextView = true
+    scrollView.documentView = textView
+
+    // Keep a document tail beyond the inserted speech so scrolling to the document end fails.
+    let prefix = "😀Start."
+    let suffix = String(repeating: "\nExisting tail", count: 80)
+    textView.string = prefix + suffix
+    let insertionPoint = (prefix as NSString).length
+    let selection = NSRange(location: 0, length: 2)
+    textView.setSelectedRange(selection)
+    var textChanges = 0
+    var cursorMoves = 0
+    textView.onTextChanged = { _ in textChanges += 1 }
+    textView.onCursorMoved = { _ in cursorMoves += 1 }
+    let speech = String(repeating: "\nSpoken 😀 line", count: 40) + " end"
+    if finalized {
+      #expect(textView.insertFinalizedText("." + speech, at: insertionPoint) == speech)
+    } else {
+      textView.setVolatileText(". short", at: insertionPoint)
+      textView.setVolatileText("." + speech, at: insertionPoint)
+    }
+
+    let layout = try #require(textView.layoutManager)
+    let container = try #require(textView.textContainer)
+    layout.ensureLayout(for: container)
+    let end = insertionPoint + (speech as NSString).length
+    let glyphs = layout.glyphRange(forCharacterRange: NSRange(location: end - 1, length: 1),
+                                   actualCharacterRange: nil)
+    let insertedEnd = layout.boundingRect(forGlyphRange: glyphs, in: container)
+      .offsetBy(dx: textView.textContainerOrigin.x, dy: textView.textContainerOrigin.y)
+    #expect(textView.visibleRect.contains(insertedEnd))
+    #expect(textView.visibleRect.minY > 0)
+    #expect(textView.string == prefix + speech + suffix)
+    #expect(textView.selectedRange() == selection)
+    #expect(textChanges == 0)
+    #expect(cursorMoves == 0)
+    #expect(textView.volatileRange == (finalized ? nil : NSRange(location: insertionPoint, length: (speech as NSString).length)))
+    #expect(textView.finalizedString == (finalized ? prefix + speech + suffix : prefix + suffix))
+  }
+
   @Test func didChangeTextFiresOnTextChanged() {
     let textView = makeTextView()
     var receivedText: String?

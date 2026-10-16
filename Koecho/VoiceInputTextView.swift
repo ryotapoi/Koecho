@@ -79,6 +79,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
         at: clampedPoint
       )
       storage.endEditing()
+      scrollRangeToVisible(NSRange(location: clampedPoint + (adjustedText as NSString).length, length: 0))
     }
     return adjustedText
   }
@@ -110,6 +111,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     let range = NSRange(location: clampedPoint, length: nsText.length)
     volatileRange = range
     applyVolatileStyling(range)
+    scrollRangeToVisible(NSRange(location: NSMaxRange(range), length: 0))
   }
 
   /// Remove volatile text from the text storage.
