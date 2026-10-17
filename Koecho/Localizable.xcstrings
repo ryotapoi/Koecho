@@ -1513,6 +1513,17 @@
         }
       }
     },
+    "Script Name" : {
+      "comment" : "Placeholder for the script display name field when it is empty.",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スクリプト名"
+          }
+        }
+      }
+    },
     "Script Settings" : {
       "comment" : "Accessibility label for the gear button below the script list.",
       "localizations" : {

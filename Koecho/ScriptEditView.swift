@@ -46,7 +46,7 @@ struct ScriptEditView: View {
             }
           }
 
-          TextField("Display Name", text: $displayName)
+          TextField("Display Name", text: $displayName, prompt: Text("Script Name"))
             .labelsHidden()
             .accessibilityLabel("Display Name")
             .textFieldStyle(.roundedBorder)
