@@ -19,7 +19,8 @@ struct ReplacementSettingsTests {
     defaults.set(savedLocal, forKey: "replacementShortcut")
     let settings = ReplacementSettings(defaults: defaults)
     #expect(settings.replacementShortcutKey == local)
-    #expect(defaults.data(forKey: "replacementShortcut") == savedLocal)
+    let persistedLocal = try #require(defaults.data(forKey: "replacementShortcut"))
+    #expect(try JSONDecoder().decode(ShortcutKey.self, from: persistedLocal) == local)
     #expect(settings.replacementAllShortcutKey == ShortcutKey(modifiers: [.command, .shift], character: "r"))
     let all = ShortcutKey(modifiers: [.control], character: "g")
     settings.replacementAllShortcutKey = all
@@ -220,24 +221,30 @@ struct ReplacementSettingsTests {
     #expect(reloaded.loadFailures.isEmpty)
   }
 
-  @Test func savedControlShortcutsAreNotMigrated() throws {
+  @Test(arguments: [
+    (#"{"modifiers":["control"],"character":"r"}"#,
+     #"{"modifiers":["control","shift"],"character":"r"}"#),
+    (#"{"character":"r","modifiers":["control"]}"#,
+     #"{"character":"r","modifiers":["shift","control"]}"#),
+  ])
+  func savedControlShortcutsAreNotMigrated(localJSON: String, allJSON: String) throws {
     let suite = "test-\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suite)!
     defer { defaults.removePersistentDomain(forName: suite) }
     let local = ShortcutKey(modifiers: [.control], character: "r")
     let all = ShortcutKey(modifiers: [.control, .shift], character: "r")
-    let localData = try ShortcutKey.encodeOptional(local)
-    let allData = try ShortcutKey.encodeOptional(all)
-    defaults.set(localData, forKey: "replacementShortcut")
-    defaults.set(allData, forKey: "replacementAllShortcut")
+    defaults.set(Data(localJSON.utf8), forKey: "replacementShortcut")
+    defaults.set(Data(allJSON.utf8), forKey: "replacementAllShortcut")
 
     for _ in 0..<2 {
       let settings = ReplacementSettings(defaults: defaults)
       #expect(settings.replacementShortcutKey == local)
       #expect(settings.replacementAllShortcutKey == all)
       #expect(settings.loadFailures.isEmpty)
-      #expect(defaults.data(forKey: "replacementShortcut") == localData)
-      #expect(defaults.data(forKey: "replacementAllShortcut") == allData)
+      let persistedLocal = try #require(defaults.data(forKey: "replacementShortcut"))
+      let persistedAll = try #require(defaults.data(forKey: "replacementAllShortcut"))
+      #expect(try JSONDecoder().decode(ShortcutKey.self, from: persistedLocal) == local)
+      #expect(try JSONDecoder().decode(ShortcutKey.self, from: persistedAll) == all)
     }
   }
 

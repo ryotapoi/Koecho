@@ -55,11 +55,13 @@
 
 [不具合修正・検証](v2.0.0-bugfixes.md)
 
-- [ ] 保存済み置換ショートカットの回帰テストから JSON の順序依存を除く
+- [x] 保存済み置換ショートカットの回帰テストから JSON の順序依存を除く
 
   発生条件・影響: `ReplacementSettingsTests.savedControlShortcutsAreNotMigrated` が、同じショートカットでも JSON のキー順・modifier の配列順の違いで失敗し、Package gate を失敗させる。D2 の検証時に変更前 HEAD でも再現した。
 
   作業・完了条件: 保存済みショートカットを変更しない契約を確認し、JSON の表現順に依存せずその契約の違反を検出できる検証にする。Package gate を反復実行し、ショートカットの意味の保持と順序依存の解消を確認する。
+
+  確認（2026-10-18）: 保存先の値を ShortcutKey にデコードして意味を比較し、キー順・modifier 配列順が異なる入力を検証した。Package gate は別プロセスで3回成功（各346件、両 test target、失敗・skip・timeout・残留なし）。
 
 - [x] 音声入力した箇所が見えるように自動スクロールする
 
