@@ -34,6 +34,7 @@ final class PanelLifecycleManager {
       appState.setInputText("")
     }
     appState.errorMessage = nil
+    appState.voiceInputNotice = nil
     appState.isInputPanelVisible = true
     if duckVolume {
       ducker.duck()
@@ -48,6 +49,7 @@ final class PanelLifecycleManager {
     appState.isInputPanelVisible = false
     appState.frontmostApplication = nil
     appState.errorMessage = nil
+    appState.voiceInputNotice = nil
     appState.voiceEngineStatus = nil
     appState.isRunningScript = false
     appState.promptScript = nil

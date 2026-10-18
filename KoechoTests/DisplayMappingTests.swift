@@ -163,6 +163,27 @@ import Testing
     #expect(appState.voiceEngineStatus == nil)
   }
 
+  @Test func microphoneFallbackMapsToIndependentNotice() {
+    let appState = makeTestAppState()
+    appState.isInputPanelVisible = true
+    appState.settings.voiceInput.isVoiceInputEnabled = true
+    let coordinator = makeTestVoiceCoordinator(
+      appState: appState, makeEngine: { MockVoiceInputEngine() })
+    appState.errorMessage = "existing error"
+    appState.voiceEngineStatus = "existing status"
+
+    coordinator.voiceInput(didUpdateNotice: .microphoneFallback)
+
+    #expect(appState.voiceInputNotice == String(
+      localized: "Selected microphone unavailable. Using the system default microphone."))
+    #expect(appState.errorMessage == "existing error")
+    #expect(appState.voiceEngineStatus == "existing status")
+    coordinator.voiceInput(didUpdateNotice: nil)
+    #expect(appState.voiceInputNotice == nil)
+    #expect(appState.errorMessage == "existing error")
+    #expect(appState.voiceEngineStatus == "existing status")
+  }
+
   @Test func inputPanelControllerMapsPasteErrorMessages() async {
     let cases: [(any Error, String)] = [
       (

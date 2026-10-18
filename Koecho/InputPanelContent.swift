@@ -149,8 +149,8 @@ struct InputPanelContent: View {
       .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    if let errorMessage = appState.errorMessage {
-      Text(errorMessage)
+    if let message = appState.errorMessage ?? appState.voiceInputNotice {
+      Text(message)
         .font(.caption)
         .foregroundStyle(.red)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -258,4 +258,18 @@ struct InputPanelContent: View {
     onCancelPrompt: {}
   )
   .frame(width: 320, height: 180)
+}
+
+#Preview("Microphone Fallback") {
+  let defaults = UserDefaults(suiteName: "preview-panel-microphone-fallback")!
+  let settings = KoechoCore.Settings(defaults: defaults)
+  settings.voiceInput.isVoiceInputEnabled = true
+  let appState = AppState(settings: settings)
+  appState.voiceInputNotice = String(
+    localized: "Selected microphone unavailable. Using the system default microphone.")
+  return InputPanelContent(
+    appState: appState, onExecuteScript: { _ in }, onConfirm: {},
+    onSwitchEngine: {}, onCancelPrompt: {}
+  )
+  .frame(width: 320, height: 240)
 }

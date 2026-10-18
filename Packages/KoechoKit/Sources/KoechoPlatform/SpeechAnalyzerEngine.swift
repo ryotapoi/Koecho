@@ -39,10 +39,15 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       else { return nil }
       return { try await request.downloadAndInstall() }
     }
-    var inputFormat: @MainActor (AVAudioEngine, String?) -> AVAudioFormat = configureAudioInput
+    var audioInput: @MainActor (AVAudioEngine, String?) -> AudioInputConfiguration = configureAudioInput
     var bestFormat: @MainActor (DictationTranscriber, AVAudioFormat) async -> AVAudioFormat? = {
       await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [$0], considering: $1)
     }
+  }
+
+  struct AudioInputConfiguration {
+    let format: AVAudioFormat
+    let notice: VoiceInputEngineNotice?
   }
 
   private struct RecognitionSession {
@@ -96,6 +101,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     let owner = UUID()
     self.owner = owner
     state = .listening
+    delegate?.voiceInput(didUpdateNotice: nil)
     logger.info("Starting SpeechAnalyzer with locale: \(self.locale.identifier, privacy: .public)")
 
     startTask = Task { @MainActor [weak self] in
@@ -185,7 +191,8 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
   private static func configureAudioInput(
     _ audioEngine: AVAudioEngine, _ deviceUID: String?
-  ) -> AVAudioFormat {
+  ) -> AudioInputConfiguration {
+    var notice: VoiceInputEngineNotice?
     let logger = Logger(subsystem: Logger.koechoSubsystem, category: "SpeechAnalyzerEngine")
     if let deviceUID {
       let resolvedID = AudioDeviceListing.resolveDeviceID(forUID: deviceUID)
@@ -203,9 +210,11 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
             &id, UInt32(MemoryLayout<AudioDeviceID>.size)
           )
           if status != noErr {
+            notice = .microphoneFallback
             logger.warning("Failed to set audio device (status: \(status)), using system default")
           }
         } else {
+          notice = .microphoneFallback
           logger.warning(
             "Audio device UID '\(deviceUID, privacy: .public)' not found or audioUnit unavailable, using system default"
           )
@@ -216,7 +225,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     let inputNode = audioEngine.inputNode
     let inputFormat = inputNode.outputFormat(forBus: 0)
 
-    return inputFormat
+    return AudioInputConfiguration(format: inputFormat, notice: notice)
   }
 
   private func canStart(owner: UUID) -> Bool {
@@ -285,13 +294,16 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     let audioEngine = AVAudioEngine()
     self.audioEngine = audioEngine
 
-    let inputFormat = dependencies.inputFormat(audioEngine, deviceUID)
+    let audioInput = dependencies.audioInput(audioEngine, deviceUID)
+    let inputFormat = audioInput.format
 
     guard canStart(owner: owner) else { return }
     guard inputFormat.channelCount > 0 else {
       reportError(.noAudioInputDevice)
       return
     }
+
+    delegate?.voiceInput(didUpdateNotice: audioInput.notice)
 
     // 5. Create the recognition session using the best compatible format.
     let session = await makeRecognitionSession(
@@ -530,6 +542,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     logger.error("\(description, privacy: .public)")
     tearDown()
     state = .error(description)
+    delegate?.voiceInput(didUpdateNotice: nil)
     delegate?.voiceInput(didEncounterError: error)
   }
 

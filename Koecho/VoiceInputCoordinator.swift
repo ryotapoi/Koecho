@@ -25,6 +25,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
 
   func suspendInput() -> UUID {
     let id = UUID()
+    appState.voiceInputNotice = nil
     inputSuspensionID = id
     lifecycleID = UUID()
     restartTranscriberTask?.cancel()
@@ -95,12 +96,14 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   func cancelEngine() {
+    appState.voiceInputNotice = nil
     engine.delegate = nil
     engine.cancel()
   }
 
   func switchEngine() async {
     guard !isInputSuspended else { return }
+    appState.voiceInputNotice = nil
     lifecycleID = UUID()
     let id = lifecycleID
     await engine.stop()
@@ -120,6 +123,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   func disableEngine() async {
+    appState.voiceInputNotice = nil
     lifecycleID = UUID()
     let id = lifecycleID
     await engine.stop()
@@ -180,6 +184,7 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
   }
 
   func resetState() {
+    appState.voiceInputNotice = nil
     lifecycleID = UUID()
     inputSuspensionID = nil
     isStoppingEngine = false
@@ -279,6 +284,18 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
 
   func voiceInput(didUpdateStatus status: VoiceInputEngineStatus?) {
     appState.voiceEngineStatus = status.map { displayMessage(for: $0) }
+  }
+
+  func voiceInput(didUpdateNotice notice: VoiceInputEngineNotice?) {
+    guard appState.isInputPanelVisible, appState.settings.voiceInput.isVoiceInputEnabled,
+      !isInputSuspended, !isStoppingEngine
+    else { return }
+    appState.voiceInputNotice = notice.map { notice in
+      switch notice {
+      case .microphoneFallback:
+        String(localized: "Selected microphone unavailable. Using the system default microphone.")
+      }
+    }
   }
 
   // MARK: - Display message conversion

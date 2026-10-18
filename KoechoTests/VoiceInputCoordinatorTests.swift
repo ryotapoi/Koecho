@@ -54,6 +54,30 @@ import Testing
     return (coordinator, appState, mockTV, mockEngine)
   }
 
+  @Test func microphoneNoticeEndsWithVoiceLifecycle() async {
+    let (coordinator, appState, _, _) = makeCoordinator()
+    appState.settings.voiceInput.isVoiceInputEnabled = true
+    coordinator.voiceInput(didUpdateNotice: .microphoneFallback)
+    #expect(appState.voiceInputNotice != nil)
+    coordinator.prepareForShow()
+    #expect(appState.voiceInputNotice == nil)
+    coordinator.voiceInput(didUpdateNotice: .microphoneFallback)
+    await coordinator.switchEngine()
+    #expect(appState.voiceInputNotice == nil)
+    coordinator.voiceInput(didUpdateNotice: .microphoneFallback)
+    appState.settings.voiceInput.isVoiceInputEnabled = false
+    await coordinator.disableEngine()
+    coordinator.voiceInput(didUpdateNotice: .microphoneFallback)
+    #expect(appState.voiceInputNotice == nil)
+    appState.settings.voiceInput.isVoiceInputEnabled = true
+    coordinator.voiceInput(didUpdateNotice: .microphoneFallback)
+    coordinator.cancelEngine()
+    #expect(appState.voiceInputNotice == nil)
+    appState.isInputPanelVisible = false
+    coordinator.voiceInput(didUpdateNotice: .microphoneFallback)
+    #expect(appState.voiceInputNotice == nil)
+  }
+
   // MARK: - Engine lifecycle
 
   @Test func finalizedVoiceEditInvalidatesScriptUndo() {

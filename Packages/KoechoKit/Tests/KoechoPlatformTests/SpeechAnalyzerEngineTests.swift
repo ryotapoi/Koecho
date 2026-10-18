@@ -30,6 +30,8 @@ struct SpeechAnalyzerEngineTests {
 private final class PreparationDelegate: VoiceInputDelegate {
   var statuses: [VoiceInputEngineStatus?] = []
   var errors: [VoiceInputEngineError] = []
+  var notices: [VoiceInputEngineNotice?] = []
+  func voiceInput(didUpdateNotice notice: VoiceInputEngineNotice?) { notices.append(notice) }
   func voiceInput(didFinalize text: String) {}
   func voiceInput(didUpdateVolatile text: String) {}
   func voiceInput(didEncounterError error: VoiceInputEngineError) { errors.append(error) }
@@ -43,6 +45,40 @@ private enum PreparationStage: CaseIterable, Sendable {
 private enum PreparationFailure: Error { case delayed }
 
 extension SpeechAnalyzerEngineTests {
+  @Test(arguments: [VoiceInputEngineNotice?.none, .microphoneFallback])
+  func audioInputResultPublishesNoticeWithoutUsingErrorOrStatus(
+    notice: VoiceInputEngineNotice?
+  ) async throws {
+    let arrived = SpeechPreparationSuspension<Bool>()
+    var dependencies = SpeechAnalyzerEngine.Dependencies()
+    dependencies.permissionAction = { .proceed }
+    dependencies.installationRequest = { _ in nil }
+    dependencies.audioInput = { _, _ in
+      .init(format: AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1)!, notice: notice)
+    }
+    dependencies.bestFormat = { _, _ in
+      _ = await arrived.wait()
+      return nil
+    }
+    let delegate = PreparationDelegate()
+    let engine = SpeechAnalyzerEngine(
+      locale: Locale(identifier: "ja-JP"), deviceUID: "selected-microphone",
+      verificationCache: SpeechModelVerificationCache(),
+      audioInputExclusiveAccess: AudioInputExclusiveAccess(), dependencies: dependencies)
+    engine.delegate = delegate
+    engine.start()
+    let task = try #require(engine.startTask)
+    await arrived.waitForArrival()
+    #expect(delegate.notices == [nil, notice])
+    #expect(delegate.errors.isEmpty)
+    #expect(delegate.statuses.allSatisfy { $0 == nil })
+    arrived.resume(returning: true)
+    await task.value
+    #expect(delegate.errors == [.noCompatibleAudioFormat])
+    #expect(delegate.notices.last == .some(nil))
+    engine.cancel()
+  }
+
   @Test(arguments: PreparationStage.allCases, [(false, false), (false, true), (true, false), (true, true)])
   fileprivate func endedPreparationCannotStartOrOverwriteNextStart(
     stage: PreparationStage, ending: (stop: Bool, fail: Bool)
@@ -76,10 +112,10 @@ extension SpeechAnalyzerEngineTests {
       }
       return nil
     }
-    dependencies.inputFormat = { audio, _ in
+    dependencies.audioInput = { audio, _ in
       inputCalls += 1
       createdAudio = audio
-      return format
+      return .init(format: format, notice: .microphoneFallback)
     }
     dependencies.bestFormat = { _, _ in
       formatCalls += 1
@@ -105,10 +141,12 @@ extension SpeechAnalyzerEngineTests {
     let nextTask = try #require(engine.startTask)
     await nextWait.waitForArrival()
     let statusesBeforeOldReturn = delegate.statuses
+    let noticesBeforeOldReturn = delegate.notices
     oldWait.resume(returning: !fail)
     await oldTask.value
     #expect(engine.state == .listening)
     #expect(delegate.statuses == statusesBeforeOldReturn)
+    #expect(delegate.notices == noticesBeforeOldReturn)
     #expect(delegate.errors.isEmpty)
     #expect(acquires == 0)
     #expect(createdAudio?.isRunning != true)
@@ -131,8 +169,8 @@ extension SpeechAnalyzerEngineTests {
     var dependencies = SpeechAnalyzerEngine.Dependencies()
     dependencies.permissionAction = { .proceed }
     dependencies.installationRequest = { _ in nil }
-    dependencies.inputFormat = { _, _ in
-      AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1)!
+    dependencies.audioInput = { _, _ in
+      .init(format: AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1)!, notice: nil)
     }
     dependencies.bestFormat = { _, _ in
       _ = await arrived.wait()

@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Selected microphone unavailable. Using the system default microphone." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選択したマイクを使用できないため、システムデフォルトのマイクを使用しています。"
+          }
+        }
+      }
+    },
     "  %@" : {
       "localizations" : {
         "ja" : {

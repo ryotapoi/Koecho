@@ -12,6 +12,10 @@ public enum VoiceInputEngineStatus: Sendable, Equatable {
   case downloadingModel
 }
 
+public enum VoiceInputEngineNotice: Sendable, Equatable {
+  case microphoneFallback
+}
+
 public enum VoiceInputEngineError: Error, Sendable, Equatable {
   case microphoneAccessDenied
   case modelDownloadFailed(description: String)
@@ -43,4 +47,5 @@ public protocol VoiceInputDelegate: AnyObject {
   func voiceInput(didUpdateVolatile text: String)
   func voiceInput(didEncounterError error: VoiceInputEngineError)
   func voiceInput(didUpdateStatus status: VoiceInputEngineStatus?)
+  func voiceInput(didUpdateNotice notice: VoiceInputEngineNotice?)
 }

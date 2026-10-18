@@ -21,6 +21,7 @@ public final class AppState {
   public var promptScript: Script? = nil
   public var pendingReplacementPattern: String?
   public var voiceEngineStatus: String?
+  public var voiceInputNotice: String?
 
   public init(settings: Settings) {
     self.settings = settings
