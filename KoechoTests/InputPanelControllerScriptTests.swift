@@ -75,7 +75,6 @@ extension InputPanelControllerTests {
 
     await ctx.controller.confirm()
 
-    // confirm should be no-op, state unchanged
     #expect(ctx.appState.isInputPanelVisible == true)
     #expect(ctx.appState.inputText == "hello")
   }
@@ -95,10 +94,8 @@ extension InputPanelControllerTests {
     ctx.controller.voiceCoordinator.currentVoiceTarget = .prompt
 
     ctx.appState.retainLastContent("previous")
-    // Simulate Escape via onEscape callback
     ctx.controller.panel.onEscape?()
 
-    // Prompt should be cancelled but panel stays visible
     #expect(ctx.appState.promptScript == nil)
     #expect(ctx.appState.promptText == "")
     #expect(ctx.appState.volatilePromptText == "")
@@ -119,12 +116,10 @@ extension InputPanelControllerTests {
     #expect(ctx.controller.panel.onShortcutKey?(shortcut) == true)
     await Task.yield()
 
-    // Cancel while script is running
     ctx.controller.cancel()
 
     await ctx.controller.shortcutScriptTask?.value
 
-    // Result should be discarded because panel was cancelled
     #expect(ctx.appState.inputText == "")
     #expect(ctx.appState.isInputPanelVisible == false)
   }
@@ -318,7 +313,6 @@ extension InputPanelControllerTests {
     ctx.controller.showPanel()
     ctx.appState.setInputText("original")
 
-    // Cmd+Shift+C should NOT match Cmd+C
     let handled = ctx.controller.panel.onShortcutKey?(cmdShiftC)
     #expect(handled == false)
     #expect(ctx.appState.inputText == "original")
@@ -507,9 +501,7 @@ extension InputPanelControllerTests {
     let handled = ctx.controller.panel.onShortcutKey?(ctrlA)
 
     #expect(handled == true)
-    // Auto-run cycle should have been triggered, not replacement
     #expect(ctx.appState.settings.script.autoRunScriptId == script.id)
-    // Text should NOT have been replaced by replacement rules
     #expect(ctx.appState.inputText == "hello")
     #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled)
   }

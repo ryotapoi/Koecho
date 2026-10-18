@@ -35,7 +35,6 @@ import Testing
   @Test func showReadsSelectedText() {
     let result = SelectedTextResult(text: "hello")
     let (manager, appState, _, _, _) = makeManager(selectedTextResult: result)
-    // Simulate having a frontmost app by setting it directly before show reads it
     appState.frontmostApplication = NSRunningApplication.current
 
     manager.show()

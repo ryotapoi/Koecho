@@ -100,7 +100,6 @@ final class AudioInputLevelMonitor {
     logger.info(
       "Starting level monitoring AUHAL (deviceID: \(effectiveDeviceID, privacy: .public))")
 
-    // 1. Find and create the AUHAL component
     var desc = AudioComponentDescription(
       componentType: kAudioUnitType_Output,
       componentSubType: kAudioUnitSubType_HALOutput,
@@ -123,14 +122,12 @@ final class AudioInputLevelMonitor {
     var initialized = false
     defer {
       if monitoringAudioUnit == nil {
-        // Setup did not complete — clean up
         if initialized { AudioUnitUninitialize(unit) }
         deallocateBufferList()
         AudioComponentInstanceDispose(unit)
       }
     }
 
-    // 2. Enable input on Element 1, disable output on Element 0
     let inputBus: AudioUnitElement = 1
     let outputBus: AudioUnitElement = 0
     let sizeOfUInt32 = UInt32(MemoryLayout<UInt32>.size)
@@ -159,7 +156,7 @@ final class AudioInputLevelMonitor {
       return false
     }
 
-    // 3. Set the input device (after enabling IO, before AudioUnitInitialize)
+    // The device must be set after enabling IO and before AudioUnitInitialize.
     var devID = effectiveDeviceID
     guard
       AudioUnitSetProperty(
@@ -172,7 +169,6 @@ final class AudioInputLevelMonitor {
       return false
     }
 
-    // 4. Get device's native format (Input scope of Element 1)
     var deviceFormat = AudioStreamBasicDescription()
     var formatSize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
     guard
@@ -186,7 +182,6 @@ final class AudioInputLevelMonitor {
       return false
     }
 
-    // 5. Set desired output format (Output scope of Element 1): non-interleaved Float32
     var desiredFormat = AudioStreamBasicDescription(
       mSampleRate: deviceFormat.mSampleRate,
       mFormatID: kAudioFormatLinearPCM,
@@ -209,7 +204,6 @@ final class AudioInputLevelMonitor {
       return false
     }
 
-    // 6. Allocate AudioBufferList (one buffer per channel, non-interleaved)
     let channelCount = Int(desiredFormat.mChannelsPerFrame)
     var maxFrames: UInt32 = 4096
     var maxFramesSize = UInt32(MemoryLayout<UInt32>.size)
@@ -231,7 +225,6 @@ final class AudioInputLevelMonitor {
     }
     monitoringBufferList = abl
 
-    // 7. Install input callback
     var callbackStruct = AURenderCallbackStruct(
       inputProc: Self.auhalInputCallback,
       inputProcRefCon: Unmanaged.passUnretained(self).toOpaque()
@@ -247,7 +240,6 @@ final class AudioInputLevelMonitor {
       return false
     }
 
-    // 8. Initialize and start
     guard AudioUnitInitialize(unit) == noErr else {
       logger.warning("Failed to initialize AUHAL")
       return false
@@ -259,7 +251,6 @@ final class AudioInputLevelMonitor {
       return false
     }
 
-    // Success — transfer ownership
     monitoringAudioUnit = unit
     logger.info("Level monitoring AUHAL started")
     return true
@@ -323,13 +314,11 @@ final class AudioInputLevelMonitor {
       return noErr
     }
 
-    // Reset buffer sizes for this render cycle
     let bytesPerFrame = UInt32(MemoryLayout<Float32>.size)
     for i in 0..<abl.count {
       abl[i].mDataByteSize = bytesPerFrame * inNumberFrames
     }
 
-    // Pull audio data from the AUHAL
     let status = AudioUnitRender(
       audioUnit, ioActionFlags, inTimeStamp,
       inBusNumber, inNumberFrames,
@@ -346,7 +335,6 @@ final class AudioInputLevelMonitor {
       return noErr
     }
 
-    // Throttle: skip if less than 50ms since last update
     let now = ContinuousClock.now
     guard AudioInputLevelMonitor.shouldPublishLevel(now: now, lastUpdate: monitor.lastLevelUpdate)
     else {

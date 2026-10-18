@@ -6,7 +6,6 @@ import Foundation
 /// (`-` vs `_`, with or without script), so comparisons go through a
 /// normalized `languageCode-script-region` key instead of raw identifiers.
 public enum SpeechLocale {
-  /// Normalized key for locale-based lookups (languageCode-script-region).
   public static func normalizationKey(_ locale: Locale) -> String {
     let lang = locale.language.languageCode?.identifier ?? ""
     let script = locale.language.script?.identifier ?? ""
@@ -14,7 +13,6 @@ public enum SpeechLocale {
     return "\(lang)-\(script)-\(region)"
   }
 
-  /// Convenience overload accepting a locale identifier string.
   public static func normalizationKey(_ identifier: String) -> String {
     normalizationKey(Locale(identifier: identifier))
   }

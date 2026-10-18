@@ -222,8 +222,8 @@ final class InputPanelController {
   }
 
   /// Confirm phase 4: hide the panel, paste into the target app, and
-  /// record history. On paste failure the panel is restored with the
-  /// text and an error message.
+  /// record history. On paste failure, restore the text and an error message
+  /// unless the target terminated, in which case reopen an empty panel.
   private func pasteAndRecord(_ text: String) async {
     guard let targetApp = appState.frontmostApplication else {
       appState.errorMessage = String(localized: "No target application")

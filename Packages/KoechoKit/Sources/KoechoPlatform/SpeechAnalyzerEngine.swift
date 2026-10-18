@@ -128,14 +128,12 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     }
     logger.debug("Stopping SpeechAnalyzer")
 
-    // Stop audio input
     if let audioEngine {
       removeAudioTap(from: audioEngine)
       audioEngine.stop()
     }
     inputContinuation?.finish()
 
-    // Ask analyzer to finalize remaining audio, with timeout
     if let analyzer {
       let finalizeTask = Task {
         try await analyzer.finalizeAndFinishThroughEndOfInput()
@@ -158,7 +156,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
     guard self.owner == owner else { return }
 
-    // Wait for result task with timeout
     if let resultTask {
       if case .timedOut = await TaskTimeout.wait(resultTask, seconds: 1) {
         logger.warning("Result task timed out during stop, cancelling")
@@ -234,7 +231,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
   private func startRecognition(owner: UUID) async {
     guard canStart(owner: owner) else { return }
-    // 1. Check microphone permission
     switch dependencies.permissionAction() {
     case .requestAccess:
       delegate?.voiceInput(didUpdateStatus: .requestingMicrophoneAccess)
@@ -256,7 +252,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
     guard canStart(owner: owner) else { return }
 
-    // 2. Create transcriber
     let preset = Self.defaultPreset
     logger.info(
       "Preset reportingOptions: \(String(describing: preset.reportingOptions), privacy: .public)")
@@ -265,7 +260,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     )
     let transcriber = makeTranscriber(preset: preset)
 
-    // 3. Check / download model (skip if already verified this session)
     let localeKey = SpeechLocale.normalizationKey(locale)
     let modelError: VoiceInputEngineError?
     do {
@@ -290,7 +284,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       return
     }
 
-    // 4. Setup audio engine
     let audioEngine = AVAudioEngine()
     self.audioEngine = audioEngine
 
@@ -305,7 +298,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
     delegate?.voiceInput(didUpdateNotice: audioInput.notice)
 
-    // 5. Create the recognition session using the best compatible format.
     let session = await makeRecognitionSession(
       transcriber: transcriber,
       format: .determine(from: inputFormat),
@@ -323,7 +315,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       return
     }
 
-    // 6. Create format converter if needed
     let needsConversion = inputFormat != session.analyzerFormat
     if needsConversion {
       guard let conv = AVAudioConverter(from: inputFormat, to: session.analyzerFormat) else {
@@ -336,7 +327,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     }
     activate(session)
 
-    // 7. Install audio tap and start
     let acquisitionID = audioInputExclusiveAccess.acquire()
     guard canStart(owner: owner) else {
       audioInputExclusiveAccess.release(acquisitionID)
@@ -487,7 +477,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     defer { if self.owner == owner { isRestarting = false } }
     logger.info("Restarting transcriber to clear segment buffer")
 
-    // 1. Stop old: remove tap, stop audio engine, finish stream, cancel analyzer
     removeAudioTap(from: audioEngine)
     audioEngine.stop()
     inputContinuation?.finish()
@@ -503,10 +492,10 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       }
     }
 
-    // 2. Re-check state (stop/cancel may have run during await)
+    // Stop or cancel may have run during the preceding await.
     guard canStart(owner: owner) else { return false }
 
-    // 3. Create a new session with the format selected at initial start.
+    // Reuse the original analyzer format across restarts.
     guard let analyzerFormat else { return false }
     guard let session = await makeRecognitionSession(
       transcriber: makeTranscriber(preset: Self.defaultPreset),
@@ -522,7 +511,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     }
     activate(session)
 
-    // 4. Re-install audio tap and restart audio engine
     do {
       try installAudioTap()
       guard canStart(owner: owner) else { return false }

@@ -97,7 +97,6 @@ struct ReplacementRuleTests {
         matchesWholeWord: true
       )
     ]
-    // In regex mode, matchesWholeWord is ignored so "the" inside "other" should also match
     let result = applyReplacementRules(rules, to: "the other the")
     #expect(result == "X oXr X")
   }
@@ -113,17 +112,13 @@ struct ReplacementRuleTests {
   }
 
   @Test func findMatchesMultipleIndependentRules() {
-    // Two independent rules that don't overlap
     let rules = [
       ReplacementRule(pattern: "えーと", replacement: ""),
       ReplacementRule(pattern: "あのー", replacement: ""),
     ]
     let matches = findReplacementMatches(rules, in: "えーとあのー天気")
     #expect(matches.count == 2)
-    // Rule 1 matches "えーと" at (0,3) in original
     #expect(matches[0] == ReplacementMatch(range: NSRange(location: 0, length: 3), replacement: ""))
-    // After rule 1, intermediate = "あのー天気", cumulativeOffset = -3
-    // Rule 2 matches "あのー" at (0,3) in intermediate, original = 0 - (-3) = 3
     #expect(matches[1] == ReplacementMatch(range: NSRange(location: 3, length: 3), replacement: ""))
   }
 
@@ -387,7 +382,6 @@ struct ReplacementRuleTests {
   }
 
   @Test func multiplePatternsLongestMatchFirst() {
-    // "GitHub" should match before "Git" due to longest-first sorting
     let rules = [
       ReplacementRule(patterns: ["Git", "GitHub"], replacement: "X")
     ]
@@ -396,7 +390,6 @@ struct ReplacementRuleTests {
   }
 
   @Test func multiplePatternsWithEmptyElement() {
-    // Empty patterns should be filtered out
     let rules = [
       ReplacementRule(patterns: ["", "foo", ""], replacement: "bar")
     ]
@@ -425,7 +418,6 @@ struct ReplacementRuleTests {
   }
 
   @Test func multiplePatternsRegexStillSingle() {
-    // Regex mode uses only patterns.first
     let rules = [
       ReplacementRule(
         patterns: ["\\d+", "ignored"],

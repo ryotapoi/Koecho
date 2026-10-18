@@ -41,11 +41,9 @@ struct SettingsTests {
     let defaults = makeDefaults()
     let settings = Settings(defaults: defaults)
 
-    // Modify via sub-settings
     settings.script.addScript(Script(name: "Test", scriptPath: "/bin/test"))
     settings.replacement.addReplacementRule(ReplacementRule(pattern: "a", replacement: "b"))
 
-    // Reload via fresh Settings (same defaults) and verify
     let reloaded = Settings(defaults: defaults)
     #expect(reloaded.script.scripts.count == Script.defaultBuiltins.count + 1)
     #expect(reloaded.script.scripts.last?.name == "Test")

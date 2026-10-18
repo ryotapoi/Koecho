@@ -152,7 +152,6 @@ import Testing
 
     await service.execute(script)
 
-    // Script ran and completed, prompt cleared
     #expect(appState.promptScript == nil)
     #expect(appState.promptText == "")
     #expect(appState.volatilePromptText == "")
@@ -311,7 +310,6 @@ import Testing
 
     await service.execute(script)
 
-    // Should not change inputText (was skipped)
     #expect(appState.inputText == "hello")
   }
 
@@ -386,15 +384,12 @@ import Testing
     let script2 = Script(name: "S2", scriptPath: "cat")
     appState.settings.script.scripts = [script1, script2]
 
-    // nil → first
     service.cycleAutoRunScript()
     #expect(appState.settings.script.autoRunScriptId == script1.id)
 
-    // first → second
     service.cycleAutoRunScript()
     #expect(appState.settings.script.autoRunScriptId == script2.id)
 
-    // second → nil
     service.cycleAutoRunScript()
     #expect(appState.settings.script.autoRunScriptId == nil)
   }

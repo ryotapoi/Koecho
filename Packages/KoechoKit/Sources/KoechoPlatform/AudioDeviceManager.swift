@@ -45,7 +45,6 @@ public final class AudioDeviceManager {
   }
 
   isolated deinit {
-    // Remove property listener blocks
     if let block = deviceListListenerBlock {
       var address = AudioObjectPropertyAddress(
         mSelector: kAudioHardwarePropertyDevices,
@@ -165,12 +164,10 @@ public final class AudioDeviceManager {
     let element = volumeElement(for: deviceID)
     monitoredDeviceSupportsVolume = AudioDeviceListing.supportsVolumeControl(deviceID)
 
-    // Read current volume
     if monitoredDeviceSupportsVolume {
       inputVolume = readVolume(deviceID: deviceID, element: element)
     }
 
-    // Install volume change listener
     installVolumeListener(deviceID: deviceID, element: element)
   }
 

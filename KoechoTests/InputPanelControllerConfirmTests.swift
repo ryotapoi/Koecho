@@ -90,7 +90,6 @@ extension InputPanelControllerTests {
 
     ctx.controller.showPanel()
     ctx.appState.setInputText("hello")
-    // Set a fake frontmost app — use current app as a stand-in
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
     await ctx.controller.confirm()
@@ -322,24 +321,19 @@ extension InputPanelControllerTests {
     ctx.appState.setInputText("hello")
     ctx.appState.frontmostApplication = NSRunningApplication.current
 
-    // Make paste suspend so we can call cancel() while confirm() is in progress.
     paster.suspendsPaste = true
 
-    // Start confirm in a Task so we can call cancel() after it begins
     let confirmTask = Task { @MainActor in
       await ctx.controller.confirm()
     }
     await paster.waitForPasteStart()
 
-    // Panel should be hidden (confirm hides it before paste) but isConfirming is true
-    // cancel() should be ignored because isConfirming is true
     ctx.controller.cancel()
     #expect(paster.restoreClipboardCallCount == 0)
 
     paster.finishPaste()
     await confirmTask.value
 
-    // Confirm should have succeeded — cancel was ignored
     #expect(ctx.appState.isInputPanelVisible == false)
     #expect(ctx.appState.inputText == "")
     #expect(paster.pastedTexts == ["hello"])

@@ -114,7 +114,6 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     scrollRangeToVisible(NSRange(location: NSMaxRange(range), length: 0))
   }
 
-  /// Remove volatile text from the text storage.
   func clearVolatileText() {
     guard let range = volatileRange else { return }
     let storage = textStorage!
@@ -133,7 +132,6 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     onDisplayTextChanged?()
   }
 
-  /// Finalize volatile text: remove styling, keep the text, clear volatileRange.
   func finalizeVolatileText() {
     guard let range = volatileRange else { return }
     let storage = textStorage!
@@ -157,7 +155,6 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     onDisplayTextChanged?()
   }
 
-  /// Return the finalized text (excluding volatile text).
   var finalizedString: String {
     guard let range = volatileRange else { return string }
     let nsString = string as NSString

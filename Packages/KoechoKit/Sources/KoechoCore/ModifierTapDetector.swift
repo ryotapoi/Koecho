@@ -6,7 +6,6 @@ public enum TapResult: Equatable, Sendable {
 
 /// Detects modifier key tap patterns (single tap and double tap).
 ///
-/// Pure state machine — no NSEvent dependency, no timers, fully testable.
 /// Feed `flagsChanged` and `keyDown` events; returns a `TapResult`.
 /// The caller (HotkeyService) manages the double-tap timeout timer
 /// and calls `expireDoubleTapWindow` when it fires.
@@ -27,12 +26,7 @@ public struct ModifierTapDetector: Sendable {
 
   public init() {}
 
-  /// Handle a flagsChanged event.
-  /// - Parameters:
-  ///   - keyCode: The keyCode from the event.
-  ///   - targetFlagIsSet: Whether the target modifier flag is currently set.
-  ///   - now: Event timestamp (system uptime).
-  /// - Returns: A `TapResult` indicating what was detected.
+  /// - Parameter now: Event timestamp (system uptime).
   public mutating func handleFlagsChanged(
     keyCode: UInt16, targetFlagIsSet: Bool, now: TimeInterval
   ) -> TapResult {

@@ -84,7 +84,6 @@ public final class SpeechAnalyzerLocaleManager {
 
     let reservedItems = reservedLocales
     guard !reservedItems.isEmpty else {
-      // No reserved locales — trigger auto-download for current selection
       await downloadAsset(for: currentSelection, currentSelection: currentSelection)
       return nil
     }
@@ -137,7 +136,6 @@ public final class SpeechAnalyzerLocaleManager {
       })
     else { return }
 
-    // Optimistic UI update
     if let index = allLocales.firstIndex(where: { $0.identifier == item.identifier }) {
       allLocales[index].isReserved = false
     }
@@ -206,7 +204,7 @@ public final class SpeechAnalyzerLocaleManager {
         supporting: [transcriber]
       )
     else {
-      // nil = already installed
+      // A nil request means the model is already installed.
       verificationCache.markVerified(localeKey: localeKey)
       return false
     }

@@ -130,7 +130,6 @@ public final class OutputVolumeDucker: VolumeDucking {
   func handleOutputDeviceChanged() {
     guard isDucked else { return }
 
-    // Restore old device volume (best-effort)
     if let volume = savedVolume {
       setOutputVolume(volume, deviceID: duckedDeviceID, element: duckedElement)
       logger.info("Restored old device volume to \(volume, privacy: .public)")
@@ -139,7 +138,6 @@ public final class OutputVolumeDucker: VolumeDucking {
     duckedDeviceID = kAudioObjectUnknown
     duckedElement = kAudioObjectPropertyElementMain
 
-    // Duck on new device
     guard let newDeviceID = defaultOutputDeviceID() else {
       logger.info("No new default output device after change")
       return

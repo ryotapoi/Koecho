@@ -112,10 +112,8 @@ public final class HotkeyService {
         break
       }
 
-      // If detector entered waitingForSecondTap, decide whether to start timer or expire immediately
       if tapResult == .none, case .waitingForSecondTap = detector.state, doubleTapTimer == nil {
         if config.tapMode == .singleToggle || isPanelVisible() {
-          // No need to wait for double tap — expire immediately
           let expireResult = detector.expireDoubleTapWindow()
           if expireResult == .singleTap {
             logger.debug("Single tap detected (immediate expire)")

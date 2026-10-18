@@ -195,7 +195,6 @@ struct VoiceInputTextViewTests {
       receivedPattern = pattern
     }
 
-    // Invoke the menu action directly via the selector
     textView.perform(Selector(("addReplacementRuleFromMenu:")), with: nil)
 
     #expect(receivedPattern == "hello")
@@ -375,14 +374,12 @@ struct VoiceInputTextViewTests {
       finalizeCalled = true
     }
 
-    // Simulate keyboard input triggering shouldChangeText
     _ = textView.shouldChangeText(
       in: NSRange(location: 11, length: 0),
       replacementString: "!"
     )
 
     #expect(textView.volatileRange == nil)
-    // Volatile text is finalized (kept as confirmed text)
     #expect(textView.string == "hello world")
     #expect(finalizeCalled)
   }
@@ -391,7 +388,6 @@ struct VoiceInputTextViewTests {
     let textView = makeTextView()
     textView.string = "hi"
 
-    // Insert at position beyond text length — should clamp
     textView.setVolatileText(" there", at: 100)
 
     #expect(textView.string == "hi there")

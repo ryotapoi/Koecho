@@ -15,11 +15,9 @@ extension InputPanelControllerTests {
     ctx.controller.showPanel()
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
 
-    // Cancel and reopen
     ctx.controller.cancel()
     ctx.controller.showPanel()
 
-    // The reopened panel accepts the same speech again.
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "hello")
     #expect(ctx.appState.inputText == "hello")
   }
@@ -106,7 +104,6 @@ extension InputPanelControllerTests {
     ctx.controller.showPanel()
     let textView = try #require(findVoiceInputTextView(in: ctx.controller), "textView not found")
 
-    // Insert text via normal finalize first
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "こんにちは")
 
     ctx.controller.voiceCoordinator.voiceInput(didUpdateVolatile: "こんにちは")
@@ -114,7 +111,6 @@ extension InputPanelControllerTests {
     textView.onVolatileFinalized?()
     ctx.controller.voiceCoordinator.localFinalizationState.finishRestart()
 
-    // New speech after local finalization should be inserted.
     ctx.controller.voiceCoordinator.voiceInput(didFinalize: "ありがとう")
     #expect(ctx.appState.inputText.contains("ありがとう"))
     #expect(ctx.controller.voiceCoordinator.localFinalizationState == .idle)
