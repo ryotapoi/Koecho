@@ -1,8 +1,42 @@
 # Changelog
 
-All notable changes to Koecho are documented here. Release notes are reconstructed from GitHub Releases and version tags. See [CHANGELOG.ja.md](CHANGELOG.ja.md) for Japanese.
+All notable changes to Koecho are documented here. See [CHANGELOG.ja.md](CHANGELOG.ja.md) for Japanese.
 
 Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi/Koecho/releases).
+
+## 2.0.0 — 2026-10-19
+
+### Compatibility
+
+- Requires macOS 27.0 or later. Version 1.8.0 is the last release supporting macOS 14 and later.
+- Uses on-device SpeechAnalyzer recognition exclusively; the system dictation input mode has been removed.
+
+### What's New
+
+- Preview replacement candidates at the caret and apply individual occurrences or candidates fully contained in the selection. A separate action replaces the whole document. Automatic replacement is off by default; saved preferences are preserved.
+- Default panel shortcuts are Command+R for local replacement, Command+Shift+R for whole-document replacement, and Control+V for toggling voice input. Existing saved shortcuts, including unassigned shortcuts, are preserved.
+- Undo the most recent successful manual script operation in one step, and copy the last panel content from the menu even after cancellation or a failed paste.
+- Customize script display names and icons, add built-in operations from the add menu, and see the selected auto-run script in the panel.
+- Reorganized audio, history, replacement, and script settings, improved Japanese translations, and removed the app icon selector.
+- The panel supports smaller windows and starts at 480 × 240 pt when no saved frame exists.
+- Added a voice transcription correction example using Apple Foundation Models via macOS 27's `fm` command.
+
+### Bug Fixes
+
+- Improved speech finalization, repeated phrases, caret preservation, and automatic scrolling to newly dictated text. Voice input pauses while custom scripts run.
+- Fixed recognition startup and cancellation races, language switching, and microphone level monitoring after recognition or device reconnection. A notice appears when the selected microphone falls back to the system default.
+- Protected IME composition and Unicode boundaries during replacement, and avoided Japanese IME conflicts in the default replacement shortcuts.
+- Fixed IME candidates remaining after confirmation and old text returning when the panel reopened.
+- Fixed a crash when deleting the last script.
+- When automatic replacement is off, confirming input or adding a rule no longer applies pending replacements. Auto-run scripts and pasting receive the text with those candidates unchanged.
+- Prevented duplicate confirmation while speech is finalizing, preserved paste targets for retries, and stopped clipboard restoration from overwriting newly copied content.
+- Made script timeouts cover output collection, handled early stdin closure, and stopped active scripts when the panel is cancelled.
+- Protected unreadable settings and history from unintended overwrites, and preserved history when clearing it cannot be saved.
+- Removed recognized speech text from diagnostic logs.
+
+### Internal
+
+- Strengthened regression coverage and isolated hosted test settings and history from regular app data.
 
 ## 1.8.0 — 2026-09-20
 

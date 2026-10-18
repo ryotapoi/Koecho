@@ -11,12 +11,13 @@ Invoke with a hotkey, edit text by voice and keyboard, process it with shell scr
 
 - Voice + keyboard: dictate and edit with the keyboard at the same time. Recognition results update in real time
 - On-device speech recognition with spoken punctuation and line breaks
+- Manual replacement: preview candidates at the caret and replace individual occurrences, selected text, or the whole document
 - Built-in text operations: increase or decrease indentation and add block quotes to selected lines without configuring external scripts
 - Script integration: transform text with shell scripts, including the Apple Foundation Models voice formatting example
 
 ## Requirements
 
-- macOS 27.0 or later
+- macOS 27.0 or later (version 1.8.0 is the last release supporting macOS 14 and later)
 
 ## Installation
 
@@ -53,6 +54,20 @@ The system will prompt for these permissions on first launch:
 3. Optionally run a script (the text is replaced in place)
 4. Press the hotkey again to confirm and paste into the foreground app
 5. Press Escape to cancel
+
+### Replacement and panel shortcuts
+
+Configure replacement rules in Settings → Replacement. Automatic replacement is off by default. Review candidates in the preview, then apply them with the text context menu or a shortcut. A selection limits replacement to candidates fully contained within it.
+
+| Action | Default shortcut |
+|--------|------------------|
+| Replace at the caret or in the selection | Command+R |
+| Replace throughout the document | Command+Shift+R |
+| Toggle voice input | Control+V |
+
+Customize these in Settings → Shortcuts. Saved shortcuts are preserved when upgrading.
+
+After a successful manual script run, use Undo Script to restore the previous text before editing further. Use Copy Last Content in the menu bar to recover the last panel content after closing the panel.
 
 ### Script integration
 
