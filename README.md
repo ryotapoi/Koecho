@@ -55,6 +55,8 @@ The system will prompt for these permissions on first launch:
 4. Press the hotkey again to confirm and paste into the foreground app
 5. Press Escape to cancel
 
+If recognition fails to start, close and reopen the panel to retry. After changing the microphone in Settings, reopen the panel to use the selected input.
+
 ### Replacement and panel shortcuts
 
 Configure replacement rules in Settings → Replacement. Automatic replacement is off by default. Review candidates in the preview, then apply them with the text context menu or a shortcut. A selection limits replacement to candidates fully contained within it.

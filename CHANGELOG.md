@@ -4,6 +4,17 @@ All notable changes to Koecho are documented here. See [CHANGELOG.ja.md](CHANGEL
 
 Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi/Koecho/releases).
 
+## 2.0.1 — 2026-10-21
+
+### Bug Fixes
+
+- Aligned speech capture with the selected microphone's sample rate and channel count to avoid recognition startup failures caused by mismatched audio formats. Fixed repeated input buffers during audio conversion.
+- The input panel now reports audio conversion failures once per recognition session while voice input continues.
+
+### Known Issues
+
+- A report of no transcription with the built-in microphone remains unresolved. After a recognition startup error, close and reopen the panel to retry with the selected microphone.
+
 ## 2.0.0 — 2026-10-19
 
 ### Compatibility
