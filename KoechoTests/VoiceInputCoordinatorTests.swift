@@ -54,6 +54,15 @@ import Testing
     return (coordinator, appState, mockTV, mockEngine)
   }
 
+  @Test func audioConversionNoticeReachesPanelWithoutStoppingInput() {
+    let (coordinator, appState, _, engine) = makeCoordinator()
+    appState.settings.voiceInput.isVoiceInputEnabled = true
+    coordinator.voiceInput(didUpdateNotice: .audioConversionFailure)
+    #expect(appState.voiceInputNotice == String(localized: "Audio conversion failed. Voice input will continue."))
+    #expect(appState.errorMessage == nil)
+    #expect(engine.stopCallCount == 0)
+  }
+
   @Test func microphoneNoticeEndsWithVoiceLifecycle() async {
     let (coordinator, appState, _, _) = makeCoordinator()
     appState.settings.voiceInput.isVoiceInputEnabled = true

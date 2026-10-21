@@ -25,6 +25,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
   private var analyzerFormat: AVAudioFormat?
   private var isRestarting = false
   private var hasAudioTap = false
+  private var hasReportedAudioConversionFailure = false
 
   // Keep the OS suspension points injectable without replacing the engine lifecycle.
   struct Dependencies {
@@ -99,6 +100,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     }
     let owner = UUID()
     self.owner = owner
+    hasReportedAudioConversionFailure = false
     state = .listening
     delegate?.voiceInput(didUpdateNotice: nil)
     logger.info("Starting SpeechAnalyzer with locale: \(self.locale.identifier, privacy: .public)")
@@ -416,18 +418,50 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     else { return }
     let converter = try SpeechAudioConverter(input: inputFormat, output: analyzerFormat)
     let inputNode = audioEngine.inputNode
+    let reportConversionFailure = makeAudioConversionFailureHandler()
     // A nonnil tap format applies the client format through the engine's node API.
     try inputNode.installAudioTap(
       onBus: 0, bufferSize: 4096, format: inputFormat
     ) { @Sendable buffer, _ in
       // The converter and continuation belong to this tap, never another session.
       let copiedBuffer = AVAudioPCMBuffer(copying: buffer)
-      guard let input = converter.convert(copiedBuffer) else { return }
-      localContinuation.yield(AnalyzerInput(buffer: input))
+      Self.deliverAudioConversion(
+        converter.convert(copiedBuffer), to: localContinuation,
+        reportFailure: reportConversionFailure)
     }
     hasAudioTap = true
     guard inputNode.outputFormat(forBus: 0) == inputFormat else {
       throw VoiceInputEngineError.audioFormatConversionNotSupported
+    }
+  }
+
+  // Capture ownership when installing a tap; delayed callbacks cannot affect another start.
+  func makeAudioConversionFailureHandler() -> @Sendable () async -> Void {
+    let owner = self.owner
+    return { [weak self] in
+      await self?.reportAudioConversionFailure(owner: owner)
+    }
+  }
+
+  private func reportAudioConversionFailure(owner: UUID?) {
+    guard let owner, self.owner == owner, state == .listening,
+      !hasReportedAudioConversionFailure else { return }
+    hasReportedAudioConversionFailure = true
+    delegate?.voiceInput(didUpdateNotice: .audioConversionFailure)
+  }
+
+  nonisolated static func deliverAudioConversion(
+    _ result: SpeechAudioConverter.Result,
+    to continuation: AsyncStream<AnalyzerInput>.Continuation,
+    reportFailure: @escaping @Sendable () async -> Void
+  ) {
+    switch result {
+    case .audio(let buffer):
+      continuation.yield(AnalyzerInput(buffer: buffer))
+    case .noOutput:
+      break
+    case .failure:
+      Task { await reportFailure() }
     }
   }
 

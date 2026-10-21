@@ -1,6 +1,7 @@
 @preconcurrency import AVFoundation
 import Foundation
 import KoechoCore
+import Speech
 import Testing
 
 @testable import KoechoPlatform
@@ -304,5 +305,76 @@ extension SpeechAnalyzerEngineTests {
     }
     #expect(!access.isInUse)
     engine.cancel()
+  }
+}
+
+extension SpeechAnalyzerEngineTests {
+  @Test func conversionFailureNoticeBelongsToAcceptedStartAcrossRestart() async throws {
+    let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1))
+    var dependencies = SpeechAnalyzerEngine.Dependencies()
+    dependencies.permissionAction = { .proceed }
+    dependencies.installationRequest = { _ in nil }
+    dependencies.audioInput = { audio, _ in
+      if !audio.isInManualRenderingMode {
+        try audio.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 4096)
+        audio.connect(audio.inputNode, to: audio.mainMixerNode, format: format)
+      }
+      return .init(format: format, notice: nil)
+    }
+    dependencies.bestFormat = { _, _ in format }
+    let delegate = PreparationDelegate()
+    let engine = SpeechAnalyzerEngine(
+      locale: Locale(identifier: "ja-JP"), deviceUID: nil,
+      verificationCache: SpeechModelVerificationCache(),
+      audioInputExclusiveAccess: AudioInputExclusiveAccess(), dependencies: dependencies)
+    engine.delegate = delegate
+    let idleFailure = engine.makeAudioConversionFailureHandler()
+    engine.start()
+    await engine.startTask?.value
+    let oldFailure = engine.makeAudioConversionFailureHandler()
+    await idleFailure()
+    #expect(!delegate.notices.contains(.audioConversionFailure))
+    await oldFailure()
+    engine.start() // A duplicate start does not reset the notification allowance.
+    await oldFailure()
+    #expect(delegate.notices.filter { $0 == .audioConversionFailure }.count == 1)
+    #expect(await engine.restartTranscriber())
+    await engine.makeAudioConversionFailureHandler()()
+    #expect(delegate.notices.filter { $0 == .audioConversionFailure }.count == 1)
+    #expect(engine.state == .listening)
+    #expect(delegate.errors.isEmpty)
+    await engine.stop()
+    await oldFailure()
+    #expect(delegate.notices.filter { $0 == .audioConversionFailure }.count == 1)
+    engine.start()
+    await engine.startTask?.value
+    await oldFailure() // A queued callback cannot consume the next start's allowance.
+    #expect(delegate.notices.filter { $0 == .audioConversionFailure }.count == 1)
+    let newFailure = engine.makeAudioConversionFailureHandler()
+    await newFailure()
+    #expect(delegate.notices.filter { $0 == .audioConversionFailure }.count == 2)
+    engine.cancel()
+    await newFailure()
+    #expect(delegate.notices.filter { $0 == .audioConversionFailure }.count == 2)
+  }
+
+  @Test func conversionDeliveryContinuesAfterFailureAndIgnoresNoOutput() async throws {
+    let (stream, continuation) = AsyncStream<AnalyzerInput>.makeStream()
+    let (failures, failureContinuation) = AsyncStream<Void>.makeStream()
+    let reportFailure: @Sendable () async -> Void = { failureContinuation.yield(()) }
+    SpeechAnalyzerEngine.deliverAudioConversion(.noOutput, to: continuation, reportFailure: reportFailure)
+    SpeechAnalyzerEngine.deliverAudioConversion(.failure, to: continuation, reportFailure: reportFailure)
+    var failureIterator = failures.makeAsyncIterator()
+    _ = await failureIterator.next()
+    failureContinuation.finish()
+    #expect(await failureIterator.next() == nil)
+    let format = try #require(AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16000, channels: 1, interleaved: false))
+    let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 32))
+    buffer.frameLength = 32
+    SpeechAnalyzerEngine.deliverAudioConversion(.audio(buffer), to: continuation, reportFailure: reportFailure)
+    continuation.finish()
+    var inputs = stream.makeAsyncIterator()
+    #expect(await inputs.next() != nil)
+    #expect(await inputs.next() == nil)
   }
 }

@@ -1,4 +1,5 @@
 @preconcurrency import AVFoundation
+import Foundation
 import KoechoCore
 import Testing
 
@@ -42,7 +43,10 @@ struct SpeechAudioCaptureTests {
       buffer.frameLength = 4096
       let samples = try #require(buffer.floatChannelData?[0])
       for index in 0..<4096 { samples[index] = sign * 0.25 }
-      let converted = try #require(converter.convert(buffer))
+      guard case .audio(let converted) = converter.convert(buffer) else {
+        Issue.record("Expected converted PCM output")
+        return
+      }
       #expect(converted.format == output)
       #expect(converted.frameLength > 0)
       #expect(Double(converted.frameLength) <= ceil(4096 * 16000 / rate))
@@ -53,12 +57,40 @@ struct SpeechAudioCaptureTests {
     }
   }
 
+  @Test(arguments: [AVAudioConverterOutputStatus.haveData, .inputRanDry, .endOfStream, .error],
+    [false, true])
+  func conversionResultDistinguishesFailureFromWaiting(
+    status: AVAudioConverterOutputStatus, hasError: Bool
+  ) throws {
+    let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1))
+    let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 32))
+    let error = hasError ? NSError(domain: "ConversionTest", code: 1) : nil
+    for frames: AVAudioFrameCount in [0, 32] {
+      buffer.frameLength = frames
+      let result = SpeechAudioConverter.Result(output: buffer, status: status, error: error)
+      switch result {
+      case .failure: #expect(hasError || status == .error)
+      case .noOutput: #expect(!hasError && status != .error && frames == 0)
+      case .audio(let output):
+        #expect(!hasError && status != .error && frames > 0)
+        #expect(output === buffer)
+      }
+    }
+  }
+
   @Test func matchingPCMBypassesConversion() throws {
     let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1))
     let converter = try SpeechAudioConverter(input: format, output: format)
     let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 32))
-    #expect(converter.convert(buffer) == nil)
+    guard case .noOutput = converter.convert(buffer) else {
+      Issue.record("Empty PCM produced output")
+      return
+    }
     buffer.frameLength = 32
-    #expect(converter.convert(buffer) === buffer)
+    guard case .audio(let converted) = converter.convert(buffer) else {
+      Issue.record("Expected PCM passthrough")
+      return
+    }
+    #expect(converted === buffer)
   }
 }

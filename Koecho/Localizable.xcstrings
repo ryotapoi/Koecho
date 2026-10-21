@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Audio conversion failed. Voice input will continue." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声の変換に失敗しました。音声入力は継続します。"
+          }
+        }
+      }
+    },
     "Selected microphone unavailable. Using the system default microphone." : {
       "localizations" : {
         "ja" : {

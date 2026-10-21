@@ -294,6 +294,8 @@ final class VoiceInputCoordinator: VoiceInputDelegate {
       switch notice {
       case .microphoneFallback:
         String(localized: "Selected microphone unavailable. Using the system default microphone.")
+      case .audioConversionFailure:
+        String(localized: "Audio conversion failed. Voice input will continue.")
       }
     }
   }

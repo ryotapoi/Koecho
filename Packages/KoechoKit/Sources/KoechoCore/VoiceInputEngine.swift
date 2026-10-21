@@ -14,6 +14,7 @@ public enum VoiceInputEngineStatus: Sendable, Equatable {
 
 public enum VoiceInputEngineNotice: Sendable, Equatable {
   case microphoneFallback
+  case audioConversionFailure
 }
 
 public enum VoiceInputEngineError: Error, Sendable, Equatable {
