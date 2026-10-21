@@ -22,7 +22,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
   private var resultTask: Task<Void, Never>?
   private var transcriber: DictationTranscriber?
   private var audioInputAcquisitionID: UUID?
-  private var converter: AVAudioConverter?
   private var analyzerFormat: AVAudioFormat?
   private var isRestarting = false
   private var hasAudioTap = false
@@ -39,7 +38,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       else { return nil }
       return { try await request.downloadAndInstall() }
     }
-    var audioInput: @MainActor (AVAudioEngine, String?) -> AudioInputConfiguration = configureAudioInput
+    var audioInput: @MainActor (AVAudioEngine, String?) throws -> AudioInputConfiguration = configureAudioInput
     var bestFormat: @MainActor (DictationTranscriber, AVAudioFormat) async -> AVAudioFormat? = {
       await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [$0], considering: $1)
     }
@@ -188,7 +187,7 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
 
   private static func configureAudioInput(
     _ audioEngine: AVAudioEngine, _ deviceUID: String?
-  ) -> AudioInputConfiguration {
+  ) throws -> AudioInputConfiguration {
     var notice: VoiceInputEngineNotice?
     let logger = Logger(subsystem: Logger.koechoSubsystem, category: "SpeechAnalyzerEngine")
     if let deviceUID {
@@ -220,9 +219,8 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     }
 
     let inputNode = audioEngine.inputNode
-    let inputFormat = inputNode.outputFormat(forBus: 0)
-
-    return AudioInputConfiguration(format: inputFormat, notice: notice)
+    let format = try SpeechAudioCaptureFormat.make(hardware: inputNode.inputFormat(forBus: 0))
+    return AudioInputConfiguration(format: format, notice: notice)
   }
 
   private func canStart(owner: UUID) -> Bool {
@@ -287,11 +285,17 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     let audioEngine = AVAudioEngine()
     self.audioEngine = audioEngine
 
-    let audioInput = dependencies.audioInput(audioEngine, deviceUID)
+    let audioInput: AudioInputConfiguration
+    do {
+      audioInput = try dependencies.audioInput(audioEngine, deviceUID)
+    } catch {
+      reportAudioInputError(error)
+      return
+    }
     let inputFormat = audioInput.format
 
     guard canStart(owner: owner) else { return }
-    guard inputFormat.channelCount > 0 else {
+    guard inputFormat.sampleRate > 0, inputFormat.channelCount > 0 else {
       reportError(.noAudioInputDevice)
       return
     }
@@ -315,16 +319,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
       return
     }
 
-    let needsConversion = inputFormat != session.analyzerFormat
-    if needsConversion {
-      guard let conv = AVAudioConverter(from: inputFormat, to: session.analyzerFormat) else {
-        reportError(.audioFormatConversionNotSupported)
-        return
-      }
-      self.converter = conv
-    } else {
-      self.converter = nil
-    }
     activate(session)
 
     let acquisitionID = audioInputExclusiveAccess.acquire()
@@ -335,12 +329,12 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     audioInputAcquisitionID = acquisitionID
 
     do {
-      try installAudioTap()
+      try installAudioTap(format: inputFormat)
       guard canStart(owner: owner) else { return }
       try audioEngine.start()
       logger.info("Audio engine started, listening...")
     } catch {
-      reportError(.audioEngineStartFailed(description: error.localizedDescription))
+      reportAudioInputError(error)
     }
   }
 
@@ -416,56 +410,25 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     hasAudioTap = false
   }
 
-  private func installAudioTap() throws {
+  private func installAudioTap(format inputFormat: AVAudioFormat) throws {
     guard let audioEngine, let analyzerFormat,
       let localContinuation = inputContinuation
     else { return }
+    let converter = try SpeechAudioConverter(input: inputFormat, output: analyzerFormat)
     let inputNode = audioEngine.inputNode
-    let inputFormat = inputNode.outputFormat(forBus: 0)
-
-    // Recreate converter if input format changed (e.g. during restart)
-    let needsConversion = inputFormat != analyzerFormat
-    if needsConversion {
-      if converter == nil || converter?.inputFormat != inputFormat {
-        guard let conv = AVAudioConverter(from: inputFormat, to: analyzerFormat) else {
-          reportError(.audioFormatConversionNotSupported)
-          return
-        }
-        converter = conv
-      }
-    } else {
-      converter = nil
-    }
-
-    let localConverter = converter
-    let localAnalyzerFormat = analyzerFormat
-    try inputNode.installAudioTap(onBus: 0, bufferSize: 4096, format: inputFormat) { @Sendable buffer, _ in
-      // This runs on the audio thread — do not access self
+    // A nonnil tap format applies the client format through the engine's node API.
+    try inputNode.installAudioTap(
+      onBus: 0, bufferSize: 4096, format: inputFormat
+    ) { @Sendable buffer, _ in
+      // The converter and continuation belong to this tap, never another session.
       let copiedBuffer = AVAudioPCMBuffer(copying: buffer)
-      let inputBuffer: AVAudioPCMBuffer
-      if let localConverter {
-        let frameCapacity = AVAudioFrameCount(
-          Double(copiedBuffer.frameLength) * localAnalyzerFormat.sampleRate / inputFormat.sampleRate
-        )
-        guard
-          let convertedBuffer = AVAudioPCMBuffer(
-            pcmFormat: localAnalyzerFormat,
-            frameCapacity: frameCapacity
-          )
-        else { return }
-        var error: NSError?
-        localConverter.convert(to: convertedBuffer, error: &error) { _, outStatus in
-          outStatus.pointee = .haveData
-          return copiedBuffer
-        }
-        if error != nil { return }
-        inputBuffer = convertedBuffer
-      } else {
-        inputBuffer = copiedBuffer
-      }
-      localContinuation.yield(AnalyzerInput(buffer: inputBuffer))
+      guard let input = converter.convert(copiedBuffer) else { return }
+      localContinuation.yield(AnalyzerInput(buffer: input))
     }
     hasAudioTap = true
+    guard inputNode.outputFormat(forBus: 0) == inputFormat else {
+      throw VoiceInputEngineError.audioFormatConversionNotSupported
+    }
   }
 
   /// Restart the transcriber to clear segment buffer.
@@ -512,17 +475,26 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     activate(session)
 
     do {
-      try installAudioTap()
+      let audioInput = try dependencies.audioInput(audioEngine, deviceUID)
+      delegate?.voiceInput(didUpdateNotice: audioInput.notice)
+      guard canStart(owner: owner) else { return false }
+      try installAudioTap(format: audioInput.format)
       guard canStart(owner: owner) else { return false }
       try audioEngine.start()
     } catch {
       resultTask?.cancel()
-      reportError(.audioEngineStartFailed(description: error.localizedDescription))
+      reportAudioInputError(error)
       return false
     }
 
     logger.info("Transcriber restarted")
     return true
+  }
+
+  private func reportAudioInputError(_ error: Error) {
+    reportError(
+      (error as? VoiceInputEngineError)
+        ?? .audioEngineStartFailed(description: error.localizedDescription))
   }
 
   private func reportError(_ error: VoiceInputEngineError) {
@@ -553,7 +525,6 @@ public final class SpeechAnalyzerEngine: VoiceInputEngine, TranscriberRestartabl
     transcriber = nil
     inputContinuation = nil
     resultTask = nil
-    converter = nil
     analyzerFormat = nil
     if let acquisitionID = audioInputAcquisitionID {
       audioInputAcquisitionID = nil

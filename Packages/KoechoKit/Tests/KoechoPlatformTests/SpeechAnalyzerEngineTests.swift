@@ -193,3 +193,116 @@ extension SpeechAnalyzerEngineTests {
     engine.cancel()
   }
 }
+
+extension SpeechAnalyzerEngineTests {
+  @Test(arguments: [VoiceInputEngineError.noAudioInputDevice,
+    .audioFormatConversionNotSupported,
+    .audioEngineStartFailed(description: "Client format was rejected")])
+  func audioConfigurationFailureEndsPreparation(error: VoiceInputEngineError) async throws {
+    var dependencies = SpeechAnalyzerEngine.Dependencies()
+    dependencies.permissionAction = { .proceed }
+    dependencies.installationRequest = { _ in nil }
+    weak var createdAudio: AVAudioEngine?
+    dependencies.audioInput = { audio, _ in
+      createdAudio = audio
+      throw error
+    }
+    dependencies.bestFormat = { _, _ in
+      Issue.record("A failed capture configuration must not reach analyzer preparation")
+      return nil
+    }
+    let access = AudioInputExclusiveAccess()
+    var acquisitions = 0
+    let monitor = access.markAsActive { acquisitions += 1 }
+    let delegate = PreparationDelegate()
+    let engine = SpeechAnalyzerEngine(
+      locale: Locale(identifier: "ja-JP"), deviceUID: nil,
+      verificationCache: SpeechModelVerificationCache(), audioInputExclusiveAccess: access,
+      dependencies: dependencies)
+    engine.delegate = delegate
+    engine.start()
+    let task = try #require(engine.startTask)
+    await task.value
+    #expect(delegate.errors == [error])
+    #expect(engine.state != .listening)
+    #expect(createdAudio == nil)
+    #expect(acquisitions == 0)
+    #expect(await engine.restartTranscriber() == false)
+    engine.cancel()
+    access.clearActive(monitor)
+  }
+}
+
+private enum RestartCaptureFailure: CaseIterable, Sendable {
+  case none, configuration, changedFormat
+}
+
+extension SpeechAnalyzerEngineTests {
+  @Test(arguments: RestartCaptureFailure.allCases)
+  fileprivate func restartReconfiguresCaptureAndReleasesAccess(
+    failureStage: RestartCaptureFailure
+  ) async throws {
+    let fail = failureStage == .configuration
+    let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1))
+    let changedFormat = try #require(
+      AVAudioFormat(standardFormatWithSampleRate: 24000, channels: 1))
+    let failure = VoiceInputEngineError.audioFormatConversionNotSupported
+    var configurations = 0
+    weak var createdAudio: AVAudioEngine?
+    var dependencies = SpeechAnalyzerEngine.Dependencies()
+    dependencies.permissionAction = { .proceed }
+    dependencies.installationRequest = { _ in nil }
+    dependencies.audioInput = { audio, _ in
+      configurations += 1
+      if configurations > 1 {
+        if failureStage == .configuration { throw failure }
+        return .init(format: failureStage == .changedFormat ? changedFormat : format, notice: nil)
+      }
+      createdAudio = audio
+      // Manual rendering exercises the real tap/start lifecycle without microphone I/O.
+      try audio.enableManualRenderingMode(.offline, format: format, maximumFrameCount: 4096)
+      audio.connect(audio.inputNode, to: audio.mainMixerNode, format: format)
+      return .init(format: format, notice: nil)
+    }
+    dependencies.bestFormat = { _, capture in
+      #expect(capture == format)
+      return format
+    }
+    let access = AudioInputExclusiveAccess()
+    let delegate = PreparationDelegate()
+    let engine = SpeechAnalyzerEngine(
+      locale: Locale(identifier: "ja-JP"), deviceUID: nil,
+      verificationCache: SpeechModelVerificationCache(), audioInputExclusiveAccess: access,
+      dependencies: dependencies)
+    engine.delegate = delegate
+    engine.start()
+    let task = try #require(engine.startTask)
+    await task.value
+    #expect(delegate.errors.isEmpty)
+    #expect(createdAudio?.isRunning == true)
+    #expect(access.isInUse)
+    #expect(await engine.restartTranscriber() == !fail)
+    #expect(configurations == 2)
+    switch failureStage {
+    case .none, .changedFormat:
+      #expect(delegate.errors.isEmpty)
+    case .configuration:
+      #expect(delegate.errors == [failure])
+    }
+    if fail {
+      #expect(engine.state != .listening)
+      #expect(createdAudio == nil)
+    } else {
+      #expect(engine.state == .listening)
+      #expect(createdAudio?.isRunning == true)
+      #expect(createdAudio?.inputNode.outputFormat(forBus: 0)
+        == (failureStage == .changedFormat ? changedFormat : format))
+      #expect(access.isInUse)
+      await engine.stop()
+      #expect(engine.state == .idle)
+      #expect(createdAudio == nil)
+    }
+    #expect(!access.isInUse)
+    engine.cancel()
+  }
+}
