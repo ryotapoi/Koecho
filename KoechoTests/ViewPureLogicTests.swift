@@ -1,11 +1,35 @@
 import Foundation
 import KoechoCore
+import KoechoPlatform
 import Testing
 
 @testable import Koecho
 
 @MainActor
 struct ViewPureLogicTests {
+  @Test func languageMenuRequiresMultipleAvailableLanguages() {
+    let languages = InputPanelLanguages()
+    #expect(!languages.hasMultipleLanguages)
+    languages.locales = [
+      LocaleItem(
+        identifier: "ja_JP", displayName: "Japanese", normalizedKey: "ja--JP", isReserved: true)
+    ]
+    #expect(!languages.hasMultipleLanguages)
+    languages.locales.append(
+      LocaleItem(
+        identifier: "en_US", displayName: "English", normalizedKey: "en--US", isReserved: true)
+    )
+    #expect(languages.hasMultipleLanguages)
+  }
+
+  @Test func languageCodesFitFiveCharactersAndPreserveRegionalDistinctions() {
+    #expect(InputPanelLanguages.displayCode(for: "ja_JP") == "ja-JP")
+    #expect(InputPanelLanguages.displayCode(for: "en-US") == "en-US")
+    #expect(InputPanelLanguages.displayCode(for: "en_GB") == "en-GB")
+    #expect(InputPanelLanguages.displayCode(for: "yue_CN") == "yueCN")
+    #expect(InputPanelLanguages.displayCode(for: "zh_CN") == "zh-CN")
+  }
+
   @Test func duplicatePatternsCountsEachPatternOncePerRule() {
     let rules = [
       ReplacementRule(patterns: ["alpha", "alpha", ""], replacement: "one"),

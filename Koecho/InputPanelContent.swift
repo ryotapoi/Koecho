@@ -6,6 +6,8 @@ struct InputPanelContent: View {
   private let cornerRadius: CGFloat = 20
 
   @Bindable var appState: AppState
+  var languages = InputPanelLanguages()
+  var onSelectLanguage: (String) async -> Void = { _ in }
   var onExecuteScript: (Script) async -> Void
   var onConfirm: () async -> Void
   var onSwitchEngine: () async -> Void
@@ -44,6 +46,9 @@ struct InputPanelContent: View {
           InputPanelToolbar(
             availableWidth: geometry.size.width,
             isVoiceInputEnabled: appState.settings.voiceInput.isVoiceInputEnabled,
+            languages: languages,
+            selectedLanguage: appState.settings.voiceInput.speechAnalyzerLocale,
+            onSelectLanguage: onSelectLanguage,
             scriptSettings: appState.settings.script,
             isRunningScript: appState.isRunningScript,
             hasPromptScript: hasPromptScript,

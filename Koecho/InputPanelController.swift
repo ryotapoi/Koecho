@@ -18,7 +18,11 @@ final class InputPanelController {
   private var replacementService: ReplacementService!
   private var scriptService: ScriptExecutionService!
   private(set) var shortcutScriptTask: Task<Void, Never>?
-  var availableLocales: [LocaleItem] = []
+  private let panelLanguages = InputPanelLanguages()
+  var availableLocales: [LocaleItem] {
+    get { panelLanguages.locales }
+    set { panelLanguages.locales = newValue }
+  }
   private(set) var languageShortcutTask: Task<Void, Never>?
   private(set) var voiceShortcutTask: Task<Void, Never>?
   // Internal getter so tests can reach local finalization state directly instead of
@@ -362,6 +366,10 @@ final class InputPanelController {
     let hostingView = NSHostingView(
       rootView: InputPanelContent(
         appState: appState,
+        languages: panelLanguages,
+        onSelectLanguage: { [weak self] identifier in
+          await self?.selectLanguage(identifier)
+        },
         onExecuteScript: { [weak self] script in
           await self?.scriptService.execute(script)
         },

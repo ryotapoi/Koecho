@@ -1,9 +1,13 @@
 import KoechoCore
+import KoechoPlatform
 import SwiftUI
 
 struct InputPanelToolbar: View {
   let availableWidth: CGFloat
   let isVoiceInputEnabled: Bool
+  var languages = InputPanelLanguages()
+  var selectedLanguage = "ja-JP"
+  var onSelectLanguage: (String) async -> Void = { _ in }
   @Bindable var scriptSettings: ScriptSettings
   let isRunningScript: Bool
   let hasPromptScript: Bool
@@ -24,25 +28,13 @@ struct InputPanelToolbar: View {
   var body: some View {
     ScrollView(.horizontal) {
       HStack(spacing: 8) {
-        Button {
-          Task { await onSwitchEngine() }
-        } label: {
-          Label {
-            Text("Voice")
-          } icon: {
-            Image(isVoiceEnabled ? "KoechoStatusItemColor" : "MenuBarIcon")
-              .renderingMode(isVoiceEnabled ? .original : .template)
-              .resizable()
-              .scaledToFit()
-              .frame(width: 12, height: 12)
+        HStack(spacing: 2) {
+          voiceButton
+          if languages.hasMultipleLanguages {
+            languageMenu
           }
         }
-        .buttonStyle(.koechoToolbar(isEmphasized: isVoiceEnabled))
         .disabled(isRunningScript)
-        .help(
-          !isVoiceInputEnabled
-            ? String(localized: "Voice input is off") : String(localized: "Voice")
-        )
 
         if canUndoScript {
           Button("Undo Script", systemImage: "arrow.uturn.backward") {
@@ -82,6 +74,57 @@ struct InputPanelToolbar: View {
     .overlay(alignment: .top) {
       Divider()
     }
+  }
+
+  private var voiceButton: some View {
+    Button {
+      Task { await onSwitchEngine() }
+    } label: {
+      Label {
+        if languages.hasMultipleLanguages {
+          Text(InputPanelLanguages.displayCode(for: selectedLanguage))
+            .monospaced()
+            .frame(width: 44)
+        } else {
+          Text("Voice")
+        }
+      } icon: {
+        Image(isVoiceEnabled ? "KoechoStatusItemColor" : "MenuBarIcon")
+          .renderingMode(isVoiceEnabled ? .original : .template)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 12, height: 12)
+      }
+    }
+    .accessibilityLabel(Text("Voice"))
+    .accessibilityValue(isVoiceEnabled ? Text("On") : Text("Off"))
+    .buttonStyle(.koechoToolbar(isEmphasized: isVoiceEnabled))
+    .help(!isVoiceEnabled ? String(localized: "Voice input is off") : String(localized: "Voice"))
+  }
+
+  private var languageMenu: some View {
+    let currentKey = SpeechLocale.normalizationKey(selectedLanguage)
+    return Menu {
+      ForEach(languages.locales) { locale in
+        Button {
+          Task { await onSelectLanguage(locale.identifier) }
+        } label: {
+          if locale.normalizedKey == currentKey {
+            Label(locale.displayName, systemImage: "checkmark")
+          } else {
+            Text(locale.displayName)
+          }
+        }
+      }
+    } label: {
+      Image(systemName: "chevron.down")
+    }
+    .menuIndicator(.hidden)
+    .menuStyle(.borderlessButton)
+    .fixedSize()
+    .buttonStyle(.koechoToolbar(isEmphasized: isVoiceEnabled))
+    .accessibilityLabel(Text("Recognition Language"))
+    .help(String(localized: "Recognition Language"))
   }
 
   private func helpText(_ label: String, shortcut: ShortcutKey?) -> String {
@@ -146,9 +189,20 @@ extension HotkeyConfig {
   titleOnly.display = .init(name: "Title only", symbolName: "")
   scriptSettings.scripts = [both, symbolOnly, titleOnly]
   scriptSettings.autoRunScriptId = both.id
+  let languages = InputPanelLanguages()
+  languages.locales = [
+    LocaleItem(
+      identifier: "ja-JP", displayName: "Japanese",
+      normalizedKey: SpeechLocale.normalizationKey("ja-JP"), isReserved: true),
+    LocaleItem(
+      identifier: "en-US", displayName: "English (US)",
+      normalizedKey: SpeechLocale.normalizationKey("en-US"), isReserved: true),
+  ]
   return InputPanelToolbar(
     availableWidth: 560,
     isVoiceInputEnabled: true,
+    languages: languages,
+    selectedLanguage: "ja-JP",
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: false,
@@ -186,9 +240,20 @@ extension HotkeyConfig {
     Script(name: "Format", scriptPath: "format.sh"),
     Script(name: "AI", scriptPath: "ai.sh"),
   ]
+  let languages = InputPanelLanguages()
+  languages.locales = [
+    LocaleItem(
+      identifier: "ja-JP", displayName: "Japanese",
+      normalizedKey: SpeechLocale.normalizationKey("ja-JP"), isReserved: true),
+    LocaleItem(
+      identifier: "en-US", displayName: "English (US)",
+      normalizedKey: SpeechLocale.normalizationKey("en-US"), isReserved: true),
+  ]
   return InputPanelToolbar(
     availableWidth: 350,
-    isVoiceInputEnabled: true,
+    isVoiceInputEnabled: false,
+    languages: languages,
+    selectedLanguage: "en-US",
     scriptSettings: scriptSettings,
     isRunningScript: false,
     hasPromptScript: false,

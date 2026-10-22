@@ -2037,6 +2037,16 @@
           }
         }
       }
+    },
+    "On" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オン"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
