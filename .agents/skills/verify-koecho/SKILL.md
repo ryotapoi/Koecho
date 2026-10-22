@@ -1,11 +1,15 @@
 ---
 name: verify-koecho
-description: Koecho の macOS メニューバー・入力パネル・Settings を実画面で検証するときに使う。専用署名ビルドの起動、識別、CUA または本人操作、権限維持確認、後片付けを行う。
+description: Koecho の macOS メニューバー・入力パネル・Settings・OS連携を、専用検証アプリで実際に確認する必要があるとき、またはその検証環境を調べるときに使う。専用署名ビルドの起動、識別、本人操作、証拠保存、後片付けを行う。通常の build・test・Preview だけでは使わない。
 ---
 
 # Koecho の実画面検証
 
-実画面の自動操作は **blocked**。2026-10-06 に CLI の専用署名 build・起動・doctor・PID 限定ログ取得を実測したが、CUA の絶対パス取得は `timeoutReached`。画面操作と権限維持は別の証拠が必要であり、プロセス起動だけでは検証済みとしない。[機能マップ](features/README.md)を使い、通った機能だけに証拠を付ける。
+## 使用する条件
+
+[検証の正本](../../../docs/verification.md)で実画面・実環境確認が必要になったときに、対象操作だけを選んで使う。通常の build / test / Preview の手順は [Xcode 操作](../../../docs/xcode.md)を使う。機能マップの全件確認、Custom Script の実行、再ビルド後の権限維持試験を各変更に追加しない。
+
+操作は本人操作を標準とする。CUA の対象取得は `timeoutReached` で **blocked** のため、通常の検証では試さない。専用署名 build・起動・doctor・PID 限定ログ取得と、画面操作の成否は別に記録する。[機能マップ](features/README.md)の確認済み項目だけに証拠を付け、プロセス起動だけでは実画面検証済みとしない。
 
 ## 正本と隔離の限界
 
@@ -68,7 +72,15 @@ repository root から helper を実行する。`RUN` は毎回異なる一つ�
 
 確認対象はその作業に関係する [機能マップ](features/README.md) の項目を選ぶ。通常作業中に実際のユーザー導線を確認できた場合も、対象・操作・観測結果・副作用・証拠を記録してその項目の確認に使ってよい。項目の順序は固定しない。一つの成功から他の未確認項目の成功を推測しない。
 
-代表的な初回導線は [custom-script](features/custom-script.md)。`tr a-z A-Z` を Settings から登録し、本文 `original` がボタン操作で `ORIGINAL` になることを確認する。スキルの実操作経路を実証済みとするには、少なくとも一つの mapped feature の launch・doctor・操作・証拠保存・cleanup を実施し、確認範囲を明記する。build・起動だけでは代替しない。
+本人確認の依頼には、識別した専用アプリ、必要な事前設定、操作、期待結果、報告してほしい結果、保持期限を示す。保存済み設定と今回変更した既定値を区別し、未観測の画面表示を断定しない。案内した操作への本人報告を証拠として残し、曖昧な報告を全項目成功に広げない。
+
+スキルの実操作経路そのものを実証するときは、対象の mapped feature 一つで launch・doctor・操作・証拠保存・cleanup を実施する。[custom-script](features/custom-script.md)はその候補であり、他の機能確認の前提ではない。文書だけの整理で新しい実操作の成功を主張しない。
+
+### CUA の再評価を行う場合だけ
+
+CUA の更新・設定変更など再評価する根拠がある場合、または利用者が原因調査を依頼した場合に限る。同じ環境・経路の失敗を別の変更で試し直さない。
+
+対象アプリの利用確認が本人に表示されていないとの報告がある。対象取得のどの段階で止まったかは未特定であり、アプリ利用の拒否、OS権限不足、初期パネル非表示のいずれも原因と断定しない。再評価時は利用確認の表示有無、対象ウィンドウの表示状態、取得結果を分けて記録する。
 
 CUA の最初の呼出しはこれ一つだけ:
 
@@ -78,13 +90,19 @@ let app = await cua.getApp('/Users/ryota/Sources/ryotapoi/Koecho/.tmp/verify-koe
 
 別 checkout では plan が返す絶対パスを使う。以後は返された documentation と live AX state の名称を使う。操作後に `getAXState()` を取得し、要素番号を取り直す。固定座標・推測した要素番号は使わない。timeout した場合は同じ取得を繰り返さず、doctor → blocked 記録 → 本人操作への引継ぎ。Finder / desktop / 全体 screenshot は現在許可されていない。別 UI 技術で迂回しない。
 
+### 対象操作に必要な権限
+
 権限が必要なら本人に対象を **Koecho Verification / com.ryotapoi.Koecho.Verification / plan の app 絶対パス** と示す。システム設定 → プライバシーとセキュリティ → アクセシビリティで対象を確認する。追加が必要な場合は + のファイル選択で Cmd+Shift+G に絶対 app path を入力する。入力監視も hotkey の必要性を確認して対象を設定する。マイクは Voice を on にして開始した際の対象アプリの要求を本人が判断する。通常版の Koecho を選ばない。許可変更は新しいアクセスを与えるため、本人の判断で行ってもらう。CUA backend 自身の権限と Koecho の権限は別物。TCC DB 読取・reset はしない。
 
-## 再ビルド・再起動と権限維持
+## 権限維持を検証対象にした場合だけ
 
-初回 script 成功後、許可項目・本人操作・対象 path を記録し、cleanup（build は保持し所有 marker を解放）→新しい run の prepare→`build_launch.py build`→`build_launch.py launch`→doctor を行う。前後の証明書 SHA-1 と designated requirement、Bundle ID、path が同じことを確認する。これだけでは TCC 維持の証拠にならない。
+署名・Bundle ID・起動経路の変更や、再ビルド後に再許可を求められる問題など、権限維持そのものを確認するときに行う。通常の機能確認では、その操作に必要だった許可だけを記録する。
 
-本人または利用可能な CUA で、再許可なしに同じ script 操作と、許可が必要な hotkey / paste を実施する。Microphone を許可済みなら音声機能も再確認する。音声確認の launch では `build_launch.py launch --run <run> --voice-input-on` を使い、明示的な `-voiceInputMode on` を渡す。off / on は Settings が永続化し得るため、単に off 引数を外す方法では保存済み off を解除できない。結果表に Accessibility / Input Monitoring / Microphone ごとに「初回設定」「再起動後の実操作」「再許可の有無」を残す。未設定・未操作の項目は未確認とする。script の成功だけで権限維持を検証済みとしない。
+対象操作の成功後、許可項目・本人操作・対象 path を記録し、cleanup（build は保持し所有 marker を解放）→新しい run の prepare→`build_launch.py build`→`build_launch.py launch`→doctor を行う。前後の証明書 SHA-1 と designated requirement、Bundle ID、path が同じことを確認する。これだけでは TCC 維持の証拠にならない。
+
+本人操作、または再評価で利用可能と確認できた CUA で、対象の許可が必要な同じ操作を再実施し、再許可の有無を確認する。Microphone の権限維持が対象なら、音声機能で確認する。音声確認の launch では `build_launch.py launch --run <run> --voice-input-on` を使い、明示的な `-voiceInputMode on` を渡す。off / on は Settings が永続化し得るため、単に off 引数を外す方法では保存済み off を解除できない。結果表に Accessibility / Input Monitoring / Microphone ごとに「初回設定」「再起動後の実操作」「再許可の有無」を残す。未設定・未操作の項目は未確認とする。script の成功だけで権限維持を検証済みとしない。
+
+## Helper を変更した場合
 
 helper の回帰テストは repository root で `python3 -m unittest discover -s .agents/skills/verify-koecho/scripts -p 'test_*.py' -v` を実行する。
 
@@ -96,11 +114,11 @@ helper の回帰テストは repository root で `python3 -m unittest discover -
 .agents/skills/verify-koecho/scripts/session.py cleanup --run 20261002-script-check
 ```
 
-所有 PID が同じ実行パス・起動時刻のときだけ SIGTERM を送る。scratch の削除・所有 marker の解放は同じ run の marker がある場合だけ行う。5秒で停止しない場合、または固定実行パスに未所有の process が残る場合は失敗を `session.json` に記録する。未所有 process は kill しない。残留時は scratch も保持する。権限維持の次回確認用に固定 build は保持する。最終終了時は同じ cleanup に `--remove-build` を付けて所有 scratch を削除する。証拠、専用 UserDefaults、TCC 許可、検証版履歴は保持する。ユーザーの通常版や既存プロセスに触れない。証拠が残ることと、無関係な既存差分を変更していないことを確認する。コミットしない。
+所有 PID が同じ実行パス・起動時刻のときだけ SIGTERM を送る。scratch の削除・所有 marker の解放は同じ run の marker がある場合だけ行う。5秒で停止しない場合、または固定実行パスに未所有の process が残る場合は失敗を `session.json` に記録する。未所有 process は kill しない。残留時は scratch も保持する。後続の実画面確認に再利用できるよう固定 build は保持する。最終終了時は同じ cleanup に `--remove-build` を付けて所有 scratch を削除する。証拠、専用 UserDefaults、TCC 許可、検証版履歴は保持する。ユーザーの通常版や既存プロセスに触れない。証拠が残ることと、無関係な既存差分を変更していないことを確認する。コミットしない。
 
 ## 起動オプションと観測
 
-`build_launch.py build --run <run> --timeout 600` は Apple CLI を使い、[共通 helper](../../../scripts/verify.py) の timeout・残留検査と run のログを保存する。通常 build / tests の gate は [Xcode 操作](../../../docs/xcode.md) にあり、このスキル限定ではない。
+`build_launch.py build --run <run> --timeout 600` は Apple CLI を使い、[共通 helper](../../../scripts/verify.py) の timeout・残留検査と run のログを保存する。通常 build / tests の gate は [検証の正本](../../../docs/verification.md) にあり、このスキル限定ではない。
 
 ```sh
 .agents/skills/verify-koecho/scripts/build_launch.py launch --run 20261002-script-check --arg=-AppleLanguages --arg='(en)' --env KOECHO_VERIFICATION_RUN=20261002-script-check

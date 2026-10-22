@@ -14,10 +14,10 @@
 4. `Open Input Panel` を開き、Microphone 許可の案内が出たら本人が許可する。実際に短く発話し、パネルの本文へ転記されることを確認する。
 5. `Voice` ボタンを押して off / on を確認し、最後は `Escape` で閉じる。
 
-## Driving it with CUA・本人操作
+## Driving it with 本人操作
 
-- CUA は [README](README.md) の絶対パスによる `getApp` で開始する。各操作は返された documentation と live state を使い、言語・マイク一覧の現況を読む。
-- 発話、マイク接続、Microphone のシステム許可は本人の操作・確認が必要。初回権限と再ビルド・再起動後の維持を別々に記録する。
+- 本人が上の画面操作を行い、操作と結果を報告する。CUA の再評価を行う場合だけ [SKILL.md](../SKILL.md) の条件と手順に従い、返された documentation と live state を使う。
+- 発話、マイク接続、Microphone のシステム許可は本人が操作・確認し、必要だった許可を記録する。再起動後の権限維持は、今回の検証対象に選んだ場合だけ確認する。
 - 言語・マイク設定、音声入力中の状態、確定した本文を `.tmp/verification/verify-koecho/<run>` に記録する。Finder / desktop は取得しない。
 
 ## Gotchas

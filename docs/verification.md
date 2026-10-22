@@ -1,6 +1,19 @@
 # Verification
 
-この文書を、変更条件ごとの必須 build / test / 実行確認の正本とする。Xcode の操作方法は [xcode.md](xcode.md) に従う。
+すべての変更でこの文書を参照し、該当する必須 gate と結果を確認する。すべての検証を毎回実行するという意味ではない。
+
+## 毎回の判断と参照先
+
+1. 変更条件を下表に照らし、必要な gate を選ぶ。同じ gate が複数行に該当しても重複実行しない。
+2. 変更した振る舞い、既存の証拠で確認できる範囲、今回追加で確認する操作と期待結果を決める。未確認項目があることだけを理由に、無関係な機能確認を追加しない。
+3. 実行結果と未確認範囲を報告する。成功済みの確認を繰り返すのは、変更・失敗・証拠不足により再確認が必要な場合だけとする。
+
+| 必要になった作業 | 手順の正本 |
+| --- | --- |
+| build / test / Preview、ログ確認、test host の回収 | [Xcode 操作](xcode.md) |
+| 下表で必要と判断した専用検証アプリの実画面・実環境確認、またはその検証環境自体の調査 | [verify-koecho](../.agents/skills/verify-koecho/SKILL.md) |
+
+検証方法の選択は共通の `~/.config/agents/principles/test-verification-policy.md` と、下表のプロジェクト固有 gate に従う。`verify-koecho` は条件付きの実行手順であり、通常の build / test / Preview や文書変更のためには使用しない。実画面確認は本人操作でもよく、Computer Use の試行・成功を gate にしない。
 
 ## 必須 gate
 
@@ -14,7 +27,7 @@
 | Package と App の境界をまたぐ振る舞い | Package の `swift test`、通常 build、`xcodebuild -only-testing:KoechoTests test` |
 | SwiftUI の表示・レイアウト | 該当する上記 gate に加え、適切な `#Preview` があれば Apple Xcode MCP の `RenderPreview`、なければ専用検証アプリを起動して実画面を確認する。 |
 | ウィンドウ lifecycle、focus、入力、メニュー、操作フロー | 該当する上記 gate に加え、専用検証アプリで操作を確認する。Preview だけでは代替しない。 |
-| 権限、実際の音声認識、ペースト、global hotkey、audio device、外部 script など OS / 外部環境との連携 | 該当する自動 gate に加え、専用検証アプリと実環境で対象操作を確認する。自力で確定できない権限・hardware・外部 app 依存だけをユーザー確認に回す。 |
+| 権限、実際の音声認識、ペースト、global hotkey、audio device、外部 script など OS / 外部環境との連携 | 該当する自動 gate に加え、専用検証アプリと実環境で対象操作を確認する。利用可能な手段では自力で確定できない画面操作・権限・hardware・外部 app 依存を、対象を絞って本人確認に回す。 |
 
 テスト可能な振る舞い変更や bug fix には unit test / regression test を追加または更新する。追加できない場合は理由と未検証範囲を報告する。必須 gate を実行できず、代替証拠でも裏付けられない High-risk 変更は完了扱いにしない。
 

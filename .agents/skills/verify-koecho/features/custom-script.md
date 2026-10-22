@@ -14,10 +14,10 @@
 4. メニューバーの `Open Input Panel` を選び、本文に `original` と入力する。`SCRIPTS` 行の `Verification Uppercase` ボタンを押し、本文が `ORIGINAL` に置き換わることを確認する。
 5. 任意で `Undo Script` を押し、`original` に戻ることを確認する。変換と Undo はそれぞれ結果を記録する。最後は後片付けとして `Escape` でパネルを閉じる。
 
-## Driving it with CUA・本人操作
+## Driving it with 本人操作
 
-- CUA の初回呼び出しは [README](README.md) の `getApp` 絶対パス。返された documentation と live state に従い、メニュー、Settings、入力パネルの順に操作する。固定した座標・要素 ID は置かない。
-- 初回起動時の Accessibility / Input Monitoring 許可は本人の操作が必要な場合がある。許可後に再ビルド・再起動し、同じ検証アプリの許可が維持されるか確認する。
+- 本人が上の画面操作を行い、操作と結果を報告する。CUA の再評価を行う場合だけ [SKILL.md](../SKILL.md) の条件と手順に従い、返された documentation と live state を使う。
+- Accessibility / Input Monitoring の許可が必要になった場合は、本人の対応を記録する。再起動後の権限維持は、今回の検証対象に選んだ場合だけ確認する。
 - パネルの本文、スクリプト実行後、任意の Undo 後の状態を `.tmp/verification/verify-koecho/<run>` に記録する。Finder / desktop は取得しない。
 
 ## Gotchas

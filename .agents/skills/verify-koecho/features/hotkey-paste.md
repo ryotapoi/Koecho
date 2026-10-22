@@ -14,10 +14,10 @@
 4. 同じホットキーの確定操作、またはパネルの `Confirm` を使う。貼り付け先に `paste check` が入り、パネルが閉じることを確認する。
 5. クリップボードの元の内容が復元されたことを確認する。
 
-## Driving it with CUA・本人操作
+## Driving it with 本人操作
 
-- CUA は [README](README.md) の絶対パスによる `getApp` で開始する。設定表示、貼り付け先アプリ、パネルを live state で識別する。ホットキー送信の API は返された documentation に従う。
-- Accessibility / Input Monitoring の初回許可が必要なら本人が操作する。再ビルド・再起動後に許可が維持されるかを確認する。
+- 本人が上の画面操作を行い、操作と結果を報告する。CUA の再評価を行う場合だけ [SKILL.md](../SKILL.md) の条件と手順に従い、返された documentation と live state を使う。
+- Accessibility / Input Monitoring の許可が必要なら本人が操作し、結果を記録する。再起動後の権限維持は、今回の検証対象に選んだ場合だけ確認する。
 - 確定前のパネル、貼り付け先、クリップボードの前後結果を `.tmp/verification/verify-koecho/<run>` に記録する。Finder / desktop は取得しない。
 
 ## Gotchas
