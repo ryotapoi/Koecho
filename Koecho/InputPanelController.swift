@@ -18,6 +18,8 @@ final class InputPanelController {
   private var replacementService: ReplacementService!
   private var scriptService: ScriptExecutionService!
   private(set) var shortcutScriptTask: Task<Void, Never>?
+  var availableLocales: [LocaleItem] = []
+  private(set) var languageShortcutTask: Task<Void, Never>?
   private(set) var voiceShortcutTask: Task<Void, Never>?
   // Internal getter so tests can reach local finalization state directly instead of
   // production-unused forwarding properties on the controller.
@@ -300,6 +302,26 @@ final class InputPanelController {
     await voiceCoordinator.switchEngine()
   }
 
+  func selectLanguage(_ identifier: String) async {
+    guard !isConfirming, processingConfirmationID == nil,
+      SpeechLocale.normalizationKey(identifier)
+        != SpeechLocale.normalizationKey(appState.settings.voiceInput.speechAnalyzerLocale)
+    else { return }
+    appState.settings.voiceInput.speechAnalyzerLocale = identifier
+    if appState.settings.voiceInput.isVoiceInputEnabled {
+      await switchEngine()
+    }
+  }
+
+  private func cycleLanguage() async {
+    guard appState.isInputPanelVisible, !isConfirming, processingConfirmationID == nil else { return }
+    let manager = SpeechAnalyzerLocaleManager()
+    guard let next = manager.nextSelection(
+      currentSelection: appState.settings.voiceInput.speechAnalyzerLocale, items: availableLocales
+    ) else { return }
+    await selectLanguage(next)
+  }
+
   func toggleVoiceInput() async {
     guard appState.isInputPanelVisible, !isConfirming else { return }
 
@@ -428,6 +450,13 @@ final class InputPanelController {
         self.shortcutScriptTask = Task { @MainActor in
           await self.scriptService.execute(script)
         }
+        return true
+      }
+      if self.appState.settings.voiceInput.nextLanguageShortcutKey == shortcut,
+        self.appState.isInputPanelVisible, !self.isConfirming,
+        self.processingConfirmationID == nil
+      {
+        self.languageShortcutTask = Task { @MainActor in await self.cycleLanguage() }
         return true
       }
       if self.appState.settings.voiceInput.voiceInputShortcutKey == shortcut,

@@ -1981,6 +1981,16 @@
         }
       }
     },
+    "Switch to next language" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次の言語に切り替え"
+          }
+        }
+      }
+    },
     "Voice input shortcut" : {
       "localizations" : {
         "en" : {

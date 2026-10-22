@@ -317,6 +317,87 @@ struct InputPanelControllerTests {
     #expect(ducker.duckCallCount == 0)
   }
 
+  @Test(arguments: [false, true])
+  func languageShortcutKeepsVoiceModeAndUsesSelectedEngine(voiceEnabled: Bool) async throws {
+    var appState: AppState?
+    var engines: [MockVoiceInputEngine] = []
+    var locales: [String?] = []
+    let ctx = makeController(makeEngine: {
+      let engine = MockVoiceInputEngine()
+      engines.append(engine)
+      locales.append(appState?.settings.voiceInput.speechAnalyzerLocale)
+      return engine
+    })
+    appState = ctx.appState
+    defer { ctx.controller.cancel() }
+    let key = ShortcutKey(modifiers: [.control], character: "l")
+    ctx.appState.settings.voiceInput.nextLanguageShortcutKey = key
+    ctx.appState.settings.voiceInput.isVoiceInputEnabled = voiceEnabled
+    ctx.appState.settings.voiceInput.speechAnalyzerLocale = "ja-JP"
+    ctx.controller.availableLocales = ["ja-JP", "en-US"].map {
+      LocaleItem(identifier: $0, displayName: $0,
+        normalizedKey: SpeechLocale.normalizationKey($0), isReserved: true)
+    }
+    #expect(ctx.controller.panel.onShortcutKey?(key) == false)
+    ctx.controller.showPanel()
+    await Task.yield()
+    let oldEngine = try #require(engines.last)
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    await ctx.controller.languageShortcutTask?.value
+    #expect(ctx.appState.settings.voiceInput.speechAnalyzerLocale == "en-US")
+    #expect(ctx.appState.settings.voiceInput.isVoiceInputEnabled == voiceEnabled)
+    if !voiceEnabled {
+      #expect(engines.last === oldEngine)
+      #expect(oldEngine.state == .idle)
+      await ctx.controller.toggleVoiceInput()
+    }
+    #expect(locales.last == "en-US")
+    #expect(engines.last?.state == .listening)
+  }
+
+  @Test func languageShortcutIgnoresUnassignedDifferentAndSingleLanguage() async {
+    let ctx = makeController()
+    defer { ctx.controller.cancel() }
+    let key = ShortcutKey(modifiers: [.control], character: "l")
+    ctx.appState.settings.voiceInput.speechAnalyzerLocale = "en-US"
+    ctx.controller.showPanel()
+    #expect(ctx.controller.panel.onShortcutKey?(key) == false)
+    ctx.appState.settings.voiceInput.nextLanguageShortcutKey = key
+    #expect(ctx.controller.panel.onShortcutKey?(ShortcutKey(modifiers: [.option], character: "l")) == false)
+    let engine = ctx.controller.voiceCoordinator.engine
+    ctx.controller.availableLocales = [
+      LocaleItem(identifier: "en_US", displayName: "English",
+        normalizedKey: SpeechLocale.normalizationKey("en_US"), isReserved: true)
+    ]
+    #expect(ctx.controller.panel.onShortcutKey?(key) == true)
+    await ctx.controller.languageShortcutTask?.value
+    #expect(ctx.appState.settings.voiceInput.speechAnalyzerLocale == "en-US")
+    #expect(ctx.controller.voiceCoordinator.engine === engine)
+  }
+
+  @Test func languageShortcutIsNotHandledDuringConfirmation() async {
+    let engine = MockVoiceInputEngine()
+    let ctx = makeController(makeEngine: { engine })
+    let key = ShortcutKey(modifiers: [.control], character: "l")
+    ctx.appState.settings.voiceInput.nextLanguageShortcutKey = key
+    ctx.appState.settings.voiceInput.speechAnalyzerLocale = "ja-JP"
+    ctx.controller.showPanel()
+    let stopStarted = AsyncStream<Void>.makeStream()
+    let finishStop = AsyncStream<Void>.makeStream()
+    engine.onStop = {
+      stopStarted.continuation.yield(())
+      for await _ in finishStop.stream { break }
+    }
+    let confirming = Task { await ctx.controller.confirm() }
+    for await _ in stopStarted.stream { break }
+    #expect(ctx.controller.panel.onShortcutKey?(key) == false)
+    #expect(ctx.appState.settings.voiceInput.speechAnalyzerLocale == "ja-JP")
+    finishStop.continuation.yield(())
+    await confirming.value
+    stopStarted.continuation.finish()
+    finishStop.continuation.finish()
+  }
+
   @Test func voiceShortcutTogglesOnlyInsidePanel() async {
     let ctx = makeController()
     let key = ShortcutKey(modifiers: [.control], character: "v")

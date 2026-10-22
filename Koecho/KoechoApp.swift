@@ -75,15 +75,8 @@ struct KoechoApp: App {
         downloadedLocales: downloadedLocales,
         onTogglePanel: { togglePanel() },
         onSwitchLanguage: { newLocale in
-          let newKey = SpeechLocale.normalizationKey(newLocale)
-          let currentKey = SpeechLocale.normalizationKey(
-            appState.settings.voiceInput.speechAnalyzerLocale
-          )
-          guard newKey != currentKey else { return }
-          appState.settings.voiceInput.speechAnalyzerLocale = newLocale
-          Task { @MainActor in
-            await panelController?.switchEngine()
-          }
+          let controller = ensurePanelController()
+          Task { @MainActor in await controller.selectLanguage(newLocale) }
         }
       )
     }
@@ -174,6 +167,7 @@ struct KoechoApp: App {
     case .replacementAllShortcut: String(localized: .replaceAllShortcut)
     case .replacementShortcut: String(localized: "Replacement shortcut")
     case .isAutoReplacementEnabled: String(localized: "Auto-replace")
+    case .nextLanguageShortcut: String(localized: "Switch to next language")
     case .voiceInputShortcut: String(localized: "Voice input shortcut")
     }
   }
@@ -181,6 +175,7 @@ struct KoechoApp: App {
   private func ensurePanelController() -> InputPanelController {
     if let existing = panelController { return existing }
     let controller = InputPanelController(appState: appState, historyStore: historyStore)
+    controller.availableLocales = downloadedLocales
     panelController = controller
     return controller
   }
@@ -206,14 +201,10 @@ struct KoechoApp: App {
   }
 
   private func refreshDownloadedLocales() async {
-    guard appState.settings.voiceInput.isVoiceInputEnabled else {
-      downloadedLocales = []
-      return
-    }
-
     let manager = SpeechAnalyzerLocaleManager()
     let items = await manager.refreshMenuLocales()
     downloadedLocales = items
+    panelController?.availableLocales = items
 
     // Menu items carry AssetInventory-form identifiers, which can differ in
     // string form from the supportedLocales-form identifiers the Settings
@@ -223,7 +214,10 @@ struct KoechoApp: App {
     if manager.findNormalizedMatch(for: current, in: items) == nil,
       let corrected = manager.correctSelection(currentSelection: current, items: items)
     {
-      appState.settings.voiceInput.speechAnalyzerLocale = corrected
+      await panelController?.selectLanguage(corrected)
+      if panelController == nil {
+        appState.settings.voiceInput.speechAnalyzerLocale = corrected
+      }
     }
   }
 

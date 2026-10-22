@@ -17,6 +17,15 @@ public final class VoiceInputSettings {
     }
   }
 
+  private var _nextLanguageShortcutKey: ShortcutKey?
+  public var nextLanguageShortcutKey: ShortcutKey? {
+    get { _nextLanguageShortcutKey }
+    set {
+      _nextLanguageShortcutKey = newValue
+      save()
+    }
+  }
+
   private var _isVoiceInputEnabled: Bool
   public var isVoiceInputEnabled: Bool {
     get { _isVoiceInputEnabled }
@@ -56,6 +65,7 @@ public final class VoiceInputSettings {
   public init(defaults: UserDefaults) {
     self.defaults = defaults
     _voiceInputShortcutKey = nil
+    _nextLanguageShortcutKey = nil
 
     _isVoiceInputEnabled = Self.voiceInputEnabled(
       from: defaults.string(forKey: "voiceInputMode")
@@ -80,6 +90,19 @@ public final class VoiceInputSettings {
       }
     } else {
       _voiceInputShortcutKey = ShortcutKey(modifiers: [.control], character: "v")
+    }
+
+    if let storedShortcut = defaults.object(forKey: "nextLanguageShortcut") {
+      if let data = storedShortcut as? Data {
+        do {
+          _nextLanguageShortcutKey = try ShortcutKey.decodeOptional(from: data)
+        } catch {
+          logger.warning("Failed to decode nextLanguageShortcut, using nil")
+          loadFailures.insert(.nextLanguageShortcut)
+        }
+      } else {
+        loadFailures.insert(.nextLanguageShortcut)
+      }
     }
 
     save()
@@ -107,6 +130,11 @@ public final class VoiceInputSettings {
       defaults.set(try ShortcutKey.encodeOptional(_voiceInputShortcutKey), forKey: "voiceInputShortcut")
     } catch {
       logger.error("Failed to encode voiceInputShortcut: \(error.localizedDescription)")
+    }
+    do {
+      defaults.set(try ShortcutKey.encodeOptional(_nextLanguageShortcutKey), forKey: "nextLanguageShortcut")
+    } catch {
+      logger.error("Failed to encode nextLanguageShortcut: \(error.localizedDescription)")
     }
     defaults.set(_isVoiceInputEnabled ? "on" : "off", forKey: "voiceInputMode")
     defaults.set(_speechAnalyzerLocale, forKey: "speechAnalyzerLocale")

@@ -175,6 +175,16 @@ public final class SpeechAnalyzerLocaleManager {
     return items[0].identifier
   }
 
+  /// Advances in menu order, correcting a stale selection before cycling.
+  public func nextSelection(currentSelection: String, items: [LocaleItem]) -> String? {
+    guard !items.isEmpty else { return nil }
+    let key = SpeechLocale.normalizationKey(currentSelection)
+    guard let index = items.firstIndex(where: { $0.normalizedKey == key }) else {
+      return correctSelection(currentSelection: currentSelection, items: items)
+    }
+    return items[(index + 1) % items.count].identifier
+  }
+
   public func findNormalizedMatch(for identifier: String, in items: [LocaleItem]) -> LocaleItem? {
     let sourceKey = SpeechLocale.normalizationKey(identifier)
     return items.first { $0.normalizedKey == sourceKey }

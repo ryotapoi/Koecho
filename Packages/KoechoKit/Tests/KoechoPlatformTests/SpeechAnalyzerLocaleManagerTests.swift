@@ -16,6 +16,21 @@ struct SpeechAnalyzerLocaleManagerTests {
     #expect(manager.reservedLocales.isEmpty)
   }
 
+  @Test func nextSelectionUsesMenuOrderAndWrapsWithNormalizedIdentifiers() {
+    let manager = SpeechAnalyzerLocaleManager()
+    let items = ["fr-FR", "ja-JP", "en_US"].map {
+      LocaleItem(identifier: $0, displayName: $0,
+        normalizedKey: SpeechLocale.normalizationKey($0), isReserved: true)
+    }
+    #expect(manager.nextSelection(currentSelection: "fr-FR", items: items) == "ja-JP")
+    #expect(manager.nextSelection(currentSelection: "ja-JP", items: items) == "en_US")
+    #expect(manager.nextSelection(currentSelection: "en-US", items: items) == "fr-FR")
+    #expect(manager.nextSelection(currentSelection: "de-DE", items: items) == "ja-JP")
+    #expect(manager.nextSelection(currentSelection: "de-DE", items: [items[0]]) == "fr-FR")
+    #expect(manager.nextSelection(currentSelection: "fr_FR", items: [items[0]]) == "fr-FR")
+    #expect(manager.nextSelection(currentSelection: "en-US", items: []) == nil)
+  }
+
   // MARK: - correctSelection
 
   @Test func correctSelectionWhenSelectionInAll() {

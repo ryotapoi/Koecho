@@ -57,6 +57,37 @@ struct VoiceInputSettingsTests {
     #expect(defaults.data(forKey: "voiceInputShortcut") == Data())
   }
 
+  @Test func nextLanguageShortcutDefaultsToUnassignedAndRoundTrips() {
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    let settings = VoiceInputSettings(defaults: defaults)
+    #expect(settings.nextLanguageShortcutKey == nil)
+    #expect(defaults.data(forKey: "nextLanguageShortcut") == Data())
+    let key = ShortcutKey(modifiers: [.control], character: "l")
+    settings.nextLanguageShortcutKey = key
+    #expect(VoiceInputSettings(defaults: defaults).nextLanguageShortcutKey == key)
+    settings.nextLanguageShortcutKey = nil
+    #expect(defaults.data(forKey: "nextLanguageShortcut") == Data())
+    #expect(VoiceInputSettings(defaults: defaults).nextLanguageShortcutKey == nil)
+  }
+
+  @Test(arguments: [false, true])
+  func malformedNextLanguageShortcutIsReportedAndReset(usingInvalidType: Bool) {
+    let suiteName = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    if usingInvalidType {
+      defaults.set("invalid", forKey: "nextLanguageShortcut")
+    } else {
+      defaults.set(Data("invalid".utf8), forKey: "nextLanguageShortcut")
+    }
+    let settings = Settings(defaults: defaults)
+    #expect(settings.voiceInput.nextLanguageShortcutKey == nil)
+    #expect(settings.loadFailures.contains(.nextLanguageShortcut))
+    #expect(defaults.data(forKey: "nextLanguageShortcut") == Data())
+  }
+
   @Test func persistsVoiceInputEnabled() {
     let defaults = makeDefaults()
 

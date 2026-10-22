@@ -44,6 +44,12 @@ struct HotkeySettingsView: View {
             .frame(width: 120)
         }
         HStack {
+          Text("Switch to next language")
+          Spacer()
+          ShortcutKeyRecorder(shortcutKey: $voiceInput.nextLanguageShortcutKey)
+            .frame(width: 120)
+        }
+        HStack {
           Text("Replacement shortcut")
           Spacer()
           ShortcutKeyRecorder(shortcutKey: $replacement.replacementShortcutKey)
