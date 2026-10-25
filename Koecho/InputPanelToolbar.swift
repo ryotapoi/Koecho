@@ -81,13 +81,24 @@ struct InputPanelToolbar: View {
       Task { await onSwitchEngine() }
     } label: {
       Label {
-        if languages.hasMultipleLanguages {
-          Text(InputPanelLanguages.displayCode(for: selectedLanguage))
+        ZStack {
+          // Reserve the same compact title width for Voice and five-character language codes.
+          Text(verbatim: "Voice")
+            .hidden()
+          Text(verbatim: "en-US")
             .monospaced()
-            .frame(width: 44)
-        } else {
+            .hidden()
           Text("Voice")
+            .hidden()
+
+          if languages.hasMultipleLanguages {
+            Text(InputPanelLanguages.displayCode(for: selectedLanguage))
+              .monospaced()
+          } else {
+            Text("Voice")
+          }
         }
+        .fixedSize()
       } icon: {
         Image(isVoiceEnabled ? "KoechoStatusItemColor" : "MenuBarIcon")
           .renderingMode(isVoiceEnabled ? .original : .template)
@@ -177,6 +188,40 @@ extension HotkeyConfig {
 }
 
 // MARK: - Previews
+
+#Preview("Voice button widths") {
+  let defaults = UserDefaults(suiteName: "preview-toolbar-voice-widths")!
+  let scriptSettings = ScriptSettings(defaults: defaults)
+  let languages = InputPanelLanguages()
+  languages.locales = [
+    LocaleItem(
+      identifier: "ja-JP", displayName: "Japanese",
+      normalizedKey: SpeechLocale.normalizationKey("ja-JP"), isReserved: true),
+    LocaleItem(
+      identifier: "en-US", displayName: "English (US)",
+      normalizedKey: SpeechLocale.normalizationKey("en-US"), isReserved: true),
+  ]
+  return VStack(spacing: 0) {
+    ForEach(["Voice", "音声", "ja-JP", "en-US"], id: \.self) { title in
+      InputPanelToolbar(
+        availableWidth: 350,
+        isVoiceInputEnabled: true,
+        languages: title == "Voice" || title == "音声" ? InputPanelLanguages() : languages,
+        selectedLanguage: title,
+        scriptSettings: scriptSettings,
+        isRunningScript: false,
+        hasPromptScript: false,
+        canUndoScript: false,
+        hotkeyConfig: .default,
+        onSwitchEngine: {},
+        onUndoScript: {},
+        onConfirm: {}
+      )
+      .environment(\.locale, Locale(identifier: title == "音声" ? "ja" : "en"))
+    }
+  }
+  .frame(width: 350)
+}
 
 #Preview("Full") {
   let defaults = UserDefaults(suiteName: "preview-toolbar-full")!
