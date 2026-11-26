@@ -65,6 +65,8 @@ Configure replacement rules in Settings → Replacement. Automatic replacement i
 |--------|------------------|
 | Replace at the caret or in the selection | Command+R |
 | Replace throughout the document | Command+Shift+R |
+| Move to the next replacement candidate | Command+G |
+| Move to the previous replacement candidate | Command+Shift+G |
 | Toggle voice input | Control+V |
 
 Customize these in Settings → Shortcuts. Saved shortcuts are preserved when upgrading.

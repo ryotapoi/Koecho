@@ -118,6 +118,36 @@ public func replacementTargets(
   }.map { [$0] } ?? []
 }
 
+public enum ReplacementNavigationDirection: Sendable {
+  case next
+  case previous
+}
+
+/// Move through the ordered candidates returned by findReplacementCandidates.
+/// An explicit target distinguishes the two candidates at a shared caret position.
+public func replacementNavigationTarget(
+  _ candidates: [ReplacementMatch], selection: NSRange,
+  currentTarget: ReplacementMatch?, direction: ReplacementNavigationDirection
+) -> ReplacementMatch? {
+  if selection.length == 0,
+    let current = currentTarget ?? replacementTargets(candidates, selection: selection).first,
+    let index = candidates.firstIndex(of: current)
+  {
+    guard candidates.count > 1 else { return nil }
+    switch direction {
+    case .next: return index == candidates.count - 1 ? candidates.first : candidates[index + 1]
+    case .previous: return index == 0 ? candidates.last : candidates[index - 1]
+    }
+  }
+
+  switch direction {
+  case .next:
+    return candidates.first { $0.range.location > selection.location } ?? candidates.first
+  case .previous:
+    return candidates.last { $0.range.location < selection.location } ?? candidates.last
+  }
+}
+
 /// Apply a validated, non-overlapping snapshot without searching generated text.
 /// Descending edits preserve original ranges and map each UTF-16 point cumulatively.
 public func applyReplacementMatches(

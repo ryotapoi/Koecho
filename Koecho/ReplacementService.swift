@@ -64,14 +64,18 @@ final class ReplacementService {
     if textView.hasMarkedText() {
       textView.showReplacementPreviews(matches)
     } else {
-      textView.showReplacementCandidates(matches, rules: rules) { [weak self] match in
-        guard let self else { return }
-        guard !self.appState.settings.replacement.isAutoReplacementEnabled else {
-          self.refreshCandidates()
-          return
-        }
-        self.replaceOccurrences(match, in: text, rules: rules)
+      showCandidates(matches, in: text, rules: rules)
+    }
+  }
+
+  private func showCandidates(_ matches: [ReplacementMatch], in text: String, rules: [ReplacementRule]) {
+    textView?.showReplacementCandidates(matches, rules: rules) { [weak self] match in
+      guard let self else { return }
+      guard !self.appState.settings.replacement.isAutoReplacementEnabled else {
+        self.refreshCandidates()
+        return
       }
+      self.replaceOccurrences(match, in: text, rules: rules)
     }
   }
 
@@ -79,8 +83,30 @@ final class ReplacementService {
     guard let textView else { return }
     let text = textView.string
     let rules = appState.settings.replacement.replacementRules
-    let targets = replacementTargets(findReplacementCandidates(rules, in: text), selection: textView.selectedRange())
+    let candidates = findReplacementCandidates(rules, in: text)
+    let targets = if let target = textView.navigatedReplacementTarget(rules: rules), candidates.contains(target) {
+      [target]
+    } else {
+      replacementTargets(candidates, selection: textView.selectedRange())
+    }
     replaceOccurrences(targets, in: text, rules: rules)
+  }
+
+  func navigateCandidates(_ direction: ReplacementNavigationDirection) {
+    guard let textView, appState.isInputPanelVisible, !appState.isRunningScript,
+      !appState.settings.replacement.isAutoReplacementEnabled,
+      !textView.hasMarkedText(), textView.volatileRange == nil,
+      textView.string == appState.inputText
+    else { return }
+    let rules = appState.settings.replacement.replacementRules
+    let text = textView.string
+    let candidates = findReplacementCandidates(rules, in: text)
+    guard let target = replacementNavigationTarget(
+      candidates, selection: textView.selectedRange(),
+      currentTarget: textView.navigatedReplacementTarget(rules: rules), direction: direction)
+    else { return }
+    showCandidates(candidates, in: text, rules: rules)
+    textView.moveCaret(to: target, rules: rules)
   }
 
   func replaceAll() {

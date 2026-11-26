@@ -613,6 +613,26 @@ struct VoiceInputTextViewTests {
     #expect(view.caretReplacementPreview.displayed?.label == "a → long")
   }
 
+  @Test func caretPreviewFollowsNavigatedCandidateUntilOrdinaryPlacement() throws {
+    let view = makeTextView()
+    view.frame = NSRect(x: 0, y: 0, width: 320, height: 160)
+    let window = CaretPreviewWindow(contentRect: view.frame, styleMask: [.titled], backing: .buffered, defer: false)
+    window.contentView = view
+    window.makeKeyAndOrderFront(nil)
+    window.makeFirstResponder(view)
+    defer { window.orderOut(nil); window.contentView = nil }
+    let rules = [ReplacementRule(pattern: "a", replacement: "A"), ReplacementRule(pattern: "b", replacement: "B")]
+    let candidates = findReplacementCandidates(rules, in: "ab")
+    view.replaceText("ab", selecting: NSRange(location: 0, length: 0))
+    view.showReplacementCandidates(candidates, rules: rules) { _ in }
+    view.moveCaret(to: candidates[1], rules: rules)
+    try #require(view.caretReplacementPreview.timer).fire()
+    #expect(view.caretReplacementPreview.displayed?.label == "b → B")
+    view.setSelectedRange(NSRange(location: 1, length: 0))
+    try #require(view.caretReplacementPreview.timer).fire()
+    #expect(view.caretReplacementPreview.displayed?.label == "a → A")
+  }
+
 }
 
 // Hosted tests suppress app activation; supply only the OS key-window signal.

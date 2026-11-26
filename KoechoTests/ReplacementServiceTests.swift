@@ -29,6 +29,25 @@ import Testing
     return (service, appState, mockTV, coordinator)
   }
 
+  enum NavigationProtection: CaseIterable {
+    case marked, volatile, script, automatic
+  }
+
+  @Test(arguments: NavigationProtection.allCases)
+  func candidateNavigationLeavesProtectedInputInPlace(protection: NavigationProtection) {
+    let (service, appState, view, _) = makeService(inputText: "a a")
+    appState.settings.replacement.replacementRules = [ReplacementRule(pattern: "a", replacement: "b")]
+    switch protection {
+    case .marked: view.markedText = true
+    case .volatile: view.volatileRange = NSRange(location: 2, length: 1)
+    case .script: appState.isRunningScript = true
+    case .automatic: appState.settings.replacement.isAutoReplacementEnabled = true
+    }
+    service.navigateCandidates(.next)
+    #expect(view.selectedRange() == NSRange(location: 0, length: 0))
+    #expect(appState.inputText == "a a")
+  }
+
   // MARK: - applyOrPreview
 
   @Test func applyOrPreviewTransformsText() {

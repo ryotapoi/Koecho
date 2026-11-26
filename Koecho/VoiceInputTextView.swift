@@ -21,6 +21,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   /// the marked text state and causes duplicate text.
   private var previewMatches: [ReplacementMatch] = []
   private var previewRules: [ReplacementRule] = []
+  private var navigatedCandidate: (text: String, rules: [ReplacementRule], match: ReplacementMatch)?
   let caretReplacementPreview = CaretReplacementPreview()
   private var windowObservers: [NSObjectProtocol] = []
 
@@ -205,7 +206,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   // MARK: - Replacement previews
 
   func showReplacementPreviews(_ matches: [ReplacementMatch]) {
-    caretReplacementPreview.cancel()
+    resetCaretReplacementPreview()
     previewMatches = matches
     onReplaceCandidate = nil
     needsDisplay = true
@@ -216,7 +217,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
     onReplace: @escaping ([ReplacementMatch]) -> Void
   ) {
     if previewMatches != matches || previewRules != rules || onReplaceCandidate == nil {
-      caretReplacementPreview.cancel()
+      resetCaretReplacementPreview()
     }
     previewRules = rules
     previewMatches = matches
@@ -226,10 +227,28 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   }
 
   func clearReplacementPreviews() {
-    caretReplacementPreview.cancel()
+    resetCaretReplacementPreview()
     previewMatches = []
     onReplaceCandidate = nil
     needsDisplay = true
+  }
+
+  func navigatedReplacementTarget(rules: [ReplacementRule]) -> ReplacementMatch? {
+    guard let navigatedCandidate, navigatedCandidate.rules == rules,
+      navigatedCandidate.text.utf16.elementsEqual(string.utf16),
+      selectedRanges.count == 1,
+      selectedRange() == NSRange(location: navigatedCandidate.match.range.location, length: 0)
+    else { return nil }
+    return navigatedCandidate.match
+  }
+
+  func moveCaret(to candidate: ReplacementMatch, rules: [ReplacementRule]) {
+    let caret = NSRange(location: candidate.range.location, length: 0)
+    setSelectedRange(caret)
+    scrollRangeToVisible(caret)
+    // AppKit's normal selection handling clears the previous explicit target.
+    navigatedCandidate = (string, rules, candidate)
+    refreshCaretReplacementPreview()
   }
 
   // MARK: - Caret replacement preview
@@ -239,10 +258,16 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
       let window, window.isVisible, window.isKeyWindow, window.firstResponder === self,
       !hasMarkedText(), volatileRange == nil, onReplaceCandidate != nil,
       selectedRanges.count == 1, selectedRange().length == 0,
-      let match = replacementTargets(previewMatches, selection: selectedRange()).first,
+      let match = navigatedReplacementTarget(rules: previewRules)
+        ?? replacementTargets(previewMatches, selection: selectedRange()).first,
       match.range.location >= 0, NSMaxRange(match.range) <= (string as NSString).length
     else { return nil }
     return .init(text: string, caret: selectedRange().location, match: match)
+  }
+
+  private func resetCaretReplacementPreview() {
+    navigatedCandidate = nil
+    caretReplacementPreview.cancel()
   }
 
   private func refreshCaretReplacementPreview() {
@@ -262,12 +287,14 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   override func resignFirstResponder() -> Bool {
     let result = super.resignFirstResponder()
-    if result { caretReplacementPreview.cancel() }
+    if result {
+      resetCaretReplacementPreview()
+    }
     return result
   }
 
   override func viewWillMove(toWindow newWindow: NSWindow?) {
-    caretReplacementPreview.cancel()
+    resetCaretReplacementPreview()
     for observer in windowObservers { NotificationCenter.default.removeObserver(observer) }
     windowObservers.removeAll()
     super.viewWillMove(toWindow: newWindow)
@@ -276,7 +303,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
       windowObservers.append(NotificationCenter.default.addObserver(
         forName: name, object: newWindow, queue: .main
       ) { [weak self] _ in
-        MainActor.assumeIsolated { self?.caretReplacementPreview.cancel() }
+        MainActor.assumeIsolated { self?.resetCaretReplacementPreview() }
       })
     }
     windowObservers.append(NotificationCenter.default.addObserver(
@@ -288,24 +315,29 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   override var isHidden: Bool {
     didSet {
-      if isHidden { caretReplacementPreview.cancel() }
-      else { refreshCaretReplacementPreview() }
+      if isHidden {
+        resetCaretReplacementPreview()
+      } else {
+        refreshCaretReplacementPreview()
+      }
     }
   }
 
   override var isEditable: Bool {
     didSet {
-      if !isEditable { caretReplacementPreview.cancel() }
+      if !isEditable {
+        resetCaretReplacementPreview()
+      }
     }
   }
 
   override func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
-    caretReplacementPreview.cancel()
+    resetCaretReplacementPreview()
     super.setMarkedText(string, selectedRange: selectedRange, replacementRange: replacementRange)
   }
 
   override func unmarkText() {
-    caretReplacementPreview.cancel()
+    resetCaretReplacementPreview()
     super.unmarkText()
     onDisplayTextChanged?()
     refreshCaretReplacementPreview()
@@ -398,7 +430,7 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
 
   override func shouldChangeText(in affectedCharRange: NSRange, replacementString: String?) -> Bool
   {
-    caretReplacementPreview.cancel()
+    resetCaretReplacementPreview()
     // Finalize volatile text before keyboard input so it becomes confirmed text.
     if let range = volatileRange, !isSuppressingCallbacks {
       if let storage = textStorage, range.location + range.length <= storage.length {
@@ -428,12 +460,26 @@ final class VoiceInputTextView: NSTextView, TextViewOperating {
   override func setSelectedRanges(
     _ ranges: [NSValue], affinity: NSSelectionAffinity, stillSelecting stillSelectingFlag: Bool
   ) {
-    caretReplacementPreview.cancel()
+    resetCaretReplacementPreview()
     super.setSelectedRanges(ranges, affinity: affinity, stillSelecting: stillSelectingFlag)
     if !stillSelectingFlag, !isSuppressingCallbacks {
       onCursorMoved?(selectedRange().location)
     }
     if !stillSelectingFlag { refreshCaretReplacementPreview() }
+  }
+
+  override func mouseDown(with event: NSEvent) {
+    let hadNavigationTarget = navigatedCandidate != nil
+    if hadNavigationTarget { resetCaretReplacementPreview() }
+    super.mouseDown(with: event)
+    if hadNavigationTarget { refreshCaretReplacementPreview() }
+  }
+
+  override func keyDown(with event: NSEvent) {
+    let hadNavigationTarget = navigatedCandidate != nil
+    if hadNavigationTarget { resetCaretReplacementPreview() }
+    super.keyDown(with: event)
+    if hadNavigationTarget { refreshCaretReplacementPreview() }
   }
 
   // MARK: - Context menu

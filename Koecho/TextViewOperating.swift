@@ -17,6 +17,8 @@ protocol TextViewOperating: AnyObject {
   func showReplacementCandidates(
     _ matches: [ReplacementMatch], rules: [ReplacementRule], onReplace: @escaping ([ReplacementMatch]) -> Void)
   func clearReplacementPreviews()
+  func navigatedReplacementTarget(rules: [ReplacementRule]) -> ReplacementMatch?
+  func moveCaret(to candidate: ReplacementMatch, rules: [ReplacementRule])
   func makeFirstResponder(in panel: InputPanel)
   func setSelectedRange(_ range: NSRange)
   func selectedRange() -> NSRange

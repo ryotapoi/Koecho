@@ -6,6 +6,8 @@ public enum SettingsLoadFailure: String, CaseIterable, Hashable, Sendable {
   case replacementRules
   case replacementAllShortcut
   case replacementShortcut
+  case nextReplacementCandidateShortcut
+  case previousReplacementCandidateShortcut
   case isAutoReplacementEnabled
   case nextLanguageShortcut
   case voiceInputShortcut

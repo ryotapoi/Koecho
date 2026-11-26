@@ -54,6 +54,46 @@ struct ReplacementSettingsTests {
     #expect(settings.replacementRules.isEmpty)
   }
 
+  @Test func candidateNavigationShortcutsPersistIndependently() {
+    let suite = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let settings = ReplacementSettings(defaults: defaults)
+    #expect(settings.nextReplacementCandidateShortcutKey == ShortcutKey(modifiers: [.command], character: "g"))
+    #expect(settings.previousReplacementCandidateShortcutKey ==
+      ShortcutKey(modifiers: [.command, .shift], character: "g"))
+    let customNext = ShortcutKey(modifiers: [.control], character: "j")
+    let customPrevious = ShortcutKey(modifiers: [.control], character: "k")
+    settings.nextReplacementCandidateShortcutKey = customNext
+    settings.previousReplacementCandidateShortcutKey = customPrevious
+    let reloaded = ReplacementSettings(defaults: defaults)
+    #expect(reloaded.nextReplacementCandidateShortcutKey == customNext)
+    #expect(reloaded.previousReplacementCandidateShortcutKey == customPrevious)
+    reloaded.nextReplacementCandidateShortcutKey = nil
+    let nextDisabled = ReplacementSettings(defaults: defaults)
+    #expect(nextDisabled.nextReplacementCandidateShortcutKey == nil)
+    #expect(nextDisabled.previousReplacementCandidateShortcutKey == customPrevious)
+    nextDisabled.previousReplacementCandidateShortcutKey = nil
+    let bothDisabled = ReplacementSettings(defaults: defaults)
+    #expect(bothDisabled.nextReplacementCandidateShortcutKey == nil)
+    #expect(bothDisabled.previousReplacementCandidateShortcutKey == nil)
+    #expect(bothDisabled.loadFailures.isEmpty)
+  }
+
+  @Test func corruptCandidateNavigationShortcutsReportFailureAndRestoreDefaults() {
+    let suite = "test-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    defer { defaults.removePersistentDomain(forName: suite) }
+    defaults.set(Data("invalid json".utf8), forKey: "nextReplacementCandidateShortcut")
+    defaults.set("invalid type", forKey: "previousReplacementCandidateShortcut")
+    let settings = ReplacementSettings(defaults: defaults)
+    #expect(settings.nextReplacementCandidateShortcutKey == ShortcutKey(modifiers: [.command], character: "g"))
+    #expect(settings.previousReplacementCandidateShortcutKey ==
+      ShortcutKey(modifiers: [.command, .shift], character: "g"))
+    #expect(settings.loadFailures == [.nextReplacementCandidateShortcut, .previousReplacementCandidateShortcut])
+    #expect(ReplacementSettings(defaults: defaults).loadFailures.isEmpty)
+  }
+
   @Test func addReplacementRule() {
     let settings = ReplacementSettings(defaults: makeDefaults())
     let rule = ReplacementRule(pattern: "えーと", replacement: "")

@@ -8,6 +8,11 @@ public final class ReplacementSettings {
 
   static let defaultReplacementAllShortcutKey = ShortcutKey(modifiers: [.command, .shift], character: "r")
 
+  static let defaultNextReplacementCandidateShortcutKey = ShortcutKey(modifiers: [.command], character: "g")
+
+  static let defaultPreviousReplacementCandidateShortcutKey = ShortcutKey(
+    modifiers: [.command, .shift], character: "g")
+
   private let defaults: UserDefaults
   private let logger = Logger(subsystem: Logger.koechoSubsystem, category: "ReplacementSettings")
 
@@ -42,6 +47,16 @@ public final class ReplacementSettings {
     }
   }
 
+  public var nextReplacementCandidateShortcutKey: ShortcutKey? {
+    didSet { saveCandidateShortcut(nextReplacementCandidateShortcutKey, for: .nextReplacementCandidateShortcut) }
+  }
+
+  public var previousReplacementCandidateShortcutKey: ShortcutKey? {
+    didSet {
+      saveCandidateShortcut(previousReplacementCandidateShortcutKey, for: .previousReplacementCandidateShortcut)
+    }
+  }
+
   private var _isAutoReplacementEnabled: Bool
   public var isAutoReplacementEnabled: Bool {
     get { _isAutoReplacementEnabled }
@@ -57,6 +72,11 @@ public final class ReplacementSettings {
     _replacementShortcutKey = Self.defaultReplacementShortcutKey
     _replacementAllShortcutKey = Self.defaultReplacementAllShortcutKey
     _isAutoReplacementEnabled = false
+
+    nextReplacementCandidateShortcutKey = loadCandidateShortcut(
+      .nextReplacementCandidateShortcut, default: Self.defaultNextReplacementCandidateShortcutKey)
+    previousReplacementCandidateShortcutKey = loadCandidateShortcut(
+      .previousReplacementCandidateShortcut, default: Self.defaultPreviousReplacementCandidateShortcutKey)
 
     if let storedRules = defaults.object(forKey: "replacementRules") {
       if let data = storedRules as? Data {
@@ -123,6 +143,8 @@ public final class ReplacementSettings {
     }
 
     save()
+    saveCandidateShortcut(nextReplacementCandidateShortcutKey, for: .nextReplacementCandidateShortcut)
+    saveCandidateShortcut(previousReplacementCandidateShortcutKey, for: .previousReplacementCandidateShortcut)
   }
 
   public func addReplacementRule(_ rule: ReplacementRule) {
@@ -151,6 +173,27 @@ public final class ReplacementSettings {
     _replacementRules = []
     isReplacementRulesProtected = false
     save()
+  }
+
+  private func loadCandidateShortcut(_ setting: SettingsLoadFailure, default fallback: ShortcutKey) -> ShortcutKey? {
+    guard let stored = defaults.object(forKey: setting.rawValue) else { return fallback }
+    if let data = stored as? Data {
+      do {
+        return try ShortcutKey.decodeOptional(from: data)
+      } catch {
+        logger.warning("Failed to decode \(setting.rawValue), using default")
+      }
+    }
+    loadFailures.insert(setting)
+    return fallback
+  }
+
+  private func saveCandidateShortcut(_ shortcut: ShortcutKey?, for setting: SettingsLoadFailure) {
+    do {
+      defaults.set(try ShortcutKey.encodeOptional(shortcut), forKey: setting.rawValue)
+    } catch {
+      logger.error("Failed to encode \(setting.rawValue): \(error.localizedDescription)")
+    }
   }
 
   private func save() {

@@ -166,6 +166,8 @@ struct KoechoApp: App {
     case .replacementRules: String(localized: "Replacement rules")
     case .replacementAllShortcut: String(localized: .replaceAllShortcut)
     case .replacementShortcut: String(localized: "Replacement shortcut")
+    case .nextReplacementCandidateShortcut: String(localized: .nextReplacementCandidate)
+    case .previousReplacementCandidateShortcut: String(localized: .previousReplacementCandidate)
     case .isAutoReplacementEnabled: String(localized: "Auto-replace")
     case .nextLanguageShortcut: String(localized: "Switch to next language")
     case .voiceInputShortcut: String(localized: "Voice input shortcut")

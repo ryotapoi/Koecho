@@ -475,6 +475,19 @@ final class InputPanelController {
         }
         return true
       }
+      if let textView = self.textView, self.panel.firstResponder === textView,
+        !self.isConfirming, self.processingConfirmationID == nil
+      {
+        let settings = self.appState.settings.replacement
+        if settings.nextReplacementCandidateShortcutKey == shortcut {
+          self.replacementService.navigateCandidates(.next)
+          return true
+        }
+        if settings.previousReplacementCandidateShortcutKey == shortcut {
+          self.replacementService.navigateCandidates(.previous)
+          return true
+        }
+      }
       return false
     }
   }

@@ -985,6 +985,17 @@
         }
       }
     },
+    "Next replacement candidate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次の置換候補へ移動"
+          }
+        }
+      }
+    },
     "No audio input device available." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1140,6 +1151,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ショートカットを押してください..."
+          }
+        }
+      }
+    },
+    "Previous replacement candidate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前の置換候補へ移動"
           }
         }
       }

@@ -518,6 +518,39 @@ struct ReplacementRuleTests {
     #expect(replacementTargets([a, b], selection: NSRange(location: 1, length: 2)).isEmpty)
   }
 
+  @Test(arguments: [
+    (0, ReplacementNavigationDirection.next, 2),
+    (0, .previous, 12),
+    (6, .next, 7),
+    (6, .previous, 2),
+    (3, .next, 7),
+    (3, .previous, 12),
+    (10, .next, 12),
+    (10, .previous, 2),
+    (14, .next, 2),
+    (14, .previous, 7),
+  ])
+  func candidateNavigationUsesDocumentOrderAndWraps(
+    position: Int, direction: ReplacementNavigationDirection, expected: Int
+  ) {
+    let candidates = findReplacementCandidates([ReplacementRule(pattern: "cat", replacement: "dog")],
+      in: "😀cat  cat  cat  ")
+    let target = replacementNavigationTarget(
+      candidates, selection: NSRange(location: position, length: 0), currentTarget: nil, direction: direction)
+    #expect(target?.range.location == expected)
+  }
+
+  @Test(arguments: [ReplacementNavigationDirection.next, .previous])
+  func candidateNavigationWithoutAlternatives(direction: ReplacementNavigationDirection) {
+    let candidate = ReplacementMatch(range: NSRange(location: 3, length: 2), replacement: "x")
+    #expect(replacementNavigationTarget([], selection: NSRange(location: 0, length: 0),
+      currentTarget: nil, direction: direction) == nil)
+    #expect(replacementNavigationTarget([candidate], selection: NSRange(location: 4, length: 0),
+      currentTarget: nil, direction: direction) == nil)
+    #expect(replacementNavigationTarget([candidate], selection: NSRange(location: 0, length: 0),
+      currentTarget: nil, direction: direction) == candidate)
+  }
+
   @Test func snapshotEditsMapUnicodePointsWithoutSearchingGeneratedText() {
     let text = "😀ab cde fZ"
     let matches = [

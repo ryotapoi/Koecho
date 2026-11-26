@@ -91,6 +91,12 @@ final class MockTextViewOperating: TextViewOperating {
 
   func makeFirstResponder(in panel: InputPanel) {}
 
+  func navigatedReplacementTarget(rules: [ReplacementRule]) -> ReplacementMatch? { nil }
+
+  func moveCaret(to candidate: ReplacementMatch, rules: [ReplacementRule]) {
+    selectedRangeValue = NSRange(location: candidate.range.location, length: 0)
+  }
+
   func setSelectedRange(_ range: NSRange) {}
 
   var selectedRangeValue = NSRange(location: 0, length: 0)

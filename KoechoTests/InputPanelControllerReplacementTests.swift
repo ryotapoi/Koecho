@@ -94,6 +94,63 @@ extension InputPanelControllerTests {
 
   // MARK: - Replacement shortcuts
 
+  @Test func candidateShortcutsNavigateAndReplaceAdjacentCandidates() throws {
+    let ctx = makeController()
+    let panel = ctx.controller.panel
+    ctx.appState.settings.replacement.replacementRules = [
+      ReplacementRule(pattern: "甲", replacement: "A"),
+      ReplacementRule(pattern: "乙", replacement: "B"),
+      ReplacementRule(pattern: "丙", replacement: "C"),
+    ]
+    ctx.controller.showPanel()
+    let view = try #require(findVoiceInputTextView(in: ctx.controller))
+    #expect(panel.makeFirstResponder(view))
+    let text = "甲乙 丙"
+    ctx.appState.setInputText(text)
+    view.replaceText(text, selecting: NSRange(location: 0, length: 0))
+    let next = ShortcutKey(modifiers: [.command], character: "g")
+    let previous = ShortcutKey(modifiers: [.command, .shift], character: "g")
+    let replace = ShortcutKey(modifiers: [.command], character: "r")
+
+    for (shortcut, location) in [(next, 1), (next, 3), (previous, 1), (previous, 0), (next, 1)] {
+      #expect(panel.onShortcutKey?(shortcut) == true)
+      #expect(view.selectedRange() == NSRange(location: location, length: 0))
+      #expect(ctx.controller.voiceCoordinator.voiceInsertionPoint == location)
+      #expect(view.string == text)
+      #expect(ctx.appState.inputText == text)
+    }
+    #expect(panel.onShortcutKey?(replace) == true)
+    #expect(ctx.appState.inputText == "甲B 丙")
+
+    ctx.appState.setInputText(text)
+    view.replaceText(text, selecting: NSRange(location: 0, length: 0))
+    #expect(panel.onShortcutKey?(next) == true)
+    #expect(view.selectedRange() == NSRange(location: 1, length: 0))
+    // An ordinary placement at the same offset belongs to the candidate on the left.
+    view.setSelectedRange(NSRange(location: 1, length: 0))
+    #expect(panel.onShortcutKey?(replace) == true)
+    #expect(ctx.appState.inputText == "A乙 丙")
+  }
+
+  @Test func reconfiguredCandidateShortcutsApplyImmediately() throws {
+    let ctx = makeController()
+    let panel = ctx.controller.panel
+    let settings = ctx.appState.settings.replacement
+    settings.replacementRules = [ReplacementRule(pattern: "a", replacement: "b")]
+    ctx.controller.showPanel()
+    let view = try #require(findVoiceInputTextView(in: ctx.controller))
+    #expect(panel.makeFirstResponder(view))
+    ctx.appState.setInputText("a a")
+    view.replaceText("a a", selecting: NSRange(location: 0, length: 1))
+    let customNext = ShortcutKey(modifiers: [.control], character: "j")
+    settings.nextReplacementCandidateShortcutKey = customNext
+    settings.previousReplacementCandidateShortcutKey = nil
+    #expect(panel.onShortcutKey?(ShortcutKey(modifiers: [.command], character: "g")) == false)
+    #expect(panel.onShortcutKey?(ShortcutKey(modifiers: [.command, .shift], character: "g")) == false)
+    #expect(panel.onShortcutKey?(customNext) == true)
+    #expect(view.selectedRange() == NSRange(location: 2, length: 0))
+  }
+
   @Test func shortcutRAppliesReplacementRules() {
     let ctx = makeController()
     ctx.appState.settings.replacement.addReplacementRule(

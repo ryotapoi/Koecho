@@ -61,6 +61,18 @@ struct HotkeySettingsView: View {
           ShortcutKeyRecorder(shortcutKey: $replacement.replacementAllShortcutKey)
             .frame(width: 120)
         }
+        HStack {
+          Text(.nextReplacementCandidate)
+          Spacer()
+          ShortcutKeyRecorder(shortcutKey: $replacement.nextReplacementCandidateShortcutKey)
+            .frame(width: 120)
+        }
+        HStack {
+          Text(.previousReplacementCandidate)
+          Spacer()
+          ShortcutKeyRecorder(shortcutKey: $replacement.previousReplacementCandidateShortcutKey)
+            .frame(width: 120)
+        }
         VStack(alignment: .leading, spacing: 4) {
           HStack {
             Text("Auto-run cycle shortcut")
