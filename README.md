@@ -68,8 +68,9 @@ Configure replacement rules in Settings → Replacement. Automatic replacement i
 | Move to the next replacement candidate | Command+G |
 | Move to the previous replacement candidate | Command+Shift+G |
 | Toggle voice input | Control+V |
+| Switch to the next recognition language | Unassigned |
 
-Customize these in Settings → Shortcuts. Saved shortcuts are preserved when upgrading.
+Customize these in Settings → Shortcuts. Saved shortcuts are preserved when upgrading. When two or more recognition languages are available, you can also choose one from the chevron on the voice button.
 
 After a successful manual script run, use Undo Script to restore the previous text before editing further. Use Copy Last Content in the menu bar to recover the last panel content after closing the panel.
 

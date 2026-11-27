@@ -4,6 +4,15 @@ All notable changes to Koecho are documented here. See [CHANGELOG.ja.md](CHANGEL
 
 Release artifacts are available on [GitHub Releases](https://github.com/ryotapoi/Koecho/releases).
 
+## 2.1.0 — 2026-11-27
+
+### What's New
+
+- When two or more recognition languages are available, the voice button shows the current language code and a chevron that opens a language menu. The button keeps a fixed width when the language changes.
+- Added a "Switch to next language" shortcut that cycles through the available recognition languages. It is unassigned by default; set it in Settings → Shortcuts.
+- Changing the language from the menu or the shortcut does not start voice input when it is off. While voice input is on, recognition switches to the selected language.
+- Move to the next or previous replacement candidate with Command+G and Command+Shift+G. Movement wraps around the document, so you can step through candidates and apply them with the replacement shortcut. Both shortcuts can be changed in Settings → Shortcuts.
+
 ## 2.0.1 — 2026-10-21
 
 ### Bug Fixes
